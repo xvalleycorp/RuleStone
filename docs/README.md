@@ -9,6 +9,7 @@
 | [Expression language](expressions.md) | Write conditions and outputs: operators, decimals, rounding, lists, missing fields, errors. |
 | [Fuzzy matching](fuzzy-matching.md) | Compare names for AML/KYC screening: normalization, similarity scores, thresholds and limitations. |
 | [Java API](java-api.md) | Embed the engine: inputs, results, errors, reloading rules, threading. |
+| [Testing](testing.md) | Test decision tables: JSON test cases, JUnit 5 integration, rule coverage and fluent assertions. |
 | [Examples](examples.md) | Study complete tables for loans, deposit rates and transfer fees. |
 
 ## Design
