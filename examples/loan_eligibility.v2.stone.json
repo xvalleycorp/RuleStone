@@ -1,0 +1,40 @@
+{
+  "id": "loan_eligibility",
+  "version": "2",
+  "effectiveFrom": "2026-01-01",
+  "effectiveTo": "2026-11-01",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "applicant": {
+      "age": "int",
+      "monthlyIncome": "decimal",
+      "monthlyDebt": "decimal",
+      "segment": "string",
+      "blacklisted": "bool"
+    },
+    "amount": "decimal"
+  },
+  "outputs": {
+    "decision": "string",
+    "limit": "decimal"
+  },
+  "rules": [
+    {
+      "id": "R1",
+      "when": "applicant.age < 20",
+      "then": { "decision": "'REJECT'" },
+      "reasonCode": "UNDERAGE"
+    },
+    {
+      "id": "R2",
+      "when": "amount <= applicant.monthlyIncome * 6",
+      "then": { "decision": "'APPROVE'", "limit": "applicant.monthlyIncome * 6" }
+    },
+    {
+      "id": "R3",
+      "when": "true",
+      "then": { "decision": "'REVIEW'" },
+      "reasonCode": "AMOUNT_ABOVE_LIMIT"
+    }
+  ]
+}

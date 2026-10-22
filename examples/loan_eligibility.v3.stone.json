@@ -1,0 +1,58 @@
+{
+  "id": "loan_eligibility",
+  "version": "3",
+  "description": "Unsecured consumer loan eligibility",
+  "effectiveFrom": "2026-11-01",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "applicant": {
+      "age": "int",
+      "monthlyIncome": "decimal",
+      "monthlyDebt": "decimal",
+      "segment": "string",
+      "blacklisted": "bool"
+    },
+    "amount": "decimal"
+  },
+  "outputs": {
+    "decision": "string",
+    "limit": "decimal"
+  },
+  "rules": [
+    {
+      "id": "R1",
+      "description": "Applicants must be adults",
+      "when": "applicant.age < 18",
+      "then": { "decision": "'REJECT'" },
+      "reasonCode": "UNDERAGE"
+    },
+    {
+      "id": "R2",
+      "when": "applicant.blacklisted",
+      "then": { "decision": "'REJECT'" },
+      "reasonCode": "BLACKLISTED"
+    },
+    {
+      "id": "R3",
+      "description": "Debt-to-income above 50%",
+      "when": "applicant.monthlyDebt / applicant.monthlyIncome > decimal('0.5')",
+      "then": { "decision": "'REJECT'" },
+      "reasonCode": "DTI_HIGH"
+    },
+    {
+      "id": "R4",
+      "description": "Up to 12 months of income, rounded down to the nearest million",
+      "when": "amount <= applicant.monthlyIncome * 12",
+      "then": {
+        "decision": "'APPROVE'",
+        "limit": "(applicant.monthlyIncome * 12 / 1000000).round(0, 'FLOOR') * 1000000"
+      }
+    },
+    {
+      "id": "R5",
+      "when": "true",
+      "then": { "decision": "'REVIEW'" },
+      "reasonCode": "AMOUNT_ABOVE_LIMIT"
+    }
+  ]
+}

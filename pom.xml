@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2026 The RuleStone Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>vn.io.dxa.rulestone</groupId>
+    <artifactId>rulestone-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>RuleStone</name>
+    <description>Business rules management for banking and finance. Every version set in stone. Every change in seconds.</description>
+    <inceptionYear>2026</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>Apache-2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <modules>
+        <module>rulestone-bom</module>
+        <module>rulestone-api</module>
+        <module>rulestone-cel</module>
+        <module>rulestone-core</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- Reproducible builds: fixed timestamp for archive entries -->
+        <project.build.outputTimestamp>2026-10-22T00:00:00Z</project.build.outputTimestamp>
+
+        <cel.version>0.14.0</cel.version>
+        <jackson.version>2.22.4</jackson.version>
+        <junit.version>6.1.3</junit.version>
+        <assertj.version>3.27.7</assertj.version>
+        <archunit.version>1.5.1</archunit.version>
+
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
+        <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
+        <maven-resources-plugin.version>3.4.0</maven-resources-plugin.version>
+        <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+        <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+        <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+        <mycila-license-plugin.version>5.1.1</mycila-license-plugin.version>
+        <codehaus-license-plugin.version>2.7.1</codehaus-license-plugin.version>
+        <cyclonedx-plugin.version>2.9.2</cyclonedx-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Internal modules are managed here directly: Maven 3 cannot import a BOM from the same reactor. -->
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-cel</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.cel</groupId>
+                <artifactId>cel</artifactId>
+                <version>${cel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>${archunit.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Every jar carries the project license and notice, as Apache-2.0 section 4 requires for redistribution. -->
+            <resource>
+                <directory>${maven.multiModuleProjectDirectory}</directory>
+                <targetPath>META-INF</targetPath>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+            </resource>
+            <!-- ... and the list of third-party dependencies with their licenses (see license-maven-plugin below). -->
+            <resource>
+                <directory>${project.build.directory}/generated-resources/third-party</directory>
+            </resource>
+        </resources>
+
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>${maven-resources-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <compilerArgs>
+                            <arg>-Xlint:all</arg>
+                            <arg>-parameters</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>[3.9,)</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>[17,)</version>
+                                </requireJavaVersion>
+                                <dependencyConvergence/>
+                                <banDuplicatePomDependencyVersions/>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+              License header check on every source file. Runs once, from the root.
+              To add missing headers: mvn -N com.mycila:license-maven-plugin:format
+            -->
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${mycila-license-plugin.version}</version>
+                <inherited>false</inherited>
+                <configuration>
+                    <aggregate>true</aggregate>
+                    <licenseSets>
+                        <licenseSet>
+                            <header>config/license-header.txt</header>
+                            <includes>
+                                <include>**/*.java</include>
+                                <include>**/pom.xml</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/target/**</exclude>
+                            </excludes>
+                        </licenseSet>
+                    </licenseSets>
+                    <mapping>
+                        <java>DOUBLESLASH_STYLE</java>
+                    </mapping>
+                    <strictCheck>true</strictCheck>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-license-headers</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+              Third-party license audit. Fails the build if any runtime dependency has no license
+              or a license outside the allowlist (no copyleft), and writes META-INF/THIRD-PARTY.txt
+              into each jar.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${codehaus-license-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>third-party-licenses</id>
+                        <goals>
+                            <goal>add-third-party</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/generated-resources/third-party</outputDirectory>
+                            <thirdPartyFilename>META-INF/THIRD-PARTY.txt</thirdPartyFilename>
+                            <excludedScopes>test,provided,system</excludedScopes>
+                            <excludedGroups>^vn\.io\.dxa\.rulestone$</excludedGroups>
+                            <!-- Never skip the audit because an earlier report looks up to date. -->
+                            <force>true</force>
+                            <failOnMissing>true</failOnMissing>
+                            <failOnBlacklist>true</failOnBlacklist>
+                            <includedLicenses>
+                                <includedLicense>Apache-2.0</includedLicense>
+                                <includedLicense>BSD-2-Clause</includedLicense>
+                                <includedLicense>BSD-3-Clause</includedLicense>
+                                <includedLicense>MIT</includedLicense>
+                            </includedLicenses>
+                            <licenseMerges>
+                                <licenseMerge>Apache-2.0|The Apache Software License, Version 2.0|Apache License, Version 2.0|The Apache License, Version 2.0|Apache 2.0|Apache License 2.0</licenseMerge>
+                                <licenseMerge>BSD-2-Clause|The BSD 2-Clause License|BSD 2-Clause</licenseMerge>
+                                <!-- RE2/J ships under the Go license, which is BSD-3-Clause. -->
+                                <licenseMerge>BSD-3-Clause|BSD 3-clause|The BSD 3-Clause License|New BSD License|Go License</licenseMerge>
+                                <licenseMerge>MIT|MIT License|The MIT License</licenseMerge>
+                            </licenseMerges>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Software bill of materials (CycloneDX) for each module: target/bom.json -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>${cyclonedx-plugin.version}</version>
+                <configuration>
+                    <outputFormat>json</outputFormat>
+                    <includeTestScope>false</includeTestScope>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>sbom</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeBom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>${maven-source-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Javadoc is part of the documentation: malformed Javadoc fails the build. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${maven-javadoc-plugin.version}</version>
+                <configuration>
+                    <release>17</release>
+                    <doclint>all,-missing</doclint>
+                    <quiet>true</quiet>
+                    <bottom>Copyright &#169; {inceptionYear} The RuleStone Authors. Licensed under the Apache License, Version 2.0.</bottom>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

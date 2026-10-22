@@ -1,0 +1,34 @@
+{
+  "id": "transfer_fees",
+  "version": "1",
+  "hitPolicy": "COLLECT",
+  "inputs": {
+    "transfer": {
+      "amount": "decimal",
+      "channel": "string",
+      "interbank": "bool",
+      "express": "bool"
+    }
+  },
+  "outputs": {
+    "feeCode": "string",
+    "fee": "decimal"
+  },
+  "rules": [
+    {
+      "id": "INTERBANK",
+      "when": "transfer.interbank",
+      "then": { "feeCode": "'IBT'", "fee": "max(decimal(2000), (transfer.amount * decimal('0.0005')).round(0, 'HALF_UP'))" }
+    },
+    {
+      "id": "EXPRESS",
+      "when": "transfer.express",
+      "then": { "feeCode": "'EXP'", "fee": "decimal(5000)" }
+    },
+    {
+      "id": "COUNTER",
+      "when": "transfer.channel == 'COUNTER'",
+      "then": { "feeCode": "'CTR'", "fee": "decimal(10000)" }
+    }
+  ]
+}

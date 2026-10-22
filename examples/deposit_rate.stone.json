@@ -1,0 +1,19 @@
+{
+  "id": "deposit_rate",
+  "version": "1",
+  "description": "Term deposit interest rate by term and balance",
+  "hitPolicy": "UNIQUE",
+  "inputs": {
+    "termMonths": "int",
+    "balance": "decimal"
+  },
+  "outputs": {
+    "rate": "decimal"
+  },
+  "rules": [
+    { "id": "SHORT", "when": "termMonths < 6", "then": { "rate": "decimal('0.035')" } },
+    { "id": "MID", "when": "termMonths >= 6 && termMonths < 12", "then": { "rate": "decimal('0.048')" } },
+    { "id": "LONG", "when": "termMonths >= 12 && balance < 5000000000", "then": { "rate": "decimal('0.052')" } },
+    { "id": "VIP_LONG", "when": "termMonths >= 12 && balance >= 5000000000", "then": { "rate": "decimal('0.055')" } }
+  ]
+}
