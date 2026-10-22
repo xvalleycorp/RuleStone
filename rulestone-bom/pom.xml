@@ -17,7 +17,8 @@
     <packaging>pom</packaging>
 
     <name>RuleStone BOM</name>
-    <description>Aligns the versions of all RuleStone modules.</description>
+    <description>Bill of materials that aligns the versions of all RuleStone modules.</description>
+    <url>https://rulestone.dxa.io.vn</url>
     <inceptionYear>2026</inceptionYear>
 
     <licenses>
@@ -27,6 +28,26 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
+    <developers>
+        <developer>
+            <id>rulestone-authors</id>
+            <name>The RuleStone Authors</name>
+            <url>https://github.com/xvalleycorp/RuleStone/blob/main/AUTHORS</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/xvalleycorp/RuleStone.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/xvalleycorp/RuleStone.git</developerConnection>
+        <url>https://github.com/xvalleycorp/RuleStone</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/xvalleycorp/RuleStone/issues</url>
+    </issueManagement>
 
     <dependencyManagement>
         <dependencies>

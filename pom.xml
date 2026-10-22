@@ -5,9 +5,11 @@
     SPDX-License-Identifier: Apache-2.0
 
 -->
+<!-- Modules inherit url and scm unchanged: they all live in the same repository and share one site. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+         child.project.url.inherit.append.path="false">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>vn.io.dxa.rulestone</groupId>
@@ -16,7 +18,8 @@
     <packaging>pom</packaging>
 
     <name>RuleStone</name>
-    <description>Business rules management for banking and finance. Every version set in stone. Every change in seconds.</description>
+    <description>Open-source business rules engine for banking and finance: versioned, effective-dated decision tables with exact decimal arithmetic and type-checked CEL expressions. Every version set in stone. Every change in seconds.</description>
+    <url>https://rulestone.dxa.io.vn</url>
     <inceptionYear>2026</inceptionYear>
 
     <licenses>
@@ -26,6 +29,33 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
+    <developers>
+        <developer>
+            <id>rulestone-authors</id>
+            <name>The RuleStone Authors</name>
+            <url>https://github.com/xvalleycorp/RuleStone/blob/main/AUTHORS</url>
+        </developer>
+    </developers>
+
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
+        <connection>scm:git:https://github.com/xvalleycorp/RuleStone.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/xvalleycorp/RuleStone.git</developerConnection>
+        <url>https://github.com/xvalleycorp/RuleStone</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/xvalleycorp/RuleStone/issues</url>
+    </issueManagement>
+
+    <ciManagement>
+        <system>GitHub Actions</system>
+        <url>https://github.com/xvalleycorp/RuleStone/actions</url>
+    </ciManagement>
 
     <modules>
         <module>rulestone-bom</module>

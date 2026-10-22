@@ -16,8 +16,8 @@ RuleStone requires **Java 17 or newer**.
 > **Pre-release.** RuleStone is not yet published to Maven Central. Until it is, build it from source and install it into your local Maven repository:
 >
 > ```sh
-> git clone <repository-url> rulestone
-> cd rulestone
+> git clone https://github.com/xvalleycorp/RuleStone.git
+> cd RuleStone
 > mvn install
 > ```
 

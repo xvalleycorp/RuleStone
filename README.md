@@ -1,6 +1,12 @@
 # RuleStone
 
+[![Build](https://github.com/xvalleycorp/RuleStone/actions/workflows/build.yml/badge.svg)](https://github.com/xvalleycorp/RuleStone/actions/workflows/build.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+![Java 17+](https://img.shields.io/badge/java-17%2B-orange.svg)
+
 **Every version set in stone. Every change in seconds.**
+
+Website: **[rulestone.dxa.io.vn](https://rulestone.dxa.io.vn)**
 
 RuleStone is an open-source business rules engine for banking and finance, written in Java. Business rules such as loan eligibility, pricing, fees and limits live in versioned decision tables instead of application code. They can change without a redeploy, and every decision can be explained and reproduced.
 

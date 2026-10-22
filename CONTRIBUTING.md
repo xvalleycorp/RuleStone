@@ -4,7 +4,7 @@ Thank you for helping. RuleStone is used to make decisions about real customers'
 
 ## Ways to contribute
 
-- **Report a bug.** Open an issue with the decision definition (with personal data removed), the inputs, the result you expected and the result you got. A failing test case is even better.
+- **Report a bug.** Open an [issue](https://github.com/xvalleycorp/RuleStone/issues) with the decision definition (with personal data removed), the inputs, the result you expected and the result you got. A failing test case is even better.
 - **Propose a feature.** Open an issue describing the business problem first. Rule-language and file-format changes are hard to undo, so we agree on the design before code is written.
 - **Improve the documentation.** Corrections and clarifications are always welcome.
 - **Report a security issue.** Do **not** open a public issue. Follow [SECURITY.md](SECURITY.md).
@@ -17,7 +17,7 @@ Requirements: JDK 17 or newer, Maven 3.9 or newer.
 mvn verify
 ```
 
-This single command compiles every module, runs all tests and performs every check that CI performs:
+This single command compiles every module, runs all tests and performs every check that [CI](https://github.com/xvalleycorp/RuleStone/actions) performs on Java 17, 21 and 25:
 
 | Check | What fails the build |
 |---|---|
