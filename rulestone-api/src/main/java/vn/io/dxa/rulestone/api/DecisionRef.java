@@ -16,6 +16,9 @@ import java.util.Optional;
  * When {@code asOf} is empty the engine uses the current business date from its clock.
  * Passing {@code asOf} explicitly makes a decision reproducible: replaying it later
  * selects exactly the rule version that was effective on that date.
+ *
+ * <p>The same date, whether given or taken from the clock, is passed to the rules as the
+ * implicit {@code businessDate} input, also when {@code version} is given.
  */
 public record DecisionRef(String id, Optional<String> version, Optional<LocalDate> asOf) {
 

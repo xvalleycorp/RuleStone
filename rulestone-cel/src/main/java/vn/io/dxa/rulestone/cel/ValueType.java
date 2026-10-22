@@ -13,8 +13,10 @@ import java.util.Objects;
 /**
  * Types that rule inputs, outputs and expressions may have.
  *
- * <p>There is deliberately no floating-point type: monetary amounts and ratios are
- * {@link #DECIMAL}, backed by {@link java.math.BigDecimal}.
+ * <p>There is deliberately no floating-point type: ratios and plain amounts are
+ * {@link #DECIMAL}, backed by {@link java.math.BigDecimal}; amounts with a currency are
+ * {@link #MONEY}, backed by {@link vn.io.dxa.rulestone.api.Money}. Business dates are
+ * {@link #DATE}, backed by {@link java.time.LocalDate}.
  */
 public sealed interface ValueType permits ValueType.Primitive, ValueType.ListOf, ValueType.Struct {
 
@@ -22,6 +24,8 @@ public sealed interface ValueType permits ValueType.Primitive, ValueType.ListOf,
     ValueType INT = Primitive.INT;
     ValueType STRING = Primitive.STRING;
     ValueType DECIMAL = Primitive.DECIMAL;
+    ValueType MONEY = Primitive.MONEY;
+    ValueType DATE = Primitive.DATE;
 
     static ValueType listOf(ValueType element) {
         return new ListOf(element);
@@ -35,7 +39,9 @@ public sealed interface ValueType permits ValueType.Primitive, ValueType.ListOf,
         BOOL("bool"),
         INT("int"),
         STRING("string"),
-        DECIMAL("decimal");
+        DECIMAL("decimal"),
+        MONEY("money"),
+        DATE("date");
 
         private final String typeName;
 

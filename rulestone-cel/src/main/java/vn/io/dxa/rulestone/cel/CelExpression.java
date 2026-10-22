@@ -28,7 +28,8 @@ public final class CelExpression {
 
     /**
      * Evaluates the expression and returns its value in Java form
-     * ({@code Boolean}, {@code Long}, {@code String}, {@code BigDecimal} or {@code List}).
+     * ({@code Boolean}, {@code Long}, {@code String}, {@code BigDecimal},
+     * {@link vn.io.dxa.rulestone.api.Money}, {@code LocalDate} or {@code List}).
      *
      * @throws ExpressionException if evaluation fails or produces a value of the wrong type
      */

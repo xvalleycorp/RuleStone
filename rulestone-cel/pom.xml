@@ -22,6 +22,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>vn.io.dxa.rulestone</groupId>
+            <artifactId>rulestone-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>dev.cel</groupId>
             <artifactId>cel</artifactId>
         </dependency>

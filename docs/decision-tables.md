@@ -47,7 +47,7 @@ Reading is **strict**:
 - Duplicate keys in any object are errors.
 - Every problem in the file is reported at once, each with its JSON path, e.g. `$.rules[2].then.limit`.
 
-Input and output names, and struct field names, must be valid identifiers: a letter or `_`, followed by letters, digits or `_`. CEL reserved words (`in`, `if`, `true`, `null`, …) are not allowed.
+Input and output names, and struct field names, must be valid identifiers: a letter or `_`, followed by letters, digits or `_`. CEL reserved words (`in`, `if`, `true`, `null`, …) are not allowed. No input may be named `businessDate`: every decision receives it implicitly (see [The business date](expressions.md#the-business-date)).
 
 ## Types
 
@@ -57,10 +57,12 @@ Input and output names, and struct field names, must be valid identifiers: a let
 | Integer, 64-bit | `"int"` | `Long`, `Integer`, `Short`, `Byte`, `BigInteger` within range | `Long` |
 | Text | `"string"` | `String`, any `enum` (its `name()`) | `String` |
 | Exact decimal | `"decimal"` | `BigDecimal`; integral numbers are converted | `BigDecimal` |
+| Money | `"money"` | `Money` (`vn.io.dxa.rulestone.api`) only | `Money` |
+| Date | `"date"` | `LocalDate` only; strings and other `java.time` types are rejected | `LocalDate` |
 | List | `["<type>"]`, e.g. `["decimal"]` | any `Collection` | `List` |
 | Struct | `{ "field": "<type>", … }` | `Map` with `String` keys, or a `record` | — (inputs only) |
 
-There is **no floating-point type**. Money, rates and ratios are `decimal`. Declaring `"double"`, `"float"` or `"number"` is an error, and passing a `Double` or `Float` where a `decimal` is expected is rejected at evaluation time.
+There is **no floating-point type**. Rates and ratios are `decimal`; amounts are `money` when their currency matters, otherwise `decimal`. Declaring `"double"`, `"float"` or `"number"` is an error, and passing a `Double` or `Float` where a `decimal` is expected is rejected at evaluation time.
 
 Types nest. A customer with a list of accounts:
 
@@ -79,7 +81,21 @@ customer.accounts.exists(a, a.type == 'SAVINGS' && a.balance >= decimal(10000000
 
 **Struct fields are optional at evaluation time.** A field that is missing or `null` in the input is left unset. Test for it with `has(customer.segment)`; reading an unset field fails the evaluation. **Top-level inputs are required**: a missing input fails the evaluation.
 
-Outputs must be `bool`, `int`, `string`, `decimal`, or lists of these.
+Outputs must be `bool`, `int`, `string`, `decimal`, `money`, `date`, or lists of these.
+
+A table using money and dates:
+
+```json
+"inputs":  { "transfer": { "amount": "money", "valueDate": "date" } },
+"outputs": { "fee": "money", "settles": "date" }
+```
+
+```
+max(money(2000, transfer.amount.currency()), (transfer.amount * decimal('0.0005')).round())
+transfer.valueDate.plusDays(1)
+```
+
+Besides its declared inputs, every rule can read `businessDate`, the date the decision is made for. See [The business date](expressions.md#the-business-date).
 
 ## Rules
 
@@ -143,6 +159,8 @@ A decision usually has several versions over its life. Register all of them with
 2. Otherwise the engine uses the version **effective on** the business date: `DecisionRef.asOf(date)` if given, else today according to the engine's clock.
 3. If no version is effective on that date, evaluation fails with `DecisionNotFoundException`.
 
+Rules see the same date as their implicit `businessDate` input: `asOf(date)` if given, else today according to the clock, also when a version is named.
+
 A version is effective on date `d` when `effectiveFrom <= d < effectiveTo`. Because the end is exclusive, consecutive versions share a boundary date:
 
 ```
@@ -178,9 +196,9 @@ The checks are:
 | Category | Rejected |
 |---|---|
 | File | Invalid JSON, unknown fields, duplicate keys, missing required fields, wrong JSON types, unknown types, unknown hit policy, invalid dates. |
-| Table | Invalid `id` or `version`; `effectiveTo` not after `effectiveFrom`; no rules; struct-typed outputs; invalid input or field names. |
+| Table | Invalid `id` or `version`; `effectiveTo` not after `effectiveFrom`; no rules; struct-typed outputs; invalid input or field names; an input named `businessDate`. |
 | Rules | Duplicate rule ids; reason codes that are not `UPPER_SNAKE_CASE`; `then` setting an undeclared output. |
-| Expressions | Syntax errors; unknown variables or fields; type errors, including any mix of `decimal` and floating point; `when` not producing `bool`; `then` not producing the output's type. |
+| Expressions | Syntax errors; unknown variables or fields; type errors, including any mix of `decimal` and floating point, or of `money` and plain numbers; `when` not producing `bool`; `then` not producing the output's type. |
 | Versions | The same `id@version` registered twice; overlapping effective periods. |
 
 What validation cannot catch is a rule that is well-formed but wrong for the business: for example, `UNIQUE` rows that overlap only for some inputs. Those are found by tests. Write unit tests for your decision tables just as you would for code.
