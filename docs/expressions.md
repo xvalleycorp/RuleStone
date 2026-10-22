@@ -1,6 +1,6 @@
 # Expression language
 
-The `when` and `then` fields of a rule are expressions in **[CEL](https://cel.dev)**, the Common Expression Language, used by Kubernetes, Envoy and Google Cloud for policies. RuleStone adds typed inputs and an exact `decimal` type.
+The `when` and `then` fields of a rule are expressions in **[CEL](https://cel.dev)**, the Common Expression Language, used by Kubernetes, Envoy and Google Cloud for policies. RuleStone adds typed inputs, exact `decimal` and `money` types, a `date` type and the implicit `businessDate` input.
 
 CEL was chosen because it is **safe by construction**:
 
@@ -12,6 +12,9 @@ This page covers what rule authors need. The full language is described in the [
 
 - [Values and operators](#values-and-operators)
 - [Decimals](#decimals)
+- [Money](#money)
+- [Dates](#dates)
+- [The business date](#the-business-date)
 - [Structs, lists and missing fields](#structs-lists-and-missing-fields)
 - [Text](#text)
 - [Errors](#errors)
@@ -22,7 +25,7 @@ This page covers what rule authors need. The full language is described in the [
 
 | Kind | Examples |
 |---|---|
-| Literals | `true`, `false`, `42`, `-7`, `'RETAIL'`, `"RETAIL"`, `[1, 2, 3]`, `decimal('0.05')` |
+| Literals | `true`, `false`, `42`, `-7`, `'RETAIL'`, `"RETAIL"`, `[1, 2, 3]`, `decimal('0.05')`, `money('1500000', 'VND')`, `date('2026-11-01')` |
 | Inputs | `amount`, `applicant.age`, `customer.accounts[0].balance` |
 | Comparison | `==`, `!=`, `<`, `<=`, `>`, `>=` |
 | Logic | `&&`, `\|\|`, `!` |
@@ -32,7 +35,7 @@ This page covers what rule authors need. The full language is described in the [
 
 Inside a JSON file, an expression is a JSON string, so text literals use single quotes: `"when": "applicant.segment == 'SME'"`.
 
-**Integers** are 64-bit. Integer division truncates (`7 / 2` is `3`) and overflow is an error, never a silent wrap-around. For amounts, rates and anything fractional, use `decimal`.
+**Integers** are 64-bit. Integer division truncates (`7 / 2` is `3`) and overflow is an error, never a silent wrap-around. For rates and anything fractional, use `decimal`; for amounts in a currency, use `money`.
 
 **There are no floating-point numbers in rules.** A literal such as `0.5` is a CEL `double`, and RuleStone rejects any expression that combines a `double` with a `decimal`. Write `decimal('0.5')` instead.
 
@@ -96,6 +99,117 @@ Rounding to a multiple, e.g. down to the nearest million:
 | `min(a, b)`, `max(a, b)` | smaller / larger of two decimals |
 | `string(x)` | plain-notation text, e.g. `'1500.50'` |
 
+## Money
+
+`money` is an exact amount in an [ISO 4217](https://www.iso.org/iso-4217-currency-codes.html) currency: a `decimal` amount plus a currency code. In Java it is `vn.io.dxa.rulestone.api.Money`. Use it when an amount's currency matters, so that a rule can never add dong to dollars by accident.
+
+### Creating money
+
+| Expression | Value |
+|---|---|
+| `money('1500000.50', 'VND')` | 1500000.50 VND |
+| `money(decimal('12.5'), 'USD')` | 12.5 USD |
+| `money(2000, 'VND')` | 2000 VND |
+| an input declared `"money"` | the `Money` passed in |
+
+The currency is an upper-case ISO 4217 code. An unknown code or an unparsable amount fails the evaluation.
+
+### Arithmetic and comparison
+
+| Expression | Result |
+|---|---|
+| `a + b`, `a - b` | money; both sides in the same currency |
+| `m * decimal('0.015')`, `m * 2`, `2 * m` | money; multiplied by a decimal or an int, on either side |
+| `m / 3`, `m / decimal('0.5')` | money; divided by a decimal or an int |
+| `-m` | money with the opposite sign |
+| `a < b`, `a <= b`, `a > b`, `a >= b` | bool; both sides in the same currency |
+| `a == b`, `a != b` | bool; equal when the currency is the same and the amounts are numerically equal |
+
+**Currencies are never mixed.** `+`, `-`, the comparisons `< <= > >=`, `min` and `max` fail the evaluation when the two sides have different currencies, with an error such as `money currencies differ: VND and USD`. RuleStone does not convert currencies; pass amounts already converted, or write separate rules per currency. Equality does not fail: amounts in different currencies are simply not equal.
+
+Money and plain numbers do not mix either: `m + 2000` and `m > 1000000` are type errors. Write `m + money(2000, m.currency())` or `m > money(1000000, 'VND')`. Money times money is also a type error.
+
+Equality ignores scale, as for decimals: `money('1.0', 'USD') == money('1.00', 'USD')` is `true`.
+
+### Rounding
+
+Arithmetic **never rounds** money: results keep full precision, and division keeps 34 significant digits as for decimals.
+
+```
+money('100', 'VND') / 3     // 33.33333333333333333333333333333333 VND
+```
+
+Round explicitly, to the currency's minor units, before presenting or storing an amount:
+
+| Expression | Rounding | Example → result |
+|---|---|---|
+| `m.round()` | to the currency's minor units, HALF_EVEN | `money('1234.565', 'USD').round()` → 1234.56 USD |
+| `m.round(mode)` | to the currency's minor units, the named mode | `money('1234.565', 'USD').round('HALF_UP')` → 1234.57 USD |
+
+`mode` takes the same names as for [decimals](#rounding). The minor units come from ISO 4217: 0 digits for `VND` and `JPY`, 2 for `USD` and `EUR`, 3 for `KWD`, so `money('2.5', 'VND').round()` is `2 VND`. Some codes, such as `XAU` (gold), have no minor unit in ISO 4217; rounding them fails unless you configure one. To configure or override the minor units of a currency, use `RuleStone.builder().currencyScale("XAU", 4)` (see the [Java API](java-api.md#building-an-engine)).
+
+A payment fee of 0.05% of `payment.amount`, rounded to whole dong, at least 2,000 dong:
+
+```
+max(money(2000, 'VND'), (payment.amount * decimal('0.0005')).round())
+```
+
+### Other functions
+
+| Expression | Result |
+|---|---|
+| `m.amount()` | the amount, a `decimal` |
+| `m.currency()` | the currency code, a `string`, e.g. `'VND'` |
+| `m.abs()` | absolute value |
+| `min(a, b)`, `max(a, b)` | smaller / larger of two amounts in the same currency |
+| `string(m)` | the amount in plain notation and the code, e.g. `'1500000 VND'` |
+
+## Dates
+
+`date` is a calendar date with no time of day and no time zone, such as a business date or a date of birth. In Java it is `java.time.LocalDate`. (CEL's `timestamp` type is not used for dates, so a time zone can never shift a result by a day.)
+
+| Expression | Value |
+|---|---|
+| `date('2026-11-01')` | 1 November 2026 |
+| an input declared `"date"` | the `LocalDate` passed in |
+
+Write dates in ISO format, `yyyy-MM-dd`. Anything else, such as `date('01/11/2026')`, or an impossible date such as `date('2026-02-30')`, fails the evaluation.
+
+Dates compare with `==`, `!=`, `<`, `<=`, `>` and `>=`; a later date is greater.
+
+| Expression | Result | Example → result |
+|---|---|---|
+| `d.plusDays(n)` | date `n` days later; `n` may be negative | `date('2026-11-01').plusDays(30)` → 2026-12-01 |
+| `d.plusMonths(n)` | date `n` months later, clamped to the end of the month | `date('2026-01-31').plusMonths(1)` → 2026-02-28 |
+| `d.plusYears(n)` | date `n` years later, clamped to the end of the month | `date('2028-02-29').plusYears(1)` → 2029-02-28 |
+| `d.year()`, `d.month()`, `d.day()` | `int`; month 1 to 12 | `date('2026-11-01').month()` → 11 |
+| `d.dayOfWeek()` | `int`, 1 = Monday … 7 = Sunday | `date('2026-11-01').dayOfWeek()` → 7 |
+| `daysBetween(a, b)` | whole days from `a` to `b` | `daysBetween(date('2026-10-01'), date('2026-11-01'))` → 31 |
+| `monthsBetween(a, b)` | complete months from `a` to `b` | `monthsBetween(date('2026-01-31'), date('2026-02-28'))` → 0 |
+| `yearsBetween(a, b)` | complete years from `a` to `b` | `yearsBetween(date('2008-11-02'), date('2026-11-01'))` → 17 |
+| `string(d)` | ISO text | `string(date('2026-11-01'))` → `'2026-11-01'` |
+
+The `…Between` functions count only complete units, like `java.time.temporal.ChronoUnit.between`, and are negative when `b` is before `a`. That makes `yearsBetween(birthDate, day)` a person's age on `day`.
+
+## The business date
+
+Every decision has an implicit input, `businessDate`, of type `date`. It is the date the decision is made for:
+
+- `DecisionRef.asOf(date)` when the request gives one;
+- otherwise today according to the engine's clock (`RuleStone.builder().clock(...)`), also when the request names a version.
+
+It is the same date that [selects the rule version](decision-tables.md#versions-and-effective-dates). Use it instead of a date passed in by the caller whenever a rule needs "today":
+
+```
+yearsBetween(applicant.birthDate, businessDate) >= 18
+businessDate.dayOfWeek() >= 6                       // Saturday or Sunday
+loan.maturityDate <= businessDate.plusMonths(3)
+```
+
+Expressions cannot read the clock themselves, so a decision evaluated with `asOf` gives the same result whenever it is replayed.
+
+The name is reserved. A table that declares an input named `businessDate` is rejected when it is loaded, and passing a fact named `businessDate` fails the evaluation, so a caller cannot make the rules and the version selection disagree about the date. The implicit input is not part of the table, so it does not affect the [content hash](decision-tables.md#content-hash).
+
 ## Structs, lists and missing fields
 
 Inputs declared as structs are accessed with `.`; lists with `[index]` and the list functions below.
@@ -149,7 +263,7 @@ Found when loading, and reported by `RuleStone.builder().build()`:
 
 - syntax errors;
 - unknown inputs and fields;
-- type errors, such as `decimal` compared with a `double` or a `string` compared with an `int`;
+- type errors, such as `decimal` compared with a `double`, a `string` compared with an `int`, or `money` added to a `decimal`;
 - a `when` that is not `bool`, or a `then` that does not match its output type.
 
 Found when evaluating, and reported as `DecisionEvaluationException` with the rule id:
@@ -157,8 +271,13 @@ Found when evaluating, and reported as `DecisionEvaluationException` with the ru
 - division by zero;
 - integer overflow;
 - reading an unset field;
-- an unparsable `decimal('…')` string or unknown rounding mode;
+- an unparsable `decimal('…')`, `money('…', '…')` or `date('…')` argument, an unknown currency code or an unknown rounding mode;
+- money in two different currencies combined with `+`, `-`, `<`, `<=`, `>`, `>=`, `min` or `max`;
+- rounding money in a currency that has no minor unit and no configured `currencyScale`;
+- date arithmetic beyond the supported range of years;
 - exceeding the iteration limit.
+
+Error messages name inputs, fields, rules and currency codes, never input values or amounts.
 
 An evaluation error **fails the whole decision**. RuleStone does not skip the rule and carry on, because a skipped rejection rule could turn into an approval. Treat the failure as you would any other system error, for example by routing the case to manual review.
 
@@ -178,6 +297,18 @@ amount <= applicant.monthlyIncome * 12
 applicant.monthlyDebt / applicant.monthlyIncome > decimal('0.5')
 (transfer.amount * decimal('0.0005')).round(0, 'HALF_UP')
 max(decimal(2000), fee)
+
+// money
+payment.amount > money(1000000000, 'VND')
+(payment.amount * decimal('0.0005')).round()
+money('1500000', 'VND') + money(2000, 'VND')
+loan.balance.amount() > decimal(0)
+
+// dates and the business date
+yearsBetween(applicant.birthDate, businessDate) >= 18
+businessDate >= date('2026-11-01')
+businessDate.plusDays(30)
+daysBetween(invoice.dueDate, businessDate) > 90
 
 // optional field
 has(applicant.segment) && applicant.segment == 'VIP'

@@ -8,7 +8,9 @@ package vn.io.dxa.rulestone.core;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,6 +32,12 @@ import vn.io.dxa.rulestone.cel.ValueType;
 
 /** A decision table whose expressions are all compiled and type-checked. Immutable and thread-safe. */
 final class CompiledDecision {
+
+    /**
+     * Implicit input of every decision: the date the decision is made for, which is also the
+     * date used to select its version. Tables may not declare it, and facts may not supply it.
+     */
+    static final String BUSINESS_DATE = "businessDate";
 
     private static final Pattern ID = Pattern.compile("[A-Za-z][A-Za-z0-9_.-]*");
     private static final Pattern REASON_CODE = Pattern.compile("[A-Z][A-Z0-9_]*");
@@ -61,7 +69,8 @@ final class CompiledDecision {
      * @param problems receives every problem found, prefixed with the table and location
      * @return the compiled decision, or empty if any problem was found
      */
-    static Optional<CompiledDecision> compile(DecisionTable table, int maxIterations, List<String> problems) {
+    static Optional<CompiledDecision> compile(DecisionTable table, int maxIterations,
+                                              Map<String, Integer> currencyScales, List<String> problems) {
         String at = table.ref() + " ";
         int before = problems.size();
 
@@ -77,19 +86,29 @@ final class CompiledDecision {
         }
         table.outputs().forEach((name, type) -> {
             if (containsStruct(type)) {
-                problems.add(at + "outputs." + name + ": outputs must be bool, int, string, decimal or lists of them");
+                problems.add(at + "outputs." + name
+                        + ": outputs must be bool, int, string, decimal, money, date or lists of them");
             }
         });
         if (table.rules().isEmpty()) {
             problems.add(at + "rules: a decision table needs at least one rule");
         }
 
+        Map<String, ValueType> inputs = new LinkedHashMap<>(table.inputs());
+        if (inputs.remove(BUSINESS_DATE) != null) {
+            // Reported, then compiled against the implicit input so that other problems are found too.
+            problems.add(at + "inputs." + BUSINESS_DATE + ": reserved name; every decision receives "
+                    + BUSINESS_DATE + " implicitly (DecisionRef.asOf, else the engine clock)");
+        }
+
         ExpressionEnvironment environment;
         try {
-            environment = ExpressionEnvironment.builder()
-                    .variables(table.inputs())
-                    .maxIterations(maxIterations)
-                    .build();
+            ExpressionEnvironment.Builder builder = ExpressionEnvironment.builder()
+                    .variables(inputs)
+                    .variable(BUSINESS_DATE, ValueType.DATE)
+                    .maxIterations(maxIterations);
+            currencyScales.forEach(builder::currencyScale);
+            environment = builder.build();
         } catch (IllegalArgumentException e) {
             problems.add(at + "inputs: " + e.getMessage());
             return Optional.empty();
@@ -127,10 +146,19 @@ final class CompiledDecision {
         return Optional.of(new CompiledDecision(table, ruleVersion, environment, List.copyOf(rules)));
     }
 
-    DecisionResult evaluate(Facts facts) {
+    /**
+     * @param businessDate the value of the implicit {@code businessDate} input
+     */
+    DecisionResult evaluate(Facts facts, LocalDate businessDate) {
+        if (facts.asMap().containsKey(BUSINESS_DATE)) {
+            throw failure("invalid input " + BUSINESS_DATE + ": reserved name; the business date comes from "
+                    + "DecisionRef.asOf or the engine clock and cannot be passed as a fact", null);
+        }
+        Map<String, Object> inputs = new HashMap<>(facts.asMap());
+        inputs.put(BUSINESS_DATE, businessDate);
         Bindings bindings;
         try {
-            bindings = environment.bind(facts.asMap());
+            bindings = environment.bind(inputs);
         } catch (InvalidValueException e) {
             throw failure("invalid input " + e.getMessage(), e);
         }
