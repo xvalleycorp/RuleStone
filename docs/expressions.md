@@ -14,6 +14,7 @@ This page covers what rule authors need. The full language is described in the [
 - [Decimals](#decimals)
 - [Structs, lists and missing fields](#structs-lists-and-missing-fields)
 - [Text](#text)
+- [Fuzzy matching](#fuzzy-matching)
 - [Errors](#errors)
 - [Limits](#limits)
 - [Quick reference](#quick-reference)
@@ -141,6 +142,16 @@ has(applicant.segment) && applicant.segment == 'VIP'
 
 Enum values passed from Java arrive as their `name()`, so compare with text: `applicant.segment == 'RETAIL'`.
 
+## Fuzzy matching
+
+For name screening, RuleStone provides `normalizeName(s)`, `similarity(a, b)`, `nameSimilarity(a, b)`, `levenshtein(a, b)` and `maxNameSimilarity(name, names)`. Scores are `decimal` values between 0 and 1 with four decimal places; names are compared without accents (including Vietnamese `đ`), case or punctuation.
+
+```
+maxNameSimilarity(customer.fullName, watchlist) >= decimal('0.92')
+```
+
+See [Fuzzy matching](fuzzy-matching.md) for the algorithms, thresholds, limits and limitations.
+
 ## Errors
 
 RuleStone separates problems found when **loading** rules from problems found when **evaluating** them.
@@ -188,6 +199,10 @@ customer.accounts.filter(a, a.type == 'LOAN').size()
 
 // text
 applicant.idNumber.matches('^[0-9]{12}$')
+
+// fuzzy name matching
+maxNameSimilarity(customer.fullName, watchlist) >= decimal('0.92')
+watchlist.exists(w, nameSimilarity(w, customer.fullName) >= decimal('0.92'))
 
 // conditional output
 amount > decimal(1000000000) ? 'SENIOR_APPROVAL' : 'STANDARD'

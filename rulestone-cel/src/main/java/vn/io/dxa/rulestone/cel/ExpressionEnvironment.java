@@ -71,12 +71,14 @@ public final class ExpressionEnvironment {
         CelCompilerBuilder compilerBuilder = CelCompilerFactory.standardCelCompilerBuilder()
                 .setOptions(options)
                 .setStandardMacros(CelStandardMacro.STANDARD_MACROS)
-                .addFunctionDeclarations(DecimalLibrary.declarations());
+                .addFunctionDeclarations(DecimalLibrary.declarations())
+                .addFunctionDeclarations(FuzzyLibrary.declarations());
         variables.forEach((name, type) -> compilerBuilder.addVar(name, celType(type, "rulestone.input." + name, structs)));
         this.compiler = compilerBuilder.setTypeProvider(new StructTypeProvider(structs)).build();
         this.runtime = CelRuntimeFactory.standardCelRuntimeBuilder()
                 .setOptions(options)
                 .addFunctionBindings(DecimalLibrary.bindings())
+                .addFunctionBindings(FuzzyLibrary.bindings())
                 .build();
     }
 
