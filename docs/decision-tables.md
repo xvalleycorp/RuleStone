@@ -79,7 +79,7 @@ Types nest. A customer with a list of accounts:
 customer.accounts.exists(a, a.type == 'SAVINGS' && a.balance >= decimal(100000000))
 ```
 
-**Struct fields are optional at evaluation time.** A field that is missing or `null` in the input is left unset. Test for it with `has(customer.segment)`; reading an unset field fails the evaluation. **Top-level inputs are required**: a missing input fails the evaluation.
+**Struct fields are optional at evaluation time.** A field that is missing from a `Map` input, or `null`, is left unset. (A Java record must still declare every field as a component; see [Java API](java-api.md#inputs-facts).) Test for it with `has(customer.segment)`; reading an unset field fails the evaluation. **Top-level inputs are required**: a missing input fails the evaluation.
 
 Outputs must be `bool`, `int`, `string`, `decimal`, `money`, `date`, or lists of these.
 

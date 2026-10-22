@@ -113,7 +113,9 @@ Values are converted to the types declared in the table's `inputs`:
 | list `["…"]` | any `Collection`, each element converted |
 | struct `{…}` | a `Map` with `String` keys, or a `record`; each declared field converted |
 
-For structs, only declared fields are read; other map entries and record components are ignored. A declared field that is absent or `null` is left unset (see [missing fields](expressions.md#structs-lists-and-missing-fields)).
+For structs, only declared fields are read; other map entries and record components are ignored. A declared field that is absent from a `Map`, or `null` in a `Map` or a record, is left unset (see [missing fields](expressions.md#structs-lists-and-missing-fields)).
+
+A record must have a component for **every** declared field. A record without one, for example because of a misspelt name, fails the evaluation with `record Applicant has no component named 'monthlyIncome'`, instead of silently leaving the field unset. Use a `Map`, or a record component that may be `null`, for fields that are genuinely optional.
 
 Records are the simplest way to pass domain objects:
 

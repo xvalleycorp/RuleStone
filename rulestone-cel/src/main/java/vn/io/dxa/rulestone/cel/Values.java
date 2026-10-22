@@ -134,7 +134,10 @@ final class Values {
                     }
                 }
             }
-            return null;
+            // A missing component is a mapping mistake (e.g. a misspelt field), not an unset value:
+            // treating it as unset would only surface when a rule reads it, or never.
+            throw new InvalidValueException(path + "." + field,
+                    "record " + record.getClass().getSimpleName() + " has no component named '" + field + "'");
         }
         throw new InvalidValueException(path, "expected a Map or a record but got " + value.getClass().getName());
     }
