@@ -236,6 +236,7 @@
                             </includes>
                             <excludes>
                                 <exclude>**/target/**</exclude>
+                                <exclude>website/**</exclude>
                             </excludes>
                         </licenseSet>
                     </licenseSets>

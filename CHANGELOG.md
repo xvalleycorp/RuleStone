@@ -19,3 +19,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Evaluation traces that record rule ids only, never input values.
 - All definition problems reported together with their location.
 - Apache-2.0 license, license headers, third-party license allowlist, CycloneDX SBOM, sources and Javadoc jars.
+- Website at https://rulestone.dxa.io.vn, generated from `docs/` and served by Cloudflare.
+- GitHub Actions CI on Java 17, 21 and 25; Dependabot.

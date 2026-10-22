@@ -1,0 +1,22 @@
+{
+  "name": "rulestone-website",
+  "private": true,
+  "description": "Website for RuleStone, served at https://rulestone.dxa.io.vn",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync-docs.mjs",
+    "dev": "npm run sync && vitepress dev src",
+    "build": "npm run sync && vitepress build src",
+    "preview": "vitepress preview src",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4",
+    "vue": "3.5.44",
+    "wrangler": "4.151.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

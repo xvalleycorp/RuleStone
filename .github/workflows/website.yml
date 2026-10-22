@@ -1,0 +1,44 @@
+# Builds the website on every pull request that touches it, and deploys it to
+# Cloudflare (https://rulestone.dxa.io.vn) on pushes to main.
+#
+# Deployment needs two repository secrets:
+#   CLOUDFLARE_API_TOKEN   API token with the "Edit Cloudflare Workers" template permissions
+#   CLOUDFLARE_ACCOUNT_ID  Cloudflare account id
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'website/**', '.github/workflows/website.yml']
+  pull_request:
+    paths: ['docs/**', 'website/**', '.github/workflows/website.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: website
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Deploy to Cloudflare
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

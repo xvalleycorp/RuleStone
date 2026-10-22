@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rulestone.dxa.io.vn/sitemap.xml
