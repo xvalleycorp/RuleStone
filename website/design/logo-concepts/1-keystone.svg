@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <!-- Keystone: five voussoirs of an arch; the gold keystone locks the others in place. -->
+  <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg>
