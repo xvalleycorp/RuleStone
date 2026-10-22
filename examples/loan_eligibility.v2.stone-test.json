@@ -1,0 +1,85 @@
+{
+  "decision": "loan_eligibility",
+  "description": "Loan eligibility policy version 2, in force from 2026-01-01 to 2026-10-31",
+  "cases": [
+    {
+      "name": "19-year-old is rejected as underage",
+      "description": "The minimum age was 20 until version 3 lowered it to 18",
+      "asOf": "2026-10-31",
+      "facts": {
+        "applicant": { "age": 19, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 1000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT", "limit": null },
+        "reasonCodes": ["UNDERAGE"],
+        "matchedRules": ["R1"],
+        "ruleVersion": "2"
+      }
+    },
+    {
+      "name": "amount within 6 monthly incomes is approved",
+      "asOf": "2026-06-15",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 25750000.50, "monthlyDebt": 5000000, "segment": "RETAIL", "blacklisted": false },
+        "amount": 150000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 154500003.00 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["R2"]
+      }
+    },
+    {
+      "name": "high debt is not checked before version 3",
+      "asOf": "2026-06-15",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 20000000, "monthlyDebt": 15000000, "segment": "RETAIL", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 120000000 },
+        "reasonCodes": [],
+        "matchedRules": ["R2"]
+      }
+    },
+    {
+      "name": "amount above 6 monthly incomes is referred for review",
+      "asOf": "2026-06-15",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 200000000
+      },
+      "expect": {
+        "output": { "decision": "REVIEW", "limit": null },
+        "reasonCodes": ["AMOUNT_ABOVE_LIMIT"],
+        "matchedRules": ["R3"]
+      }
+    },
+    {
+      "name": "explicit version 2 ignores the date",
+      "description": "For replaying a decision taken under version 2",
+      "version": "2",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 19, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 1000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT" },
+        "reasonCodes": ["UNDERAGE"],
+        "ruleVersion": "2"
+      }
+    },
+    {
+      "name": "no version is in force before 2026",
+      "asOf": "2025-12-31",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 1000000
+      },
+      "expect": { "error": "no version of decision 'loan_eligibility' is effective on 2025-12-31" }
+    }
+  ]
+}

@@ -8,6 +8,7 @@
 | [Decision tables](decision-tables.md) | Learn the `.stone.json` format, hit policies, versions, effective dates and validation. |
 | [Expression language](expressions.md) | Write conditions and outputs: operators, decimals, rounding, lists, missing fields, errors. |
 | [Java API](java-api.md) | Embed the engine: inputs, results, errors, reloading rules, threading. |
+| [Testing](testing.md) | Test decision tables: JSON test cases, JUnit 5 integration, rule coverage and fluent assertions. |
 | [Examples](examples.md) | Study complete tables for loans, deposit rates and transfer fees. |
 
 ## Design

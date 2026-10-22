@@ -1,0 +1,41 @@
+{
+  "decision": "deposit_rate",
+  "description": "Term deposit rate grid: every term and balance band, and the band boundaries",
+  "cases": [
+    {
+      "name": "3 months earns the short-term rate",
+      "facts": { "termMonths": 3, "balance": 100000000 },
+      "expect": { "output": { "rate": 0.035 }, "matchedRules": ["SHORT"] }
+    },
+    {
+      "name": "6 months is mid-term",
+      "facts": { "termMonths": 6, "balance": 100000000 },
+      "expect": { "output": { "rate": 0.048 }, "matchedRules": ["MID"] }
+    },
+    {
+      "name": "9 months is mid-term",
+      "facts": { "termMonths": 9, "balance": 100000000 },
+      "expect": { "output": { "rate": 0.048 }, "matchedRules": ["MID"] }
+    },
+    {
+      "name": "12 months below 5 billion earns the long-term rate",
+      "facts": { "termMonths": 12, "balance": 4999999999.99 },
+      "expect": { "output": { "rate": 0.052 }, "matchedRules": ["LONG"] }
+    },
+    {
+      "name": "12 months from 5 billion earns the VIP rate",
+      "facts": { "termMonths": 12, "balance": 5000000000 },
+      "expect": { "output": { "rate": 0.055 }, "exactOutput": true, "reasonCodes": [], "matchedRules": ["VIP_LONG"] }
+    },
+    {
+      "name": "36 months and 6 billion earns the VIP rate",
+      "facts": { "termMonths": 36, "balance": 6000000000 },
+      "expect": { "output": { "rate": 0.055 }, "matchedRules": ["VIP_LONG"] }
+    },
+    {
+      "name": "a missing balance fails the evaluation",
+      "facts": { "termMonths": 12 },
+      "expect": { "error": "balance: missing input" }
+    }
+  ]
+}
