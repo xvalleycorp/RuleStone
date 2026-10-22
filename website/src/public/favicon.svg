@@ -1,17 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title id="title">RuleStone</title>
-  <defs>
-    <linearGradient id="basalt" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#57534e"/>
-      <stop offset="1" stop-color="#1c1917"/>
-    </linearGradient>
-  </defs>
-  <!-- A stele: a stone tablet with a rounded top and engraved lines. -->
-  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt)"/>
-  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
-  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
-    <path d="M21 34h22"/>
-    <path d="M21 42h22"/>
-    <path d="M21 50h14"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <style>.s{fill:#44403c}.k{fill:#f59e0b}@media (prefers-color-scheme:dark){.s{fill:#d6d3d1}.k{fill:#fbbf24}}</style>
+  <!-- Keystone: five voussoirs of an arch; the gold keystone locks the others in place. -->
+  <path class="s" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path class="s" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon class="k" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path class="s" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path class="s" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
 </svg>
