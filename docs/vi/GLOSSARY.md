@@ -59,18 +59,22 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 |---|---|---|
 | AI agent | AI agent | Giữ nguyên "agent". |
 | assertion (fluent assertions) | assertion (khẳng định trong kiểm thử) | |
+| audit sink | audit sink (nơi nhận bản ghi kiểm toán) | Giữ nguyên; `AuditSink`. |
 | builder | builder | Giữ nguyên (mẫu thiết kế). |
 | compile | biên dịch | |
+| correlation id | mã tương quan (correlation id) | Mã giao dịch nghiệp vụ của bên gọi, ví dụ số hồ sơ vay. |
 | dependency | thư viện phụ thuộc, phụ thuộc | |
 | embed, embedded | nhúng, chế độ nhúng | |
+| facts hash | hash của đầu vào | Giá trị `factsHash`. |
 | guardrail | rào chắn | |
+| HMAC key | khoá HMAC | |
 | hot reload | nạp lại nóng (hot reload) | |
 | immutable | bất biến | |
 | load, load time | nạp, lúc nạp | "Bắt lỗi ngay lúc nạp luật". |
 | module | mô-đun | Tên mô-đun (`rulestone-core`) giữ nguyên. |
 | pre-release | bản tiền phát hành | |
-| release, publish (a version) | phát hành | |
 | redeploy | triển khai lại | |
+| release, publish (a version) | phát hành | |
 | repository (rule repository) | kho luật | Kho mã nguồn Git: "repository" hoặc "kho mã". |
 | roadmap | lộ trình | |
 | shadow mode | chế độ bóng (shadow) | |

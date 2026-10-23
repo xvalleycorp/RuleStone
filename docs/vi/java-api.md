@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: 286c170dc785e57cf86aedd44364f9c65f78c8798b22080e66902b5a3e3e2fdc
+sourceHash: 6465313644120f53dc5d5df0ba6c419e83b382f5a620a133f600fa1498e456f0
 ---
 
 # Java API
@@ -13,6 +13,7 @@ Trang này giải thích cách nhúng RuleStone vào một ứng dụng Java: t�
 - [Đầu vào: `Facts`](#đầu-vào-facts)
 - [Tiền, ngày và ngày nghiệp vụ](#tiền-ngày-và-ngày-nghiệp-vụ)
 - [Kết quả: `DecisionResult`](#kết-quả-decisionresult)
+- [Bản ghi quyết định và kiểm toán](#bản-ghi-quyết-định-và-kiểm-toán)
 - [Fact và kết quả dạng JSON: `FactsJson`](#fact-và-kết-quả-dạng-json-factsjson)
 - [Lỗi](#lỗi)
 - [Nạp lại luật](#nạp-lại-luật)
@@ -59,6 +60,9 @@ RuleStoneEngine engine = RuleStone.builder()
 | `decision(DecisionTable)` / `decisions(Collection)` | Đăng ký bảng quyết định. Hãy đăng ký mọi phiên bản của một quyết định; engine chọn một phiên bản cho mỗi yêu cầu. |
 | `maxIterations(int)` | Giới hạn trên của số vòng lặp trong mọi hàm trên danh sách, ở mọi luật. Mặc định 10.000. |
 | `currencyScale(String, int)` | Số chữ số sau dấu thập phân mà `money.round()` dùng cho một loại tiền tệ, ghi đè ISO 4217. Bắt buộc với các mã không có đơn vị nhỏ nhất trong ISO 4217, như `XAU`. Ném `IllegalArgumentException` nếu mã không phải mã ISO 4217 viết hoa, hoặc số chữ số nằm ngoài khoảng 0 đến 18. |
+| `auditSink(AuditSink)` | Nhận `DecisionRecord` của mọi lần đánh giá, dù thành công hay thất bại. Có thể gọi nhiều lần; các sink chạy theo thứ tự. Xem [Bản ghi quyết định và kiểm toán](#bản-ghi-quyết-định-và-kiểm-toán). |
+| `factsHashKey(byte[])` | Biến `DecisionRecord.factsHash()` thành HMAC-SHA256 với khoá này (tối thiểu 16 byte; nên dùng 32 byte ngẫu nhiên từ kho khoá của bạn). Nếu không có khoá, hash là SHA-256 thông thường. |
+| `recordIds(Supplier<String>)` | Nguồn sinh id cho bản ghi. Mặc định là UUID ngẫu nhiên. |
 | `build()` | Biên dịch và kiểm tra kiểu mọi luật, kiểm tra các phiên bản trùng lặp và chồng lấn, rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
 
 `DecisionTableJson.read(...)` nhận một `String`, một `InputStream` (đọc theo UTF-8) hoặc một `Path`, và ném `InvalidDecisionException` khi tệp có bất kỳ lỗi nào. Hãy nạp tệp từ bất cứ nơi nào bạn lưu chúng: classpath, một thư mục, một cột trong cơ sở dữ liệu hay một dịch vụ cấu hình.
@@ -91,6 +95,7 @@ DecisionResult result = engine.evaluate(
 | `DecisionRef.of("loan_eligibility")` | Phiên bản có hiệu lực hôm nay, theo đồng hồ của engine. |
 | `DecisionRef.of("loan_eligibility").asOf(date)` | Phiên bản có hiệu lực vào ngày `date`. **Nên dùng**: kết quả không phụ thuộc vào thời điểm mã chạy. |
 | `DecisionRef.of("loan_eligibility").version("2")` | Đúng phiên bản `2`, bất kể ngày. Dùng để chạy lại và điều tra. |
+| `….correlationId("LOAN-2026-000123")` | Ghi mã giao dịch nghiệp vụ của bạn (mã tương quan) vào bản ghi quyết định, để có thể đối chiếu với dữ liệu của bạn. Mã này không được chứa dữ liệu cá nhân. Dùng kết hợp được với mọi dòng ở trên. |
 
 Hãy dùng ngày nghiệp vụ của giao dịch cho `asOf`: ngày nộp hồ sơ với khoản vay, ngày giá trị với khoản thanh toán. Khi đó đánh giá lại cùng một hồ sơ về sau vẫn cho cùng câu trả lời. Ngày này cũng được chuyển tới các luật qua đầu vào ngầm định `businessDate`; nếu không có `asOf`, đó là ngày hôm nay theo đồng hồ của engine, kể cả khi bạn chỉ định phiên bản.
 
@@ -184,8 +189,9 @@ result.output();   // {fee=123457 VND, nextReview=2027-05-01}
 | `trace()` | Từng luật đã được đánh giá kèm việc nó có khớp hay không, dưới dạng `TraceStep(ruleId, matched)`. |
 | `ruleVersion()` | `<version>@sha256:<hash>`, xác định chính xác nội dung luật đã dùng. |
 | `decisionId()` | Id của quyết định. |
+| `record()` | `DecisionRecord` của lần đánh giá này, cũng chính là bản ghi mà mọi audit sink đã nhận. Xem bên dưới. |
 
-Với mỗi quyết định nghiệp vụ, hãy lưu ít nhất `decisionId`, `ruleVersion`, `output`, `reasonCodes` và `trace`. Cùng với đầu vào, chúng cho phép bạn giải thích và tái lập quyết định. Không giá trị nào trong số này chứa giá trị đầu vào, nên có thể ghi log an toàn; bản thân đầu vào thì cần được xử lý theo quy trình bảo vệ dữ liệu thông thường của bạn.
+Với mỗi quyết định nghiệp vụ, hãy lưu bản ghi quyết định, hoặc cấu hình một audit sink làm việc đó. Cùng với đầu vào, bản ghi cho phép bạn giải thích và tái lập quyết định. Bản ghi không chứa giá trị đầu vào nào, nên có thể ghi log an toàn; bản thân đầu vào thì cần được xử lý theo quy trình bảo vệ dữ liệu thông thường của bạn.
 
 Với `FIRST` hoặc `UNIQUE`, luôn xử lý trường hợp "không có luật nào khớp":
 
@@ -196,6 +202,75 @@ if (!result.matched()) {
 ```
 
 hoặc kết thúc bảng bằng một luật `"when": "true"` để mọi trường hợp đều có câu trả lời.
+
+## Bản ghi quyết định và kiểm toán
+
+Mọi lần đánh giá đều tạo ra một `DecisionRecord` (bản ghi quyết định), dù thành công hay thất bại. Bản ghi cho biết đã quyết định gì, bằng chính xác những luật nào và vì sao. Engine chuyển bản ghi cho mọi audit sink (nơi nhận bản ghi kiểm toán) trước khi trả kết quả hoặc ném exception, và một kết quả thành công cũng mang theo bản ghi qua `result.record()`.
+
+```java
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)
+        .factsHashKey(factsHashKey)   // 32 random bytes from the bank's key store
+        .auditSink(record -> auditLog.add(DecisionRecordJson.write(record)))
+        .build();
+
+DecisionResult result = engine.evaluate(
+        DecisionRef.of("card_fee").asOf(LocalDate.of(2026, 11, 1)).correlationId("CARD-2026-000123"),
+        Facts.of("customer", Map.of("birthDate", LocalDate.of(2002, 1, 1)),
+                 "spend", Money.of("123456789", "VND")));
+```
+
+`auditLog` đại diện cho nơi bạn lưu bản ghi: một tệp log, một bảng cơ sở dữ liệu hay một Kafka topic. `DecisionRecordJson.write` chuyển bản ghi thành một dòng JSON. Với bảng `card_fee` trong mục [Tiền, ngày và ngày nghiệp vụ](#tiền-ngày-và-ngày-nghiệp-vụ), bản ghi của lần đánh giá này là:
+
+```json
+{
+  "recordId": "3f6c2a8e-5b1d-4e7a-9c0f-2d8b6e4a1c75",
+  "correlationId": "CARD-2026-000123",
+  "decision": "card_fee",
+  "version": "1@sha256:e38b29d8a5086a1e73ed2f1b54bba1a3fc32167000eebab77ca579516e4a198e",
+  "businessDate": "2026-11-01",
+  "evaluatedAt": "2026-11-01T02:15:04.218Z",
+  "engine": "rulestone 0.1.0",
+  "status": "OK",
+  "factsHash": "hmac-sha256:46a89c481ab66d5224883eabd26d39e01df82bc0a44d1eed8aa82dfd9f505459",
+  "output": { "fee": "0 VND", "nextReview": "2027-11-01" },
+  "reasonCodes": [ { "code": "YOUTH_WAIVER", "source": "card_fee" } ],
+  "path": [
+    {
+      "node": "card_fee",
+      "type": "table",
+      "version": "1@sha256:e38b29d8a5086a1e73ed2f1b54bba1a3fc32167000eebab77ca579516e4a198e",
+      "matchedRules": ["YOUTH"]
+    }
+  ]
+}
+```
+
+| Trường | Nội dung |
+|---|---|
+| `recordId` | Id duy nhất, là UUID ngẫu nhiên nếu bạn không đặt `recordIds`. |
+| `correlationId` | Mã giao dịch nghiệp vụ của bạn, lấy từ `DecisionRef.correlationId`. Bị bỏ qua nếu bạn không truyền. |
+| `decision`, `version` | Quyết định được yêu cầu và phiên bản chính xác đã dùng. `version` bị bỏ qua nếu không tìm thấy phiên bản nào. |
+| `businessDate`, `evaluatedAt` | Ngày mà quyết định được đưa ra cho, và thời điểm bắt đầu đánh giá, đều lấy từ đồng hồ của engine, trừ khi `asOf` đã cho ngày. |
+| `engine` | Phiên bản RuleStone, lấy từ manifest của jar; là `rulestone dev` khi chạy từ các lớp chưa đóng gói. |
+| `status` | `OK`, hoặc `ERROR` nếu bên gọi nhận về một exception. Một quyết định không khớp luật nào vẫn là `OK`, không có reason code. |
+| `factsHash` | Hash của các đầu vào đã khai báo; xem bên dưới. Bị bỏ qua nếu đầu vào không hợp lệ. |
+| `output` | Các đầu ra, viết theo cách của `FactsJson`. Rỗng khi trạng thái là `ERROR`. |
+| `reasonCodes` | Từng reason code kèm nút đã tạo ra nó. |
+| `path` | Từng nút đã được đánh giá: hiện tại là bảng quyết định, kèm phiên bản và các luật đã khớp. Khi việc đánh giá lỗi giữa chừng trong một bảng, trường này cho thấy các luật đã khớp trước khi lỗi. |
+| `error` | Chỉ có khi trạng thái là `ERROR`: thông điệp của exception, không bao giờ chứa giá trị đầu vào. Với exception không phải `RuleStoneException`, chỉ kiểu exception được ghi lại. |
+
+**Không có giá trị đầu vào.** Bản ghi không bao giờ chứa giá trị đầu vào. Thay vào đó, `factsHash` định danh các đầu vào: nó được tính trên các đầu vào đã khai báo ở dạng chuẩn hoá, nên các đầu vào tương đương luôn cho cùng một hash. Ở dạng chuẩn hoá này:
+
+- các khoá được sắp xếp;
+- số thập phân và số tiền không có số 0 thừa ở cuối, nên `1.0` và `1.00` cho cùng một hash, giống như luật coi chúng là bằng nhau;
+- các fact không được khai báo và `businessDate` bị bỏ qua.
+
+Để kiểm chứng một quyết định về sau, hãy tính lại hash từ đầu vào bạn đã lưu và so với bản ghi.
+
+**Hãy dùng khoá.** Nếu không có `factsHashKey`, hash là SHA-256 thông thường. Khi đó, ai có được bản ghi có thể thử đoán các đầu vào ít biến thể, như ngày sinh, rồi so với hash. Khi có khoá, hash là HMAC-SHA256 (`hmac-sha256:…`), và chỉ người giữ khoá mới làm được việc đó. Hãy dùng cùng một khoá ở mọi nơi kiểm chứng bản ghi.
+
+**Sink phải thành công.** Các sink chạy đồng bộ trên luồng đang đánh giá. Nếu một sink ném lỗi, việc đánh giá thất bại với `AuditException` và bên gọi không nhận được kết quả: một quyết định không bao giờ được trả về khi bản ghi của nó chưa được chấp nhận. Sink nào không được làm chậm quyết định có thể chuyển bản ghi vào hàng đợi riêng của nó. Khi việc đánh giá đã thất bại và một sink cũng lỗi, bên gọi nhận exception ban đầu, kèm `AuditException` dưới dạng exception bị nén (suppressed).
 
 ## Fact và kết quả dạng JSON: `FactsJson`
 
@@ -246,6 +321,7 @@ Mọi ngoại lệ đều kế thừa `RuleStoneException`, một unchecked exce
 | `InvalidDecisionException` (core) | Khi nạp tệp hoặc tạo engine. `problems()` liệt kê mọi lỗi kèm vị trí. | Sửa định nghĩa. Lúc khởi động, hãy dừng ngay (fail fast); khi nạp lại, hãy giữ engine trước đó (xem bên dưới). |
 | `InvalidFactsException` (core) | Khi đọc fact hoặc giá trị JSON bằng `FactsJson`. `problems()` liệt kê mọi lỗi kèm vị trí. | Từ chối yêu cầu vì đầu vào không hợp lệ, ví dụ trả về HTTP 400 kèm danh sách lỗi. |
 | `DecisionNotFoundException` (api) | Không có quyết định với id đó, không có phiên bản đó, hoặc không có phiên bản nào có hiệu lực vào ngày đó. | Lỗi cấu hình: kiểm tra các phiên bản đã đăng ký và ngày hiệu lực của chúng. |
+| `AuditException` (api) | Một audit sink ném lỗi khi nhận bản ghi quyết định; exception của sink là nguyên nhân, và `recordId()` cho biết bản ghi nào. | Coi như lỗi hệ thống: quyết định đã không được trả về và không được giả định. |
 | `DecisionEvaluationException` (api) | Đầu vào không hợp lệ (thiếu, sai kiểu, số dấu phẩy động cho một decimal, một fact tên `businessDate`), một biểu thức lỗi lúc chạy, hoặc một bảng `UNIQUE` có nhiều luật cùng khớp. `decisionId()` và `ruleVersion()` xác định quyết định. | Coi như lỗi hệ thống đối với hồ sơ này, ví dụ chuyển sang xem xét thủ công. **Không thay bằng một quyết định mặc định.** |
 
 Thông báo ngoại lệ nêu tên quyết định, luật, đầu vào hoặc trường liên quan, không bao giờ nêu giá trị đầu vào. Hãy ghi log chúng như mọi lỗi khác.

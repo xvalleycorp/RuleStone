@@ -9,8 +9,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.TraceStep;
 import vn.io.dxa.rulestone.core.DecisionTable;
@@ -23,8 +28,9 @@ class RuleCoverageTest {
     }
 
     private static DecisionResult result(String decision, String ruleVersion, String... matched) {
-        return new DecisionResult(decision, ruleVersion, java.util.Map.of(), List.of(),
-                java.util.Arrays.stream(matched).map(id -> new TraceStep(id, true)).toList());
+        return new DecisionResult(decision, ruleVersion, Map.of(), List.of(),
+                java.util.Arrays.stream(matched).map(id -> new TraceStep(id, true)).toList(),
+                testRecord(decision, ruleVersion, Map.of()));
     }
 
     @Test
@@ -34,8 +40,9 @@ class RuleCoverageTest {
 
         coverage.record(result("loan_eligibility", "3@sha256:abc", "R1"));
         coverage.record(result("loan_eligibility", "3@sha256:abc", "R4"));
-        coverage.record(new DecisionResult("loan_eligibility", "2@sha256:def", java.util.Map.of(), List.of(),
-                List.of(new TraceStep("R1", false), new TraceStep("R2", true))));
+        coverage.record(new DecisionResult("loan_eligibility", "2@sha256:def", Map.of(), List.of(),
+                List.of(new TraceStep("R1", false), new TraceStep("R2", true)),
+                testRecord("loan_eligibility", "2@sha256:def", Map.of())));
 
         assertThat(coverage.uncoveredRules()).hasToString("{loan_eligibility@2=[R1, R3], loan_eligibility@3=[R2, R3, R5]}");
         assertThat(coverage.report()).isEqualTo("""
@@ -73,5 +80,12 @@ class RuleCoverageTest {
         assertThatThrownBy(() -> RuleCoverage.of(table, table))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("deposit_rate@1 is listed more than once");
+    }
+
+    /** A minimal record for a hand-built result. */
+    private static DecisionRecord testRecord(String decision, String version, Map<String, Object> output) {
+        return new DecisionRecord("test", Optional.empty(), decision, Optional.of(version), LocalDate.of(2026, 11, 1),
+                Instant.EPOCH, "test", DecisionRecord.Status.OK, Optional.empty(), output, List.of(), List.of(),
+                Optional.empty());
     }
 }

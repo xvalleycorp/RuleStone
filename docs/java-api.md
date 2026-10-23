@@ -8,6 +8,7 @@ This page explains how to embed RuleStone in a Java application: building an eng
 - [Inputs: `Facts`](#inputs-facts)
 - [Money, dates and the business date](#money-dates-and-the-business-date)
 - [Results: `DecisionResult`](#results-decisionresult)
+- [Decision records and auditing](#decision-records-and-auditing)
 - [JSON facts and results: `FactsJson`](#json-facts-and-results-factsjson)
 - [Errors](#errors)
 - [Reloading rules](#reloading-rules)
@@ -54,6 +55,9 @@ RuleStoneEngine engine = RuleStone.builder()
 | `decision(DecisionTable)` / `decisions(Collection)` | Registers tables. Register every version of a decision; the engine selects one per request. |
 | `maxIterations(int)` | Upper bound on iterations of any list function in any rule. Default 10,000. |
 | `currencyScale(String, int)` | Number of digits after the decimal point that `money.round()` uses for a currency, overriding ISO 4217. Required for codes without minor units in ISO 4217, such as `XAU`. Throws `IllegalArgumentException` for a code that is not upper-case ISO 4217 or digits outside 0 to 18. |
+| `auditSink(AuditSink)` | Receives the `DecisionRecord` of every evaluation, successful or not. May be called several times; sinks run in order. See [Decision records and auditing](#decision-records-and-auditing). |
+| `factsHashKey(byte[])` | Makes `DecisionRecord.factsHash()` an HMAC-SHA256 with this key (at least 16 bytes; use 32 random bytes from your key store). Without it, the hash is plain SHA-256. |
+| `recordIds(Supplier<String>)` | Source of record ids. Defaults to random UUIDs. |
 | `build()` | Compiles and type-checks every rule, checks versions for duplicates and overlaps, and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
 
 `DecisionTableJson.read(...)` accepts a `String`, an `InputStream` (read as UTF-8) or a `Path`, and throws `InvalidDecisionException` for any problem in the file. Load files from wherever you keep them: the classpath, a directory, a database column or a configuration service.
@@ -86,6 +90,7 @@ DecisionResult result = engine.evaluate(
 | `DecisionRef.of("loan_eligibility")` | Effective today, according to the engine clock. |
 | `DecisionRef.of("loan_eligibility").asOf(date)` | Effective on `date`. **Recommended**: the result does not depend on when the code runs. |
 | `DecisionRef.of("loan_eligibility").version("2")` | Exactly version `2`, regardless of dates. For replays and investigations. |
+| `….correlationId("LOAN-2026-000123")` | Adds your id for the business transaction to the decision record, so that it can be joined with your own data. It must not contain personal data. Combines with any of the above. |
 
 Use the business date of the transaction for `asOf`: the application date for a loan, the value date for a payment. Then re-evaluating the same case later gives the same answer. The same date reaches the rules as their implicit `businessDate` input; without `asOf` it is today according to the engine clock, also when you name a version.
 
@@ -179,8 +184,9 @@ result.output();   // {fee=123457 VND, nextReview=2027-05-01}
 | `trace()` | Each evaluated rule with whether it matched, as `TraceStep(ruleId, matched)`. |
 | `ruleVersion()` | `<version>@sha256:<hash>`, identifying the exact rule content used. |
 | `decisionId()` | The decision's id. |
+| `record()` | The `DecisionRecord` of this evaluation, the same one every audit sink received. See below. |
 
-Store at least `decisionId`, `ruleVersion`, `output`, `reasonCodes` and `trace` with each business decision. Together with the inputs, they let you explain and reproduce it. None of these contain input values, so they are safe to log; the inputs themselves need your normal data-protection handling.
+Store the decision record with each business decision, or configure an audit sink that does. Together with the inputs, it lets you explain and reproduce the decision. It contains no input values, so it is safe to log; the inputs themselves need your normal data-protection handling.
 
 Under `FIRST` or `UNIQUE`, always handle "no rule matched":
 
@@ -191,6 +197,75 @@ if (!result.matched()) {
 ```
 
 or end the table with a `"when": "true"` rule so that every case gets an answer.
+
+## Decision records and auditing
+
+Every evaluation produces a `DecisionRecord`, whether it succeeds or fails. The record says what was decided, with exactly which rules, and why. The engine hands it to every audit sink before it returns the result or throws, and a successful result also carries it as `result.record()`.
+
+```java
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)
+        .factsHashKey(factsHashKey)   // 32 random bytes from the bank's key store
+        .auditSink(record -> auditLog.add(DecisionRecordJson.write(record)))
+        .build();
+
+DecisionResult result = engine.evaluate(
+        DecisionRef.of("card_fee").asOf(LocalDate.of(2026, 11, 1)).correlationId("CARD-2026-000123"),
+        Facts.of("customer", Map.of("birthDate", LocalDate.of(2002, 1, 1)),
+                 "spend", Money.of("123456789", "VND")));
+```
+
+`auditLog` stands for wherever your records go: a log file, a database table or a Kafka topic. `DecisionRecordJson.write` turns the record into one line of JSON. For the `card_fee` table from [Money, dates and the business date](#money-dates-and-the-business-date), the record of this evaluation is:
+
+```json
+{
+  "recordId": "3f6c2a8e-5b1d-4e7a-9c0f-2d8b6e4a1c75",
+  "correlationId": "CARD-2026-000123",
+  "decision": "card_fee",
+  "version": "1@sha256:e38b29d8a5086a1e73ed2f1b54bba1a3fc32167000eebab77ca579516e4a198e",
+  "businessDate": "2026-11-01",
+  "evaluatedAt": "2026-11-01T02:15:04.218Z",
+  "engine": "rulestone 0.1.0",
+  "status": "OK",
+  "factsHash": "hmac-sha256:46a89c481ab66d5224883eabd26d39e01df82bc0a44d1eed8aa82dfd9f505459",
+  "output": { "fee": "0 VND", "nextReview": "2027-11-01" },
+  "reasonCodes": [ { "code": "YOUTH_WAIVER", "source": "card_fee" } ],
+  "path": [
+    {
+      "node": "card_fee",
+      "type": "table",
+      "version": "1@sha256:e38b29d8a5086a1e73ed2f1b54bba1a3fc32167000eebab77ca579516e4a198e",
+      "matchedRules": ["YOUTH"]
+    }
+  ]
+}
+```
+
+| Field | Content |
+|---|---|
+| `recordId` | A unique id, a random UUID unless you set `recordIds`. |
+| `correlationId` | Your id for the business transaction, from `DecisionRef.correlationId`. Left out if you gave none. |
+| `decision`, `version` | The decision requested and the exact version used. `version` is left out if no version was found. |
+| `businessDate`, `evaluatedAt` | The date the decision was made for, and the instant evaluation started, both from the engine clock unless `asOf` gave the date. |
+| `engine` | The RuleStone version, from the jar's manifest; `rulestone dev` when run from unpackaged classes. |
+| `status` | `OK`, or `ERROR` if the caller received an exception. A decision that matched no rule is `OK` with no reason codes. |
+| `factsHash` | A hash of the declared inputs; see below. Left out if the inputs were invalid. |
+| `output` | The outputs, written as by `FactsJson`. Empty when the status is `ERROR`. |
+| `reasonCodes` | Each reason code with the node that produced it. |
+| `path` | Each node evaluated: today, the decision table with its version and the rules that matched. When evaluation fails inside a table, it shows the rules that matched before the failure. |
+| `error` | Present only when the status is `ERROR`: the exception's message, which never contains input values. For exceptions that are not `RuleStoneException`s, only the exception type is recorded. |
+
+**No input values.** A record never contains input values. `factsHash` identifies the inputs instead: it is computed over the declared inputs in a canonical form, so equivalent inputs always give the same hash. In this canonical form:
+
+- keys are sorted;
+- decimals and money amounts have no trailing zeros, so `1.0` and `1.00` hash alike, just as rules treat them alike;
+- undeclared facts and `businessDate` are left out.
+
+To verify a decision later, recompute the hash from the inputs you stored and compare it with the record.
+
+**Use a key.** Without `factsHashKey`, the hash is plain SHA-256. Someone who has a record could then test guesses of low-variety inputs, such as a birth date, against it. With a key, the hash is HMAC-SHA256 (`hmac-sha256:…`), and only holders of the key can do that. Use the same key wherever records are verified.
+
+**Sinks must succeed.** Sinks run synchronously on the evaluating thread. If a sink throws, the evaluation fails with an `AuditException` and the caller gets no result: a decision is never returned without its record having been accepted. A sink that must not slow decisions down can hand records to its own queue. When an evaluation has already failed and a sink also fails, the caller receives the original exception, with the `AuditException` attached as suppressed.
 
 ## JSON facts and results: `FactsJson`
 
@@ -241,6 +316,7 @@ All exceptions extend `RuleStoneException`, an unchecked exception.
 | `InvalidDecisionException` (core) | Loading a file or building an engine. `problems()` lists every problem with its location. | Fix the definition. At startup, fail fast; when reloading, keep the previous engine (see below). |
 | `InvalidFactsException` (core) | Reading JSON facts or values with `FactsJson`. `problems()` lists every problem with its location. | Reject the request as invalid input, e.g. with HTTP 400 and the problems. |
 | `DecisionNotFoundException` (api) | No decision with that id, no such version, or no version effective on the date. | Configuration error: check registered versions and their dates. |
+| `AuditException` (api) | An audit sink threw while accepting a decision record; the sink's exception is the cause and `recordId()` names the record. | Treat as a system failure: the decision was not returned and must not be assumed. |
 | `DecisionEvaluationException` (api) | Invalid input (missing, wrong type, floating point for a decimal, a fact named `businessDate`), an expression failing at run time, or a `UNIQUE` table with several matches. `decisionId()` and `ruleVersion()` identify the decision. | Treat as a system failure for this case, e.g. route it to manual review. **Do not substitute a default decision.** |
 
 Exception messages name the decision, rule, input or field involved, never input values. Log them as you would any error.

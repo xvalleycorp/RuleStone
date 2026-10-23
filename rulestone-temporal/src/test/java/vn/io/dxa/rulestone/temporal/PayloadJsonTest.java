@@ -14,11 +14,14 @@ import io.temporal.common.converter.DataConverter;
 import io.temporal.common.converter.DefaultDataConverter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.Money;
@@ -89,7 +92,8 @@ class PayloadJsonTest {
         output.put("tier", "STANDARD");
         output.put("fees", List.of(new BigDecimal("1.50"), new BigDecimal("2")));
         DecisionOutcome outcome = DecisionOutcome.from(new DecisionResult("card_fee", "1@sha256:00", output,
-                List.of("CODE"), List.of(new TraceStep("R1", true))), LocalDate.of(2026, 11, 1));
+                List.of("CODE"), List.of(new TraceStep("R1", true)), testRecord("card_fee", "1@sha256:00", output)),
+                LocalDate.of(2026, 11, 1));
 
         DecisionOutcome back = roundTrip(outcome, DecisionOutcome.class);
 
@@ -133,5 +137,12 @@ class PayloadJsonTest {
         DecisionRequest request = DecisionRequest.of("any", Map.of("n", 1));
         request.facts().put("n", 2);
         assertThat(request.facts().get("n").asLong()).isEqualTo(1);
+    }
+
+    /** A minimal record for a hand-built result. */
+    private static DecisionRecord testRecord(String decision, String version, Map<String, Object> output) {
+        return new DecisionRecord("test", Optional.empty(), decision, Optional.of(version), LocalDate.of(2026, 11, 1),
+                Instant.EPOCH, "test", DecisionRecord.Status.OK, Optional.empty(), output, List.of(), List.of(),
+                Optional.empty());
     }
 }

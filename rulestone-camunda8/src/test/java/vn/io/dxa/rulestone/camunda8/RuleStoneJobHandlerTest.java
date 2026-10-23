@@ -19,19 +19,23 @@ import static vn.io.dxa.rulestone.camunda8.TestSupport.job;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.camunda.client.CamundaClient;
 import io.camunda.client.api.response.ActivatedJob;
+import io.camunda.client.api.worker.JobHandler;
 import io.camunda.client.api.worker.JobWorker;
-import io.camunda.client.api.worker.JobWorkerBuilderStep1;
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep2;
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3;
-import io.camunda.client.api.worker.JobHandler;
+import io.camunda.client.api.worker.JobWorkerBuilderStep1;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
+import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.api.TraceStep;
@@ -149,9 +153,9 @@ class RuleStoneJobHandlerTest {
 
     @Test
     void theCompletionPayloadKeepsDecimalsExact() throws Exception {
-        DecisionResult result = new DecisionResult("rate", "1@sha256:" + "0".repeat(64),
-                Map.of("rate", new BigDecimal("0.123456789012345678901234567890")),
-                List.of(), List.of(new TraceStep("R1", true)));
+        Map<String, Object> rate = Map.of("rate", new BigDecimal("0.123456789012345678901234567890"));
+        DecisionResult result = new DecisionResult("rate", "1@sha256:" + "0".repeat(64), rate,
+                List.of(), List.of(new TraceStep("R1", true)), testRecord("rate", "1@sha256:" + "0".repeat(64), rate));
 
         String json = RuleStoneJobHandler.completionVariables("decision", result);
 
@@ -401,5 +405,12 @@ class RuleStoneJobHandlerTest {
         verify(step1).jobType(RuleStoneWorkerOptions.DEFAULT_JOB_TYPE);
         verify(step3, never()).fetchVariables(org.mockito.ArgumentMatchers.<List<String>>any());
         verify(step3).open();
+    }
+
+    /** A minimal record for a hand-built result. */
+    private static DecisionRecord testRecord(String decision, String version, Map<String, Object> output) {
+        return new DecisionRecord("test", Optional.empty(), decision, Optional.of(version), LocalDate.of(2026, 11, 1),
+                Instant.EPOCH, "test", DecisionRecord.Status.OK, Optional.empty(), output, List.of(), List.of(),
+                Optional.empty());
     }
 }

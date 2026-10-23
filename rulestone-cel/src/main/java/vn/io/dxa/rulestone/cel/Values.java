@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import vn.io.dxa.rulestone.api.Money;
 
 /** Converts values between their Java form and their CEL runtime form, checking declared types. */
@@ -116,6 +117,29 @@ final class Values {
             return List.copyOf(converted);
         }
         throw new InvalidValueException(path, "expected " + expected + " but expression produced " + describe(value));
+    }
+
+    /** See {@link Bindings#canonicalValues()}. */
+    static Object canonical(Object celValue) {
+        if (celValue instanceof CelDecimal d) {
+            return strip(d.value);
+        }
+        if (celValue instanceof CelMoney m) {
+            return new Money(strip(m.amount), m.currency);
+        }
+        if (celValue instanceof List<?> items) {
+            return items.stream().map(Values::canonical).toList();
+        }
+        if (celValue instanceof Map<?, ?> fields) {
+            Map<String, Object> sorted = new TreeMap<>();
+            fields.forEach((name, value) -> sorted.put((String) name, canonical(value)));
+            return Collections.unmodifiableMap(sorted);
+        }
+        return celValue; // Boolean, Long, String, LocalDate
+    }
+
+    private static BigDecimal strip(BigDecimal value) {
+        return value.signum() == 0 ? BigDecimal.ZERO : value.stripTrailingZeros();
     }
 
     private static Object readField(Object value, String field, String path) {

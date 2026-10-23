@@ -1,13 +1,13 @@
 ---
 source: hybrid-ai.md
-sourceHash: 81eace8a6f7290d1d2e78b83fecf3d45f376f45c697881559d77219415e9bcfa
+sourceHash: f090ea0bddd6384a1aed75017d6e72e14ce45e9c90aac718335a2f0a033ca939
 ---
 
 # Ra quyết định AI lai
 
-> Trạng thái: **đề xuất thiết kế**. Chưa có phần nào trong trang này được triển khai · Cập nhật lần cuối: 2026-10-23
+> Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-10-23
 >
-> Các định dạng và API dưới đây là đề xuất để rà soát. Chúng sẽ thay đổi trước khi phát hành, và trang [kiến trúc](architecture.md) sẽ đánh dấu từng phần là đã có khi phần đó được triển khai.
+> Bước 1 của [kế hoạch triển khai](#9-kế-hoạch-triển-khai) **đã có**: mọi lần đánh giá một bảng quyết định đều tạo ra một bản ghi quyết định. Xem [Bản ghi quyết định và kiểm toán](java-api.md#bản-ghi-quyết-định-và-kiểm-toán). Mọi phần còn lại trong trang này là đề xuất để rà soát và sẽ thay đổi trước khi phát hành.
 
 Trang này đặc tả cách RuleStone kết hợp mô hình học máy (machine learning) với luật, và cách mọi quyết định tự giải thích. Trang đề cập ba nội dung:
 
@@ -259,7 +259,7 @@ Một luồng bị từ chối, với mọi lỗi được liệt kê cùng lúc
 
 ### 4.1 Luôn được tạo ra
 
-Mỗi lần gọi `evaluate` đều tạo một `DecisionRecord`, dù chạy một bảng đơn lẻ hay một luồng, và dù thành công hay thất bại. Bản ghi được trả về qua `DecisionResult.record()` và được chuyển cho mọi `AuditSink` đã cấu hình.
+Mỗi lần gọi `evaluate` đều tạo một `DecisionRecord`, dù chạy một bảng đơn lẻ hay một luồng, và dù thành công hay thất bại. Bản ghi được trả về qua `DecisionResult.record()` và được chuyển cho mọi `AuditSink` đã cấu hình. *Đã có cho bảng quyết định.*
 
 - **Dùng nhúng:** bên gọi quyết định bản ghi được gửi tới đâu. `rulestone-test` có thể assert trên bản ghi.
 - **`rulestone-server`, Spring Boot starter, Temporal và Camunda:** việc khởi động thất bại nếu chưa cấu hình audit sink nào, trừ khi được tắt tường minh bằng một thuộc tính có tài liệu hướng dẫn, chỉ dành cho phát triển cục bộ.
@@ -346,7 +346,7 @@ Việc không đưa giá trị vào bản ghi mặc định nghĩa là bản ghi
 
 | Tích hợp | Hành vi |
 |---|---|
-| Nhúng | `RuleStone.builder().auditSink(…)`; các sink được gọi đồng bộ sau khi đánh giá, còn sink bất đồng bộ tự đệm dữ liệu. |
+| Nhúng | `RuleStone.builder().auditSink(…)`; các sink được gọi đồng bộ sau khi đánh giá, còn sink bất đồng bộ tự đệm dữ liệu. *Đã có.* |
 | `rulestone-audit-jdbc` / `-kafka` (dự kiến) | Một kho chỉ cho phép ghi thêm (append-only). Các bản ghi được liên kết bằng chuỗi băm trong mô-đun quản trị (dự kiến), giúp mọi sự giả mạo đều lộ ra. |
 | Temporal | Activity trả về id của bản ghi. Bản ghi được activity ghi, không bao giờ do mã workflow ghi, nên replay không tạo bản ghi trùng lặp. |
 | Camunda | Id của bản ghi được lưu thành một biến quy trình để truy vết, và bản ghi được gửi tới sink đã cấu hình. |
@@ -455,7 +455,7 @@ Bảng này định hướng cho thiết kế; đây không phải tư vấn ph�
 
 Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử và tài liệu riêng.
 
-1. **Bản ghi quyết định cho bảng.** Thêm `DecisionRecord`, `DecisionResult.record()`, `AuditSink` và `correlationId` cho các bảng quyết định hiện nay, chưa có mô hình. Bước này thực hiện trước nghĩa vụ "luôn giải thích".
+1. **Bản ghi quyết định cho bảng.** *Đã xong.* Thêm `DecisionRecord`, `DecisionResult.record()`, `AuditSink` và `correlationId` cho các bảng quyết định hiện nay, chưa có mô hình. Bước này thực hiện trước nghĩa vụ "luôn giải thích".
 2. **Luồng chưa có mô hình.** Thêm định dạng luồng, các nút `table`, `switch`, `derive`, `split` và `end`, các bước kiểm tra khi nạp kể cả quy tắc chi phối (dominance), bộ thực thi, và hỗ trợ trong `rulestone-test` cho đường đi và độ bao phủ nút.
 3. **Nút mô hình.** Thêm `ModelInvoker`, `ModelResult`, các chế độ `invoke` và `supplied`, xử lý lỗi, và mã lý do từ attribution. Thêm đối tượng `models` vào định dạng kiểm thử và cho các bên gọi JSON dựa trên `FactsJson` (Temporal, Camunda, trình soạn thảo).
 4. **Giải thích.** Thêm danh mục mã lý do với thông điệp EN/VI và một bộ hiển thị giải thích tất định.
@@ -470,5 +470,5 @@ Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử
 | Luồng có nên dùng chung phần mở rộng `.stone.json` không? | Dùng `.flow.json`, với `id`/`version`/hiệu lực theo ngày giống hệt bảng, trong cùng repository. |
 | Gọi mô hình bất đồng bộ | Trước hết giữ việc đánh giá đồng bộ với deadline. Thêm API không chặn khi mô-đun máy chủ cần đến. |
 | Mặc định đưa ra bao nhiêu mã lý do từ mô hình | Ba, cấu hình được theo từng nút. Ngân hàng thường cần tới bốn cho thông báo từ chối. |
-| `factsHash` có nên dùng salt không? | Băm trực tiếp các đầu vào có ít entropy có thể bị dò ngược. Đề xuất dùng HMAC với khoá do ngân hàng nắm giữ, cấu hình trên audit sink. |
+| `factsHash` có nên dùng salt không? | Đã quyết định: băm trực tiếp các đầu vào có ít entropy có thể bị dò ngược, nên `factsHashKey` biến hash thành HMAC-SHA256 với khoá do ngân hàng nắm giữ. Nếu không có khoá, hash là SHA-256 thông thường. |
 | Phương pháp attribution | Do nhà cung cấp mô hình quyết định (SHAP, điểm scorecard, v.v.). Adapter phải nêu tên phương pháp, và bản ghi lưu tên đó. |

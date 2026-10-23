@@ -20,7 +20,6 @@ import java.util.Set;
 import java.util.HexFormat;
 import java.util.regex.Pattern;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
-import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.TraceStep;
 import vn.io.dxa.rulestone.cel.Bindings;
@@ -147,55 +146,67 @@ final class CompiledDecision {
     }
 
     /**
+     * Converts and type-checks the facts for this decision.
+     *
      * @param businessDate the value of the implicit {@code businessDate} input
+     * @throws DecisionEvaluationException if a fact is missing or has the wrong type
      */
-    DecisionResult evaluate(Facts facts, LocalDate businessDate) {
+    Bindings bind(Facts facts, LocalDate businessDate) {
         if (facts.asMap().containsKey(BUSINESS_DATE)) {
             throw failure("invalid input " + BUSINESS_DATE + ": reserved name; the business date comes from "
                     + "DecisionRef.asOf or the engine clock and cannot be passed as a fact", null);
         }
         Map<String, Object> inputs = new HashMap<>(facts.asMap());
         inputs.put(BUSINESS_DATE, businessDate);
-        Bindings bindings;
         try {
-            bindings = environment.bind(inputs);
+            return environment.bind(inputs);
         } catch (InvalidValueException e) {
             throw failure("invalid input " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Applies the rules.
+     *
+     * @param trace receives each rule examined as it is examined, so that it shows how far
+     *              evaluation got if it fails
+     * @throws DecisionEvaluationException if a rule fails or the hit policy is violated
+     */
+    Outcome evaluate(Bindings bindings, List<TraceStep> trace) {
         return switch (table.hitPolicy()) {
-            case FIRST -> first(bindings);
-            case UNIQUE -> unique(bindings);
-            case COLLECT -> collect(bindings);
+            case FIRST -> first(bindings, trace);
+            case UNIQUE -> unique(bindings, trace);
+            case COLLECT -> collect(bindings, trace);
         };
     }
 
-    private DecisionResult first(Bindings bindings) {
-        List<TraceStep> trace = new ArrayList<>();
+    /** The outputs and reason codes of one evaluation. */
+    record Outcome(Map<String, Object> output, List<String> reasonCodes) {}
+
+    private Outcome first(Bindings bindings, List<TraceStep> trace) {
         for (CompiledRule rule : rules) {
             boolean matched = matches(rule, bindings);
             trace.add(new TraceStep(rule.id, matched));
             if (matched) {
-                return result(outputs(rule, bindings), reasons(List.of(rule)), trace);
+                return new Outcome(outputs(rule, bindings), reasons(List.of(rule)));
             }
         }
-        return result(Map.of(), List.of(), trace);
+        return new Outcome(Map.of(), List.of());
     }
 
-    private DecisionResult unique(Bindings bindings) {
-        List<TraceStep> trace = new ArrayList<>();
+    private Outcome unique(Bindings bindings, List<TraceStep> trace) {
         List<CompiledRule> matched = matchAll(bindings, trace);
         if (matched.size() > 1) {
             throw failure("UNIQUE hit policy violated: rules "
                     + matched.stream().map(r -> r.id).toList() + " all matched", null);
         }
         if (matched.isEmpty()) {
-            return result(Map.of(), List.of(), trace);
+            return new Outcome(Map.of(), List.of());
         }
-        return result(outputs(matched.get(0), bindings), reasons(matched), trace);
+        return new Outcome(outputs(matched.get(0), bindings), reasons(matched));
     }
 
-    private DecisionResult collect(Bindings bindings) {
-        List<TraceStep> trace = new ArrayList<>();
+    private Outcome collect(Bindings bindings, List<TraceStep> trace) {
         List<CompiledRule> matched = matchAll(bindings, trace);
         Map<String, List<Object>> collected = new LinkedHashMap<>();
         table.outputs().keySet().forEach(name -> collected.put(name, new ArrayList<>()));
@@ -204,7 +215,7 @@ final class CompiledDecision {
         }
         Map<String, Object> output = new LinkedHashMap<>();
         collected.forEach((name, values) -> output.put(name, List.copyOf(values)));
-        return result(output, reasons(matched), trace);
+        return new Outcome(output, reasons(matched));
     }
 
     private List<CompiledRule> matchAll(Bindings bindings, List<TraceStep> trace) {
@@ -241,10 +252,6 @@ final class CompiledDecision {
 
     private static List<String> reasons(List<CompiledRule> matched) {
         return matched.stream().flatMap(r -> r.reasonCode.stream()).toList();
-    }
-
-    private DecisionResult result(Map<String, Object> output, List<String> reasonCodes, List<TraceStep> trace) {
-        return new DecisionResult(table.id(), ruleVersion, output, reasonCodes, trace);
     }
 
     private DecisionEvaluationException failure(String message, Throwable cause) {

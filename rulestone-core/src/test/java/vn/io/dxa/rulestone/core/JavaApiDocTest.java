@@ -8,14 +8,20 @@ package vn.io.dxa.rulestone.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionResult;
@@ -118,6 +124,40 @@ class JavaApiDocTest {
                 .extracting(e -> ((InvalidFactsException) e).problems())
                 .isEqualTo(List.of("customer.birthDate: expected a date as \"yyyy-MM-dd\"",
                         "spend: expected money as \"<amount> <CCY>\", e.g. \"1500000 VND\""));
+    }
+
+    @Test
+    void decisionRecords() throws IOException {
+        List<DecisionTable> tables = List.of(DecisionTableJson.read(CARD_FEE));
+        byte[] factsHashKey = "example key, not for production!".getBytes(StandardCharsets.UTF_8);
+        List<String> auditLog = new ArrayList<>();
+
+        // --- as in docs/java-api.md
+        RuleStoneEngine engine = RuleStone.builder()
+                .decisions(tables)
+                .factsHashKey(factsHashKey)   // 32 random bytes from the bank's key store
+                .auditSink(record -> auditLog.add(DecisionRecordJson.write(record)))
+                .build();
+
+        DecisionResult result = engine.evaluate(
+                DecisionRef.of("card_fee").asOf(LocalDate.of(2026, 11, 1)).correlationId("CARD-2026-000123"),
+                Facts.of("customer", Map.of("birthDate", LocalDate.of(2002, 1, 1)),
+                         "spend", Money.of("123456789", "VND")));
+        // ---
+
+        assertThat(auditLog).containsExactly(DecisionRecordJson.write(result.record()));
+        String doc = Files.readString(Path.of("..", "docs", "java-api.md"));
+        Matcher json = Pattern.compile("```json\\n(\\{\\n  \"recordId\".*?)```", Pattern.DOTALL).matcher(doc);
+        assertThat(json.find()).as("record example in docs/java-api.md").isTrue();
+        ObjectNode documented = (ObjectNode) new ObjectMapper().readTree(json.group(1));
+        ObjectNode actual = DecisionRecordJson.toJson(result.record());
+        // Fields that differ on every run are only checked for their form.
+        assertThat(actual.get("recordId").asText()).matches("[0-9a-f-]{36}");
+        assertThat(actual.get("engine").asText()).startsWith("rulestone ");
+        for (String varying : List.of("recordId", "evaluatedAt", "engine")) {
+            actual.set(varying, documented.get(varying));
+        }
+        assertThat(actual).as(actual.toPrettyString()).isEqualTo(documented);
     }
 
     @Test

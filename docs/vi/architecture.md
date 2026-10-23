@@ -1,6 +1,6 @@
 ---
 source: architecture.md
-sourceHash: f3f6543dea33ff0fc5895b2e0f22349dd61ffe3207b60d34c0b537f711cbdaa0
+sourceHash: 8334914f59106d84af242b915bf13c07aa4ce89c6006049699ee2aa9fb543c9e
 ---
 
 # Kiến trúc RuleStone
@@ -125,7 +125,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 | Hiệu lực theo ngày | Mỗi phiên bản có `effectiveFrom`/`effectiveTo`; các phiên bản chồng lấn bị từ chối; một quyết định cho ngày X có thể chạy lại với bộ luật có hiệu lực vào ngày X. | đã có |
 | Phân tách nhiệm vụ (maker-checker) | Vòng đời luật `DRAFT → SUBMITTED → APPROVED → ACTIVE → RETIRED`; người lập và người duyệt phải khác nhau, được kiểm soát ở tầng quản trị (governance). | dự kiến |
 | Kiểm toán chống giả mạo | Bản ghi kiểm toán liên kết bằng chuỗi băm, có thể ký số, chứa đầu vào đã che, phiên bản luật, vết thực thi và kết quả. | dự kiến |
-| Khả năng giải thích | Mã lý do tường minh cùng vết thực thi có cấu trúc; AI chỉ diễn đạt lại vết thực thi. Một bản ghi quyết định cho mọi quyết định, gồm cả phiên bản, đầu ra và attribution của mô hình, được đặc tả trong [Ra quyết định AI lai](hybrid-ai.md#4-bản-ghi-quyết-định). | đã có (mã lý do, vết thực thi); bản ghi dự kiến |
+| Khả năng giải thích | Mã lý do tường minh cùng vết thực thi có cấu trúc; AI chỉ diễn đạt lại vết thực thi. Một bản ghi quyết định cho mọi quyết định, gồm cả phiên bản, đầu ra và attribution của mô hình, được đặc tả trong [Ra quyết định AI lai](hybrid-ai.md#4-bản-ghi-quyết-định). | đã có (mã lý do, vết thực thi, bản ghi quyết định cho bảng) |
 | Bảo vệ dữ liệu cá nhân | Không có giá trị đầu vào trong vết thực thi hay thông báo ngoại lệ (đã có). `DataMasker` bật mặc định cho bản ghi kiểm toán (dự kiến). | một phần |
 | An toàn khi thực thi | CEL không có reflection hay eval; các thao tác trên danh sách có giới hạn (đã có). Thời gian chờ tối đa cho mỗi quyết định (dự kiến). | một phần |
 | Tính sẵn sàng cao | Chế độ nhúng không phụ thuộc mạng trên luồng xử lý chính; nếu kho luật gặp sự cố, phiên bản đã nạp vẫn tiếp tục chạy. | đã có (chế độ nhúng) |

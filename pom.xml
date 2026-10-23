@@ -211,6 +211,14 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>${maven-jar-plugin.version}</version>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <!-- Implementation-Version names the engine in every decision record. -->
+                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            </manifest>
+                        </archive>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

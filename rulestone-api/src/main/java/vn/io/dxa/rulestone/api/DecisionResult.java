@@ -19,17 +19,20 @@ import java.util.Objects;
  * @param output      named output values produced by the decision, in the order the decision declares them
  * @param reasonCodes stable, machine-readable reasons (e.g. {@code DTI_HIGH}) for audit and customer notices
  * @param trace       the rules examined, in evaluation order
+ * @param record      the explanation of this evaluation, also given to every {@link AuditSink}
  */
 public record DecisionResult(
         String decisionId,
         String ruleVersion,
         Map<String, Object> output,
         List<String> reasonCodes,
-        List<TraceStep> trace) {
+        List<TraceStep> trace,
+        DecisionRecord record) {
 
     public DecisionResult {
         Objects.requireNonNull(decisionId, "decisionId");
         Objects.requireNonNull(ruleVersion, "ruleVersion");
+        Objects.requireNonNull(record, "record");
         // Keep the decision's output order so serialized results are deterministic.
         output.forEach((name, value) -> {
             Objects.requireNonNull(name, "output name");

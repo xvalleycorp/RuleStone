@@ -15,6 +15,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.function.Supplier;
+import vn.io.dxa.rulestone.api.AuditSink;
+import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.cel.ExpressionEnvironment;
 
@@ -45,6 +49,9 @@ public final class RuleStone {
         private Clock clock = Clock.systemDefaultZone();
         private int maxIterations = ExpressionEnvironment.DEFAULT_MAX_ITERATIONS;
         private final Map<String, Integer> currencyScales = new HashMap<>();
+        private final List<AuditSink> auditSinks = new ArrayList<>();
+        private byte[] factsHashKey;
+        private Supplier<String> recordIds = () -> UUID.randomUUID().toString();
 
         private Builder() {}
 
@@ -90,6 +97,38 @@ public final class RuleStone {
         }
 
         /**
+         * Adds a sink for the {@link DecisionRecord} of every evaluation, successful or not.
+         * Sinks are called in the order added, before the result is returned or the exception
+         * thrown. If a sink throws, the evaluation fails with an
+         * {@link vn.io.dxa.rulestone.api.AuditException}; see {@link AuditSink}.
+         */
+        public Builder auditSink(AuditSink sink) {
+            auditSinks.add(Objects.requireNonNull(sink, "sink"));
+            return this;
+        }
+
+        /**
+         * Key for {@link DecisionRecord#factsHash()}. With a key the hash is HMAC-SHA256, so that
+         * nobody without the key can test guesses of low-variety inputs, such as a birth date,
+         * against a record. Without one it is plain SHA-256. Use at least 32 random bytes,
+         * kept in the bank's key store, and the same key wherever records are verified.
+         */
+        public Builder factsHashKey(byte[] key) {
+            Objects.requireNonNull(key, "key");
+            if (key.length < 16) {
+                throw new IllegalArgumentException("factsHashKey must be at least 16 bytes");
+            }
+            this.factsHashKey = key.clone();
+            return this;
+        }
+
+        /** Source of {@link DecisionRecord#recordId()} values; the default is a random UUID. Must be thread-safe. */
+        public Builder recordIds(Supplier<String> recordIds) {
+            this.recordIds = Objects.requireNonNull(recordIds, "recordIds");
+            return this;
+        }
+
+        /**
          * @throws InvalidDecisionException listing every problem in every registered table,
          *         including duplicate versions and overlapping effective periods
          */
@@ -105,7 +144,15 @@ public final class RuleStone {
                 throw new InvalidDecisionException(problems);
             }
             byId.replaceAll((id, versions) -> List.copyOf(versions));
-            return new DefaultRuleStoneEngine(byId, clock);
+            Supplier<String> ids = recordIds;
+            Supplier<String> checkedIds = () -> {
+                String id = ids.get();
+                if (id == null || id.isBlank()) {
+                    throw new IllegalStateException("recordIds supplied an empty record id");
+                }
+                return id;
+            };
+            return new DefaultRuleStoneEngine(byId, clock, auditSinks, new FactsHasher(factsHashKey), checkedIds);
         }
 
         /** At most one version of a decision may be in force on any date, so selection is never ambiguous. */

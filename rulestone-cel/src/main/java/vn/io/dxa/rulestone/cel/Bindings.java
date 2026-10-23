@@ -5,7 +5,9 @@
 
 package vn.io.dxa.rulestone.cel;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Inputs already converted and type-checked for one {@link ExpressionEnvironment}.
@@ -19,6 +21,21 @@ public final class Bindings {
     Bindings(ExpressionEnvironment environment, Map<String, Object> values) {
         this.environment = environment;
         this.values = Map.copyOf(values);
+    }
+
+    /**
+     * The bound values in canonical form, for hashing: maps sorted by key, {@code decimal} as
+     * {@link java.math.BigDecimal} and {@code money} as {@link vn.io.dxa.rulestone.api.Money}
+     * with trailing zeros removed (so {@code 1.0} and {@code 1.00}, which rules treat as equal,
+     * are equal here too), {@code int} as {@link Long}, {@code date} as
+     * {@link java.time.LocalDate}, lists as lists. Unset struct fields are absent.
+     *
+     * <p>The values are the inputs themselves and may be personal data: hash them, never log them.
+     */
+    public Map<String, Object> canonicalValues() {
+        Map<String, Object> canonical = new TreeMap<>();
+        values.forEach((name, value) -> canonical.put(name, Values.canonical(value)));
+        return Collections.unmodifiableMap(canonical);
     }
 
     @Override

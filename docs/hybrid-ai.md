@@ -1,8 +1,8 @@
 # Hybrid AI decisioning
 
-> Status: **design proposal**. Nothing on this page is implemented yet · Last updated: 2026-10-23
+> Status: **design proposal**, partly implemented · Last updated: 2026-10-23
 >
-> The formats and APIs below are proposals for review. They will change before they ship, and the [architecture](architecture.md) page marks each part as available once it is.
+> Step 1 of the [implementation plan](#9-implementation-plan) is **available**: every evaluation of a decision table produces a decision record. See [Decision records and auditing](java-api.md#decision-records-and-auditing). Everything else on this page is a proposal for review and will change before it ships.
 
 This page specifies how RuleStone combines machine-learning models with rules, and how every decision explains itself. It covers three things:
 
@@ -254,7 +254,7 @@ A flow is rejected, with all problems listed together as for decision tables tod
 
 ### 4.1 Always produced
 
-Each call to `evaluate` builds a `DecisionRecord`, whether it runs a single table or a flow, and whether it succeeds or fails. The record is returned on `DecisionResult.record()` and handed to every configured `AuditSink`.
+Each call to `evaluate` builds a `DecisionRecord`, whether it runs a single table or a flow, and whether it succeeds or fails. The record is returned on `DecisionResult.record()` and handed to every configured `AuditSink`. *Available for decision tables.*
 
 - **Embedded use:** the caller decides where records go. `rulestone-test` can assert on them.
 - **`rulestone-server`, the Spring Boot starter, Temporal and Camunda:** startup fails if no audit sink is configured, unless it is turned off explicitly with a documented property, intended for local development only.
@@ -341,7 +341,7 @@ Keeping values out of the default record means it can be written to ordinary log
 
 | Integration | Behaviour |
 |---|---|
-| Embedded | `RuleStone.builder().auditSink(…)`; sinks are called synchronously after evaluation, and asynchronous sinks buffer on their own. |
+| Embedded | `RuleStone.builder().auditSink(…)`; sinks are called synchronously after evaluation, and asynchronous sinks buffer on their own. *Available.* |
 | `rulestone-audit-jdbc` / `-kafka` (planned) | An append-only store. Records are chained by hash in the governance module (planned), which makes tampering visible. |
 | Temporal | The activity returns the record id. The record is written by the activity, never by workflow code, so replays do not write duplicates. |
 | Camunda | The record id is stored as a process variable for traceability, and the record goes to the configured sink. |
@@ -450,7 +450,7 @@ This table guides the design; it is not legal advice. The current texts must be 
 
 Each step is a separate, reviewable change with its own tests and documentation.
 
-1. **Decision record for tables.** Add `DecisionRecord`, `DecisionResult.record()`, `AuditSink` and `correlationId` for today's decision tables, with no models yet. This delivers the "always explain" obligation first.
+1. **Decision record for tables.** *Done.* Add `DecisionRecord`, `DecisionResult.record()`, `AuditSink` and `correlationId` for today's decision tables, with no models yet. This delivers the "always explain" obligation first.
 2. **Flows without models.** Add the flow format, the `table`, `switch`, `derive`, `split` and `end` nodes, the load-time checks including the dominance rule, the executor, and `rulestone-test` support for paths and node coverage.
 3. **Model nodes.** Add `ModelInvoker`, `ModelResult`, the `invoke` and `supplied` modes, failure handling, and reason codes from attributions. Add the `models` object to the test format and to `FactsJson`-based JSON callers (Temporal, Camunda, editor).
 4. **Explanations.** Add the reason-code catalog with EN/VI messages and a deterministic explanation renderer.
@@ -465,5 +465,5 @@ Each step is a separate, reviewable change with its own tests and documentation.
 | Should flows share the `.stone.json` extension? | Use `.flow.json`, with `id`/`version`/effective dating identical to tables, in the same repository. |
 | Asynchronous model calls | Keep evaluation synchronous with deadlines first. Add a non-blocking API once the server module needs one. |
 | How many model reason codes to emit by default | Three, configurable per node. Banks often need up to four for adverse-action notices. |
-| Should `factsHash` be salted? | A plain hash of low-entropy inputs can be brute-forced. Propose an HMAC with a bank-held key, configured on the audit sink. |
+| Should `factsHash` be salted? | Decided: a plain hash of low-entropy inputs can be brute-forced, so `factsHashKey` makes it an HMAC-SHA256 with a bank-held key. Without a key it is plain SHA-256. |
 | Attribution method | Up to the model provider (SHAP, scorecard points, etc.). The adapter must name the method, and the record stores that name. |
