@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2026 The RuleStone Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+                  xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+                  id="Definitions_LoanApproval"
+                  targetNamespace="https://rulestone.dxa.io.vn/examples"
+                  exporter="RuleStone" exporterVersion="0.1.0"
+                  modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.6.0">
+  <bpmn:error id="Error_DecisionFailed" name="RuleStone decision failed" errorCode="RULESTONE_DECISION_FAILED" />
+  <bpmn:process id="loan-approval" name="Loan approval" isExecutable="true">
+    <bpmn:startEvent id="Start" name="Application received">
+      <bpmn:outgoing>Flow_ToCheck</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="CheckEligibility" name="Check eligibility"
+                      zeebe:modelerTemplate="vn.io.dxa.rulestone.decision" zeebe:modelerTemplateVersion="1">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="rulestone:decision" retries="3" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="decisionId" value="loan_eligibility" />
+          <zeebe:header key="asOfVariable" value="applicationDate" />
+          <zeebe:header key="resultVariable" value="decision" />
+          <zeebe:header key="failOnNoMatch" value="false" />
+          <zeebe:header key="errorCode" value="RULESTONE_DECISION_FAILED" />
+        </zeebe:taskHeaders>
+        <zeebe:ioMapping>
+          <zeebe:output source="=decision" target="decision" />
+          <zeebe:output source="=decision.output.decision" target="loanDecision" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="DecisionFailed" name="Decision failed" attachedToRef="CheckEligibility">
+      <bpmn:outgoing>Flow_FailedToReview</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDefinition_DecisionFailed" errorRef="Error_DecisionFailed" />
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Outcome" name="Outcome?" default="Flow_Review">
+      <bpmn:incoming>Flow_ToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approve</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Reject</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Review</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="Approved" name="Approved">
+      <bpmn:incoming>Flow_Approve</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="Rejected" name="Rejected">
+      <bpmn:incoming>Flow_Reject</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="ManualReview" name="Manual review">
+      <bpmn:incoming>Flow_Review</bpmn:incoming>
+      <bpmn:incoming>Flow_FailedToReview</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ToCheck" sourceRef="Start" targetRef="CheckEligibility" />
+    <bpmn:sequenceFlow id="Flow_ToGateway" sourceRef="CheckEligibility" targetRef="Outcome" />
+    <bpmn:sequenceFlow id="Flow_Approve" name="APPROVE" sourceRef="Outcome" targetRef="Approved">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">=decision.output.decision = "APPROVE"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Reject" name="REJECT" sourceRef="Outcome" targetRef="Rejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">=decision.output.decision = "REJECT"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Review" name="otherwise" sourceRef="Outcome" targetRef="ManualReview" />
+    <bpmn:sequenceFlow id="Flow_FailedToReview" sourceRef="DecisionFailed" targetRef="ManualReview" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_LoanApproval">
+    <bpmndi:BPMNPlane id="Plane_LoanApproval" bpmnElement="loan-approval">
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckEligibility_di" bpmnElement="CheckEligibility">
+        <dc:Bounds x="240" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DecisionFailed_di" bpmnElement="DecisionFailed">
+        <dc:Bounds x="272" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Outcome_di" bpmnElement="Outcome" isMarkerVisible="true">
+        <dc:Bounds x="395" y="175" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Approved_di" bpmnElement="Approved">
+        <dc:Bounds x="512" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Rejected_di" bpmnElement="Rejected">
+        <dc:Bounds x="512" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ManualReview_di" bpmnElement="ManualReview">
+        <dc:Bounds x="512" y="302" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ToCheck_di" bpmnElement="Flow_ToCheck">
+        <di:waypoint x="188" y="200" />
+        <di:waypoint x="240" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToGateway_di" bpmnElement="Flow_ToGateway">
+        <di:waypoint x="340" y="200" />
+        <di:waypoint x="395" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Approve_di" bpmnElement="Flow_Approve">
+        <di:waypoint x="420" y="175" />
+        <di:waypoint x="420" y="100" />
+        <di:waypoint x="512" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Reject_di" bpmnElement="Flow_Reject">
+        <di:waypoint x="445" y="200" />
+        <di:waypoint x="512" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Review_di" bpmnElement="Flow_Review">
+        <di:waypoint x="420" y="225" />
+        <di:waypoint x="420" y="320" />
+        <di:waypoint x="512" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FailedToReview_di" bpmnElement="Flow_FailedToReview">
+        <di:waypoint x="290" y="258" />
+        <di:waypoint x="290" y="340" />
+        <di:waypoint x="512" y="340" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

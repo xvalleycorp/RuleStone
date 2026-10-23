@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2026 The RuleStone Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_LoanApprovalExpression"
+                  targetNamespace="https://rulestone.dxa.io.vn/examples">
+  <bpmn:process id="loan-approval-expression" name="Loan approval (expression)" isExecutable="true" camunda:historyTimeToLive="P180D">
+    <bpmn:startEvent id="Start" />
+    <bpmn:sequenceFlow id="Flow_ToOutcome" sourceRef="Start" targetRef="Outcome" />
+    <bpmn:exclusiveGateway id="Outcome" default="Flow_Review" />
+    <bpmn:sequenceFlow id="Flow_Approve" sourceRef="Outcome" targetRef="Disburse">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${rulestone.evaluateAsOf('loan_eligibility', 'applicationDate', execution).output.decision == 'APPROVE'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Review" sourceRef="Outcome" targetRef="ManualReview" />
+    <bpmn:userTask id="Disburse" name="Disburse loan" />
+    <bpmn:userTask id="ManualReview" name="Manual review" />
+  </bpmn:process>
+</bpmn:definitions>

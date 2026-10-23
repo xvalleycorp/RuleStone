@@ -47,6 +47,7 @@ const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
       ['testing.md', 'Testing'],
       ['temporal.md', 'Temporal integration'],
       ['editor.md', 'Web editor'],
+      ['camunda.md', 'Camunda integration'],
     ],
   },
   {

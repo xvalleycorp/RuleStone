@@ -81,6 +81,16 @@
                 <artifactId>rulestone-temporal</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-camunda8</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-camunda7</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>

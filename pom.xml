@@ -65,6 +65,8 @@
         <module>rulestone-test</module>
         <module>rulestone-temporal</module>
         <module>rulestone-editor</module>
+        <module>rulestone-camunda8</module>
+        <module>rulestone-camunda7</module>
     </modules>
 
     <properties>
@@ -124,6 +126,16 @@
             <dependency>
                 <groupId>vn.io.dxa.rulestone</groupId>
                 <artifactId>rulestone-temporal</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-camunda8</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-camunda7</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
