@@ -29,7 +29,23 @@
         <!-- -DskipTests also skips the frontend unit tests; -Dfrontend.skip skips the whole frontend build. -->
         <skipTests>false</skipTests>
         <frontend.skip>false</frontend.skip>
+        <frontend.test.skip>${skipTests}</frontend.test.skip>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>frontend-skip</id>
+            <activation>
+                <property>
+                    <name>frontend.skip</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <frontend.test.skip>true</frontend.test.skip>
+            </properties>
+        </profile>
+    </profiles>
 
     <dependencies>
         <dependency>
@@ -149,7 +165,7 @@
                         </goals>
                         <configuration>
                             <arguments>test</arguments>
-                            <skip>${skipTests}</skip>
+                            <skip>${frontend.test.skip}</skip>
                         </configuration>
                     </execution>
                 </executions>

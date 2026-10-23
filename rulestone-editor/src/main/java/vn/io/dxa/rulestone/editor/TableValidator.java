@@ -93,8 +93,13 @@ final class TableValidator {
 
     /** Duplicate versions and overlapping effective periods between {@code table} and the files on disk. */
     List<Problem> versionProblems(DecisionTable table, String selfFile, Map<String, DecisionTable> overrides) {
+        return versionProblems(table, others(selfFile, overrides));
+    }
+
+    /** Duplicate versions and overlapping effective periods between {@code table} and {@code others}, by file. */
+    static List<Problem> versionProblems(DecisionTable table, Map<String, DecisionTable> others) {
         List<Problem> problems = new ArrayList<>();
-        others(selfFile, overrides).forEach((file, other) -> {
+        others.forEach((file, other) -> {
             if (!other.id().equals(table.id())) {
                 return;
             }

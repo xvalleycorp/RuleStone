@@ -46,11 +46,53 @@ final class Catalog {
                     "Rounds to the given number of decimal places, half-even (banker's rounding)."),
             new Function("round", "method", "decimal.round(int, string) -> decimal", "round(${0}, 'HALF_UP')",
                     "Rounds with a named mode: HALF_EVEN, HALF_UP, HALF_DOWN, UP, DOWN, CEILING or FLOOR."),
-            new Function("abs", "method", "decimal.abs() -> decimal", "abs()", "Absolute value."),
-            new Function("min", "function", "min(decimal, decimal) -> decimal", "min(${})", "The smaller of two decimals."),
-            new Function("max", "function", "max(decimal, decimal) -> decimal", "max(${})", "The larger of two decimals."),
+            new Function("abs", "method", "decimal.abs() | money.abs()", "abs()", "Absolute value."),
+            new Function("min", "function", "min(a, b) -> decimal | money", "min(${})",
+                    "The smaller of two decimals, or of two amounts in the same currency."),
+            new Function("max", "function", "max(a, b) -> decimal | money", "max(${})",
+                    "The larger of two decimals, or of two amounts in the same currency."),
+            new Function("money", "function", "money(string, string) -> money", "money('${}', 'VND')",
+                    "Exact amount in an ISO 4217 currency, e.g. money('1500000', 'VND')."),
+            new Function("money", "function", "money(int | decimal, string) -> money", "money(${}, 'VND')",
+                    "Amount from a number and a currency code, e.g. money(2000, 'VND')."),
+            new Function("round", "method", "money.round() -> money", "round()",
+                    "Rounds to the currency's minor units (0 for VND, 2 for USD), half-even."),
+            new Function("round", "method", "money.round(string) -> money", "round('HALF_UP')",
+                    "Rounds to the currency's minor units with a named mode."),
+            new Function("amount", "method", "money.amount() -> decimal", "amount()", "The amount, as a decimal."),
+            new Function("currency", "method", "money.currency() -> string", "currency()",
+                    "The ISO 4217 currency code, e.g. 'VND'."),
+            new Function("date", "function", "date(string) -> date", "date('${}')",
+                    "Calendar date in ISO format, e.g. date('2026-11-01')."),
+            new Function("plusDays", "method", "date.plusDays(int) -> date", "plusDays(${})",
+                    "The date n days later; n may be negative."),
+            new Function("plusMonths", "method", "date.plusMonths(int) -> date", "plusMonths(${})",
+                    "The date n months later, clamped to the end of the month."),
+            new Function("plusYears", "method", "date.plusYears(int) -> date", "plusYears(${})",
+                    "The date n years later, clamped to the end of the month."),
+            new Function("year", "method", "date.year() -> int", "year()", "The year."),
+            new Function("month", "method", "date.month() -> int", "month()", "The month, 1 to 12."),
+            new Function("day", "method", "date.day() -> int", "day()", "The day of the month."),
+            new Function("dayOfWeek", "method", "date.dayOfWeek() -> int", "dayOfWeek()",
+                    "Day of the week, 1 = Monday ... 7 = Sunday."),
+            new Function("daysBetween", "function", "daysBetween(date, date) -> int", "daysBetween(${})",
+                    "Whole days from the first date to the second."),
+            new Function("monthsBetween", "function", "monthsBetween(date, date) -> int", "monthsBetween(${})",
+                    "Complete months from the first date to the second."),
+            new Function("yearsBetween", "function", "yearsBetween(date, date) -> int", "yearsBetween(${})",
+                    "Complete years from the first date to the second, e.g. an age."),
+            new Function("normalizeName", "function", "normalizeName(string) -> string", "normalizeName(${})",
+                    "The name without accents, case or punctuation."),
+            new Function("similarity", "function", "similarity(string, string) -> decimal", "similarity(${})",
+                    "Jaro-Winkler similarity of two normalized names, from 0 to 1."),
+            new Function("nameSimilarity", "function", "nameSimilarity(string, string) -> decimal",
+                    "nameSimilarity(${})", "Name similarity that also ignores word order, from 0 to 1."),
+            new Function("levenshtein", "function", "levenshtein(string, string) -> int", "levenshtein(${})",
+                    "Edit distance of two normalized names."),
+            new Function("maxNameSimilarity", "function", "maxNameSimilarity(string, list<string>) -> decimal",
+                    "maxNameSimilarity(${})", "The highest nameSimilarity of a name against a list of names."),
             new Function("string", "function", "string(x) -> string", "string(${})",
-                    "Converts a decimal (plain notation) or an int to text."),
+                    "Converts a decimal (plain notation), an int, money or a date to text."),
             new Function("int", "function", "int(string) -> int", "int(${})", "Parses an integer from text."),
             new Function("size", "function", "size(list | string) -> int", "size(${})",
                     "Number of elements of a list, or characters of a text."),
@@ -92,6 +134,9 @@ final class Catalog {
                     "Division. Integer division truncates; decimal division keeps 34 significant digits."),
             new Function("%", "operator", "a % b", "% ", "Remainder of integer division."),
             new Function("? :", "operator", "condition ? a : b", "? ${} : ", "Conditional value."));
+
+    /** Inputs every rule can read without declaring them (see "The business date" in docs/expressions.md). */
+    static final Map<String, String> IMPLICIT_INPUTS = Map.of("businessDate", "date");
 
     static final List<String> ROUNDING_MODES = List.of("HALF_EVEN", "HALF_UP", "HALF_DOWN", "UP", "DOWN", "CEILING", "FLOOR");
 
@@ -135,6 +180,8 @@ final class Catalog {
             fn.put("insert", f.insert());
             fn.put("description", f.description());
         }
+        ArrayNode implicit = meta.putArray("implicitInputs");
+        IMPLICIT_INPUTS.forEach((name, type) -> implicit.addObject().put("name", name).put("type", type));
         ArrayNode modes = meta.putArray("roundingModes");
         ROUNDING_MODES.forEach(modes::add);
         ObjectNode limits = meta.putObject("limits");

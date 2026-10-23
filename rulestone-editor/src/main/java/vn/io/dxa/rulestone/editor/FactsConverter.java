@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import vn.io.dxa.rulestone.api.Money;
 import vn.io.dxa.rulestone.cel.ValueType;
 
 /**
@@ -24,12 +25,17 @@ import vn.io.dxa.rulestone.cel.ValueType;
  *   <li>{@code decimal}: a JSON number or a numeric string, as an exact {@link BigDecimal}. JSON numbers are
  *       parsed as decimals, never as doubles; browsers should send strings to avoid JavaScript rounding.</li>
  *   <li>{@code bool}, {@code string}: the JSON value.</li>
- *   <li>{@code date} (when the engine supports it): an ISO {@code yyyy-MM-dd} string, as {@link LocalDate}.</li>
- *   <li>Other types: the plain JSON value (string, number as {@link BigDecimal}/{@link Long}, list, map), which the
- *       engine then checks.</li>
+ *   <li>{@code money}: the text {@code "1500000.50 VND"} (amount in plain notation, one space, ISO 4217 code),
+ *       as {@link Money}.</li>
+ *   <li>{@code date}: an ISO {@code yyyy-MM-dd} string, as {@link LocalDate}.</li>
+ *   <li>Types added to the engine later: the plain JSON value (string, number as {@link BigDecimal}/{@link Long},
+ *       list, map), which the engine then checks.</li>
  * </ul>
  * {@code null} and absent struct fields are left unset; facts the table does not declare are ignored.
  * Error messages name the input path and the expected type, never the value.
+ *
+ * <p>These are the same JSON forms as the engine's shared JSON facts format; this class is the editor's only
+ * JSON-to-facts conversion, kept small so that it can be replaced by the shared converter.
  */
 final class FactsConverter {
 
@@ -118,6 +124,9 @@ final class FactsConverter {
                     return decimal(node.textValue(), path);
                 }
             }
+            case "money" -> {
+                return money(node, path);
+            }
             case "date" -> {
                 if (node.isTextual()) {
                     try {
@@ -140,6 +149,19 @@ final class FactsConverter {
             throw invalid(path, "a decimal number in plain notation, e.g. \"1234.50\"");
         }
         return new BigDecimal(s);
+    }
+
+    private static Money money(JsonNode node, String path) {
+        if (!node.isTextual() || !node.textValue().strip().matches("\\S+ [A-Z]{3}")) {
+            throw invalid(path, describe("money"));
+        }
+        String[] parts = node.textValue().strip().split(" ");
+        BigDecimal value = decimal(parts[0], path);
+        try {
+            return Money.of(value, parts[1]);
+        } catch (IllegalArgumentException e) {
+            throw invalid(path, "an ISO 4217 currency code in upper case, e.g. \"1500000 VND\"");
+        }
     }
 
     /** JSON as plain Java values, with exact numbers. */
@@ -180,6 +202,7 @@ final class FactsConverter {
             case "int" -> "an integer";
             case "decimal" -> "a decimal number (a JSON number or a numeric string)";
             case "date" -> "an ISO date string (yyyy-MM-dd)";
+            case "money" -> "money as an amount and an ISO 4217 code, e.g. \"1500000.50 VND\"";
             default -> "a " + typeName;
         };
     }
@@ -188,10 +211,19 @@ final class FactsConverter {
         return new ApiException(422, "invalid_facts", path + ": expected " + expected);
     }
 
-    /** Converts an engine output value to JSON-friendly Java: decimals become plain-notation strings. */
+    /**
+     * Converts an engine output value to JSON-friendly Java, in the same forms as the input: decimals become
+     * plain-notation strings, money {@code "1500000.50 VND"} and dates ISO strings.
+     */
     static Object outputValue(Object value) {
         if (value instanceof BigDecimal d) {
             return d.toPlainString();
+        }
+        if (value instanceof Money m) {
+            return m.toString();
+        }
+        if (value instanceof LocalDate date) {
+            return date.toString();
         }
         if (value instanceof BigInteger i) {
             return i.toString();
