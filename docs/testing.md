@@ -101,11 +101,47 @@ Each case evaluates the decision once with its `facts` and compares the result w
 | `ruleVersion` | The version used: `"3"` accepts any content of version 3; `"3@sha256:…"` (the full `ruleVersion` of a result) accepts only that exact content. |
 | `error` | The evaluation fails with a `RuleStoneException` whose message contains this text, e.g. `"division by zero"`, `"balance: missing input"` or `"no version of decision 'loan_eligibility' is effective on 2025-12-31"`. Cannot be combined with the other fields. |
 
-### Numbers
+### Values
+
+When the test files are run with the tables (see [Rule coverage](#rule-coverage), or pass the tables to `StoneTests.dynamicTests` or `StoneTestJson.read`), `facts` and `expect.output` are read with the types the table declares, with the same JSON forms as [`FactsJson`](java-api.md#json-facts-and-results-factsjson):
+
+| Type | Written as | Example |
+|---|---|---|
+| `bool` | `true` or `false` | `"blacklisted": false` |
+| `int` | an integer | `"age": 30` |
+| `string` | a string | `"segment": "RETAIL"` |
+| `decimal` | a number, or a string in plain notation | `"monthlyIncome": 25750000.50`, `"rate": "0.0980"` |
+| `money` | a string, the amount, a space and the ISO 4217 code | `"amount": "1500000.50 VND"` |
+| `date` | a string, `yyyy-MM-dd` | `"valueDate": "2026-11-02"` |
+| list | an array | `"cashDepositsLast7d": ["250000000 VND", "270000000 VND"]` |
+| struct | an object | `"account": { "openedOn": "2019-04-10", "riskRating": "LOW" }` |
+
+A case from [`examples/aml_transaction_monitoring.stone-test.json`](../examples/aml_transaction_monitoring.stone-test.json) with money and dates:
+
+```json
+{
+  "name": "large cash deposit is a large cash transaction",
+  "asOf": "2026-11-02",
+  "facts": {
+    "account": { "openedOn": "2019-04-10", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+    "transaction": { "amount": "350000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+    "history": { "cashDepositsLast7d": ["350000000 VND"], "totalInLast24h": "350000000 VND", "totalOutLast24h": "0 VND" }
+  },
+  "expect": {
+    "output": { "alert": ["LARGE_CASH"], "score": [10] },
+    "reasonCodes": ["LARGE_CASH_TRANSACTION"],
+    "matchedRules": ["LARGE_CASH"]
+  }
+}
+```
+
+Read with types, a value that does not match its type is a problem in the file, reported with its path, such as `$.cases[3].facts.transaction.amount: expected money as "<amount> <CCY>", e.g. "1500000 VND"`. So are inputs, struct fields and outputs that the table does not declare. A struct field that is left out stays unset, so rules see it with `has()`. Under `COLLECT`, every expected output is a list. The types come from the version the case evaluates: the one named by `version`, or the one in force on `asOf`. Without either, all versions of the decision must declare the same inputs and outputs. Cases for a decision that is not among the tables are read without types.
+
+Without the tables, values keep their JSON types and the decision converts them, so `money` and `date` inputs cannot be written: the decision rejects a string where it expects a `Money` or a `LocalDate`.
 
 Numbers are read exactly and never pass through floating point: integers become `Long` (`BigInteger` beyond 64 bits) and all other numbers `BigDecimal`, keeping the written scale, so `25750000.50` is passed to the decision as `25750000.50`.
 
-Expected numbers are compared **by value**: `309000000`, `309000000.0` and `309000000.00` all match a limit of `309000000`. Lists are compared element by element, in order: `"fee": [25000, 10000]` matches the `COLLECT` output `[25000, 10000]`.
+Expected numbers are compared **by value**: `309000000`, `309000000.0` and `309000000.00` all match a limit of `309000000`. So are amounts of money in the same currency: `"25000.00 VND"` matches `25000 VND`. Lists are compared element by element, in order: `"fee": [25000, 10000]` matches the `COLLECT` output `[25000, 10000]`.
 
 ### Strict reading
 
@@ -147,7 +183,9 @@ loan_eligibility.v3.stone-test.json, case "adult with low debt is approved", eva
 
 Messages show expected and actual outputs, never the input facts. A file that cannot be read becomes a single failing test, named after the file, that lists its problems; the other files still run. A path that does not exist, or contains no test file, fails the test factory, so a wrong path cannot pass unnoticed.
 
-To read test files without JUnit, use `StoneTestJson.read(path)` and call `check(engine)` on each `StoneTestCase`. It throws an `AssertionError` listing the mismatches.
+To read values with their declared types, so that money and dates can be written (see [Values](#values)), pass the tables as well: `StoneTests.dynamicTests(engine, path, tables)`. The overload with a `RuleCoverage` below uses its tables.
+
+To read test files without JUnit, use `StoneTestJson.read(path, tables)` (or `StoneTestJson.read(path)`, without types) and call `check(engine)` on each `StoneTestCase`. It throws an `AssertionError` listing the mismatches.
 
 ## Rule coverage
 

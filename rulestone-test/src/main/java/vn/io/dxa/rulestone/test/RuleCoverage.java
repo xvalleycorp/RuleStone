@@ -36,8 +36,10 @@ public final class RuleCoverage {
     /** Keyed by {@code id@version}; values are the rule ids still never matched, in table order. */
     private final Map<String, Set<String>> uncovered = new LinkedHashMap<>();
     private final Map<String, Integer> ruleCounts = new LinkedHashMap<>();
+    private final List<DecisionTable> tables;
 
     private RuleCoverage(Collection<DecisionTable> tables) {
+        this.tables = List.copyOf(tables);
         for (DecisionTable table : tables) {
             Set<String> ids = new LinkedHashSet<>();
             table.rules().stream().map(Rule::id).forEach(ids::add);
@@ -148,5 +150,10 @@ public final class RuleCoverage {
             report = report();
         }
         throw new AssertionError(report);
+    }
+
+    /** The tables whose rules are tracked, used by {@link StoneTests} to read test files with their types. */
+    List<DecisionTable> tables() {
+        return tables;
     }
 }

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.cfg.JsonNodeFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +20,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -28,6 +30,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import vn.io.dxa.rulestone.api.Facts;
+import vn.io.dxa.rulestone.cel.ValueType;
+import vn.io.dxa.rulestone.core.DecisionTable;
+import vn.io.dxa.rulestone.core.FactsJson;
+import vn.io.dxa.rulestone.core.InvalidFactsException;
 
 /**
  * Reads test cases in the {@code .stone-test.json} format.
@@ -44,9 +50,17 @@ import vn.io.dxa.rulestone.api.Facts;
  * }
  * }</pre>
  *
- * <p>Numbers are read exactly: integers as {@code Long} ({@code BigInteger} beyond 64 bits),
- * all other numbers as {@code BigDecimal} with their written scale. No number ever passes
- * through {@code double}. JSON objects become {@code Map}s and arrays {@code List}s.
+ * <p>Given the decision tables, facts and expected outputs are read with the types the table
+ * declares, as by {@link FactsJson}: money as {@code "1500000 VND"}, dates as
+ * {@code "2026-11-01"}, decimals as numbers or strings; undeclared inputs, struct fields and
+ * outputs are problems. The table is the version the case selects with {@code "version"} or
+ * {@code "asOf"}; without either, all versions of the decision must declare the same types. Cases
+ * for a decision or version that is not among the tables are read without types.
+ *
+ * <p>Without tables, numbers are read exactly: integers as {@code Long} ({@code BigInteger}
+ * beyond 64 bits), all other numbers as {@code BigDecimal} with their written scale; strings stay
+ * strings, so money and date inputs cannot be written. No number ever passes through
+ * {@code double}. JSON objects become {@code Map}s and arrays {@code List}s.
  *
  * <p>Reading is strict, like {@code DecisionTableJson}: unknown or duplicate keys are errors,
  * so a misspelt {@code "matchedRule"} cannot silently turn off a check. Every problem is
@@ -86,6 +100,21 @@ public final class StoneTestJson {
     }
 
     /**
+     * Reads the test cases of one file, with the types declared by {@code tables}.
+     *
+     * @param file   a {@code .stone-test.json} file, read as UTF-8
+     * @param tables the decision tables under test, usually the ones the engine was built from
+     * @return the cases, in file order
+     * @throws InvalidStoneTestException listing every problem in the file, including values that do
+     *                                   not match their declared types
+     * @throws UncheckedIOException      if the file cannot be read
+     */
+    public static List<StoneTestCase> read(Path file, Collection<DecisionTable> tables) {
+        Path fileName = file.getFileName();
+        return read(readString(file), fileName == null ? file.toString() : fileName.toString(), tables);
+    }
+
+    /**
      * Reads test cases from JSON text.
      *
      * @param json   the content of a {@code .stone-test.json} file
@@ -94,6 +123,25 @@ public final class StoneTestJson {
      * @throws InvalidStoneTestException listing every problem in the text
      */
     public static List<StoneTestCase> read(String json, String source) {
+        return parse(json, source, null);
+    }
+
+    /**
+     * Reads test cases from JSON text, with the types declared by {@code tables}.
+     *
+     * @param json   the content of a {@code .stone-test.json} file
+     * @param source name used in test names and messages, usually the file name
+     * @param tables the decision tables under test, usually the ones the engine was built from
+     * @return the cases, in file order
+     * @throws InvalidStoneTestException listing every problem in the text, including values that do
+     *                                   not match their declared types
+     */
+    public static List<StoneTestCase> read(String json, String source, Collection<DecisionTable> tables) {
+        return parse(json, source, List.copyOf(tables));
+    }
+
+    /** Reads with the types of {@code tables}, or without types when it is null. */
+    static List<StoneTestCase> parse(String json, String source, List<DecisionTable> tables) {
         JsonNode root;
         try {
             root = MAPPER.readTree(json);
@@ -102,7 +150,7 @@ public final class StoneTestJson {
                     : " (line " + e.getLocation().getLineNr() + ", column " + e.getLocation().getColumnNr() + ")";
             throw new InvalidStoneTestException(source, List.of("invalid JSON: " + e.getOriginalMessage() + location));
         }
-        return new Reader(source).file(root);
+        return new Reader(source, tables).file(root);
     }
 
     /** The test files at {@code path}: the file itself, or every {@code *.stone-test.json} below a directory, sorted. */
@@ -135,10 +183,12 @@ public final class StoneTestJson {
     private static final class Reader {
 
         private final String source;
+        private final List<DecisionTable> tables;   // null: read without types
         private final List<String> problems = new ArrayList<>();
 
-        Reader(String source) {
+        Reader(String source, List<DecisionTable> tables) {
             this.source = source;
+            this.tables = tables;
         }
 
         List<StoneTestCase> file(JsonNode root) {
@@ -188,7 +238,8 @@ public final class StoneTestJson {
                     return Optional.empty();
                 }
             });
-            Facts facts = facts(node.get("facts"), path + ".facts");
+            Schema schema = schema(decision, version, asOf, path);
+            Facts facts = facts(node.get("facts"), path + ".facts", schema);
 
             JsonNode expect = node.get("expect");
             String at = path + ".expect";
@@ -201,9 +252,7 @@ public final class StoneTestJson {
             JsonNode outputNode = expect.get("output");
             if (outputNode != null) {
                 if (outputNode.isObject()) {
-                    // null means "this output must be absent"
-                    outputNode.properties().forEach(e -> output.put(e.getKey(),
-                            e.getValue().isNull() ? null : value(e.getValue(), at + ".output." + e.getKey())));
+                    output = outputs(outputNode, at + ".output", schema);
                 } else {
                     problem(at + ".output", "expected an object of output names to values");
                 }
@@ -244,10 +293,45 @@ public final class StoneTestJson {
                     output, exactOutput, reasonCodes, matchedRules, ruleVersion, error);
         }
 
-        private Facts facts(JsonNode node, String path) {
+        /** The declared types for a case, or null to read without types. */
+        private Schema schema(String decision, Optional<String> version, Optional<LocalDate> asOf, String path) {
+            if (tables == null) {
+                return null;
+            }
+            List<DecisionTable> candidates = tables.stream()
+                    .filter(t -> t.id().equals(decision))
+                    .filter(t -> version.map(v -> t.version().equals(v))
+                            .orElseGet(() -> asOf.map(t::isEffectiveOn).orElse(true)))
+                    .toList();
+            if (candidates.isEmpty()) {
+                return null;   // the engine reports the unknown decision or version
+            }
+            Schema schema = new Schema(candidates.get(0).inputs(), FactsJson.resultTypes(candidates.get(0)));
+            for (DecisionTable table : candidates) {
+                if (!table.inputs().equals(schema.inputs()) || !FactsJson.resultTypes(table).equals(schema.results())) {
+                    problem(path, "set \"version\" or \"asOf\": the versions of " + Expectations.quote(decision)
+                            + " declare different inputs or outputs");
+                    return null;
+                }
+            }
+            return schema;
+        }
+
+        private Facts facts(JsonNode node, String path, Schema schema) {
             if (node == null || !node.isObject()) {
                 problem(path, "required object of fact names to values");
                 return Facts.empty();
+            }
+            if (schema != null) {
+                if (nulls(node, path)) {
+                    return Facts.empty();
+                }
+                try {
+                    return FactsJson.readFacts(node, schema.inputs());
+                } catch (InvalidFactsException e) {
+                    e.problems().forEach(p -> problems.add(path + "." + p));
+                    return Facts.empty();
+                }
             }
             Map<String, Object> values = new LinkedHashMap<>();
             node.properties().forEach(e -> {
@@ -257,6 +341,55 @@ public final class StoneTestJson {
                 }
             });
             return Facts.from(values);
+        }
+
+        /** Expected outputs; a JSON null means "this output must be absent". */
+        private Map<String, Object> outputs(JsonNode node, String path, Schema schema) {
+            Map<String, Object> output = new LinkedHashMap<>();
+            if (schema == null) {
+                node.properties().forEach(e -> output.put(e.getKey(),
+                        e.getValue().isNull() ? null : value(e.getValue(), path + "." + e.getKey())));
+                return output;
+            }
+            ObjectNode values = node.deepCopy();
+            node.properties().forEach(e -> {
+                if (e.getValue().isNull()) {
+                    values.remove(e.getKey());
+                    if (!schema.results().containsKey(e.getKey())) {
+                        problem(path + "." + e.getKey(), "not declared (declared: "
+                                + String.join(", ", schema.results().keySet()) + ")");
+                    }
+                }
+            });
+            Map<String, Object> converted = Map.of();
+            try {
+                converted = FactsJson.readValues(values, schema.results());
+            } catch (InvalidFactsException e) {
+                e.problems().forEach(p -> problems.add(path + "." + p));
+            }
+            for (Map.Entry<String, JsonNode> e : node.properties()) {
+                output.put(e.getKey(), e.getValue().isNull() ? null : converted.get(e.getKey()));
+            }
+            return output;
+        }
+
+        /** Reports every JSON null in {@code node}: test files never use null for a value. */
+        private boolean nulls(JsonNode node, String path) {
+            if (node.isNull()) {
+                problem(path, "null is not a value; leave the field out instead");
+                return true;
+            }
+            boolean found = false;
+            if (node.isArray()) {
+                for (int i = 0; i < node.size(); i++) {
+                    found |= nulls(node.get(i), path + "[" + i + "]");
+                }
+            } else if (node.isObject()) {
+                for (Map.Entry<String, JsonNode> e : node.properties()) {
+                    found |= nulls(e.getValue(), path + "." + e.getKey());
+                }
+            }
+            return found;
         }
 
         /** Converts a JSON value to Java without floating point; reports and returns null for JSON null. */
@@ -348,4 +481,7 @@ public final class StoneTestJson {
             problems.add(path + ": " + message);
         }
     }
+
+    /** The declared input types and result types of the decision version a case evaluates. */
+    private record Schema(Map<String, ValueType> inputs, Map<String, ValueType> results) {}
 }

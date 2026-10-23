@@ -81,6 +81,21 @@ class TestingDocTest {
     }
 
     @Test
+    void caseWithMoneyAndDatesPassesWithTheTables() throws IOException {
+        String caseJson = blocks("json").stream().filter(b -> b.contains("LARGE_CASH_TRANSACTION")).findFirst().orElseThrow();
+        String file = "{ \"decision\": \"aml_transaction_monitoring\", \"cases\": [" + caseJson + "] }";
+
+        List<StoneTestCase> cases = StoneTestJson.read(file, "testing.md", ExamplesStoneTest.exampleTables());
+
+        assertThat(cases).singleElement().satisfies(c -> assertThat(c.check(engine)).isPresent());
+        List<String> exampleNames = StoneTestJson.read(
+                        ExamplesStoneTest.EXAMPLES.resolve("aml_transaction_monitoring.stone-test.json"),
+                        ExamplesStoneTest.exampleTables())
+                .stream().map(StoneTestCase::name).toList();
+        assertThat(exampleNames).contains(cases.get(0).name());
+    }
+
+    @Test
     void casesInThePageAreCopiedFromTheExampleFile() throws IOException {
         List<String> exampleNames = StoneTestJson.read(ExamplesStoneTest.EXAMPLES.resolve("loan_eligibility.v3.stone-test.json"))
                 .stream().map(StoneTestCase::name).toList();

@@ -1,0 +1,347 @@
+{
+  "decision": "aml_name_screening",
+  "description": "Name screening against an invented sanctions and PEP watchlist: the documented scenarios and both sides of the 0.92 and 0.85 thresholds. All names are invented",
+  "cases": [
+    {
+      "name": "blank name is reviewed without a score",
+      "facts": {
+        "customer": { "fullName": " - ", "aliases": [], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW" },
+        "exactOutput": true,
+        "reasonCodes": ["NAME_MISSING"],
+        "matchedRules": ["NAME_MISSING"]
+      }
+    },
+    {
+      "name": "missing name is reviewed without a score",
+      "facts": {
+        "customer": { "aliases": [], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW" },
+        "exactOutput": true,
+        "reasonCodes": ["NAME_MISSING"],
+        "matchedRules": ["NAME_MISSING"]
+      }
+    },
+    {
+      "name": "listed name without diacritics is a possible sanctions match",
+      "description": "Without the customer's date of birth a name match can never be a strong match",
+      "facts": {
+        "customer": { "fullName": "TRAN THI BICH NGOC", "aliases": [], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 1.0000 },
+        "exactOutput": true,
+        "reasonCodes": ["SANCTIONS_POSSIBLE_MATCH"],
+        "matchedRules": ["SANCTIONS_POSSIBLE_MATCH"]
+      }
+    },
+    {
+      "name": "reordered listed name is a possible sanctions match",
+      "facts": {
+        "customer": { "fullName": "Ngoc Tran Thi Bich", "aliases": [], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 1.0000 },
+        "reasonCodes": ["SANCTIONS_POSSIBLE_MATCH"],
+        "matchedRules": ["SANCTIONS_POSSIBLE_MATCH"]
+      }
+    },
+    {
+      "name": "customer alias matching a listed alias is a possible sanctions match",
+      "description": "bestScore compares the full name with the primary names only, so it stays low",
+      "facts": {
+        "customer": { "fullName": "Lê Thị Hoa", "aliases": ["MPT Trading"], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 0.6206 },
+        "reasonCodes": ["SANCTIONS_POSSIBLE_MATCH"],
+        "matchedRules": ["SANCTIONS_POSSIBLE_MATCH"]
+      }
+    },
+    {
+      "name": "company name with a different legal suffix is a possible sanctions match",
+      "facts": {
+        "customer": { "fullName": "Mekong Phantom Trading Company Limited", "aliases": [] },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 0.9526 },
+        "reasonCodes": ["SANCTIONS_POSSIBLE_MATCH"],
+        "matchedRules": ["SANCTIONS_POSSIBLE_MATCH"]
+      }
+    },
+    {
+      "name": "score of exactly 0.92 is a possible sanctions match",
+      "facts": {
+        "customer": { "fullName": "Tram Van Bich Ngoc", "aliases": [] },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 0.9200 },
+        "reasonCodes": ["SANCTIONS_POSSIBLE_MATCH"],
+        "matchedRules": ["SANCTIONS_POSSIBLE_MATCH"]
+      }
+    },
+    {
+      "name": "score just below 0.92 is a weak sanctions match",
+      "facts": {
+        "customer": { "fullName": "Tran Kim Bich Ngoc", "aliases": [] },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 0.9181 },
+        "reasonCodes": ["SANCTIONS_WEAK_MATCH"],
+        "matchedRules": ["SANCTIONS_WEAK_MATCH"]
+      }
+    },
+    {
+      "name": "short name sharing family and middle name is a weak sanctions match",
+      "facts": {
+        "customer": { "fullName": "Tran Thi Mai", "aliases": [], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 0.8778 },
+        "reasonCodes": ["SANCTIONS_WEAK_MATCH"],
+        "matchedRules": ["SANCTIONS_WEAK_MATCH"]
+      }
+    },
+    {
+      "name": "score of exactly 0.85 is a weak sanctions match",
+      "facts": {
+        "customer": { "fullName": "Bui Thi Bich Hoa", "aliases": [] },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 0.8500 },
+        "reasonCodes": ["SANCTIONS_WEAK_MATCH"],
+        "matchedRules": ["SANCTIONS_WEAK_MATCH"]
+      }
+    },
+    {
+      "name": "score just below 0.85 is clear",
+      "facts": {
+        "customer": { "fullName": "Ngo Thi Binh", "aliases": [] },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "CLEAR", "bestScore": 0.8498 },
+        "reasonCodes": [],
+        "matchedRules": ["CLEAR"]
+      }
+    },
+    {
+      "name": "listed PEP without diacritics needs enhanced due diligence",
+      "facts": {
+        "customer": { "fullName": "Pham Van Quyet", "aliases": [], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "ENHANCED_DUE_DILIGENCE", "bestScore": 1.0000 },
+        "exactOutput": true,
+        "reasonCodes": ["PEP_MATCH"],
+        "matchedRules": ["PEP_MATCH"]
+      }
+    },
+    {
+      "name": "a PEP has no weak band",
+      "facts": {
+        "customer": { "fullName": "Pham Duc Quyet", "aliases": [], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "CLEAR", "bestScore": 0.8961 },
+        "reasonCodes": [],
+        "matchedRules": ["CLEAR"]
+      }
+    },
+    {
+      "name": "sanctions take priority over PEP",
+      "facts": {
+        "customer": { "fullName": "Phạm Văn Quyết", "aliases": [] },
+        "watchlist": [
+          { "name": "Phạm Văn Quyết", "aliases": [], "listType": "PEP" },
+          { "name": "Pham Van Quyet", "aliases": [], "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 1.0000 },
+        "reasonCodes": ["SANCTIONS_POSSIBLE_MATCH"],
+        "matchedRules": ["SANCTIONS_POSSIBLE_MATCH"]
+      }
+    },
+    {
+      "name": "unrelated name is clear",
+      "facts": {
+        "customer": { "fullName": "Lê Thị Hoa", "aliases": [], "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "CLEAR", "bestScore": 0.6206 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["CLEAR"]
+      }
+    },
+    {
+      "name": "listed name without diacritics and the same date of birth is blocked",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "customer": { "fullName": "TRAN THI BICH NGOC", "aliases": [], "dateOfBirth": "1975-03-14", "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "BLOCK", "bestScore": 1.0000 },
+        "exactOutput": true,
+        "reasonCodes": ["SANCTIONS_MATCH"],
+        "matchedRules": ["SANCTIONS_MATCH"]
+      }
+    },
+    {
+      "name": "reordered listed name with another date of birth is a possible sanctions match",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "customer": { "fullName": "Ngoc Tran Thi Bich", "aliases": [], "dateOfBirth": "1990-05-01", "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 1.0000 },
+        "reasonCodes": ["SANCTIONS_POSSIBLE_MATCH"],
+        "matchedRules": ["SANCTIONS_POSSIBLE_MATCH"]
+      }
+    },
+    {
+      "name": "customer alias matching a listed alias with the same date of birth is blocked",
+      "description": "Documented scenario in docs/examples.md; bestScore compares the full name with the primary names only",
+      "facts": {
+        "customer": { "fullName": "Lê Thị Hoa", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "nationality": "VN" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" },
+          { "name": "Mekong Phantom Trading Co., Ltd", "aliases": ["MPT Trading"], "listType": "SANCTIONS" },
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "BLOCK", "bestScore": 0.6206 },
+        "reasonCodes": ["SANCTIONS_MATCH"],
+        "matchedRules": ["SANCTIONS_MATCH"]
+      }
+    },
+    {
+      "name": "the same date of birth still needs a name score of 0.92 to block",
+      "facts": {
+        "customer": { "fullName": "Tran Kim Bich Ngoc", "aliases": [], "dateOfBirth": "1975-03-14" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "REVIEW", "bestScore": 0.9181 },
+        "reasonCodes": ["SANCTIONS_WEAK_MATCH"],
+        "matchedRules": ["SANCTIONS_WEAK_MATCH"]
+      }
+    },
+    {
+      "name": "a PEP with the same date of birth is never blocked",
+      "facts": {
+        "customer": { "fullName": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20" },
+        "watchlist": [
+          { "name": "Phạm Văn Quyết", "aliases": [], "dateOfBirth": "1959-07-20", "listType": "PEP" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "ENHANCED_DUE_DILIGENCE", "bestScore": 1.0000 },
+        "reasonCodes": ["PEP_MATCH"],
+        "matchedRules": ["PEP_MATCH"]
+      }
+    },
+    {
+      "name": "a blank customer alias does not match a blank listed alias",
+      "facts": {
+        "customer": { "fullName": "Lê Thị Hoa", "aliases": [" "], "dateOfBirth": "1975-03-14" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": [""], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": {
+        "output": { "result": "CLEAR", "bestScore": 0.5815 },
+        "reasonCodes": [],
+        "matchedRules": ["CLEAR"]
+      }
+    },
+    {
+      "name": "missing aliases fail the evaluation",
+      "description": "Pass an empty list when the customer has no alias",
+      "facts": {
+        "customer": { "fullName": "Lê Thị Hoa" },
+        "watchlist": [
+          { "name": "Trần Thị Bích Ngọc", "aliases": ["Jade Tran"], "dateOfBirth": "1975-03-14", "listType": "SANCTIONS" }
+        ]
+      },
+      "expect": { "error": "aliases" }
+    }
+  ]
+}
