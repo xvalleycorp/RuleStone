@@ -1,0 +1,260 @@
+{
+  "decision": "card_fraud_action",
+  "description": "Card authorization action from the total risk score of card_fraud_signals: the documented scenarios and both sides of every score and amount band",
+  "cases": [
+    {
+      "name": "everyday grocery purchase is approved",
+      "description": "Documented scenario in docs/examples.md: score 0 from no signal",
+      "facts": {
+        "riskScore": 0,
+        "transaction": { "amount": 450000, "channel": "POS" }
+      },
+      "expect": {
+        "output": { "action": "APPROVE" },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE"]
+      }
+    },
+    {
+      "name": "foreign night-time online purchase from a new device is challenged",
+      "description": "Documented scenario in docs/examples.md: score 65 from AMOUNT_SPIKE, FOREIGN_COUNTRY, NEW_DEVICE_ECOM, FOREIGN_CURRENCY",
+      "facts": {
+        "riskScore": 65,
+        "transaction": { "amount": 6000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "CHALLENGE" },
+        "exactOutput": true,
+        "reasonCodes": ["RISK_SCORE_HIGH"],
+        "matchedRules": ["CHALLENGE_HIGH"]
+      }
+    },
+    {
+      "name": "third country in a day at a point of sale is declined because it cannot be challenged",
+      "description": "Documented scenario in docs/examples.md: score 50 from FOREIGN_COUNTRY, MULTI_COUNTRY_24H, FOREIGN_CURRENCY",
+      "facts": {
+        "riskScore": 50,
+        "transaction": { "amount": 2000000, "channel": "POS" }
+      },
+      "expect": {
+        "output": { "action": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["STEP_UP_UNAVAILABLE"],
+        "matchedRules": ["DECLINE_NO_STEP_UP"]
+      }
+    },
+    {
+      "name": "large online money transfer with some risk is challenged",
+      "description": "Documented scenario in docs/examples.md: score 20 from HIGH_RISK_MCC",
+      "facts": {
+        "riskScore": 20,
+        "transaction": { "amount": 25000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "CHALLENGE" },
+        "exactOutput": true,
+        "reasonCodes": ["LARGE_AMOUNT_WITH_RISK"],
+        "matchedRules": ["CHALLENGE_LARGE_AMOUNT"]
+      }
+    },
+    {
+      "name": "night-time crypto purchase from a new device is declined",
+      "description": "Documented scenario in docs/examples.md: score 85 from AMOUNT_SPIKE, NIGHT_ECOM, HIGH_RISK_MCC, NEW_DEVICE_ECOM",
+      "facts": {
+        "riskScore": 85,
+        "transaction": { "amount": 15000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["RISK_SCORE_VERY_HIGH"],
+        "matchedRules": ["DECLINE_VERY_HIGH"]
+      }
+    },
+    {
+      "name": "score of 100 online is declined",
+      "facts": {
+        "riskScore": 100,
+        "transaction": { "amount": 1000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["RISK_SCORE_VERY_HIGH"],
+        "matchedRules": ["DECLINE_VERY_HIGH"]
+      }
+    },
+    {
+      "name": "score of exactly 80 online is declined",
+      "facts": {
+        "riskScore": 80,
+        "transaction": { "amount": 1000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["RISK_SCORE_VERY_HIGH"],
+        "matchedRules": ["DECLINE_VERY_HIGH"]
+      }
+    },
+    {
+      "name": "score of 80 at a point of sale is declined as very high risk",
+      "description": "DECLINE_VERY_HIGH comes before DECLINE_NO_STEP_UP",
+      "facts": {
+        "riskScore": 80,
+        "transaction": { "amount": 1000000, "channel": "POS" }
+      },
+      "expect": {
+        "output": { "action": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["RISK_SCORE_VERY_HIGH"],
+        "matchedRules": ["DECLINE_VERY_HIGH"]
+      }
+    },
+    {
+      "name": "score of 79 at a point of sale is declined because it cannot be challenged",
+      "facts": {
+        "riskScore": 79,
+        "transaction": { "amount": 1000000, "channel": "POS" }
+      },
+      "expect": {
+        "output": { "action": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["STEP_UP_UNAVAILABLE"],
+        "matchedRules": ["DECLINE_NO_STEP_UP"]
+      }
+    },
+    {
+      "name": "score of exactly 40 at an ATM is declined because it cannot be challenged",
+      "facts": {
+        "riskScore": 40,
+        "transaction": { "amount": 1000000, "channel": "ATM" }
+      },
+      "expect": {
+        "output": { "action": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["STEP_UP_UNAVAILABLE"],
+        "matchedRules": ["DECLINE_NO_STEP_UP"]
+      }
+    },
+    {
+      "name": "score of 79 online is challenged",
+      "facts": {
+        "riskScore": 79,
+        "transaction": { "amount": 1000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "CHALLENGE" },
+        "exactOutput": true,
+        "reasonCodes": ["RISK_SCORE_HIGH"],
+        "matchedRules": ["CHALLENGE_HIGH"]
+      }
+    },
+    {
+      "name": "score of exactly 40 online is challenged",
+      "facts": {
+        "riskScore": 40,
+        "transaction": { "amount": 1000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "CHALLENGE" },
+        "exactOutput": true,
+        "reasonCodes": ["RISK_SCORE_HIGH"],
+        "matchedRules": ["CHALLENGE_HIGH"]
+      }
+    },
+    {
+      "name": "score of 39 on a 20 million online payment is challenged",
+      "facts": {
+        "riskScore": 39,
+        "transaction": { "amount": 20000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "CHALLENGE" },
+        "exactOutput": true,
+        "reasonCodes": ["LARGE_AMOUNT_WITH_RISK"],
+        "matchedRules": ["CHALLENGE_LARGE_AMOUNT"]
+      }
+    },
+    {
+      "name": "score of exactly 20 on exactly 20 million online is challenged",
+      "facts": {
+        "riskScore": 20,
+        "transaction": { "amount": 20000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "CHALLENGE" },
+        "exactOutput": true,
+        "reasonCodes": ["LARGE_AMOUNT_WITH_RISK"],
+        "matchedRules": ["CHALLENGE_LARGE_AMOUNT"]
+      }
+    },
+    {
+      "name": "score of 19 on a 20 million online payment is approved",
+      "facts": {
+        "riskScore": 19,
+        "transaction": { "amount": 20000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "APPROVE" },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE"]
+      }
+    },
+    {
+      "name": "score of 20 on an online payment one dong under 20 million is approved",
+      "facts": {
+        "riskScore": 20,
+        "transaction": { "amount": 19999999, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "APPROVE" },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE"]
+      }
+    },
+    {
+      "name": "score of 39 on a large point-of-sale payment is approved",
+      "description": "Only e-commerce is challenged for a large amount",
+      "facts": {
+        "riskScore": 39,
+        "transaction": { "amount": 50000000, "channel": "POS" }
+      },
+      "expect": {
+        "output": { "action": "APPROVE" },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE"]
+      }
+    },
+    {
+      "name": "score of 39 on a small online payment is approved",
+      "facts": {
+        "riskScore": 39,
+        "transaction": { "amount": 1000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "APPROVE" },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE"]
+      }
+    },
+    {
+      "name": "score of 0 online is approved",
+      "facts": {
+        "riskScore": 0,
+        "transaction": { "amount": 1000000, "channel": "ECOM" }
+      },
+      "expect": {
+        "output": { "action": "APPROVE" },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE"]
+      }
+    }
+  ]
+}

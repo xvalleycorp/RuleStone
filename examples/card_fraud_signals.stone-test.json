@@ -1,0 +1,444 @@
+{
+  "decision": "card_fraud_signals",
+  "description": "Card fraud signals: the documented scenarios, every signal alone, and both sides of every threshold. Cardholders' home country is VN unless stated; amounts are VND billing amounts.",
+  "cases": [
+    {
+      "name": "everyday grocery purchase raises no signal",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "transaction": { "amount": 450000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 18, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 600000, "transactionsLastHour": 1, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 800 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "foreign online purchase from a new device scores 65",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "transaction": { "amount": 6000000, "currency": "USD", "merchantCategory": "5732", "country": "US", "channel": "ECOM", "hourOfDay": 23, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 1, "distinctCountriesLast24h": 2, "newDevice": true, "accountAgeDays": 400 }
+      },
+      "expect": {
+        "output": { "signal": ["AMOUNT_SPIKE", "FOREIGN_COUNTRY", "NEW_DEVICE_ECOM", "FOREIGN_CURRENCY"], "points": [30, 10, 20, 5] },
+        "exactOutput": true,
+        "reasonCodes": ["AMOUNT_SPIKE", "FOREIGN_COUNTRY", "NEW_DEVICE_ECOM", "FOREIGN_CURRENCY"],
+        "matchedRules": ["AMOUNT_SPIKE", "FOREIGN_COUNTRY", "NEW_DEVICE_ECOM", "FOREIGN_CURRENCY"]
+      }
+    },
+    {
+      "name": "third country in a day at a restaurant scores 50",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "transaction": { "amount": 2000000, "currency": "THB", "merchantCategory": "5812", "country": "TH", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 800000, "transactionsLastHour": 2, "distinctCountriesLast24h": 3, "newDevice": false, "accountAgeDays": 900 }
+      },
+      "expect": {
+        "output": { "signal": ["FOREIGN_COUNTRY", "MULTI_COUNTRY_24H", "FOREIGN_CURRENCY"], "points": [10, 35, 5] },
+        "exactOutput": true,
+        "reasonCodes": ["FOREIGN_COUNTRY", "MULTI_COUNTRY_24H", "FOREIGN_CURRENCY"],
+        "matchedRules": ["FOREIGN_COUNTRY", "MULTI_COUNTRY_24H", "FOREIGN_CURRENCY"]
+      }
+    },
+    {
+      "name": "online money transfer scores 20",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "transaction": { "amount": 25000000, "currency": "VND", "merchantCategory": "4829", "country": "VN", "channel": "ECOM", "hourOfDay": 10, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 8000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 600 }
+      },
+      "expect": {
+        "output": { "signal": ["HIGH_RISK_MCC"], "points": [20] },
+        "exactOutput": true,
+        "reasonCodes": ["HIGH_RISK_MCC"],
+        "matchedRules": ["HIGH_RISK_MCC"]
+      }
+    },
+    {
+      "name": "night-time crypto purchase from a new device scores 85",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "transaction": { "amount": 15000000, "currency": "VND", "merchantCategory": "6051", "country": "VN", "channel": "ECOM", "hourOfDay": 2, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1200000, "transactionsLastHour": 2, "distinctCountriesLast24h": 1, "newDevice": true, "accountAgeDays": 400 }
+      },
+      "expect": {
+        "output": { "signal": ["AMOUNT_SPIKE", "NIGHT_ECOM", "HIGH_RISK_MCC", "NEW_DEVICE_ECOM"], "points": [30, 15, 20, 20] },
+        "exactOutput": true,
+        "reasonCodes": ["AMOUNT_SPIKE", "NIGHT_ECOM", "HIGH_RISK_MCC", "NEW_DEVICE_ECOM"],
+        "matchedRules": ["AMOUNT_SPIKE", "NIGHT_ECOM", "HIGH_RISK_MCC", "NEW_DEVICE_ECOM"]
+      }
+    },
+    {
+      "name": "domestic card-present grocery purchase by an established cardholder raises no signal",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "amount of exactly 5 times the average is not a spike",
+      "description": "AMOUNT_SPIKE needs strictly more than 5 x 1,000,000",
+      "facts": {
+        "transaction": { "amount": 5000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "amount one cent above 5 times the average is a spike",
+      "facts": {
+        "transaction": { "amount": 5000000.01, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["AMOUNT_SPIKE"], "points": [30] },
+        "exactOutput": true,
+        "reasonCodes": ["AMOUNT_SPIKE"],
+        "matchedRules": ["AMOUNT_SPIKE"]
+      }
+    },
+    {
+      "name": "card without purchase history never raises an amount spike",
+      "description": "An average of 0 means no history; without the guard every purchase would be a spike",
+      "facts": {
+        "transaction": { "amount": 50000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 0, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "4 transactions in the last hour is normal velocity",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 4, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "5 transactions in the last hour is high velocity",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 5, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["HIGH_VELOCITY"], "points": [25] },
+        "exactOutput": true,
+        "reasonCodes": ["HIGH_VELOCITY"],
+        "matchedRules": ["HIGH_VELOCITY"]
+      }
+    },
+    {
+      "name": "purchase abroad is a foreign-country signal",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "SG", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["FOREIGN_COUNTRY"], "points": [10] },
+        "exactOutput": true,
+        "reasonCodes": ["FOREIGN_COUNTRY"],
+        "matchedRules": ["FOREIGN_COUNTRY"]
+      }
+    },
+    {
+      "name": "purchase in the cardholder's own home country is not foreign",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "SG", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "SG", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "2 countries in 24 hours is not impossible travel",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 2, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "3 countries in 24 hours is impossible travel",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 3, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["MULTI_COUNTRY_24H"], "points": [35] },
+        "exactOutput": true,
+        "reasonCodes": ["MULTI_COUNTRY_24H"],
+        "matchedRules": ["MULTI_COUNTRY_24H"]
+      }
+    },
+    {
+      "name": "e-commerce at midnight is night-time",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "ECOM", "hourOfDay": 0, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["NIGHT_ECOM"], "points": [15] },
+        "exactOutput": true,
+        "reasonCodes": ["NIGHT_ECOM"],
+        "matchedRules": ["NIGHT_ECOM"]
+      }
+    },
+    {
+      "name": "e-commerce at 04:00 is still night-time",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "ECOM", "hourOfDay": 4, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["NIGHT_ECOM"], "points": [15] },
+        "exactOutput": true,
+        "reasonCodes": ["NIGHT_ECOM"],
+        "matchedRules": ["NIGHT_ECOM"]
+      }
+    },
+    {
+      "name": "e-commerce at 05:00 is no longer night-time",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "ECOM", "hourOfDay": 5, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "card-present purchase at night is not night-time e-commerce",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 2, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "gambling merchant is high-risk",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "7995", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["HIGH_RISK_MCC"], "points": [20] },
+        "exactOutput": true,
+        "reasonCodes": ["HIGH_RISK_MCC"],
+        "matchedRules": ["HIGH_RISK_MCC"]
+      }
+    },
+    {
+      "name": "money transfer merchant is high-risk",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "4829", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["HIGH_RISK_MCC"], "points": [20] },
+        "exactOutput": true,
+        "reasonCodes": ["HIGH_RISK_MCC"],
+        "matchedRules": ["HIGH_RISK_MCC"]
+      }
+    },
+    {
+      "name": "quasi-cash and crypto merchant is high-risk",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "6051", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["HIGH_RISK_MCC"], "points": [20] },
+        "exactOutput": true,
+        "reasonCodes": ["HIGH_RISK_MCC"],
+        "matchedRules": ["HIGH_RISK_MCC"]
+      }
+    },
+    {
+      "name": "merchant category with a leading zero is not high-risk",
+      "description": "Veterinary services; merchant category codes are text",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "0742", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "new device at a point of sale raises no signal",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": true, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "e-commerce from a new device is a signal",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "ECOM", "hourOfDay": 14, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": true, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["NEW_DEVICE_ECOM"], "points": [20] },
+        "exactOutput": true,
+        "reasonCodes": ["NEW_DEVICE_ECOM"],
+        "matchedRules": ["NEW_DEVICE_ECOM"]
+      }
+    },
+    {
+      "name": "account opened 29 days ago is new",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 29 }
+      },
+      "expect": {
+        "output": { "signal": ["NEW_ACCOUNT"], "points": [15] },
+        "exactOutput": true,
+        "reasonCodes": ["NEW_ACCOUNT"],
+        "matchedRules": ["NEW_ACCOUNT"]
+      }
+    },
+    {
+      "name": "account opened 30 days ago is no longer new",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 30 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "point-of-sale purchase without the card is keyed entry",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["KEYED_POS"], "points": [15] },
+        "exactOutput": true,
+        "reasonCodes": ["KEYED_POS"],
+        "matchedRules": ["KEYED_POS"]
+      }
+    },
+    {
+      "name": "e-commerce without the card is not keyed entry",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "ECOM", "hourOfDay": 14, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "ATM withdrawal without the card is not keyed entry",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "VND", "merchantCategory": "5411", "country": "VN", "channel": "ATM", "hourOfDay": 14, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": [], "points": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "purchase in US dollars is a foreign-currency signal",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "USD", "merchantCategory": "5411", "country": "VN", "channel": "POS", "hourOfDay": 14, "cardPresent": true },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 365 }
+      },
+      "expect": {
+        "output": { "signal": ["FOREIGN_CURRENCY"], "points": [5] },
+        "exactOutput": true,
+        "reasonCodes": ["FOREIGN_CURRENCY"],
+        "matchedRules": ["FOREIGN_CURRENCY"]
+      }
+    },
+    {
+      "name": "keyed entry abroad on a new card in a foreign currency",
+      "facts": {
+        "transaction": { "amount": 1000000, "currency": "SGD", "merchantCategory": "5411", "country": "SG", "channel": "POS", "hourOfDay": 14, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 0, "distinctCountriesLast24h": 1, "newDevice": false, "accountAgeDays": 5 }
+      },
+      "expect": {
+        "output": { "signal": ["FOREIGN_COUNTRY", "NEW_ACCOUNT", "KEYED_POS", "FOREIGN_CURRENCY"], "points": [10, 15, 15, 5] },
+        "exactOutput": true,
+        "reasonCodes": ["FOREIGN_COUNTRY", "NEW_ACCOUNT", "KEYED_POS", "FOREIGN_CURRENCY"],
+        "matchedRules": ["FOREIGN_COUNTRY", "NEW_ACCOUNT", "KEYED_POS", "FOREIGN_CURRENCY"]
+      }
+    },
+    {
+      "name": "foreign night-time online gambling on a new card raises every online signal, in rule order",
+      "description": "KEYED_POS cannot fire online, so 9 of the 10 signals match: 175 points",
+      "facts": {
+        "transaction": { "amount": 90000000, "currency": "EUR", "merchantCategory": "7995", "country": "MT", "channel": "ECOM", "hourOfDay": 3, "cardPresent": false },
+        "profile": { "homeCountry": "VN", "averageAmount30d": 1000000, "transactionsLastHour": 7, "distinctCountriesLast24h": 4, "newDevice": true, "accountAgeDays": 10 }
+      },
+      "expect": {
+        "output": { "signal": ["AMOUNT_SPIKE", "HIGH_VELOCITY", "FOREIGN_COUNTRY", "MULTI_COUNTRY_24H", "NIGHT_ECOM", "HIGH_RISK_MCC", "NEW_DEVICE_ECOM", "NEW_ACCOUNT", "FOREIGN_CURRENCY"], "points": [30, 25, 10, 35, 15, 20, 20, 15, 5] },
+        "exactOutput": true,
+        "reasonCodes": ["AMOUNT_SPIKE", "HIGH_VELOCITY", "FOREIGN_COUNTRY", "MULTI_COUNTRY_24H", "NIGHT_ECOM", "HIGH_RISK_MCC", "NEW_DEVICE_ECOM", "NEW_ACCOUNT", "FOREIGN_CURRENCY"],
+        "matchedRules": ["AMOUNT_SPIKE", "HIGH_VELOCITY", "FOREIGN_COUNTRY", "MULTI_COUNTRY_24H", "NIGHT_ECOM", "HIGH_RISK_MCC", "NEW_DEVICE_ECOM", "NEW_ACCOUNT", "FOREIGN_CURRENCY"]
+      }
+    }
+  ]
+}
