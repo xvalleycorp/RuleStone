@@ -5,7 +5,7 @@
 
 /**
  * The RuleStone expression language: <a href="https://cel.dev">CEL</a> with typed inputs and
- * an exact {@code decimal} type.
+ * exact {@code decimal} and {@code money} types and a time-zone-free {@code date} type.
  *
  * <p>Most applications do not use this package directly; decision tables in
  * {@code vn.io.dxa.rulestone.core} compile their expressions through it. Use it to evaluate

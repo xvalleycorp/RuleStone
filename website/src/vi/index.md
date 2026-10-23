@@ -3,15 +3,16 @@ layout: home
 title: RuleStone
 titleTemplate: Bộ máy luật nghiệp vụ cho ngân hàng và tài chính
 source: index.md
-sourceHash: a3c82a4c2d7f294868f3682b1924e2eaf46731befa33467929892be8a42f397e
+sourceHash: 0c70866531801734d81d0683b890d5c8eed9a65d9fbcf6d90a51a0cfb4f54969
 
 hero:
   name: RuleStone
   text: Luật nghiệp vụ ngân hàng, khắc vào đá.
   tagline: Bộ máy luật mã nguồn mở viết bằng Java, dành cho bảng quyết định có phiên bản, có ngày hiệu lực và tính toán thập phân chính xác. Mỗi phiên bản khắc vào đá. Mỗi thay đổi chỉ mất vài giây.
   image:
-    src: /logo.svg
-    alt: Biểu trưng RuleStone, một tấm bia đá có khắc các dòng chữ
+    light: /logo.svg
+    dark: /logo-dark.svg
+    alt: Biểu trưng RuleStone, một vòm đá xếp được khoá bằng viên đá đỉnh vòm màu vàng
   actions:
     - theme: brand
       text: Bắt đầu

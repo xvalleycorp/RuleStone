@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <!-- Keystone: five voussoirs of an arch; the gold keystone locks the others in place. -->
+  <!-- Wordmark: live text in a widely available system sans-serif (not converted to paths). -->
+  <g>
+    <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+    <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+    <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+    <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+    <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#fafaf9">Rule</tspan><tspan fill="#fbbf24">Stone</tspan></text>
+</svg>

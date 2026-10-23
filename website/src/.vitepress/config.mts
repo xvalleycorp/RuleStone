@@ -1,7 +1,7 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { defineConfig, type DefaultTheme } from 'vitepress';
+import { defineConfig } from 'vitepress';
 // Translations: which pages exist in Vietnamese, and whether they are up to date.
 import { LOCALES, englishDocs, englishUrl, parseFrontMatter, readText, sha256, translatedUrl, translations } from '../../scripts/i18n-lib.mjs';
 
@@ -24,9 +24,46 @@ const viPlaceholders = new Set(
     .map((f) => (f === 'README.md' ? 'vi/docs/' : `vi/docs/${f.replace(/\.md$/, '')}`)),
 );
 
-/** A Vietnamese sidebar or nav entry: the translation if there is one, else the English page marked "(English)". */
-function viItem(file: string): DefaultTheme.SidebarItem & { link: string; text: string } {
-  const title = viTitles[file] ?? file;
+// The guides in the sidebar, by group: [file in docs/, English title]. Both languages are
+// built from this list, so they always mirror each other. Vietnamese titles are in
+// LOCALES.vi.titles (scripts/i18n-lib.mjs).
+const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
+  {
+    text: 'Guide',
+    vi: 'Hướng dẫn',
+    items: [
+      ['README.md', 'Overview'],
+      ['getting-started.md', 'Getting started'],
+    ],
+  },
+  {
+    text: 'Reference',
+    vi: 'Tham khảo',
+    items: [
+      ['decision-tables.md', 'Decision tables'],
+      ['expressions.md', 'Expression language'],
+      ['fuzzy-matching.md', 'Fuzzy matching'],
+      ['java-api.md', 'Java API'],
+      ['testing.md', 'Testing'],
+    ],
+  },
+  {
+    text: 'More',
+    vi: 'Thêm',
+    items: [
+      ['examples.md', 'Examples'],
+      ['architecture.md', 'Architecture'],
+    ],
+  },
+];
+const REFERENCE = SIDEBAR[1].items;
+
+type Item = { text: string; link: string };
+const enItem = ([file, title]: [string, string]): Item => ({ text: title, link: englishUrl(`docs/${file}`) });
+
+/** A Vietnamese entry: the translation if there is one, else the English page marked "(English)". */
+function viItem(file: string): Item {
+  const title = viTitles[file] ?? SIDEBAR.flatMap((g) => g.items).find(([f]) => f === file)?.[1] ?? file;
   return viDocs.has(file)
     ? { text: title, link: translatedUrl('vi', viDocs.get(file)) }
     : { text: `${title} (English)`, link: englishUrl(`docs/${file}`) };
@@ -102,7 +139,7 @@ export default defineConfig({
   },
 
   themeConfig: {
-    logo: { src: '/logo.svg', alt: 'RuleStone' },
+    logo: { light: '/logo.svg', dark: '/logo-dark.svg', alt: 'RuleStone' },
     socialLinks: [{ icon: 'github', link: REPO }],
     outline: { level: [2, 3] },
 
@@ -142,14 +179,7 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Guide', link: '/docs/getting-started', activeMatch: '/docs/getting-started' },
-          {
-            text: 'Reference',
-            items: [
-              { text: 'Decision tables', link: '/docs/decision-tables' },
-              { text: 'Expression language', link: '/docs/expressions' },
-              { text: 'Java API', link: '/docs/java-api' },
-            ],
-          },
+          { text: 'Reference', items: REFERENCE.map(enItem) },
           { text: 'Examples', link: '/docs/examples' },
           { text: 'Architecture', link: '/docs/architecture' },
           {
@@ -163,30 +193,7 @@ export default defineConfig({
         ],
 
         sidebar: {
-          '/docs/': [
-            {
-              text: 'Guide',
-              items: [
-                { text: 'Overview', link: '/docs/' },
-                { text: 'Getting started', link: '/docs/getting-started' },
-              ],
-            },
-            {
-              text: 'Reference',
-              items: [
-                { text: 'Decision tables', link: '/docs/decision-tables' },
-                { text: 'Expression language', link: '/docs/expressions' },
-                { text: 'Java API', link: '/docs/java-api' },
-              ],
-            },
-            {
-              text: 'More',
-              items: [
-                { text: 'Examples', link: '/docs/examples' },
-                { text: 'Architecture', link: '/docs/architecture' },
-              ],
-            },
-          ],
+          '/docs/': SIDEBAR.map((group) => ({ text: group.text, items: group.items.map(enItem) })),
         },
 
         editLink: { pattern: editLinkPattern, text: 'Edit this page on GitHub' },
@@ -208,10 +215,7 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Hướng dẫn', link: viItem('getting-started.md').link, activeMatch: '/vi/docs/getting-started' },
-          {
-            text: 'Tham khảo',
-            items: [viItem('decision-tables.md'), viItem('expressions.md'), viItem('java-api.md')],
-          },
+          { text: 'Tham khảo', items: REFERENCE.map(([file]) => viItem(file)) },
           viItem('examples.md'),
           { ...viItem('architecture.md'), activeMatch: '/vi/docs/architecture' },
           {
@@ -226,14 +230,7 @@ export default defineConfig({
         ],
 
         sidebar: {
-          '/vi/docs/': [
-            { text: 'Hướng dẫn', items: [viItem('README.md'), viItem('getting-started.md')] },
-            {
-              text: 'Tham khảo',
-              items: [viItem('decision-tables.md'), viItem('expressions.md'), viItem('java-api.md')],
-            },
-            { text: 'Thêm', items: [viItem('examples.md'), viItem('architecture.md')] },
-          ],
+          '/vi/docs/': SIDEBAR.map((group) => ({ text: group.vi, items: group.items.map(([file]) => viItem(file)) })),
         },
 
         editLink: { pattern: editLinkPattern, text: 'Sửa trang này trên GitHub' },

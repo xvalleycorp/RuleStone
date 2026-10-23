@@ -1,0 +1,162 @@
+{
+  "id": "consumer_loan_underwriting",
+  "version": "1",
+  "description": "Consumer loan underwriting: hard declines, referrals to an underwriter, approval by risk grade. Omit loan.collateralValue for an unsecured loan. Estimated instalment = amount * (1 + 1% * termMonths) / termMonths.",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "applicant": {
+      "age": "int",
+      "creditScore": "int",
+      "monthlyIncome": "decimal",
+      "existingMonthlyDebt": "decimal",
+      "employmentMonths": "int",
+      "employmentType": "string",
+      "hasBadDebtLast5y": "bool"
+    },
+    "loan": {
+      "amount": "decimal",
+      "termMonths": "int",
+      "collateralValue": "decimal",
+      "purpose": "string"
+    }
+  },
+  "outputs": {
+    "decision": "string",
+    "riskGrade": "string",
+    "interestRate": "decimal",
+    "maxAmount": "decimal"
+  },
+  "rules": [
+    {
+      "id": "DECLINE_AGE",
+      "when": "applicant.age < 20 || applicant.age > 65",
+      "then": { "decision": "'DECLINE'" },
+      "reasonCode": "AGE_OUT_OF_RANGE"
+    },
+    {
+      "id": "DECLINE_BAD_DEBT",
+      "description": "Bad debt (credit bureau group 3 to 5) in the last 5 years",
+      "when": "applicant.hasBadDebtLast5y",
+      "then": { "decision": "'DECLINE'" },
+      "reasonCode": "BAD_DEBT_HISTORY"
+    },
+    {
+      "id": "DECLINE_SCORE",
+      "when": "applicant.creditScore < 500",
+      "then": { "decision": "'DECLINE'" },
+      "reasonCode": "CREDIT_SCORE_TOO_LOW"
+    },
+    {
+      "id": "DECLINE_INCOME",
+      "description": "Minimum income; also guarantees monthlyIncome > 0 for the ratios below",
+      "when": "applicant.monthlyIncome < 5000000",
+      "then": { "decision": "'DECLINE'" },
+      "reasonCode": "INCOME_BELOW_MINIMUM"
+    },
+    {
+      "id": "DECLINE_TERM",
+      "description": "6 to 60 months unsecured, 6 to 84 months secured; also guarantees termMonths > 0",
+      "when": "loan.termMonths < 6 || loan.termMonths > (has(loan.collateralValue) ? 84 : 60)",
+      "then": { "decision": "'DECLINE'" },
+      "reasonCode": "TERM_OUT_OF_RANGE"
+    },
+    {
+      "id": "DECLINE_DTI",
+      "description": "Debt-to-income above 60%, including the new loan's estimated instalment",
+      "when": "applicant.existingMonthlyDebt + loan.amount * (decimal(1) + decimal('0.01') * loan.termMonths) / loan.termMonths > applicant.monthlyIncome * decimal('0.6')",
+      "then": { "decision": "'DECLINE'" },
+      "reasonCode": "DTI_TOO_HIGH"
+    },
+    {
+      "id": "DECLINE_LTV",
+      "description": "Loan-to-value above 85%",
+      "when": "has(loan.collateralValue) && loan.amount > loan.collateralValue * decimal('0.85')",
+      "then": { "decision": "'DECLINE'" },
+      "reasonCode": "LTV_TOO_HIGH"
+    },
+    {
+      "id": "REFER_DTI",
+      "description": "Debt-to-income above 45%",
+      "when": "applicant.existingMonthlyDebt + loan.amount * (decimal(1) + decimal('0.01') * loan.termMonths) / loan.termMonths > applicant.monthlyIncome * decimal('0.45')",
+      "then": { "decision": "'REFER'" },
+      "reasonCode": "DTI_ELEVATED"
+    },
+    {
+      "id": "REFER_LTV",
+      "description": "Loan-to-value above 70%",
+      "when": "has(loan.collateralValue) && loan.amount > loan.collateralValue * decimal('0.7')",
+      "then": { "decision": "'REFER'" },
+      "reasonCode": "LTV_ELEVATED"
+    },
+    {
+      "id": "REFER_EMPLOYMENT",
+      "description": "Less than 12 months in the current job, or 24 months for the self-employed",
+      "when": "applicant.employmentMonths < (applicant.employmentType == 'SELF_EMPLOYED' ? 24 : 12)",
+      "then": { "decision": "'REFER'" },
+      "reasonCode": "EMPLOYMENT_HISTORY_SHORT"
+    },
+    {
+      "id": "REFER_PURPOSE",
+      "when": "!(loan.purpose in ['CONSUMER', 'EDUCATION', 'HOME_IMPROVEMENT', 'VEHICLE'])",
+      "then": { "decision": "'REFER'" },
+      "reasonCode": "PURPOSE_NOT_STANDARD"
+    },
+    {
+      "id": "APPROVE_A",
+      "description": "Base rate 8.5%; rate adds 5% x DTI and takes 2% off when secured; limit keeps DTI within 45% and LTV within 70%",
+      "when": "applicant.creditScore >= 750 && applicant.existingMonthlyDebt + loan.amount * (decimal(1) + decimal('0.01') * loan.termMonths) / loan.termMonths <= applicant.monthlyIncome * decimal('0.3')",
+      "then": {
+        "decision": "'APPROVE'",
+        "riskGrade": "'A'",
+        "interestRate": "(decimal('0.085') + (applicant.existingMonthlyDebt + loan.amount * (decimal(1) + decimal('0.01') * loan.termMonths) / loan.termMonths) / applicant.monthlyIncome * decimal('0.05') - (has(loan.collateralValue) ? decimal('0.02') : decimal(0))).round(4, 'HALF_UP')",
+        "maxAmount": "((has(loan.collateralValue) ? min((applicant.monthlyIncome * decimal('0.45') - applicant.existingMonthlyDebt) * loan.termMonths / (decimal(1) + decimal('0.01') * loan.termMonths), loan.collateralValue * decimal('0.7')) : (applicant.monthlyIncome * decimal('0.45') - applicant.existingMonthlyDebt) * loan.termMonths / (decimal(1) + decimal('0.01') * loan.termMonths)) / 1000000).round(0, 'FLOOR') * 1000000"
+      }
+    },
+    {
+      "id": "APPROVE_B",
+      "description": "Base rate 10.5%",
+      "when": "applicant.creditScore >= 680",
+      "then": {
+        "decision": "'APPROVE'",
+        "riskGrade": "'B'",
+        "interestRate": "(decimal('0.105') + (applicant.existingMonthlyDebt + loan.amount * (decimal(1) + decimal('0.01') * loan.termMonths) / loan.termMonths) / applicant.monthlyIncome * decimal('0.05') - (has(loan.collateralValue) ? decimal('0.02') : decimal(0))).round(4, 'HALF_UP')",
+        "maxAmount": "((has(loan.collateralValue) ? min((applicant.monthlyIncome * decimal('0.45') - applicant.existingMonthlyDebt) * loan.termMonths / (decimal(1) + decimal('0.01') * loan.termMonths), loan.collateralValue * decimal('0.7')) : (applicant.monthlyIncome * decimal('0.45') - applicant.existingMonthlyDebt) * loan.termMonths / (decimal(1) + decimal('0.01') * loan.termMonths)) / 1000000).round(0, 'FLOOR') * 1000000"
+      }
+    },
+    {
+      "id": "APPROVE_C",
+      "description": "Base rate 13%",
+      "when": "applicant.creditScore >= 620",
+      "then": {
+        "decision": "'APPROVE'",
+        "riskGrade": "'C'",
+        "interestRate": "(decimal('0.13') + (applicant.existingMonthlyDebt + loan.amount * (decimal(1) + decimal('0.01') * loan.termMonths) / loan.termMonths) / applicant.monthlyIncome * decimal('0.05') - (has(loan.collateralValue) ? decimal('0.02') : decimal(0))).round(4, 'HALF_UP')",
+        "maxAmount": "((has(loan.collateralValue) ? min((applicant.monthlyIncome * decimal('0.45') - applicant.existingMonthlyDebt) * loan.termMonths / (decimal(1) + decimal('0.01') * loan.termMonths), loan.collateralValue * decimal('0.7')) : (applicant.monthlyIncome * decimal('0.45') - applicant.existingMonthlyDebt) * loan.termMonths / (decimal(1) + decimal('0.01') * loan.termMonths)) / 1000000).round(0, 'FLOOR') * 1000000"
+      }
+    },
+    {
+      "id": "APPROVE_D_SECURED",
+      "description": "Grade D is approved only with collateral; base rate 16%",
+      "when": "applicant.creditScore >= 560 && has(loan.collateralValue)",
+      "then": {
+        "decision": "'APPROVE'",
+        "riskGrade": "'D'",
+        "interestRate": "(decimal('0.16') + (applicant.existingMonthlyDebt + loan.amount * (decimal(1) + decimal('0.01') * loan.termMonths) / loan.termMonths) / applicant.monthlyIncome * decimal('0.05') - decimal('0.02')).round(4, 'HALF_UP')",
+        "maxAmount": "(min((applicant.monthlyIncome * decimal('0.45') - applicant.existingMonthlyDebt) * loan.termMonths / (decimal(1) + decimal('0.01') * loan.termMonths), loan.collateralValue * decimal('0.7')) / 1000000).round(0, 'FLOOR') * 1000000"
+      }
+    },
+    {
+      "id": "REFER_D_UNSECURED",
+      "when": "applicant.creditScore >= 560",
+      "then": { "decision": "'REFER'", "riskGrade": "'D'" },
+      "reasonCode": "UNSECURED_GRADE_D"
+    },
+    {
+      "id": "REFER_OTHER",
+      "description": "Catch-all: credit score 500 to 559, and anything the rules above do not cover",
+      "when": "true",
+      "then": { "decision": "'REFER'", "riskGrade": "'E'" },
+      "reasonCode": "CREDIT_SCORE_MARGINAL"
+    }
+  ]
+}

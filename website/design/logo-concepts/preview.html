@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RuleStone logo concepts</title><style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f4f5;color:#18181b;font:15px/1.5 Inter,'Segoe UI',Helvetica,Arial,sans-serif}
+main{max-width:1240px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:28px;margin:0 0 4px;letter-spacing:-.5px}
+.lead{color:#52525b;margin:0 0 24px;max-width:860px}
+h2{font-size:20px;margin:0 0 4px}
+section{background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:20px;margin:0 0 24px}
+section.current{background:#fafafa;border-style:dashed}
+.why{margin:0 0 8px;color:#3f3f46;max-width:900px}
+.files{margin:4px 0 14px;color:#71717a;font-size:13px}
+code{font:12px ui-monospace,Menlo,Consolas,monospace;background:#f4f4f5;padding:1px 4px;border-radius:4px}
+.colors{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:#52525b}
+.colors li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.15);display:inline-block}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:900px){.pair{grid-template-columns:1fr}}
+.panel{border-radius:10px;padding:16px;min-width:0;overflow:hidden}
+.panel.light{background:#ffffff;border:1px solid #e4e4e7;color:#3c3c43}
+.panel.dark{background:#1b1b1f;border:1px solid #1b1b1f;color:#dfdfd6}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.6;margin-bottom:10px}
+.sizes{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
+figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+figcaption{font-size:11px;opacity:.6}
+.ic svg{display:block}
+.lockup{margin:18px 0 16px;display:flex;align-items:center}
+.lockup svg{display:block;max-width:100%}
+.lockup.synth{gap:10px;font-weight:700;font-size:28px;letter-spacing:-.5px}
+.tabs{display:flex;gap:2px;padding:6px 6px 0;border-radius:8px 8px 0 0;overflow:hidden}
+.tabs.light{background:#dee1e6}
+.tabs.dark{background:#202124}
+.tab{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px 8px 0 0;font:12px system-ui,-apple-system,'Segoe UI',sans-serif;white-space:nowrap;min-width:0;flex:0 1 auto;overflow:hidden}
+.tab span{overflow:hidden;text-overflow:ellipsis}
+.tab svg{flex:none;display:block}
+.tabs.light .tab{color:#3c4043}.tabs.dark .tab{color:#bdc1c6}
+.tabs.light .tab.active{background:#fff}
+.tabs.dark .tab.active{background:#35363a;color:#e8eaed}
+.dot{width:16px;height:16px;border-radius:50%;background:#9aa0a6;flex:none}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 16px;margin-top:14px;border-radius:8px}
+.nav.light{background:#fff;border:1px solid #e2e2e3}
+.nav.dark{background:#1b1b1f;border:1px solid #2e2e32}
+.brand{display:flex;align-items:center;gap:8px;font-weight:600;font-size:16px}
+.brand svg{display:block}
+.nav.light .brand{color:#3c3c43}.nav.dark .brand{color:#dfdfd6}
+.nav nav{display:flex;gap:20px;font-size:14px;font-weight:500;opacity:.8}
+.overview{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:900px){.overview{grid-template-columns:1fr}}
+.overview .panel .sizes{gap:28px}
+</style></head>
+<body><main>
+<h1>RuleStone logo concepts</h1>
+<p class="lead">Four replacements for the current stele logo, which reads as a tombstone. Each keeps the basalt-and-engraved-gold palette
+and avoids any upright slab silhouette. Every mark is hand-written SVG on a 64&times;64 grid with at most three colours,
+plus a dark-mode variant. The lockup wordmark is live text in <code>Inter, 'Segoe UI', Helvetica, Arial, sans-serif</code>, not paths.
+Nothing here replaces the live logo yet.</p>
+<section><h2>At a glance</h2><div class="overview">
+<div class="panel light"><div class="label">Light #ffffff</div><div class="sizes"><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-1">
+  <title id="title-1">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-1)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg><figcaption>Current</figcaption></figure><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg><figcaption>1. Keystone</figcaption></figure><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg><figcaption>2. Cut stone</figcaption></figure><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#1c1917" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#f59e0b" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#92400e" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg><figcaption>3. Decision block</figcaption></figure><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+</svg><figcaption>4. Block R</figcaption></figure></div></div>
+<div class="panel dark"><div class="label">Dark #1b1b1f</div><div class="sizes"><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-2">
+  <title id="title-2">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-2)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg><figcaption>Current</figcaption></figure><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg><figcaption>1. Keystone</figcaption></figure><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#d6d3d1" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#78716c" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#78716c" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#fbbf24" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg><figcaption>2. Cut stone</figcaption></figure><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg><figcaption>3. Decision block</figcaption></figure><figure><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+</svg><figcaption>4. Block R</figcaption></figure></div></div>
+</div></section>
+<section><h2>1. Keystone</h2><p class="why">An arch of five cut stones held by a gold keystone: the rule that locks the whole system together. It reads as a bridge or gateway of trust, not a slab, and the gold wedge echoes the engraved-gold palette.</p><ul class="colors"><li><span class="sw" style="background:#44403c"></span><code>#44403c</code> stone 700</li><li><span class="sw" style="background:#f59e0b"></span><code>#f59e0b</code> gold 500</li><li><span class="sw" style="background:#d6d3d1"></span><code>#d6d3d1 / #fbbf24</code> dark-mode stone / gold</li></ul><p class="files">Files: <code>1-keystone.svg, 1-keystone-dark.svg, 1-keystone-lockup.svg, 1-keystone-lockup-dark.svg</code></p><div class="pair"><div class="panel light"><div class="label">Light #ffffff</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup"><svg height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <g>
+    <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+    <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+    <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+    <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+    <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#1c1917">Rule</tspan><tspan fill="#b45309">Stone</tspan></text>
+</svg></div><div class="tabs light"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav light"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#44403c" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#44403c" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#f59e0b" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#44403c" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#44403c" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div><div class="panel dark"><div class="label">Dark #1b1b1f</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup"><svg height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <g>
+    <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+    <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+    <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+    <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+    <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#fafaf9">Rule</tspan><tspan fill="#fbbf24">Stone</tspan></text>
+</svg></div><div class="tabs dark"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav dark"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <path fill="#d6d3d1" d="M61 50A29 29 0 0 0 57.2 35.7L43.3 43.6A13 13 0 0 1 45 50Z"/>
+  <path fill="#d6d3d1" d="M55 32.3A29 29 0 0 0 43.2 23.3L37 38A13 13 0 0 1 42.3 42.1Z"/>
+  <polygon fill="#fbbf24" points="41.2,15 22.8,15 28.8,38 35.2,38"/>
+  <path fill="#d6d3d1" d="M20.8 23.3A29 29 0 0 0 9 32.3L21.7 42.1A13 13 0 0 1 27 38Z"/>
+  <path fill="#d6d3d1" d="M6.8 35.7A29 29 0 0 0 3 50L19 50A13 13 0 0 1 20.7 43.6Z"/>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div></div></section><section><h2>2. Cut stone</h2><p class="why">A step-cut gemstone seen from above: lit and shaded facets around a gold table. It says value and precision (many facets, many rules) and stays a bold, solid square at 16 px.</p><ul class="colors"><li><span class="sw" style="background:#57534e"></span><code>#57534e</code> lit facet</li><li><span class="sw" style="background:#1c1917"></span><code>#1c1917</code> shaded facet</li><li><span class="sw" style="background:#f59e0b"></span><code>#f59e0b</code> gold table</li><li><span class="sw" style="background:#d6d3d1"></span><code>#d6d3d1 / #78716c / #fbbf24</code> dark-mode facets / table</li></ul><p class="files">Files: <code>2-cut-stone.svg, 2-cut-stone-dark.svg, 2-cut-stone-lockup.svg, 2-cut-stone-lockup-dark.svg</code></p><div class="pair"><div class="panel light"><div class="label">Light #ffffff</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup"><svg height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <g>
+    <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+    <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+    <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+    <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+    <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#1c1917">Rule</tspan><tspan fill="#b45309">Stone</tspan></text>
+</svg></div><div class="tabs light"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav light"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div><div class="panel dark"><div class="label">Dark #1b1b1f</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#d6d3d1" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#78716c" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#78716c" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#fbbf24" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#d6d3d1" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#78716c" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#78716c" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#fbbf24" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#d6d3d1" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#78716c" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#78716c" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#fbbf24" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#d6d3d1" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#78716c" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#78716c" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#fbbf24" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup"><svg height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <g>
+    <polygon fill="#d6d3d1" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+    <polygon fill="#d6d3d1" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+    <polygon fill="#78716c" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+    <polygon fill="#78716c" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+    <polygon fill="#fbbf24" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#fafaf9">Rule</tspan><tspan fill="#fbbf24">Stone</tspan></text>
+</svg></div><div class="tabs dark"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#d6d3d1" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#78716c" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#78716c" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#fbbf24" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav dark"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+  <polygon fill="#d6d3d1" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+  <polygon fill="#78716c" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+  <polygon fill="#78716c" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+  <polygon fill="#fbbf24" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div></div></section><section><h2>3. Decision block</h2><p class="why">A squared stone block in isometric view whose gold top face is engraved with the rows of a decision table. Solid, structured and quietly suggests a gold ingot: something of fixed, verifiable value.</p><ul class="colors"><li><span class="sw" style="background:#57534e"></span><code>#57534e</code> left face</li><li><span class="sw" style="background:#1c1917"></span><code>#1c1917</code> right face</li><li><span class="sw" style="background:#f59e0b"></span><code>#f59e0b</code> gold top, grooves #92400e</li><li><span class="sw" style="background:#e7e5e4"></span><code>#e7e5e4 / #a8a29e / #fbbf24</code> dark-mode faces / top</li></ul><p class="files">Files: <code>3-decision-block.svg, 3-decision-block-dark.svg, 3-decision-block-lockup.svg, 3-decision-block-lockup-dark.svg</code></p><div class="pair"><div class="panel light"><div class="label">Light #ffffff</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#1c1917" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#f59e0b" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#92400e" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#1c1917" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#f59e0b" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#92400e" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#1c1917" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#f59e0b" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#92400e" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#1c1917" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#f59e0b" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#92400e" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup"><svg height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <g>
+    <polygon fill="#57534e" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+    <polygon fill="#1c1917" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+    <polygon fill="#f59e0b" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+    <path fill="none" stroke="#92400e" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#1c1917">Rule</tspan><tspan fill="#b45309">Stone</tspan></text>
+</svg></div><div class="tabs light"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#1c1917" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#f59e0b" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#92400e" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav light"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#57534e" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#1c1917" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#f59e0b" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#92400e" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div><div class="panel dark"><div class="label">Dark #1b1b1f</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup"><svg height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <g>
+    <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+    <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+    <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+    <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#fafaf9">Rule</tspan><tspan fill="#fbbf24">Stone</tspan></text>
+</svg></div><div class="tabs dark"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav dark"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div></div></section><section><h2>4. Block R</h2><p class="why">The letter R built from cut stone blocks: a solid upright and stacked courses, like the rows of a decision table; the gold leg strides forward for “every change in seconds”. The most ownable and the most product-like (works as an app icon).</p><ul class="colors"><li><span class="sw" style="background:#44403c"></span><code>#44403c</code> stone 700</li><li><span class="sw" style="background:#f59e0b"></span><code>#f59e0b</code> gold 500</li><li><span class="sw" style="background:#d6d3d1"></span><code>#d6d3d1 / #fbbf24</code> dark-mode stone / gold</li></ul><p class="files">Files: <code>4-block-r.svg, 4-block-r-dark.svg, 4-block-r-lockup.svg, 4-block-r-lockup-dark.svg</code></p><div class="pair"><div class="panel light"><div class="label">Light #ffffff</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup"><svg height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <g>
+    <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+    <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+    <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+    <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+    <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#1c1917">Rule</tspan><tspan fill="#b45309">Stone</tspan></text>
+</svg></div><div class="tabs light"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav light"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div><div class="panel dark"><div class="label">Dark #1b1b1f</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup"><svg height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <g>
+    <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+    <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+    <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+    <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+    <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#fafaf9">Rule</tspan><tspan fill="#fbbf24">Stone</tspan></text>
+</svg></div><div class="tabs dark"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav dark"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div></div></section>
+<section class="current"><h2>Current (tombstone issue)</h2><p class="why">The live <code>logo.svg</code>: a dark slab with a rounded top and engraved lines. At small sizes the silhouette reads as a gravestone, which is why it is being replaced. Shown for comparison only.</p><div class="pair"><div class="panel light"><div class="label">Light #ffffff</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-68">
+  <title id="title-68">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-68" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-68)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-69">
+  <title id="title-69">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-69" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-69)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-70">
+  <title id="title-70">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-70" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-70)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-71">
+  <title id="title-71">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-71" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-71)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup synth"><svg width="48" height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-67">
+  <title id="title-67">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-67" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-67)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg><span>RuleStone</span></div><div class="tabs light"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-72">
+  <title id="title-72">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-72" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-72)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav light"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-73">
+  <title id="title-73">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-73" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-73)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div><div class="panel dark"><div class="label">Dark #1b1b1f</div><div class="sizes"><figure><div class="ic" style="width:16px;height:16px"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-75">
+  <title id="title-75">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-75" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-75)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg></div><figcaption>16px</figcaption></figure><figure><div class="ic" style="width:32px;height:32px"><svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-76">
+  <title id="title-76">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-76" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-76)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg></div><figcaption>32px</figcaption></figure><figure><div class="ic" style="width:64px;height:64px"><svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-77">
+  <title id="title-77">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-77" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-77)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg></div><figcaption>64px</figcaption></figure><figure><div class="ic" style="width:160px;height:160px"><svg width="160" height="160" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-78">
+  <title id="title-78">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-78" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-78)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg></div><figcaption>160px</figcaption></figure></div><div class="lockup synth"><svg width="48" height="48" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-74">
+  <title id="title-74">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-74" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-74)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg><span>RuleStone</span></div><div class="tabs dark"><div class="tab"><span class="dot"></span><span>Inbox (3)</span></div><div class="tab active"><svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-79">
+  <title id="title-79">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-79" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-79)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg><span>RuleStone | Business rules engine</span></div><div class="tab"><span class="dot"></span><span>Pull requests</span></div></div><div class="nav dark"><a class="brand"><svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title-80">
+  <title id="title-80">RuleStone</title>
+  <defs>
+    <linearGradient id="basalt-80" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#57534e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 60V24C14 13.5 22 6 32 6s18 7.5 18 18v36z" fill="url(#basalt-80)"/>
+  <circle cx="32" cy="21" r="5" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+  <g stroke="#f59e0b" stroke-width="3" stroke-linecap="round">
+    <path d="M21 34h22"/>
+    <path d="M21 42h22"/>
+    <path d="M21 50h14"/>
+  </g>
+</svg><span>RuleStone</span></a><nav><span>Docs</span><span>Examples</span><span>GitHub</span></nav></div></div></div></section>
+</main></body></html>

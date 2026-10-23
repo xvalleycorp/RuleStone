@@ -1,0 +1,137 @@
+{
+  "decision": "loan_eligibility",
+  "description": "Loan eligibility policy version 3, in force from 2026-11-01",
+  "cases": [
+    {
+      "name": "17-year-old is rejected as underage",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 17, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT", "limit": null },
+        "reasonCodes": ["UNDERAGE"],
+        "matchedRules": ["R1"]
+      }
+    },
+    {
+      "name": "18-year-old is old enough",
+      "description": "Boundary of R1: the minimum age is 18 since version 3",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 18, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 360000000 },
+        "reasonCodes": [],
+        "matchedRules": ["R4"]
+      }
+    },
+    {
+      "name": "blacklisted applicant is rejected",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 40, "monthlyIncome": 50000000, "monthlyDebt": 0, "segment": "PRIORITY", "blacklisted": true },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT", "limit": null },
+        "reasonCodes": ["BLACKLISTED"],
+        "matchedRules": ["R2"]
+      }
+    },
+    {
+      "name": "debt just above half of income is rejected",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 20000000, "monthlyDebt": 10000001, "segment": "RETAIL", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT" },
+        "exactOutput": true,
+        "reasonCodes": ["DTI_HIGH"],
+        "matchedRules": ["R3"]
+      }
+    },
+    {
+      "name": "debt of exactly half of income is accepted",
+      "description": "Boundary of R3: only a ratio above 0.5 is rejected",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 20000000, "monthlyDebt": 10000000, "segment": "RETAIL", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 240000000 },
+        "reasonCodes": [],
+        "matchedRules": ["R4"]
+      }
+    },
+    {
+      "name": "adult with low debt is approved",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 25750000.50, "monthlyDebt": 5000000, "segment": "RETAIL", "blacklisted": false },
+        "amount": 300000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 309000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["R4"],
+        "ruleVersion": "3"
+      }
+    },
+    {
+      "name": "amount of exactly 12 monthly incomes is approved",
+      "description": "Boundary of R4; the limit is rounded down to the million",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 25750000.50, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 309000006.00
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 309000000 },
+        "matchedRules": ["R4"]
+      }
+    },
+    {
+      "name": "amount above 12 monthly incomes is referred for review",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 10000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 500000000
+      },
+      "expect": {
+        "output": { "decision": "REVIEW", "limit": null },
+        "reasonCodes": ["AMOUNT_ABOVE_LIMIT"],
+        "matchedRules": ["R5"]
+      }
+    },
+    {
+      "name": "version 3 applies from 1 November 2026",
+      "asOf": "2026-11-01",
+      "facts": {
+        "applicant": { "age": 19, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 1000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 360000000 },
+        "ruleVersion": "3"
+      }
+    },
+    {
+      "name": "zero income fails the evaluation",
+      "description": "R3 divides by monthlyIncome; see docs/examples.md for a NO_INCOME rule that avoids this",
+      "asOf": "2026-12-01",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 0, "monthlyDebt": 1000, "segment": "RETAIL", "blacklisted": false },
+        "amount": 1000
+      },
+      "expect": { "error": "division by zero" }
+    }
+  ]
+}

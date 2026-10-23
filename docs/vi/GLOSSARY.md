@@ -42,10 +42,13 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | floating point, floating-point number | dấu phẩy động, số dấu phẩy động | |
 | input / output | đầu vào / đầu ra | |
 | missing field | trường bị thiếu | |
+| normalization | chuẩn hoá | Chuẩn hoá tên trước khi so khớp. |
 | overload | overload | Giữ nguyên trong thông báo lỗi; có thể giải thích "phiên bản nạp chồng của hàm". |
 | pure function | hàm thuần (pure) | |
 | round, round down / up | làm tròn, làm tròn xuống / lên | |
+| similarity score | điểm tương đồng | |
 | struct | struct | Giữ nguyên; giải thích "kiểu cấu trúc gồm các trường có kiểu". |
+| threshold | ngưỡng | |
 | type, typed | kiểu, có kiểu | "Đầu vào có kiểu". |
 | type check, type-checked | kiểm tra kiểu, được kiểm tra kiểu | |
 | type error | lỗi kiểu | |
@@ -55,6 +58,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | English | Tiếng Việt | Ghi chú |
 |---|---|---|
 | AI agent | AI agent | Giữ nguyên "agent". |
+| assertion (fluent assertions) | assertion (khẳng định trong kiểm thử) | |
 | builder | builder | Giữ nguyên (mẫu thiết kế). |
 | compile | biên dịch | |
 | dependency | thư viện phụ thuộc, phụ thuộc | |
@@ -71,6 +75,8 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | roadmap | lộ trình | |
 | shadow mode | chế độ bóng (shadow) | |
 | SPI (service provider interface) | SPI (giao diện nhà cung cấp dịch vụ) | |
+| test case | ca kiểm thử | |
+| test coverage, rule coverage | độ bao phủ kiểm thử, độ bao phủ luật | |
 | thread-safe | an toàn đa luồng | |
 | timeout | thời gian chờ tối đa | |
 
@@ -94,6 +100,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | explainability | khả năng giải thích | |
 | fraud | gian lận | |
 | fuzzy matching | so khớp gần đúng | |
+| KYC (know your customer) | KYC (nhận biết khách hàng) | |
 | governance | quản trị | |
 | limit (credit limit) | hạn mức | |
 | maker-checker | maker-checker (người lập – người duyệt) | |

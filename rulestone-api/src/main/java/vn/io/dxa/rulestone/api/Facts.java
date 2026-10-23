@@ -14,7 +14,9 @@ import java.util.Optional;
  * Immutable named inputs to a decision.
  *
  * <p>Values may be plain Java types, maps, records or other objects a registered
- * type adapter understands. Monetary amounts must be {@link java.math.BigDecimal}.
+ * type adapter understands. Amounts must be {@link java.math.BigDecimal} or {@link Money},
+ * and dates {@link java.time.LocalDate}. The name {@code businessDate} is reserved: decisions
+ * receive it from {@link DecisionRef#asOf()} or the engine clock.
  */
 public final class Facts {
 

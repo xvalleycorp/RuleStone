@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <!-- Cut stone: a step-cut gem seen from above; lit and shaded facets around a gold table. -->
+  <!-- Wordmark: live text in a widely available system sans-serif (not converted to paths). -->
+  <g>
+    <polygon fill="#57534e" points="10,10 14,6 50,6 54,10 43.5,20.5 41,18 23,18 20.5,20.5"/>
+    <polygon fill="#57534e" points="10,54 6,50 6,14 10,10 20.5,20.5 18,23 18,41 20.5,43.5"/>
+    <polygon fill="#1c1917" points="54,10 58,14 58,50 54,54 43.5,43.5 46,41 46,23 43.5,20.5"/>
+    <polygon fill="#1c1917" points="54,54 50,58 14,58 10,54 20.5,43.5 23,46 41,46 43.5,43.5"/>
+    <polygon fill="#f59e0b" points="23,18 41,18 46,23 46,41 41,46 23,46 18,41 18,23"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#1c1917">Rule</tspan><tspan fill="#b45309">Stone</tspan></text>
+</svg>

@@ -122,7 +122,7 @@ final class DecimalLibrary {
         return wrap(value.value.setScale((int) scale, mode));
     }
 
-    private static RoundingMode roundingMode(String name) throws CelEvaluationException {
+    static RoundingMode roundingMode(String name) throws CelEvaluationException {
         try {
             RoundingMode mode = RoundingMode.valueOf(name.toUpperCase(Locale.ROOT));
             if (mode == RoundingMode.UNNECESSARY) {

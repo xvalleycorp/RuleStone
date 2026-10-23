@@ -44,6 +44,31 @@ class CelExpressionTest {
         assertThat(eval("amount <= applicant.income * 5", ValueType.BOOL)).isEqualTo(true);
     }
 
+    record ApplicantWithTypo(int age, BigDecimal incme, String segment) {}
+
+    record ApplicantWithNulls(Integer age, BigDecimal income, String segment) {}
+
+    @Test
+    void rejectsRecordsMissingADeclaredField() {
+        assertThatThrownBy(() -> env.bind(Map.of(
+                "applicant", new ApplicantWithTypo(30, new BigDecimal("120000000"), "RETAIL"),
+                "amount", BigDecimal.ONE,
+                "balances", List.of())))
+                .isInstanceOf(InvalidValueException.class)
+                .hasMessage("applicant.income: record ApplicantWithTypo has no component named 'income'")
+                .satisfies(e -> assertThat(stackTraceOf(e)).doesNotContain("120000000"));
+    }
+
+    @Test
+    void nullRecordComponentsAreUnset() {
+        Bindings bindings = env.bind(Map.of(
+                "applicant", new ApplicantWithNulls(30, null, "RETAIL"),
+                "amount", BigDecimal.ONE,
+                "balances", List.of()));
+
+        assertThat(env.compile("has(applicant.income)", ValueType.BOOL).evaluate(bindings)).isEqualTo(false);
+    }
+
     @Test
     void acceptsMapsAndEnums() {
         Bindings fromMap = env.bind(Map.of(
