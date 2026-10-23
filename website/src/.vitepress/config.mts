@@ -46,6 +46,7 @@ const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
       ['java-api.md', 'Java API'],
       ['testing.md', 'Testing'],
       ['temporal.md', 'Temporal integration'],
+      ['editor.md', 'Web editor'],
     ],
   },
   {

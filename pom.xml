@@ -64,6 +64,7 @@
         <module>rulestone-core</module>
         <module>rulestone-test</module>
         <module>rulestone-temporal</module>
+        <module>rulestone-editor</module>
     </modules>
 
     <properties>
@@ -113,6 +114,11 @@
             <dependency>
                 <groupId>vn.io.dxa.rulestone</groupId>
                 <artifactId>rulestone-test</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-editor</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -260,6 +266,8 @@
                             <excludes>
                                 <exclude>**/target/**</exclude>
                                 <exclude>website/**</exclude>
+                                <exclude>rulestone-editor/frontend/node_modules/**</exclude>
+                                <exclude>rulestone-editor/frontend/dist/**</exclude>
                             </excludes>
                         </licenseSet>
                     </licenseSets>
