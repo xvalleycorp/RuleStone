@@ -28,10 +28,12 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
 
     @Override
     public DecisionResult evaluate(DecisionRef ref, Facts facts) {
-        return resolve(ref).evaluate(facts);
+        // Read the clock once: the same date selects the version and is the businessDate input.
+        LocalDate businessDate = ref.asOf().orElseGet(() -> LocalDate.now(clock));
+        return resolve(ref, businessDate).evaluate(facts, businessDate);
     }
 
-    private CompiledDecision resolve(DecisionRef ref) {
+    private CompiledDecision resolve(DecisionRef ref, LocalDate date) {
         List<CompiledDecision> versions = decisions.get(ref.id());
         if (versions == null) {
             throw new DecisionNotFoundException("unknown decision '" + ref.id() + "'");
@@ -44,7 +46,6 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
                     .orElseThrow(() -> new DecisionNotFoundException(
                             "decision '" + ref.id() + "' has no version '" + version + "'"));
         }
-        LocalDate date = ref.asOf().orElseGet(() -> LocalDate.now(clock));
         return versions.stream()
                 .filter(d -> d.table().isEffectiveOn(date))
                 .findFirst()

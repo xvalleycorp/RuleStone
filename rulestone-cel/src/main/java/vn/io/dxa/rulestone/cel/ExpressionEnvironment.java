@@ -34,7 +34,8 @@ import java.util.regex.Pattern;
 
 /**
  * Typed variables plus the RuleStone CEL dialect (standard CEL with macros and the
- * {@code decimal} library). Compile expressions once, then evaluate them many times.
+ * {@code decimal}, {@code money} and {@code date} libraries). Compile expressions once, then
+ * evaluate them many times.
  *
  * <pre>{@code
  * ExpressionEnvironment env = ExpressionEnvironment.builder()
@@ -58,11 +59,13 @@ public final class ExpressionEnvironment {
             "if", "import", "let", "loop", "package", "namespace", "return", "var", "void", "while");
 
     private final Map<String, ValueType> variables;
+    private final Map<String, Integer> currencyScales;
     private final CelCompiler compiler;
     private final CelRuntime runtime;
 
     private ExpressionEnvironment(Builder builder) {
         this.variables = Collections.unmodifiableMap(new LinkedHashMap<>(builder.variables));
+        this.currencyScales = Map.copyOf(builder.currencyScales);
         CelOptions options = CelOptions.current()
                 .comprehensionMaxIterations(builder.maxIterations)
                 .build();
@@ -71,12 +74,18 @@ public final class ExpressionEnvironment {
         CelCompilerBuilder compilerBuilder = CelCompilerFactory.standardCelCompilerBuilder()
                 .setOptions(options)
                 .setStandardMacros(CelStandardMacro.STANDARD_MACROS)
-                .addFunctionDeclarations(DecimalLibrary.declarations());
+                .addFunctionDeclarations(DecimalLibrary.declarations())
+                .addFunctionDeclarations(MoneyLibrary.declarations())
+                .addFunctionDeclarations(DateLibrary.declarations())
+                .addFunctionDeclarations(FuzzyLibrary.declarations());
         variables.forEach((name, type) -> compilerBuilder.addVar(name, celType(type, "rulestone.input." + name, structs)));
         this.compiler = compilerBuilder.setTypeProvider(new StructTypeProvider(structs)).build();
         this.runtime = CelRuntimeFactory.standardCelRuntimeBuilder()
                 .setOptions(options)
                 .addFunctionBindings(DecimalLibrary.bindings())
+                .addFunctionBindings(MoneyLibrary.bindings(currencyScales))
+                .addFunctionBindings(DateLibrary.bindings())
+                .addFunctionBindings(FuzzyLibrary.bindings())
                 .build();
     }
 
@@ -86,6 +95,11 @@ public final class ExpressionEnvironment {
 
     public Map<String, ValueType> variables() {
         return variables;
+    }
+
+    /** Minor units overridden with {@link Builder#currencyScale}, by currency code. */
+    public Map<String, Integer> currencyScales() {
+        return currencyScales;
     }
 
     /**
@@ -144,6 +158,8 @@ public final class ExpressionEnvironment {
                 case INT -> SimpleType.INT;
                 case STRING -> SimpleType.STRING;
                 case DECIMAL -> DecimalLibrary.TYPE;
+                case MONEY -> MoneyLibrary.TYPE;
+                case DATE -> DateLibrary.TYPE;
             };
         }
         if (type instanceof ValueType.ListOf list) {
@@ -170,6 +186,7 @@ public final class ExpressionEnvironment {
     public static final class Builder {
 
         private final Map<String, ValueType> variables = new LinkedHashMap<>();
+        private final Map<String, Integer> currencyScales = new HashMap<>();
         private int maxIterations = DEFAULT_MAX_ITERATIONS;
 
         private Builder() {}
@@ -194,6 +211,27 @@ public final class ExpressionEnvironment {
                 throw new IllegalArgumentException("maxIterations must be positive");
             }
             this.maxIterations = maxIterations;
+            return this;
+        }
+
+        /**
+         * Sets the number of minor-unit digits that {@code money.round()} uses for
+         * {@code currency}, instead of its ISO 4217 default. Required before rounding amounts
+         * in currencies that have no minor unit in ISO 4217, such as {@code XAU} (gold).
+         *
+         * @param currency an upper-case ISO 4217 code, e.g. {@code VND}
+         * @param digits   digits after the decimal point, 0 to 18
+         * @throws IllegalArgumentException if the code is not ISO 4217 or {@code digits} is out of range
+         */
+        public Builder currencyScale(String currency, int digits) {
+            Objects.requireNonNull(currency, "currency");
+            if (!MoneyLibrary.isCurrencyCode(currency)) {
+                throw new IllegalArgumentException("not an upper-case ISO 4217 currency code: '" + currency + "'");
+            }
+            if (digits < 0 || digits > 18) {
+                throw new IllegalArgumentException("currency scale must be between 0 and 18");
+            }
+            currencyScales.put(currency, digits);
             return this;
         }
 

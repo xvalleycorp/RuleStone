@@ -16,6 +16,7 @@ target/
 # Website
 website/node_modules/
 website/src/docs/
+website/src/*/docs/
 website/src/.vitepress/dist/
 website/src/.vitepress/cache/
 website/.wrangler/

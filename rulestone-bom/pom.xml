@@ -68,6 +68,11 @@
             </dependency>
             <dependency>
                 <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-test</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
                 <artifactId>rulestone-temporal</artifactId>
                 <version>${project.version}</version>
             </dependency>

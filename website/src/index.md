@@ -8,8 +8,9 @@ hero:
   text: Business rules for banking, set in stone.
   tagline: An open-source Java engine for versioned, effective-dated decision tables with exact decimal arithmetic. Every version set in stone. Every change in seconds.
   image:
-    src: /logo.svg
-    alt: RuleStone logo, a stone stele with engraved lines
+    light: /logo.svg
+    dark: /logo-dark.svg
+    alt: RuleStone logo, an arch of cut stones locked by a gold keystone
   actions:
     - theme: brand
       text: Get started
