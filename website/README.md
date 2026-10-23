@@ -8,8 +8,11 @@ The source of [rulestone.dxa.io.vn](https://rulestone.dxa.io.vn): a [VitePress](
 |---|---|
 | `src/index.md` | Home page. |
 | `src/docs/` | **Generated.** Copied from the repository's [`docs/`](../docs/) by `scripts/sync-docs.mjs` on every build. Edit the files in `docs/`, not here. |
-| `src/.vitepress/config.mts` | Navigation, sidebar, search, footer. |
-| `src/.vitepress/theme/` | Colours and home page styles. |
+| `src/vi/index.md` | Vietnamese home page (translation of `src/index.md`). |
+| `src/vi/docs/` | **Generated.** Vietnamese guides copied from [`docs/vi/`](../docs/vi/), plus placeholder pages for guides not translated yet. |
+| `src/.vitepress/config.mts` | Locales, navigation, sidebar, search, footer. |
+| `src/.vitepress/theme/` | Colours, home page styles, and the notice shown on outdated translations. |
+| `scripts/` | `sync-docs.mjs` (copy and check docs), `i18n-*.mjs` (translation status and stamping), `check-site.mjs` (links, anchors and languages of the built site). |
 | `src/public/` | Logo, favicon, `robots.txt` and `_headers` (security and cache headers). |
 | `wrangler.jsonc` | Cloudflare Worker configuration, including the custom domain. |
 
@@ -26,9 +29,57 @@ npm run build     # output in src/.vitepress/dist
 npm run preview   # serve the build locally
 ```
 
-The build fails on links to pages that do not exist.
+The build fails on links to pages or anchors that do not exist (`npm run check:links` runs the anchor check on an existing build).
 
 The VitePress development server has known advisories that only affect the local dev server (`npm audit`). It listens on `localhost` only; do not expose it to a network. The published site is static files and is not affected.
+
+## Translations
+
+The site is in English at `/` and in Vietnamese at `/vi/`. English is the source of truth; English URLs never change.
+
+| English | Vietnamese | Source of the Vietnamese page |
+|---|---|---|
+| `/` | `/vi/` | `website/src/vi/index.md` |
+| `/docs/` | `/vi/docs/` | `docs/vi/index.md` (translation of `docs/README.md`) |
+| `/docs/<page>` | `/vi/docs/<page>` | `docs/vi/<page>.md` |
+
+The language switcher in the navigation bar maps each page to the same path in the other language. A guide that is not translated yet appears in the Vietnamese sidebar and navigation with the mark "(English)" and links to the English page; its `/vi/docs/<page>` address serves a short placeholder (not indexed by search engines or the site search, not in the sitemap) that points to the English page, so the switcher never leads to a 404. Translated pages declare `<link rel="alternate" hreflang>` to each other.
+
+Translator guidelines, the link conventions and the terminology are in [`docs/vi/README.md`](../docs/vi/README.md) and [`docs/vi/GLOSSARY.md`](../docs/vi/GLOSSARY.md).
+
+### Drift protection
+
+Every translation starts with front matter naming its English source and the SHA-256 of that source when the translation was last checked:
+
+```yaml
+---
+source: getting-started.md
+sourceHash: e736cfc9…
+---
+```
+
+`npm run build` (in `scripts/sync-docs.mjs`):
+
+- **fails** if a translation has no `source` or `sourceHash`, is not named like its source, or if its fenced code blocks are not byte-identical to the English source's, in the same order. The error names the page, the block number and the first differing line;
+- **warns** with the list of outdated translations when an English source no longer matches its `sourceHash`. The page is still published, with a notice at the top in Vietnamese ("Bản dịch này có thể đã cũ so với bản tiếng Anh…") linking to the English page;
+- converts GitHub-style anchors in translations (`#9-lộ-trình`) to VitePress anchors (`#_9-lo-trinh`) and warns about anchors that match no heading; `check-site.mjs` then fails the build on any broken link or anchor.
+
+```sh
+npm run i18n:status                        # up-to-date / outdated / invalid / missing, per English page
+npm run i18n:status -- --strict            # same, exit status 1 unless all translations are up to date
+npm run i18n:stamp -- getting-started.md   # after re-checking a translation: record the current source hash
+npm run i18n:stamp -- index.md home        # the docs index and the home page
+```
+
+### Add or update a translation
+
+1. **New page:** create `docs/vi/<page>.md` with `source: <page>.md` and `sourceHash: pending`, translate the prose, copy every code block unchanged, and replace the `../<page>.md` (English) link in `docs/vi/index.md`. Add the Vietnamese title to `LOCALES.vi.titles` in `scripts/i18n-lib.mjs` if it is not there. The sidebar, the navigation and links from other translations switch to the new page automatically.
+2. **English page changed:** `npm run i18n:status` lists the translation as outdated. Review the English change (`git log -p docs/<page>.md`), update the translation.
+3. Run `npm run i18n:stamp -- <page>.md`, then `npm run build`.
+
+A new English guide needs one line in `SIDEBAR` in `src/.vitepress/config.mts` (English and Vietnamese titles come from the same entry); until it is translated, the Vietnamese site links to the English page.
+
+To add another language, add it to `LOCALES` in `scripts/i18n-lib.mjs` and to `locales` in `src/.vitepress/config.mts`.
 
 ## Deploy
 
