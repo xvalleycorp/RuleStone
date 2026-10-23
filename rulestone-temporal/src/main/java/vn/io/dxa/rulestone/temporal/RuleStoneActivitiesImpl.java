@@ -20,6 +20,8 @@ import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.core.DecisionTable;
+import vn.io.dxa.rulestone.core.FactsJson;
+import vn.io.dxa.rulestone.core.InvalidFactsException;
 
 /**
  * The {@link RuleStoneActivities} implementation: evaluates requests with an engine.
@@ -79,9 +81,10 @@ public final class RuleStoneActivitiesImpl implements RuleStoneActivities {
         DecisionTable table = table(request, businessDate);
         Facts facts;
         try {
-            facts = PayloadJson.readFacts(request.facts(), table.inputs());
-        } catch (IllegalArgumentException e) {
-            throw RuleStoneFailures.invalidRequest(table.ref() + ": " + e.getMessage());
+            facts = FactsJson.readFacts(request.facts(), table);
+        } catch (InvalidFactsException e) {
+            // Problems name locations and expected forms, never values.
+            throw RuleStoneFailures.invalidRequest(table.ref() + ": " + String.join("; ", e.problems()));
         }
         DecisionRef ref = DecisionRef.of(request.decisionId()).asOf(businessDate);
         if (request.version() != null) {
