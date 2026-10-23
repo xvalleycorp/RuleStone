@@ -6,6 +6,7 @@
 package vn.io.dxa.rulestone.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -97,6 +98,26 @@ class JavaApiDocTest {
 
         assertThat(youth.output()).hasToString("{fee=0 VND, nextReview=2027-11-01}");
         assertThat(youth.reasonCodes()).containsExactly("YOUTH_WAIVER");
+    }
+
+    @Test
+    void factsJson() {
+        DecisionTable cardFee = DecisionTableJson.read(CARD_FEE);
+        RuleStoneEngine engine = RuleStone.builder().decision(cardFee).build();
+
+        Facts facts = FactsJson.readFacts("""
+                { "customer": { "birthDate": "1990-05-20" }, "spend": "123456789 VND" }""", cardFee.inputs());
+        DecisionResult result = engine.evaluate(DecisionRef.of("card_fee").asOf(LocalDate.of(2026, 11, 1)), facts);
+
+        String json = FactsJson.write(result.output());
+        assertThat(json).isEqualTo("{\"fee\":\"123457 VND\",\"nextReview\":\"2027-05-01\"}");
+
+        assertThatThrownBy(() -> FactsJson.readFacts("""
+                { "customer": { "birthDate": "20/05/1990" }, "spend": 123456789 }""", cardFee.inputs()))
+                .isInstanceOf(InvalidFactsException.class)
+                .extracting(e -> ((InvalidFactsException) e).problems())
+                .isEqualTo(List.of("customer.birthDate: expected a date as \"yyyy-MM-dd\"",
+                        "spend: expected money as \"<amount> <CCY>\", e.g. \"1500000 VND\""));
     }
 
     @Test

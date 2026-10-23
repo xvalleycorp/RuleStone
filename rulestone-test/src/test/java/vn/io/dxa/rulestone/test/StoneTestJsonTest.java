@@ -15,7 +15,11 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import vn.io.dxa.rulestone.api.DecisionRef;
+import vn.io.dxa.rulestone.api.Money;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
+import vn.io.dxa.rulestone.core.DecisionTable;
+import vn.io.dxa.rulestone.core.DecisionTableJson;
+import vn.io.dxa.rulestone.core.RuleStone;
 
 class StoneTestJsonTest {
 
@@ -230,5 +234,104 @@ class StoneTestJsonTest {
                 .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
                 .containsEntry("amount", 50_000_000L);
         assertThat(cases).allSatisfy(c -> assertThat(c.check(engine)).isPresent());
+    }
+
+    // --- Reading with the tables' types ---------------------------------------------------------
+
+    private static final String FEES = """
+            { "id": "fees", "version": "%s", %s "hitPolicy": "COLLECT",
+              "inputs": { "transfer": { "amount": "money", "valueDate": "date", "rate": "decimal" } },
+              "outputs": { "fee": "money", "settles": "date" },
+              "rules": [
+                { "id": "BASE", "when": "true", "then": {
+                  "fee": "(transfer.amount * transfer.rate).round()", "settles": "transfer.valueDate.plusDays(1)" } } ] }""";
+
+    private static DecisionTable fees(String version, String dates) {
+        return DecisionTableJson.read(FEES.formatted(version, dates));
+    }
+
+    private static final List<DecisionTable> TYPED = List.of(fees("1", ""));
+
+    private static List<StoneTestCase> typed(List<DecisionTable> tables, String casesJson) {
+        return StoneTestJson.read("{ \"decision\": \"fees\", \"cases\": [" + casesJson + "] }", "fees.json", tables);
+    }
+
+    private static List<String> typedProblems(List<DecisionTable> tables, String casesJson) {
+        try {
+            typed(tables, casesJson);
+        } catch (InvalidStoneTestException e) {
+            return e.problems();
+        }
+        throw new AssertionError("expected InvalidStoneTestException");
+    }
+
+    @Test
+    void readsMoneyDatesAndDecimalsWithTheDeclaredTypes() {
+        StoneTestCase c = typed(TYPED, """
+                { "name": "n", "facts": { "transfer": { "amount": "50000000 VND", "valueDate": "2026-11-02", "rate": "0.0005" } },
+                  "expect": { "output": { "fee": ["25000.00 VND"], "settles": ["2026-11-03"] }, "exactOutput": true } }""")
+                .get(0);
+
+        assertThat(c.facts().asMap().get("transfer")).isEqualTo(Map.of(
+                "amount", Money.of("50000000", "VND"),
+                "valueDate", LocalDate.of(2026, 11, 2),
+                "rate", new BigDecimal("0.0005")));
+        RuleStoneEngine fees = RuleStone.builder().decisions(TYPED).build();
+        assertThat(c.check(fees)).isPresent();   // money compared by value: 25000.00 VND equals 25000 VND
+    }
+
+    @Test
+    void reportsValuesThatDoNotMatchTheirTypes() {
+        assertThat(typedProblems(TYPED, """
+                { "name": "a", "facts": { "transfer": { "amount": 50000000, "valueDate": "2/11/2026", "rat": "0.1" } },
+                  "expect": { "output": { "fee": "25000 VND", "settles": ["2026-13-01"], "total": null, "other": 1 } } },
+                { "name": "b", "facts": { "transfer": { "amount": "1 VND", "rate": null } }, "expect": {} }"""))
+                .containsExactly(
+                        "$.cases[0].facts.transfer.amount: expected money as \"<amount> <CCY>\", e.g. \"1500000 VND\"",
+                        "$.cases[0].facts.transfer.valueDate: expected a date as \"yyyy-MM-dd\"",
+                        "$.cases[0].facts.transfer.rat: unknown field (declared: amount, valueDate, rate)",
+                        "$.cases[0].expect.output.total: not declared (declared: fee, settles)",
+                        "$.cases[0].expect.output.fee: expected an array",
+                        "$.cases[0].expect.output.settles[0]: expected an existing date as \"yyyy-MM-dd\"",
+                        "$.cases[0].expect.output.other: not declared (declared: fee, settles)",
+                        "$.cases[1].facts.transfer.rate: null is not a value; leave the field out instead");
+    }
+
+    @Test
+    void versionsWithDifferentTypesNeedAsOfOrVersion() {
+        DecisionTable v1 = fees("1", "\"effectiveTo\": \"2026-11-01\",");
+        DecisionTable v2 = DecisionTableJson.read(FEES.formatted("2", "\"effectiveFrom\": \"2026-11-01\",")
+                .replace("\"rate\": \"decimal\"", "\"rate\": \"decimal\", \"channel\": \"string\""));
+        List<DecisionTable> tables = List.of(v1, v2);
+        String facts = "\"facts\": { \"transfer\": { \"amount\": \"1 VND\", \"channel\": \"APP\" } }";
+
+        assertThat(typedProblems(tables, "{ \"name\": \"n\", " + facts + ", \"expect\": {} }")).containsExactly(
+                "$.cases[0]: set \"version\" or \"asOf\": the versions of \"fees\" declare different inputs or outputs");
+        assertThat(typed(tables, "{ \"name\": \"n\", \"asOf\": \"2026-11-01\", " + facts + ", \"expect\": {} }")).hasSize(1);
+        assertThat(typed(tables, "{ \"name\": \"n\", \"version\": \"2\", " + facts + ", \"expect\": {} }")).hasSize(1);
+        assertThat(typedProblems(tables, "{ \"name\": \"n\", \"asOf\": \"2026-10-31\", " + facts + ", \"expect\": {} }"))
+                .containsExactly("$.cases[0].facts.transfer.channel: unknown field (declared: amount, valueDate, rate)");
+    }
+
+    @Test
+    void decisionsThatAreNotAmongTheTablesAreReadWithoutTypes() {
+        List<StoneTestCase> cases = StoneTestJson.read("""
+                { "decision": "deposit_rate", "cases": [ { "name": "n",
+                  "facts": { "termMonths": 9, "balance": "100000000" }, "expect": {} } ] }""", "t.json", TYPED);
+
+        assertThat(cases.get(0).facts().asMap()).containsEntry("balance", "100000000");
+    }
+
+    @Test
+    void readsFilesFromDiskWithTypes() {
+        List<StoneTestCase> cases = StoneTestJson.read(
+                ExamplesStoneTest.EXAMPLES.resolve("aml_transaction_monitoring.stone-test.json"),
+                ExamplesStoneTest.exampleTables());
+
+        assertThat(cases.get(0).facts().get("transaction")).get()
+                .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                .containsEntry("amount", Money.of("10000000", "VND"))
+                .containsEntry("valueDate", LocalDate.of(2026, 11, 2));
+        assertThat(cases).filteredOn(c -> !c.expectsError()).allSatisfy(c -> assertThat(c.check(engine)).isPresent());
     }
 }

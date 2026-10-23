@@ -8,6 +8,7 @@ This page explains how to embed RuleStone in a Java application: building an eng
 - [Inputs: `Facts`](#inputs-facts)
 - [Money, dates and the business date](#money-dates-and-the-business-date)
 - [Results: `DecisionResult`](#results-decisionresult)
+- [JSON facts and results: `FactsJson`](#json-facts-and-results-factsjson)
 - [Errors](#errors)
 - [Reloading rules](#reloading-rules)
 - [Threading and performance](#threading-and-performance)
@@ -191,6 +192,46 @@ if (!result.matched()) {
 
 or end the table with a `"when": "true"` rule so that every case gets an answer.
 
+## JSON facts and results: `FactsJson`
+
+When facts arrive as JSON, for example from a REST request, a workflow engine or a rule editor, `FactsJson` (core) converts them to the Java values a decision takes, guided by the types the table declares. JSON has no money, date or exact decimal type, so it uses these forms:
+
+| Type | JSON | Java |
+|---|---|---|
+| `bool` | `true`, `false` | `Boolean` |
+| `int` | an integer, e.g. `30` | `Long` |
+| `string` | a string | `String` |
+| `decimal` | a number, e.g. `25750000.50`, or a string in plain notation, e.g. `"0.0980"` | `BigDecimal`, with the written scale |
+| `money` | `"<amount> <CCY>"`, e.g. `"1500000.50 VND"`, the form of `Money.toString()` | `Money` |
+| `date` | `"yyyy-MM-dd"`, e.g. `"2026-11-01"` | `LocalDate` |
+| list | an array | `List` |
+| struct | an object | `Map` |
+
+With the `card_fee` table above:
+
+```java
+DecisionTable cardFee = DecisionTableJson.read(Path.of("rules/card_fee.stone.json"));
+
+Facts facts = FactsJson.readFacts("""
+        { "customer": { "birthDate": "1990-05-20" }, "spend": "123456789 VND" }""", cardFee.inputs());
+DecisionResult result = engine.evaluate(DecisionRef.of("card_fee").asOf(LocalDate.of(2026, 11, 1)), facts);
+
+String json = FactsJson.write(result.output());   // {"fee":"123457 VND","nextReview":"2027-05-01"}
+```
+
+Reading is strict. Every problem is reported at once in an `InvalidFactsException`, whose `problems()` give the location and the expected form but never the value, for example `customer.birthDate: expected a date as "yyyy-MM-dd"` or `spend: expected money as "<amount> <CCY>", e.g. "1500000 VND"`. Inputs and struct fields that the table does not declare are problems too. A struct field that is absent, or `null`, is left unset, so rules see it with `has()`; an absent input is left to the engine, which reports it as missing. Numbers never pass through floating point: `readFacts(String, …)` parses decimals exactly, and a `JsonNode` you parse yourself must be read with `DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS`, otherwise its floating-point numbers are rejected.
+
+Writing produces the same forms, with decimals as strings in plain notation (`"0.0980"`, never `9.8E-2`), so values read back unchanged:
+
+| Method | Converts |
+|---|---|
+| `readFacts(String json, Map<String, ValueType> inputs)`, `readFacts(JsonNode, Map<String, ValueType>)`, `readFacts(JsonNode, DecisionTable)` | a JSON object of inputs to `Facts` |
+| `readValues(JsonNode json, Map<String, ValueType> types)` | a JSON object of named values to a `Map`, e.g. expected outputs with the types from `resultTypes(table)` |
+| `readValue(JsonNode json, ValueType type)` | one value |
+| `resultTypes(DecisionTable table)` | the types of the values in `DecisionResult.output()`: the declared outputs, each a list under `COLLECT` |
+| `writeValue(Object value)`, `writeValues(Map<String, ?> values)` | Java values to a `JsonNode` or an `ObjectNode` |
+| `write(Map<String, ?> values)` | Java values to compact JSON text |
+
 ## Errors
 
 All exceptions extend `RuleStoneException`, an unchecked exception.
@@ -198,6 +239,7 @@ All exceptions extend `RuleStoneException`, an unchecked exception.
 | Exception | When | What to do |
 |---|---|---|
 | `InvalidDecisionException` (core) | Loading a file or building an engine. `problems()` lists every problem with its location. | Fix the definition. At startup, fail fast; when reloading, keep the previous engine (see below). |
+| `InvalidFactsException` (core) | Reading JSON facts or values with `FactsJson`. `problems()` lists every problem with its location. | Reject the request as invalid input, e.g. with HTTP 400 and the problems. |
 | `DecisionNotFoundException` (api) | No decision with that id, no such version, or no version effective on the date. | Configuration error: check registered versions and their dates. |
 | `DecisionEvaluationException` (api) | Invalid input (missing, wrong type, floating point for a decimal, a fact named `businessDate`), an expression failing at run time, or a `UNIQUE` table with several matches. `decisionId()` and `ruleVersion()` identify the decision. | Treat as a system failure for this case, e.g. route it to manual review. **Do not substitute a default decision.** |
 

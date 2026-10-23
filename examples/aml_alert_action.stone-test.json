@@ -1,0 +1,82 @@
+{
+  "decision": "aml_alert_action",
+  "description": "Recommended AML action at both sides of every score band, with and without a large cash transaction",
+  "cases": [
+    {
+      "name": "score of 70 leads to a suspicious transaction report",
+      "facts": { "riskScore": 70, "hasLargeCash": false },
+      "expect": {
+        "output": { "action": "FILE_STR", "fileCtr": false },
+        "exactOutput": true,
+        "reasonCodes": ["SUSPICION_SCORE_HIGH"],
+        "matchedRules": ["FILE_STR"]
+      }
+    },
+    {
+      "name": "suspicious large cash transaction is reported twice",
+      "facts": { "riskScore": 80, "hasLargeCash": true },
+      "expect": {
+        "output": { "action": "FILE_STR", "fileCtr": true },
+        "reasonCodes": ["SUSPICION_SCORE_HIGH"],
+        "matchedRules": ["FILE_STR"]
+      }
+    },
+    {
+      "name": "score of 69 goes to an analyst",
+      "facts": { "riskScore": 69, "hasLargeCash": false },
+      "expect": {
+        "output": { "action": "ANALYST_REVIEW", "fileCtr": false },
+        "exactOutput": true,
+        "reasonCodes": ["SUSPICION_SCORE_ELEVATED"],
+        "matchedRules": ["ANALYST_REVIEW"]
+      }
+    },
+    {
+      "name": "score of 30 with large cash goes to an analyst and is reported",
+      "facts": { "riskScore": 30, "hasLargeCash": true },
+      "expect": {
+        "output": { "action": "ANALYST_REVIEW", "fileCtr": true },
+        "reasonCodes": ["SUSPICION_SCORE_ELEVATED"],
+        "matchedRules": ["ANALYST_REVIEW"]
+      }
+    },
+    {
+      "name": "large cash with a score of 29 is only reported",
+      "facts": { "riskScore": 29, "hasLargeCash": true },
+      "expect": {
+        "output": { "action": "FILE_CTR_ONLY", "fileCtr": true },
+        "exactOutput": true,
+        "reasonCodes": ["LARGE_CASH_REPORTABLE"],
+        "matchedRules": ["FILE_CTR_ONLY"]
+      }
+    },
+    {
+      "name": "large cash alone is only reported",
+      "facts": { "riskScore": 10, "hasLargeCash": true },
+      "expect": {
+        "output": { "action": "FILE_CTR_ONLY", "fileCtr": true },
+        "reasonCodes": ["LARGE_CASH_REPORTABLE"],
+        "matchedRules": ["FILE_CTR_ONLY"]
+      }
+    },
+    {
+      "name": "score of 29 without large cash needs no action",
+      "facts": { "riskScore": 29, "hasLargeCash": false },
+      "expect": {
+        "output": { "action": "NO_ACTION", "fileCtr": false },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["NO_ACTION"]
+      }
+    },
+    {
+      "name": "no alert needs no action",
+      "facts": { "riskScore": 0, "hasLargeCash": false },
+      "expect": {
+        "output": { "action": "NO_ACTION", "fileCtr": false },
+        "reasonCodes": [],
+        "matchedRules": ["NO_ACTION"]
+      }
+    }
+  ]
+}
