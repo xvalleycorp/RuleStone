@@ -1,0 +1,173 @@
+{
+  "$schema": "https://unpkg.com/@camunda/zeebe-element-templates-json-schema/resources/schema.json",
+  "name": "RuleStone decision",
+  "id": "vn.io.dxa.rulestone.decision",
+  "version": 1,
+  "description": "Evaluates a RuleStone decision table: versioned, effective-dated rules with exact decimals.",
+  "documentationRef": "https://rulestone.dxa.io.vn/docs/camunda",
+  "category": {
+    "id": "rulestone",
+    "name": "RuleStone"
+  },
+  "engines": {
+    "camunda": "^8.6"
+  },
+  "appliesTo": [
+    "bpmn:Task"
+  ],
+  "elementType": {
+    "value": "bpmn:ServiceTask"
+  },
+  "groups": [
+    {
+      "id": "decision",
+      "label": "Decision"
+    },
+    {
+      "id": "result",
+      "label": "Result",
+      "tooltip": "The job completes with one variable holding output, reasonCodes, matchedRules, ruleVersion and matched. Without output mappings it is merged into the process scope; add an output mapping, e.g. source =decision.output.decision, target loanDecision, to narrow it."
+    },
+    {
+      "id": "errors",
+      "label": "Error handling"
+    },
+    {
+      "id": "worker",
+      "label": "Worker"
+    }
+  ],
+  "properties": [
+    {
+      "label": "Decision ID",
+      "description": "The id of the decision table, e.g. loan_eligibility.",
+      "type": "String",
+      "group": "decision",
+      "binding": {
+        "type": "zeebe:taskHeader",
+        "key": "decisionId"
+      },
+      "constraints": {
+        "notEmpty": true,
+        "pattern": {
+          "value": "^[A-Za-z][A-Za-z0-9_.-]*$",
+          "message": "Starts with a letter; letters, digits, '_', '.' and '-'."
+        }
+      }
+    },
+    {
+      "label": "Version",
+      "description": "An exact version label, for replays and investigations. Leave empty to use the version effective on the business date.",
+      "type": "String",
+      "group": "decision",
+      "optional": true,
+      "binding": {
+        "type": "zeebe:taskHeader",
+        "key": "version"
+      },
+      "constraints": {
+        "notEmpty": false,
+        "pattern": {
+          "value": "^[A-Za-z0-9_.-]*$",
+          "message": "Letters, digits, '_', '.' and '-'."
+        }
+      }
+    },
+    {
+      "label": "As-of date variable",
+      "description": "Name of a process variable holding the business date as \"yyyy-MM-dd\", e.g. the application date. Leave empty to use today according to the worker's clock.",
+      "type": "String",
+      "group": "decision",
+      "optional": true,
+      "binding": {
+        "type": "zeebe:taskHeader",
+        "key": "asOfVariable"
+      },
+      "constraints": {
+        "notEmpty": false,
+        "pattern": {
+          "value": "^([A-Za-z_][A-Za-z0-9_]*)?$",
+          "message": "A variable name."
+        }
+      }
+    },
+    {
+      "label": "Result variable",
+      "description": "Variable the result is written to. Decimals, money and dates in it are strings; compare decimals with number(...) in FEEL.",
+      "type": "String",
+      "group": "result",
+      "value": "decision",
+      "binding": {
+        "type": "zeebe:taskHeader",
+        "key": "resultVariable"
+      },
+      "constraints": {
+        "notEmpty": true,
+        "pattern": {
+          "value": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "message": "A variable name."
+        }
+      }
+    },
+    {
+      "label": "Fail when no rule matches",
+      "description": "Throw the BPMN error below when no rule matches, instead of completing with matched = false.",
+      "type": "Dropdown",
+      "group": "errors",
+      "value": "false",
+      "choices": [
+        {
+          "name": "No: complete with matched = false",
+          "value": "false"
+        },
+        {
+          "name": "Yes: throw the BPMN error",
+          "value": "true"
+        }
+      ],
+      "binding": {
+        "type": "zeebe:taskHeader",
+        "key": "failOnNoMatch"
+      }
+    },
+    {
+      "label": "BPMN error code",
+      "description": "Thrown when the decision cannot be evaluated (invalid or missing input, a failing rule) and, if enabled, when no rule matches. Catch it with an error boundary event. A missing decision raises an incident instead.",
+      "type": "String",
+      "group": "errors",
+      "value": "RULESTONE_DECISION_FAILED",
+      "binding": {
+        "type": "zeebe:taskHeader",
+        "key": "errorCode"
+      },
+      "constraints": {
+        "notEmpty": true
+      }
+    },
+    {
+      "label": "Job type",
+      "description": "The job type the RuleStone worker subscribes to.",
+      "type": "String",
+      "group": "worker",
+      "value": "rulestone:decision",
+      "binding": {
+        "type": "zeebe:taskDefinition",
+        "property": "type"
+      },
+      "constraints": {
+        "notEmpty": true
+      }
+    },
+    {
+      "label": "Retries",
+      "description": "Attempts after an unexpected worker failure. Evaluation errors and missing decisions are never retried.",
+      "type": "String",
+      "group": "worker",
+      "value": "3",
+      "binding": {
+        "type": "zeebe:taskDefinition",
+        "property": "retries"
+      }
+    }
+  ]
+}

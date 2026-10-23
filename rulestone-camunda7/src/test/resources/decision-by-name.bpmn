@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2026 The RuleStone Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<!-- The decision id comes from a variable; the async variant runs the task in a job. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_DecisionByName"
+                  targetNamespace="https://rulestone.dxa.io.vn/examples">
+  <bpmn:process id="decision-by-name" isExecutable="true" camunda:historyTimeToLive="P180D">
+    <bpmn:startEvent id="Start" />
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start" targetRef="Decide" />
+    <bpmn:serviceTask id="Decide" camunda:class="vn.io.dxa.rulestone.camunda7.RuleStoneDelegate">
+      <bpmn:extensionElements>
+        <camunda:field name="decisionId">
+          <camunda:expression>${decisionToUse}</camunda:expression>
+        </camunda:field>
+        <camunda:field name="failOnNoMatch" stringValue="true" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Decide" targetRef="Done" />
+    <bpmn:userTask id="Done" />
+  </bpmn:process>
+
+  <bpmn:process id="decision-by-name-async" isExecutable="true" camunda:historyTimeToLive="P180D">
+    <bpmn:startEvent id="StartAsync" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="StartAsync" targetRef="DecideAsync" />
+    <bpmn:serviceTask id="DecideAsync" camunda:asyncBefore="true"
+                      camunda:class="vn.io.dxa.rulestone.camunda7.RuleStoneDelegate">
+      <bpmn:extensionElements>
+        <camunda:failedJobRetryTimeCycle>R1/PT0S</camunda:failedJobRetryTimeCycle>
+        <camunda:field name="decisionId">
+          <camunda:expression>${decisionToUse}</camunda:expression>
+        </camunda:field>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="DecideAsync" targetRef="DoneAsync" />
+    <bpmn:userTask id="DoneAsync" />
+  </bpmn:process>
+</bpmn:definitions>

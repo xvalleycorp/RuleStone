@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2026 The RuleStone Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_LoanApproval7"
+                  targetNamespace="https://rulestone.dxa.io.vn/examples">
+  <bpmn:error id="Error_DecisionFailed" name="RuleStone decision failed" errorCode="RULESTONE_DECISION_FAILED"
+              camunda:errorMessage="RuleStone decision failed" />
+
+  <bpmn:process id="loan-approval" name="Loan approval" isExecutable="true" camunda:historyTimeToLive="P180D">
+    <bpmn:startEvent id="Start" />
+    <bpmn:sequenceFlow id="Flow_ToCheck" sourceRef="Start" targetRef="CheckEligibility" />
+
+    <bpmn:serviceTask id="CheckEligibility" name="Check eligibility"
+                      camunda:class="vn.io.dxa.rulestone.camunda7.RuleStoneDelegate">
+      <bpmn:extensionElements>
+        <camunda:field name="decisionId" stringValue="loan_eligibility" />
+        <camunda:field name="asOfVariable" stringValue="applicationDate" />
+        <camunda:field name="resultVariable" stringValue="decision" />
+        <camunda:field name="errorCode" stringValue="RULESTONE_DECISION_FAILED" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="DecisionFailed" attachedToRef="CheckEligibility">
+      <bpmn:errorEventDefinition errorRef="Error_DecisionFailed" camunda:errorMessageVariable="decisionError" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_ToInvestigate" sourceRef="DecisionFailed" targetRef="InvestigateFailure" />
+    <bpmn:userTask id="InvestigateFailure" name="Investigate failed decision" />
+
+    <bpmn:sequenceFlow id="Flow_ToOutcome" sourceRef="CheckEligibility" targetRef="Outcome" />
+    <bpmn:exclusiveGateway id="Outcome" default="Flow_Review" />
+    <bpmn:sequenceFlow id="Flow_Approve" sourceRef="Outcome" targetRef="Disburse">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decision.output.decision == 'APPROVE'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Reject" sourceRef="Outcome" targetRef="NotifyRejection">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decision.output.decision == 'REJECT'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Review" sourceRef="Outcome" targetRef="ManualReview" />
+    <bpmn:userTask id="Disburse" name="Disburse loan" />
+    <bpmn:userTask id="NotifyRejection" name="Notify rejection" />
+    <bpmn:userTask id="ManualReview" name="Manual review" />
+  </bpmn:process>
+</bpmn:definitions>

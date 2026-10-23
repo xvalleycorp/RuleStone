@@ -34,6 +34,16 @@
             <groupId>vn.io.dxa.rulestone</groupId>
             <artifactId>rulestone-api</artifactId>
         </dependency>
+        <!-- Decision tables: their declared input types let the integration read process variables. -->
+        <dependency>
+            <groupId>vn.io.dxa.rulestone</groupId>
+            <artifactId>rulestone-core</artifactId>
+        </dependency>
+        <!-- FactsJson takes JSON trees; core depends on Jackson as well. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.camunda.bpm</groupId>
             <artifactId>camunda-engine</artifactId>
@@ -42,14 +52,16 @@
         </dependency>
 
         <dependency>
-            <groupId>vn.io.dxa.rulestone</groupId>
-            <artifactId>rulestone-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>${h2.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Silences SLF4J's "no binding" notice in tests; the engine's slf4j-api version. -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <version>1.7.26</version>
             <scope>test</scope>
         </dependency>
         <dependency>
