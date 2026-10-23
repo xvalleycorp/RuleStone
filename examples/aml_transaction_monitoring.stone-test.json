@@ -1,26 +1,442 @@
 {
   "decision": "aml_transaction_monitoring",
-  "description": "Every rule of this table reads money or dates, which cannot be written in test files yet; its rules are tested in AmlExampleTest (Java). These cases document the limitation and fail once it is lifted",
+  "description": "AML alerts: the documented scenarios (business date 2026-11-02) and both sides of every amount, count, ratio and day threshold. Amounts in VND; the history includes the transaction itself",
   "cases": [
     {
-      "name": "amounts cannot be written in test files yet",
-      "description": "A money input needs a vn.io.dxa.rulestone.api.Money, and test files pass numbers",
+      "name": "domestic transfer on an established account raises no alert",
+      "asOf": "2026-11-02",
       "facts": {
-        "account": { "riskRating": "LOW", "customerIsPep": false },
-        "transaction": { "amount": 350000000, "type": "CASH_DEPOSIT" },
-        "history": { "cashDepositsLast7d": [] }
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
       },
-      "expect": { "error": "transaction.amount: expected money but got java.lang.Long" }
+      "expect": {
+        "output": { "alert": [], "score": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
     },
     {
-      "name": "dates cannot be written in test files yet",
-      "description": "A date input needs a java.time.LocalDate, and test files pass text",
+      "name": "salary transfer raises no alert",
+      "description": "Documented scenario in docs/examples.md",
+      "asOf": "2026-11-02",
       "facts": {
-        "account": { "openedOn": "2026-10-20", "riskRating": "LOW", "customerIsPep": false },
-        "transaction": { "type": "TRANSFER_IN" },
-        "history": { "cashDepositsLast7d": [] }
+        "account": { "openedOn": "2019-04-10", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "15000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "15000000 VND", "totalOutLast24h": "2000000 VND" }
       },
-      "expect": { "error": "account.openedOn: expected date but got java.lang.String" }
+      "expect": { "output": { "alert": [], "score": [] }, "matchedRules": [] }
+    },
+    {
+      "name": "large cash deposit is a large cash transaction",
+      "description": "Documented scenario in docs/examples.md",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2019-04-10", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "350000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["350000000 VND"], "totalInLast24h": "350000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": {
+        "output": { "alert": ["LARGE_CASH"], "score": [10] },
+        "exactOutput": true,
+        "reasonCodes": ["LARGE_CASH_TRANSACTION"],
+        "matchedRules": ["LARGE_CASH"]
+      }
+    },
+    {
+      "name": "cash deposit at the reporting threshold is large cash",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "300000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": ["LARGE_CASH"] }
+    },
+    {
+      "name": "cash deposit just below the reporting threshold is not large cash",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "299999999 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "cash withdrawal at the reporting threshold is large cash",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "300000000 VND", "type": "CASH_WITHDRAWAL", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": ["LARGE_CASH"] }
+    },
+    {
+      "name": "transfer of the reporting threshold is not cash",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "300000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "three cash deposits just below the threshold are possible structuring",
+      "description": "Documented scenario in docs/examples.md",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2019-04-10", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "290000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["250000000 VND", "270000000 VND", "290000000 VND"], "totalInLast24h": "290000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": {
+        "output": { "alert": ["STRUCTURING"], "score": [50] },
+        "exactOutput": true,
+        "reasonCodes": ["POSSIBLE_STRUCTURING"],
+        "matchedRules": ["STRUCTURING"]
+      }
+    },
+    {
+      "name": "structuring band runs from 80 percent to just below the threshold",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["240000000 VND", "299999999 VND", "260000000 VND"], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": ["STRUCTURING"] }
+    },
+    {
+      "name": "two deposits in the band are not structuring",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["240000000 VND", "299999999 VND"], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "deposits below 80 percent or at the threshold are not in the structuring band",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["239999999 VND", "300000000 VND", "250000000 VND", "260000000 VND"], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "pass-through to a high-risk country raises two alerts",
+      "description": "Documented scenario in docs/examples.md",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2019-04-10", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "950000000 VND", "type": "TRANSFER_OUT", "counterpartyCountry": "XB", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "1000000000 VND", "totalOutLast24h": "950000000 VND" }
+      },
+      "expect": {
+        "output": { "alert": ["RAPID_IN_OUT", "HIGH_RISK_COUNTRY"], "score": [40, 30] },
+        "exactOutput": true,
+        "reasonCodes": ["RAPID_MOVEMENT_OF_FUNDS", "HIGH_RISK_JURISDICTION"],
+        "matchedRules": ["RAPID_IN_OUT", "HIGH_RISK_COUNTRY"]
+      }
+    },
+    {
+      "name": "outflow of exactly 90 percent of the minimum inflow is rapid movement",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "500000000 VND", "totalOutLast24h": "450000000 VND" }
+      },
+      "expect": { "output": { "alert": ["RAPID_IN_OUT"], "score": [40] }, "matchedRules": ["RAPID_IN_OUT"] }
+    },
+    {
+      "name": "outflow just below 90 percent is not rapid movement",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "500000000 VND", "totalOutLast24h": "449999999 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "inflow just below the minimum is not rapid movement",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "499999999 VND", "totalOutLast24h": "499999999 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "high-risk customers have a lower minimum inflow for rapid movement",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "HIGH", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "100000000 VND", "totalOutLast24h": "90000000 VND" }
+      },
+      "expect": { "matchedRules": ["RAPID_IN_OUT"] }
+    },
+    {
+      "name": "high-risk customer inflow just below its minimum is not rapid movement",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "HIGH", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "99999999 VND", "totalOutLast24h": "99999999 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "counterparty in XC is high risk",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "XC", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "output": { "alert": ["HIGH_RISK_COUNTRY"], "score": [30] }, "matchedRules": ["HIGH_RISK_COUNTRY"] }
+    },
+    {
+      "name": "counterparty in another country is not high risk",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "10000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "SG", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "dormant account receiving a large transfer is flagged",
+      "description": "Documented scenario in docs/examples.md",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2018-06-01", "lastActivityBeforeToday": "2025-09-01", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "180000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "180000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": {
+        "output": { "alert": ["DORMANT_ACCOUNT"], "score": [30] },
+        "exactOutput": true,
+        "reasonCodes": ["DORMANT_ACCOUNT_REACTIVATED"],
+        "matchedRules": ["DORMANT_REACTIVATED"]
+      }
+    },
+    {
+      "name": "365 days without activity is dormant",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2025-11-02", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "100000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "100000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": ["DORMANT_REACTIVATED"] }
+    },
+    {
+      "name": "364 days without activity is not dormant",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2025-11-03", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "100000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "100000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "the same account is dormant one business day later",
+      "asOf": "2026-11-03",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2025-11-03", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "100000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "100000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": ["DORMANT_REACTIVATED"] }
+    },
+    {
+      "name": "an account never active is dormant from its opening date",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2025-11-02", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "100000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["100000000 VND"], "totalInLast24h": "100000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": ["DORMANT_REACTIVATED"] }
+    },
+    {
+      "name": "dormant account receiving just below the large inflow is not flagged",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2024-01-01", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "99999999 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "99999999 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "money leaving a dormant account is not an inflow",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2024-01-01", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "100000000 VND", "type": "TRANSFER_OUT", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "0 VND", "totalOutLast24h": "100000000 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "new account receiving a large transfer from a high-risk country raises two alerts",
+      "description": "Documented scenario in docs/examples.md",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2026-10-20", "riskRating": "MEDIUM", "customerIsPep": false },
+        "transaction": { "amount": "250000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "XA", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "250000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": {
+        "output": { "alert": ["HIGH_RISK_COUNTRY", "NEW_ACCOUNT_LARGE_TRANSFER"], "score": [30, 25] },
+        "exactOutput": true,
+        "reasonCodes": ["HIGH_RISK_JURISDICTION", "NEW_ACCOUNT_LARGE_TRANSFER"],
+        "matchedRules": ["HIGH_RISK_COUNTRY", "NEW_ACCOUNT_LARGE_TRANSFER"]
+      }
+    },
+    {
+      "name": "an account 29 days old on the value date is new",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2026-10-04", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "200000000 VND", "type": "TRANSFER_OUT", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "0 VND", "totalOutLast24h": "200000000 VND" }
+      },
+      "expect": { "matchedRules": ["NEW_ACCOUNT_LARGE_TRANSFER"] }
+    },
+    {
+      "name": "an account 30 days old on the value date is not new",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2026-10-03", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "200000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "200000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "new account transfer just below the large amount is not flagged",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2026-10-25", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "199999999 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "199999999 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "cash on a new account is not a transfer",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2026-10-25", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "200000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["200000000 VND"], "totalInLast24h": "200000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "large cash deposit by a PEP raises two alerts",
+      "description": "Documented scenario in docs/examples.md",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2015-02-03", "lastActivityBeforeToday": "2026-10-28", "riskRating": "HIGH", "customerIsPep": true },
+        "transaction": { "amount": "600000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["600000000 VND"], "totalInLast24h": "600000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": {
+        "output": { "alert": ["LARGE_CASH", "PEP_LARGE_TRANSACTION"], "score": [10, 20] },
+        "exactOutput": true,
+        "reasonCodes": ["LARGE_CASH_TRANSACTION", "PEP_LARGE_TRANSACTION"],
+        "matchedRules": ["LARGE_CASH", "PEP_LARGE_TRANSACTION"]
+      }
+    },
+    {
+      "name": "PEP transfer of 500,000,000 is a large PEP transaction",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": true },
+        "transaction": { "amount": "500000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": ["PEP_LARGE_TRANSACTION"] }
+    },
+    {
+      "name": "PEP transfer just below 500,000,000 is not flagged",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": true },
+        "transaction": { "amount": "499999999 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "the same transfer by a customer who is not a PEP is not flagged",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "500000000 VND", "type": "TRANSFER_IN", "counterpartyCountry": "VN", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "matchedRules": [] }
+    },
+    {
+      "name": "PEP structuring then large cash raises three alerts",
+      "description": "Documented scenario in docs/examples.md",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2015-02-03", "lastActivityBeforeToday": "2026-11-01", "riskRating": "HIGH", "customerIsPep": true },
+        "transaction": { "amount": "520000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["245000000 VND", "255000000 VND", "265000000 VND", "520000000 VND"], "totalInLast24h": "520000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": {
+        "output": { "alert": ["LARGE_CASH", "STRUCTURING", "PEP_LARGE_TRANSACTION"], "score": [10, 50, 20] },
+        "exactOutput": true,
+        "reasonCodes": ["LARGE_CASH_TRANSACTION", "POSSIBLE_STRUCTURING", "PEP_LARGE_TRANSACTION"],
+        "matchedRules": ["LARGE_CASH", "STRUCTURING", "PEP_LARGE_TRANSACTION"]
+      }
+    },
+    {
+      "name": "every matching alert contributes in rule order",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2025-10-01", "lastActivityBeforeToday": "2025-10-01", "riskRating": "HIGH", "customerIsPep": true },
+        "transaction": { "amount": "700000000 VND", "type": "CASH_DEPOSIT", "counterpartyCountry": "XC", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": ["250000000 VND", "260000000 VND", "270000000 VND"], "totalInLast24h": "700000000 VND", "totalOutLast24h": "700000000 VND" }
+      },
+      "expect": {
+        "output": {
+          "alert": ["LARGE_CASH", "STRUCTURING", "RAPID_IN_OUT", "HIGH_RISK_COUNTRY", "DORMANT_ACCOUNT", "PEP_LARGE_TRANSACTION"],
+          "score": [10, 50, 40, 30, 30, 20]
+        },
+        "reasonCodes": ["LARGE_CASH_TRANSACTION", "POSSIBLE_STRUCTURING", "RAPID_MOVEMENT_OF_FUNDS",
+                        "HIGH_RISK_JURISDICTION", "DORMANT_ACCOUNT_REACTIVATED", "PEP_LARGE_TRANSACTION"]
+      }
+    },
+    {
+      "name": "a transaction in another currency fails the evaluation",
+      "description": "The thresholds are in VND; convert amounts before monitoring them",
+      "asOf": "2026-11-02",
+      "facts": {
+        "account": { "openedOn": "2020-01-15", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": "20000 USD", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+        "history": { "cashDepositsLast7d": [], "totalInLast24h": "10000000 VND", "totalOutLast24h": "0 VND" }
+      },
+      "expect": { "error": "money currencies differ" }
     }
   ]
 }
