@@ -1,0 +1,826 @@
+{
+  "decision": "consumer_loan_underwriting",
+  "description": "Consumer loan underwriting: the documented scenarios and both sides of every age, score, income, term, debt-to-income, loan-to-value and employment threshold. Amounts in VND; a loan without collateralValue is unsecured.",
+  "cases": [
+    {
+      "name": "strong salaried applicant gets grade A",
+      "description": "Documented scenario in docs/examples.md: instalment 360,000,000 x 1.36 / 36 = 13,600,000, debt-to-income 26%, rate 8.5% + 5% x 26% = 9.80%",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "secured vehicle loan for a self-employed applicant gets grade C",
+      "description": "Documented scenario in docs/examples.md: debt-to-income 40.57%, loan-to-value 60%; the limit is set by income (478,125,000), below 70% of the collateral (490,000,000)",
+      "facts": {
+        "applicant": { "age": 42, "creditScore": 640, "monthlyIncome": 35000000, "existingMonthlyDebt": 3000000, "employmentMonths": 30, "employmentType": "SELF_EMPLOYED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 420000000, "termMonths": 60, "collateralValue": 700000000, "purpose": "VEHICLE" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "interestRate": 0.1303, "maxAmount": 478000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_C"]
+      }
+    },
+    {
+      "name": "secured vehicle loan limit is capped at 70% of a lower collateral value",
+      "description": "70% of 680,000,000 = 476,000,000 is below the income limit of 478,125,000",
+      "facts": {
+        "applicant": { "age": 42, "creditScore": 640, "monthlyIncome": 35000000, "existingMonthlyDebt": 3000000, "employmentMonths": 30, "employmentType": "SELF_EMPLOYED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 420000000, "termMonths": 60, "collateralValue": 680000000, "purpose": "VEHICLE" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "interestRate": 0.1303, "maxAmount": 476000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_C"]
+      }
+    },
+    {
+      "name": "heavy existing debt is declined",
+      "description": "Documented scenario in docs/examples.md: debt-to-income (6,000,000 + 12,400,000) / 20,000,000 = 92%",
+      "facts": {
+        "applicant": { "age": 28, "creditScore": 700, "monthlyIncome": 20000000, "existingMonthlyDebt": 6000000, "employmentMonths": 24, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 240000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["DTI_TOO_HIGH"],
+        "matchedRules": ["DECLINE_DTI"]
+      }
+    },
+    {
+      "name": "recently self-employed applicant is referred",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "applicant": { "age": 31, "creditScore": 720, "monthlyIncome": 40000000, "existingMonthlyDebt": 0, "employmentMonths": 18, "employmentType": "SELF_EMPLOYED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 200000000, "termMonths": 48, "purpose": "HOME_IMPROVEMENT" }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["EMPLOYMENT_HISTORY_SHORT"],
+        "matchedRules": ["REFER_EMPLOYMENT"]
+      }
+    },
+    {
+      "name": "unsecured grade D is referred",
+      "description": "Documented scenario in docs/examples.md",
+      "facts": {
+        "applicant": { "age": 26, "creditScore": 590, "monthlyIncome": 15000000, "existingMonthlyDebt": 1000000, "employmentMonths": 36, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 24, "purpose": "EDUCATION" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "D" },
+        "exactOutput": true,
+        "reasonCodes": ["UNSECURED_GRADE_D"],
+        "matchedRules": ["REFER_D_UNSECURED"]
+      }
+    },
+    {
+      "name": "applicant aged 19 is declined",
+      "facts": {
+        "applicant": { "age": 19, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["AGE_OUT_OF_RANGE"],
+        "matchedRules": ["DECLINE_AGE"]
+      }
+    },
+    {
+      "name": "applicant aged exactly 20 is approved",
+      "facts": {
+        "applicant": { "age": 20, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "applicant aged exactly 65 is approved",
+      "facts": {
+        "applicant": { "age": 65, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "applicant aged 66 is declined",
+      "facts": {
+        "applicant": { "age": 66, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["AGE_OUT_OF_RANGE"],
+        "matchedRules": ["DECLINE_AGE"]
+      }
+    },
+    {
+      "name": "bad debt in the last 5 years is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": true },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["BAD_DEBT_HISTORY"],
+        "matchedRules": ["DECLINE_BAD_DEBT"]
+      }
+    },
+    {
+      "name": "credit score of 499 is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 499, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["CREDIT_SCORE_TOO_LOW"],
+        "matchedRules": ["DECLINE_SCORE"]
+      }
+    },
+    {
+      "name": "credit score of exactly 500 is referred as marginal",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 500, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "E" },
+        "exactOutput": true,
+        "reasonCodes": ["CREDIT_SCORE_MARGINAL"],
+        "matchedRules": ["REFER_OTHER"]
+      }
+    },
+    {
+      "name": "income one cent below 5 million is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 4999999.99, "existingMonthlyDebt": 0, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 12000000, "termMonths": 12, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["INCOME_BELOW_MINIMUM"],
+        "matchedRules": ["DECLINE_INCOME"]
+      }
+    },
+    {
+      "name": "income of exactly 5 million is approved",
+      "description": "12,000,000 x 1.12 / 12 = 1,120,000 a month: debt-to-income 22.4%",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 5000000, "existingMonthlyDebt": 0, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 12000000, "termMonths": 12, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0962, "maxAmount": 24000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "zero income is declined instead of dividing by zero",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 0, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["INCOME_BELOW_MINIMUM"],
+        "matchedRules": ["DECLINE_INCOME"]
+      }
+    },
+    {
+      "name": "income with cents is used exactly",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000.50, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "zero-month term is declined instead of dividing by zero",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 0, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["TERM_OUT_OF_RANGE"],
+        "matchedRules": ["DECLINE_TERM"]
+      }
+    },
+    {
+      "name": "5-month unsecured term is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 5, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["TERM_OUT_OF_RANGE"],
+        "matchedRules": ["DECLINE_TERM"]
+      }
+    },
+    {
+      "name": "6-month unsecured term is approved",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 6, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0955, "maxAmount": 141000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "60-month unsecured term is approved",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 60, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0880, "maxAmount": 937000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "61-month unsecured term is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 61, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["TERM_OUT_OF_RANGE"],
+        "matchedRules": ["DECLINE_TERM"]
+      }
+    },
+    {
+      "name": "5-month secured term is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 5, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["TERM_OUT_OF_RANGE"],
+        "matchedRules": ["DECLINE_TERM"]
+      }
+    },
+    {
+      "name": "84-month secured term is approved",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 84, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0678, "maxAmount": 280000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "85-month secured term is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 60000000, "termMonths": 85, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["TERM_OUT_OF_RANGE"],
+        "matchedRules": ["DECLINE_TERM"]
+      }
+    },
+    {
+      "name": "debt-to-income of exactly 30% gets grade A",
+      "description": "4,400,000 + 13,600,000 = 18,000,000, 30% of 60,000,000",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 4400000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.1000, "maxAmount": 598000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "debt-to-income just above 30% gets grade B",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 4400001, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "interestRate": 0.1200, "maxAmount": 598000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_B"]
+      }
+    },
+    {
+      "name": "debt-to-income of exactly 45% is approved",
+      "description": "13,400,000 + 13,600,000 = 27,000,000, 45% of 60,000,000",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 13400000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "interestRate": 0.1275, "maxAmount": 360000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_B"]
+      }
+    },
+    {
+      "name": "debt-to-income just above 45% is referred",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 13400001, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["DTI_ELEVATED"],
+        "matchedRules": ["REFER_DTI"]
+      }
+    },
+    {
+      "name": "debt-to-income of exactly 60% is referred",
+      "description": "22,400,000 + 13,600,000 = 36,000,000, 60% of 60,000,000",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 22400000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["DTI_ELEVATED"],
+        "matchedRules": ["REFER_DTI"]
+      }
+    },
+    {
+      "name": "debt-to-income just above 60% is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 22400001, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["DTI_TOO_HIGH"],
+        "matchedRules": ["DECLINE_DTI"]
+      }
+    },
+    {
+      "name": "secured loan at exactly 70% loan-to-value is approved with a rate discount",
+      "description": "Instalment 280,000,000 x 1.36 / 36 = 10,577,777.78, debt-to-income 20.96%, rate 8.5% + 1.048% - 2% = 7.548%; limit 70% of the collateral",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0755, "maxAmount": 280000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "loan-to-value just above 70% is referred",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000001, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["LTV_ELEVATED"],
+        "matchedRules": ["REFER_LTV"]
+      }
+    },
+    {
+      "name": "loan-to-value of exactly 85% is referred",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 340000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["LTV_ELEVATED"],
+        "matchedRules": ["REFER_LTV"]
+      }
+    },
+    {
+      "name": "loan-to-value just above 85% is declined",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 340000001, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["LTV_TOO_HIGH"],
+        "matchedRules": ["DECLINE_LTV"]
+      }
+    },
+    {
+      "name": "zero collateral value is declined instead of dividing by zero",
+      "description": "Zero means worthless collateral, not an unsecured loan",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 0 }
+      },
+      "expect": {
+        "output": { "decision": "DECLINE" },
+        "exactOutput": true,
+        "reasonCodes": ["LTV_TOO_HIGH"],
+        "matchedRules": ["DECLINE_LTV"]
+      }
+    },
+    {
+      "name": "salaried for 11 months is referred",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 11, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["EMPLOYMENT_HISTORY_SHORT"],
+        "matchedRules": ["REFER_EMPLOYMENT"]
+      }
+    },
+    {
+      "name": "salaried for 12 months is approved",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 12, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "contract worker for 11 months is referred",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 11, "employmentType": "CONTRACT", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["EMPLOYMENT_HISTORY_SHORT"],
+        "matchedRules": ["REFER_EMPLOYMENT"]
+      }
+    },
+    {
+      "name": "self-employed for 23 months is referred",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 23, "employmentType": "SELF_EMPLOYED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["EMPLOYMENT_HISTORY_SHORT"],
+        "matchedRules": ["REFER_EMPLOYMENT"]
+      }
+    },
+    {
+      "name": "self-employed for 24 months is approved",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 24, "employmentType": "SELF_EMPLOYED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "unsecured vehicle purchase is a standard purpose",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "VEHICLE" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "education is a standard purpose",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "EDUCATION" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "home improvement is a standard purpose",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "HOME_IMPROVEMENT" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "travel loan is referred",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "TRAVEL" }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "exactOutput": true,
+        "reasonCodes": ["PURPOSE_NOT_STANDARD"],
+        "matchedRules": ["REFER_PURPOSE"]
+      }
+    },
+    {
+      "name": "credit score of exactly 750 gets grade A",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 750, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0980, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "credit score of 749 gets grade B",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 749, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "interestRate": 0.1180, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_B"]
+      }
+    },
+    {
+      "name": "credit score of 700 gets grade B at 11.80%",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 700, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "interestRate": 0.1180, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_B"]
+      }
+    },
+    {
+      "name": "credit score of exactly 680 gets grade B",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 680, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "interestRate": 0.1180, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_B"]
+      }
+    },
+    {
+      "name": "credit score of 679 gets grade C",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 679, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "interestRate": 0.1430, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_C"]
+      }
+    },
+    {
+      "name": "credit score of 650 gets grade C at 14.30%",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 650, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "interestRate": 0.1430, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_C"]
+      }
+    },
+    {
+      "name": "credit score of exactly 620 gets grade C",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 620, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "interestRate": 0.1430, "maxAmount": 661000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_C"]
+      }
+    },
+    {
+      "name": "unsecured credit score of 619 is referred as grade D",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 619, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "D" },
+        "exactOutput": true,
+        "reasonCodes": ["UNSECURED_GRADE_D"],
+        "matchedRules": ["REFER_D_UNSECURED"]
+      }
+    },
+    {
+      "name": "unsecured credit score of exactly 560 is referred as grade D",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 560, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "D" },
+        "exactOutput": true,
+        "reasonCodes": ["UNSECURED_GRADE_D"],
+        "matchedRules": ["REFER_D_UNSECURED"]
+      }
+    },
+    {
+      "name": "unsecured credit score of 559 is referred as marginal",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 559, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "E" },
+        "exactOutput": true,
+        "reasonCodes": ["CREDIT_SCORE_MARGINAL"],
+        "matchedRules": ["REFER_OTHER"]
+      }
+    },
+    {
+      "name": "secured credit score of exactly 750 gets grade A",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 750, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "interestRate": 0.0755, "maxAmount": 280000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_A"]
+      }
+    },
+    {
+      "name": "secured credit score of exactly 620 gets grade C",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 620, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "interestRate": 0.1205, "maxAmount": 280000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_C"]
+      }
+    },
+    {
+      "name": "secured credit score of 619 is approved as grade D",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 619, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "D", "interestRate": 0.1505, "maxAmount": 280000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_D_SECURED"]
+      }
+    },
+    {
+      "name": "secured credit score of 580 is approved as grade D at 15.05%",
+      "description": "16% + 5% x 20.96% - 2% = 15.048%",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 580, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "D", "interestRate": 0.1505, "maxAmount": 280000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_D_SECURED"]
+      }
+    },
+    {
+      "name": "secured credit score of exactly 560 is approved as grade D",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 560, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "D", "interestRate": 0.1505, "maxAmount": 280000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_D_SECURED"]
+      }
+    },
+    {
+      "name": "secured credit score of 559 is referred as marginal",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 559, "monthlyIncome": 60000000, "existingMonthlyDebt": 2000000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "E" },
+        "exactOutput": true,
+        "reasonCodes": ["CREDIT_SCORE_MARGINAL"],
+        "matchedRules": ["REFER_OTHER"]
+      }
+    },
+    {
+      "name": "interest rate is rounded half up",
+      "description": "Debt-to-income exactly 30.1%: 10.5% + 5% x 30.1% = 12.005%, rounded half up to 12.01% (HALF_EVEN would give 12.00%)",
+      "facts": {
+        "applicant": { "age": 35, "creditScore": 780, "monthlyIncome": 60000000, "existingMonthlyDebt": 4460000, "employmentMonths": 60, "employmentType": "SALARIED", "hasBadDebtLast5y": false },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "interestRate": 0.1201, "maxAmount": 596000000 },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["APPROVE_B"]
+      }
+    }
+  ]
+}

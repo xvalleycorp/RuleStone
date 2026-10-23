@@ -1,0 +1,289 @@
+{
+  "decision": "consumer_loan_conditions",
+  "description": "Conditions attached to an approved consumer loan: the documented approvals, every condition alone, and both sides of every amount and term threshold. Amounts in VND; a loan without collateralValue is unsecured.",
+  "cases": [
+    {
+      "name": "grade A unsecured consumer loan needs credit life insurance",
+      "description": "Documented scenario in docs/examples.md: the grade A approval, 360,000,000 over 36 months",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 360000000, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["CREDIT_LIFE_INSURANCE"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["CREDIT_LIFE_INSURANCE"]
+      }
+    },
+    {
+      "name": "grade C secured vehicle loan for a self-employed applicant",
+      "description": "Documented scenario in docs/examples.md: the grade C approval",
+      "facts": {
+        "riskGrade": "C",
+        "applicant": { "employmentType": "SELF_EMPLOYED" },
+        "loan": { "amount": 420000000, "termMonths": 60, "collateralValue": 700000000, "purpose": "VEHICLE" }
+      },
+      "expect": {
+        "output": { "condition": ["TAX_RETURNS_2Y", "CREDIT_LIFE_INSURANCE", "COLLATERAL_INSURANCE", "HOLD_VEHICLE_REGISTRATION"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["TAX_RETURNS", "CREDIT_LIFE_INSURANCE", "COLLATERAL_INSURANCE", "HOLD_VEHICLE_REGISTRATION"]
+      }
+    },
+    {
+      "name": "small unsecured grade A loan has no condition",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "salaried grade B applicant needs no salary assignment",
+      "facts": {
+        "riskGrade": "B",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "salaried grade C applicant assigns the salary",
+      "facts": {
+        "riskGrade": "C",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["SALARY_ASSIGNMENT"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["SALARY_ASSIGNMENT"]
+      }
+    },
+    {
+      "name": "salaried grade D applicant assigns the salary and needs a guarantor",
+      "facts": {
+        "riskGrade": "D",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["SALARY_ASSIGNMENT", "GUARANTOR"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["SALARY_ASSIGNMENT", "GUARANTOR"]
+      }
+    },
+    {
+      "name": "contract worker in grade C needs no salary assignment",
+      "facts": {
+        "riskGrade": "C",
+        "applicant": { "employmentType": "CONTRACT" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "self-employed applicant provides 2 years of tax returns",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SELF_EMPLOYED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["TAX_RETURNS_2Y"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["TAX_RETURNS"]
+      }
+    },
+    {
+      "name": "grade D needs a guarantor",
+      "facts": {
+        "riskGrade": "D",
+        "applicant": { "employmentType": "CONTRACT" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["GUARANTOR"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["GUARANTOR"]
+      }
+    },
+    {
+      "name": "unsecured loan of exactly 500 million needs no guarantor",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 500000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["CREDIT_LIFE_INSURANCE"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["CREDIT_LIFE_INSURANCE"]
+      }
+    },
+    {
+      "name": "unsecured loan just above 500 million needs a guarantor",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 500000001, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["GUARANTOR", "CREDIT_LIFE_INSURANCE"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["GUARANTOR", "CREDIT_LIFE_INSURANCE"]
+      }
+    },
+    {
+      "name": "secured loan above 500 million needs no guarantor",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 500000001, "termMonths": 24, "purpose": "CONSUMER", "collateralValue": 900000000 }
+      },
+      "expect": {
+        "output": { "condition": ["CREDIT_LIFE_INSURANCE", "COLLATERAL_INSURANCE"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["CREDIT_LIFE_INSURANCE", "COLLATERAL_INSURANCE"]
+      }
+    },
+    {
+      "name": "loan just under 100 million over 36 months needs no credit life insurance",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 99999999, "termMonths": 36, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "loan of exactly 100 million needs credit life insurance",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 100000000, "termMonths": 24, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["CREDIT_LIFE_INSURANCE"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["CREDIT_LIFE_INSURANCE"]
+      }
+    },
+    {
+      "name": "loan over 37 months needs credit life insurance",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 37, "purpose": "CONSUMER" }
+      },
+      "expect": {
+        "output": { "condition": ["CREDIT_LIFE_INSURANCE"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["CREDIT_LIFE_INSURANCE"]
+      }
+    },
+    {
+      "name": "unsecured vehicle loan holds no registration",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "VEHICLE" }
+      },
+      "expect": {
+        "output": { "condition": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    },
+    {
+      "name": "secured vehicle loan insures the collateral and holds the registration",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "VEHICLE", "collateralValue": 80000000 }
+      },
+      "expect": {
+        "output": { "condition": ["COLLATERAL_INSURANCE", "HOLD_VEHICLE_REGISTRATION"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["COLLATERAL_INSURANCE", "HOLD_VEHICLE_REGISTRATION"]
+      }
+    },
+    {
+      "name": "secured home improvement loan only insures the collateral",
+      "facts": {
+        "riskGrade": "B",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "HOME_IMPROVEMENT", "collateralValue": 200000000 }
+      },
+      "expect": {
+        "output": { "condition": ["COLLATERAL_INSURANCE"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["COLLATERAL_INSURANCE"]
+      }
+    },
+    {
+      "name": "education loan is paid to the school",
+      "facts": {
+        "riskGrade": "A",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 50000000, "termMonths": 24, "purpose": "EDUCATION" }
+      },
+      "expect": {
+        "output": { "condition": ["DISBURSE_TO_SCHOOL"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["DISBURSE_TO_SCHOOL"]
+      }
+    },
+    {
+      "name": "secured grade D loan collects every applicable condition",
+      "description": "The grade D approval from consumer_loan_underwriting: 280,000,000 over 36 months on 400,000,000 collateral",
+      "facts": {
+        "riskGrade": "D",
+        "applicant": { "employmentType": "SALARIED" },
+        "loan": { "amount": 280000000, "termMonths": 36, "purpose": "CONSUMER", "collateralValue": 400000000 }
+      },
+      "expect": {
+        "output": { "condition": ["SALARY_ASSIGNMENT", "GUARANTOR", "CREDIT_LIFE_INSURANCE", "COLLATERAL_INSURANCE"] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["SALARY_ASSIGNMENT", "GUARANTOR", "CREDIT_LIFE_INSURANCE", "COLLATERAL_INSURANCE"]
+      }
+    }
+  ]
+}
