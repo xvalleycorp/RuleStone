@@ -10,7 +10,10 @@
 | [Fuzzy matching](fuzzy-matching.md) | Compare names for AML/KYC screening: normalization, similarity scores, thresholds and limitations. |
 | [Java API](java-api.md) | Embed the engine: inputs, results, errors, reloading rules, threading. |
 | [Testing](testing.md) | Test decision tables: JSON test cases, JUnit 5 integration, rule coverage and fluent assertions. |
-| [Examples](examples.md) | Study complete tables for loans, deposit rates and transfer fees. |
+| [Web editor](editor.md) | Create and edit decision tables in the browser, try them on sample facts and save `.stone.json` files. |
+| [Temporal integration](temporal.md) | Evaluate decisions from Temporal workflows, as activities or inside workflow code with pinned rule versions. |
+| [Camunda integration](camunda.md) | Call decisions from BPMN processes with a Camunda 8 job worker or a Camunda 7 delegate. |
+| [Examples](examples.md) | Study complete tables for loans, deposit rates, transfer fees, card fraud, underwriting and AML. |
 
 ## Design
 
