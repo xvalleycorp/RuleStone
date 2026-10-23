@@ -1,0 +1,49 @@
+{
+  "id": "card_fraud_action",
+  "version": "1",
+  "description": "Authorization action from the risk score produced by card_fraud_signals",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "riskScore": "int",
+    "transaction": {
+      "amount": "decimal",
+      "channel": "string"
+    }
+  },
+  "outputs": {
+    "action": "string"
+  },
+  "rules": [
+    {
+      "id": "DECLINE_VERY_HIGH",
+      "when": "riskScore >= 80",
+      "then": { "action": "'DECLINE'" },
+      "reasonCode": "RISK_SCORE_VERY_HIGH"
+    },
+    {
+      "id": "DECLINE_NO_STEP_UP",
+      "description": "Only e-commerce can step up with an OTP; at POS and ATM a high score declines",
+      "when": "riskScore >= 40 && transaction.channel != 'ECOM'",
+      "then": { "action": "'DECLINE'" },
+      "reasonCode": "STEP_UP_UNAVAILABLE"
+    },
+    {
+      "id": "CHALLENGE_HIGH",
+      "when": "riskScore >= 40",
+      "then": { "action": "'CHALLENGE'" },
+      "reasonCode": "RISK_SCORE_HIGH"
+    },
+    {
+      "id": "CHALLENGE_LARGE_AMOUNT",
+      "description": "Some risk on a large e-commerce payment",
+      "when": "transaction.channel == 'ECOM' && riskScore >= 20 && transaction.amount >= 20000000",
+      "then": { "action": "'CHALLENGE'" },
+      "reasonCode": "LARGE_AMOUNT_WITH_RISK"
+    },
+    {
+      "id": "APPROVE",
+      "when": "true",
+      "then": { "action": "'APPROVE'" }
+    }
+  ]
+}

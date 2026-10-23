@@ -8,12 +8,14 @@ package vn.io.dxa.rulestone.cel;
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import vn.io.dxa.rulestone.api.Money;
 
 /** Converts values between their Java form and their CEL runtime form, checking declared types. */
 final class Values {
@@ -25,7 +27,7 @@ final class Values {
      *
      * <p>Accepted: {@code Boolean}; integral boxes and {@code BigInteger} for int;
      * {@code String} and enums for string; {@code BigDecimal} and integral numbers for decimal;
-     * collections for lists; maps and records for structs. Floating-point numbers are rejected.
+     * {@link Money} for money; {@link LocalDate} for date; collections for lists; maps and records for structs. Floating-point numbers are rejected.
      * Struct fields that are absent or null are left unset, so rules can test them with {@code has()}.
      */
     static Object toCel(Object value, ValueType type, String path) {
@@ -51,6 +53,20 @@ final class Values {
                     throw mismatch(path, type, value);
                 }
                 case DECIMAL -> DecimalLibrary.wrap(toBigDecimal(value, path));
+                case MONEY -> {
+                    if (value instanceof Money money) {
+                        yield new CelMoney(money.amount(), money.currency());
+                    }
+                    throw new InvalidValueException(path, "expected money but got " + value.getClass().getName()
+                            + "; pass a " + Money.class.getName());
+                }
+                case DATE -> {
+                    if (value instanceof LocalDate) {
+                        yield value;
+                    }
+                    throw new InvalidValueException(path, "expected date but got " + value.getClass().getName()
+                            + "; pass a java.time.LocalDate");
+                }
             };
         }
         if (type instanceof ValueType.ListOf list) {
@@ -83,6 +99,8 @@ final class Values {
                 case INT -> value instanceof Long ? value : null;
                 case STRING -> value instanceof String ? value : null;
                 case DECIMAL -> value instanceof CelDecimal d ? d.value : null;
+                case MONEY -> value instanceof CelMoney m ? new Money(m.amount, m.currency) : null;
+                case DATE -> value instanceof LocalDate ? value : null;
             };
             if (result == null) {
                 throw new InvalidValueException(path, "expected " + expected + " but expression produced " + describe(value));
@@ -116,7 +134,10 @@ final class Values {
                     }
                 }
             }
-            return null;
+            // A missing component is a mapping mistake (e.g. a misspelt field), not an unset value:
+            // treating it as unset would only surface when a rule reads it, or never.
+            throw new InvalidValueException(path + "." + field,
+                    "record " + record.getClass().getSimpleName() + " has no component named '" + field + "'");
         }
         throw new InvalidValueException(path, "expected a Map or a record but got " + value.getClass().getName());
     }
@@ -165,6 +186,12 @@ final class Values {
         }
         if (value instanceof CelDecimal) {
             return "decimal";
+        }
+        if (value instanceof CelMoney) {
+            return "money";
+        }
+        if (value instanceof LocalDate) {
+            return "date";
         }
         return value.getClass().getSimpleName();
     }

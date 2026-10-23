@@ -1,0 +1,59 @@
+{
+  "id": "consumer_loan_conditions",
+  "version": "1",
+  "description": "Conditions attached to an approved consumer loan; riskGrade comes from consumer_loan_underwriting",
+  "hitPolicy": "COLLECT",
+  "inputs": {
+    "riskGrade": "string",
+    "applicant": {
+      "employmentType": "string"
+    },
+    "loan": {
+      "amount": "decimal",
+      "termMonths": "int",
+      "collateralValue": "decimal",
+      "purpose": "string"
+    }
+  },
+  "outputs": {
+    "condition": "string"
+  },
+  "rules": [
+    {
+      "id": "SALARY_ASSIGNMENT",
+      "description": "Salary paid into an account at the bank, lower grades only",
+      "when": "applicant.employmentType == 'SALARIED' && riskGrade in ['C', 'D']",
+      "then": { "condition": "'SALARY_ASSIGNMENT'" }
+    },
+    {
+      "id": "TAX_RETURNS",
+      "when": "applicant.employmentType == 'SELF_EMPLOYED'",
+      "then": { "condition": "'TAX_RETURNS_2Y'" }
+    },
+    {
+      "id": "GUARANTOR",
+      "when": "riskGrade == 'D' || (!has(loan.collateralValue) && loan.amount > 500000000)",
+      "then": { "condition": "'GUARANTOR'" }
+    },
+    {
+      "id": "CREDIT_LIFE_INSURANCE",
+      "when": "loan.amount >= 100000000 || loan.termMonths > 36",
+      "then": { "condition": "'CREDIT_LIFE_INSURANCE'" }
+    },
+    {
+      "id": "COLLATERAL_INSURANCE",
+      "when": "has(loan.collateralValue)",
+      "then": { "condition": "'COLLATERAL_INSURANCE'" }
+    },
+    {
+      "id": "HOLD_VEHICLE_REGISTRATION",
+      "when": "loan.purpose == 'VEHICLE' && has(loan.collateralValue)",
+      "then": { "condition": "'HOLD_VEHICLE_REGISTRATION'" }
+    },
+    {
+      "id": "DISBURSE_TO_SCHOOL",
+      "when": "loan.purpose == 'EDUCATION'",
+      "then": { "condition": "'DISBURSE_TO_SCHOOL'" }
+    }
+  ]
+}

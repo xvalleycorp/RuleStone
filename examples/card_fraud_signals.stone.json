@@ -1,0 +1,101 @@
+{
+  "id": "card_fraud_signals",
+  "version": "1",
+  "description": "Risk signals for a card authorization; the application sums the points and passes the score to card_fraud_action",
+  "hitPolicy": "COLLECT",
+  "inputs": {
+    "transaction": {
+      "amount": "decimal",
+      "currency": "string",
+      "merchantCategory": "string",
+      "country": "string",
+      "channel": "string",
+      "hourOfDay": "int",
+      "cardPresent": "bool"
+    },
+    "profile": {
+      "homeCountry": "string",
+      "averageAmount30d": "decimal",
+      "transactionsLastHour": "int",
+      "distinctCountriesLast24h": "int",
+      "newDevice": "bool",
+      "accountAgeDays": "int"
+    }
+  },
+  "outputs": {
+    "signal": "string",
+    "points": "int"
+  },
+  "rules": [
+    {
+      "id": "AMOUNT_SPIKE",
+      "description": "More than 5 times the 30-day average amount; cards without history are covered by NEW_ACCOUNT",
+      "when": "profile.averageAmount30d > 0 && transaction.amount > profile.averageAmount30d * 5",
+      "then": { "signal": "'AMOUNT_SPIKE'", "points": "30" },
+      "reasonCode": "AMOUNT_SPIKE"
+    },
+    {
+      "id": "HIGH_VELOCITY",
+      "description": "5 or more transactions in the previous hour, not counting this one",
+      "when": "profile.transactionsLastHour >= 5",
+      "then": { "signal": "'HIGH_VELOCITY'", "points": "25" },
+      "reasonCode": "HIGH_VELOCITY"
+    },
+    {
+      "id": "FOREIGN_COUNTRY",
+      "description": "Merchant country differs from the cardholder's home country",
+      "when": "transaction.country != profile.homeCountry",
+      "then": { "signal": "'FOREIGN_COUNTRY'", "points": "10" },
+      "reasonCode": "FOREIGN_COUNTRY"
+    },
+    {
+      "id": "MULTI_COUNTRY_24H",
+      "description": "Impossible-travel proxy: 3 or more distinct merchant countries in 24 hours, this transaction included",
+      "when": "profile.distinctCountriesLast24h >= 3",
+      "then": { "signal": "'MULTI_COUNTRY_24H'", "points": "35" },
+      "reasonCode": "MULTI_COUNTRY_24H"
+    },
+    {
+      "id": "NIGHT_ECOM",
+      "description": "E-commerce between 00:00 and 04:59, cardholder's local time",
+      "when": "transaction.channel == 'ECOM' && transaction.hourOfDay < 5",
+      "then": { "signal": "'NIGHT_ECOM'", "points": "15" },
+      "reasonCode": "NIGHT_ECOM"
+    },
+    {
+      "id": "HIGH_RISK_MCC",
+      "description": "Gambling (7995), money transfer (4829), quasi-cash and crypto (6051)",
+      "when": "transaction.merchantCategory in ['7995', '4829', '6051']",
+      "then": { "signal": "'HIGH_RISK_MCC'", "points": "20" },
+      "reasonCode": "HIGH_RISK_MCC"
+    },
+    {
+      "id": "NEW_DEVICE_ECOM",
+      "description": "E-commerce from a device not seen before on this card",
+      "when": "transaction.channel == 'ECOM' && profile.newDevice",
+      "then": { "signal": "'NEW_DEVICE_ECOM'", "points": "20" },
+      "reasonCode": "NEW_DEVICE_ECOM"
+    },
+    {
+      "id": "NEW_ACCOUNT",
+      "description": "Card account opened less than 30 days ago",
+      "when": "profile.accountAgeDays < 30",
+      "then": { "signal": "'NEW_ACCOUNT'", "points": "15" },
+      "reasonCode": "NEW_ACCOUNT"
+    },
+    {
+      "id": "KEYED_POS",
+      "description": "Point-of-sale transaction without the card present (manual key entry)",
+      "when": "transaction.channel == 'POS' && !transaction.cardPresent",
+      "then": { "signal": "'KEYED_POS'", "points": "15" },
+      "reasonCode": "KEYED_POS"
+    },
+    {
+      "id": "FOREIGN_CURRENCY",
+      "description": "Original currency is not VND; amount is always the VND billing amount",
+      "when": "transaction.currency != 'VND'",
+      "then": { "signal": "'FOREIGN_CURRENCY'", "points": "5" },
+      "reasonCode": "FOREIGN_CURRENCY"
+    }
+  ]
+}

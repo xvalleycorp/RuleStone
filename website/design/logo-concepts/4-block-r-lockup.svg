@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 64" role="img" aria-label="RuleStone">
+  <!-- Block R: the letter R laid in courses of cut stone, like the rows of a decision table; the gold leg strides forward. -->
+  <!-- Wordmark: live text in a widely available system sans-serif (not converted to paths). -->
+  <g>
+    <polygon fill="#44403c" points="9,6 23,6 23,58 9,58"/>
+    <polygon fill="#44403c" points="27,6 48,6 55,13 55,17 27,17"/>
+    <polygon fill="#44403c" points="43,21 55,21 55,29 43,29"/>
+    <polygon fill="#44403c" points="27,33 55,33 55,37 49,43 27,43"/>
+    <polygon fill="#f59e0b" points="29,47 43,47 55,58 41,58"/>
+  </g>
+  <text x="76" y="44" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5"><tspan fill="#1c1917">Rule</tspan><tspan fill="#b45309">Stone</tspan></text>
+</svg>

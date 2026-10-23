@@ -28,7 +28,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: { src: '/logo.svg', alt: 'RuleStone' },
+    logo: { light: '/logo.svg', dark: '/logo-dark.svg', alt: 'RuleStone' },
 
     nav: [
       { text: 'Guide', link: '/docs/getting-started', activeMatch: '/docs/getting-started' },
