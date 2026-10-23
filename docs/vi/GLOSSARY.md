@@ -126,6 +126,41 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | value date | ngày giá trị | |
 | watchlist | danh sách theo dõi | |
 
+## Decision flows, AI and orchestration
+
+| English | Tiếng Việt | Ghi chú |
+|---|---|---|
+| activity (Temporal) | activity | Giữ nguyên; một bước công việc do worker thực thi. |
+| attribution (model) | attribution (mức đóng góp của đặc trưng) | |
+| attested input | đầu vào có chứng thực | |
+| BPMN error | BPMN error | Giữ nguyên. |
+| boundary event | boundary event | Giữ nguyên. |
+| champion/challenger | champion/challenger | Xem bảng "Banking and governance". Nhóm: bucket → nhóm. |
+| decision flow | luồng quyết định | |
+| decision record | bản ghi quyết định | |
+| delegate (Camunda 7) | delegate | Giữ nguyên (`JavaDelegate`). |
+| element template | element template | Giữ nguyên. |
+| feature (model) | đặc trưng | |
+| hybrid AI decisioning | ra quyết định AI lai | |
+| incident (Camunda) | incident | Giữ nguyên; sự cố cần người vận hành xử lý. |
+| job worker | job worker | Giữ nguyên. |
+| machine-learning model | mô hình học máy (ML) | |
+| node | nút | |
+| payload | payload | Giữ nguyên. |
+| pin (a version) | ghim (phiên bản) | |
+| process variable | biến quy trình | |
+| replay (decision) | replay, chạy lại | "Replay" giữ nguyên khi nói về Temporal. |
+| re-score | chấm điểm lại | |
+| search attribute | search attribute | Giữ nguyên. |
+| shadow model | mô hình chạy bóng (shadow) | |
+| side effect (Temporal) | side effect | Giữ nguyên (`Workflow.sideEffect`). |
+| strategy tree | cây chiến lược | |
+| web editor | trình soạn thảo web | |
+| workflow | workflow | Giữ nguyên. |
+| workflow history | history của workflow | |
+| workflow replay | replay workflow | |
+| workflow task | workflow task | Giữ nguyên. |
+
 ## Software supply chain and project
 
 | English | Tiếng Việt | Ghi chú |
