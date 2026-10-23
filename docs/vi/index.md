@@ -5,19 +5,19 @@ sourceHash: e416af542e0b1a52d7c438e8828f90fff90f6918b0c66e5805f3c1da095cc31e
 
 # Tài liệu RuleStone
 
-Đây là bản tiếng Việt của tài liệu RuleStone. Bản tiếng Anh là bản gốc; các trang chưa được dịch được đánh dấu "(English)" và dẫn tới bản tiếng Anh. Thuật ngữ dùng trong bản dịch được thống nhất trong [bảng thuật ngữ](GLOSSARY.md).
+Đây là bản tiếng Việt của tài liệu RuleStone. Bản tiếng Anh là bản gốc; trang nào chưa được dịch sẽ được đánh dấu "(English)" và dẫn tới bản tiếng Anh. Thuật ngữ dùng trong bản dịch được thống nhất trong [bảng thuật ngữ](GLOSSARY.md).
 
 ## Hướng dẫn
 
 | Trang | Đọc để |
 |---|---|
 | [Bắt đầu](getting-started.md) | Viết và đánh giá bảng quyết định đầu tiên của bạn trong mười phút. |
-| [Bảng quyết định](../decision-tables.md) (English) | Nắm định dạng `.stone.json`, hit policy, phiên bản, ngày hiệu lực và cách kiểm tra hợp lệ. |
-| [Ngôn ngữ biểu thức](../expressions.md) (English) | Viết điều kiện và đầu ra: toán tử, số thập phân, làm tròn, danh sách, trường bị thiếu, lỗi. |
-| [So khớp gần đúng](../fuzzy-matching.md) (English) | So sánh tên khi sàng lọc AML/KYC: chuẩn hoá, điểm tương đồng, ngưỡng và các giới hạn. |
-| [Java API](../java-api.md) (English) | Nhúng engine vào ứng dụng: đầu vào, kết quả, lỗi, nạp lại luật, đa luồng. |
-| [Kiểm thử](../testing.md) (English) | Kiểm thử bảng quyết định: ca kiểm thử bằng JSON, tích hợp JUnit 5, độ bao phủ luật và assertion dạng fluent. |
-| [Ví dụ](../examples.md) (English) | Tìm hiểu các bảng quyết định hoàn chỉnh cho khoản vay, lãi suất tiền gửi và phí chuyển tiền. |
+| [Bảng quyết định](decision-tables.md) | Nắm định dạng `.stone.json`, hit policy, phiên bản, ngày hiệu lực và cách kiểm tra hợp lệ. |
+| [Ngôn ngữ biểu thức](expressions.md) | Viết điều kiện và đầu ra: toán tử, số thập phân, làm tròn, danh sách, trường bị thiếu, lỗi. |
+| [So khớp gần đúng](fuzzy-matching.md) | So sánh tên khi sàng lọc AML/KYC: chuẩn hoá, điểm tương đồng, ngưỡng và các giới hạn. |
+| [Java API](java-api.md) | Nhúng engine vào ứng dụng: đầu vào, kết quả, lỗi, nạp lại luật, đa luồng. |
+| [Kiểm thử](testing.md) | Kiểm thử bảng quyết định: ca kiểm thử bằng JSON, tích hợp JUnit 5, độ bao phủ luật và assertion dạng fluent. |
+| [Ví dụ](examples.md) | Tìm hiểu các bảng quyết định hoàn chỉnh cho khoản vay, lãi suất tiền gửi và phí chuyển tiền. |
 
 ## Thiết kế
 

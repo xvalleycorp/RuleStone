@@ -114,7 +114,7 @@ Nếu dùng nhiều mô-đun RuleStone, hãy import `rulestone-bom` trong `<depe
 - **`inputs`** khai báo những gì bên gọi phải cung cấp, kèm kiểu dữ liệu. `applicant` (người vay) là một *struct* gồm năm trường có kiểu; `amount` (số tiền vay) có kiểu `decimal`, một kiểu số chính xác, phù hợp để biểu diễn tiền.
 - **`outputs`** khai báo những gì các luật có thể trả về.
 - **`hitPolicy: FIRST`** nghĩa là các luật được thử lần lượt từ trên xuống, và luật đầu tiên có `when` đúng sẽ quyết định kết quả. `R5` khớp với mọi trường hợp, nên nó đón tất cả những gì các luật phía trên chưa xử lý.
-- **`when`** và các giá trị trong **`then`** là biểu thức [CEL](../expressions.md). Giá trị văn bản được đặt trong dấu nháy đơn bên trong chuỗi JSON: `"'REJECT'"`.
+- **`when`** và các giá trị trong **`then`** là biểu thức [CEL](expressions.md). Giá trị văn bản được đặt trong dấu nháy đơn bên trong chuỗi JSON: `"'REJECT'"`.
 - **`reasonCode`** là một mã lý do ổn định, có thể hiển thị cho khách hàng hoặc lưu lại phục vụ kiểm toán.
 - **`effectiveFrom`** cho biết phiên bản này có hiệu lực từ ngày 1 tháng 11 năm 2026.
 
@@ -211,7 +211,7 @@ RuleStone kiểm tra luật ngay lúc nạp, chứ không phải lúc khách hà
 
 ## Bước tiếp theo
 
-- [Bảng quyết định](../decision-tables.md) (English): mọi trường của định dạng tệp, hit policy, phiên bản và ngày hiệu lực.
-- [Ngôn ngữ biểu thức](../expressions.md) (English): những gì bạn có thể viết trong `when` và `then`.
-- [Java API](../java-api.md) (English): nhúng engine vào ứng dụng, các kiểu đầu vào, kết quả, lỗi và nạp lại luật.
-- [Ví dụ](../examples.md) (English): thêm nhiều bảng quyết định hoàn chỉnh.
+- [Bảng quyết định](decision-tables.md): mọi trường của định dạng tệp, hit policy, phiên bản và ngày hiệu lực.
+- [Ngôn ngữ biểu thức](expressions.md): những gì bạn có thể viết trong `when` và `then`.
+- [Java API](java-api.md): nhúng engine vào ứng dụng, các kiểu đầu vào, kết quả, lỗi và nạp lại luật.
+- [Ví dụ](examples.md): thêm nhiều bảng quyết định hoàn chỉnh.

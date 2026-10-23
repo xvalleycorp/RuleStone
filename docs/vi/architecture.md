@@ -83,7 +83,7 @@ Quy tắc phụ thuộc: `core` **không bao giờ** phụ thuộc vào `ai`, `s
 ### 4.3 Nạp động
 
 - Luật được biên dịch (phân tích cú pháp, kiểm tra kiểu, chuyển thành chương trình CEL) **một lần** khi nạp. *Đã có.*
-- Nạp lại nóng (hot reload) hoán đổi toàn bộ tập luật đã biên dịch một cách nguyên tử. Không bao giờ tồn tại trạng thái nạp dở dang. *Đã có*, bằng cách tạo engine mới rồi hoán đổi; xem [Reloading rules](../java-api.md#reloading-rules) (English).
+- Nạp lại nóng (hot reload) hoán đổi toàn bộ tập luật đã biên dịch một cách nguyên tử. Không bao giờ tồn tại trạng thái nạp dở dang. *Đã có*, bằng cách tạo engine mới rồi hoán đổi; xem [Nạp lại luật](java-api.md#nạp-lại-luật).
 - Phát hành canary: chuyển một tỷ lệ phần trăm lưu lượng sang phiên bản mới, hoặc chạy phiên bản mới ở chế độ bóng (shadow) để so sánh mà không ảnh hưởng đến kết quả thật. *Dự kiến.*
 
 ## 5. Phác thảo API
