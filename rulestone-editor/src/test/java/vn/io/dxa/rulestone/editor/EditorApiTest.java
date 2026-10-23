@@ -20,9 +20,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import vn.io.dxa.rulestone.api.DecisionRef;
-import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.cel.ValueType;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
+import vn.io.dxa.rulestone.core.FactsJson;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 class EditorApiTest {
@@ -445,10 +445,9 @@ class EditorApiTest {
         var table = DecisionTableJson.read(file);
         String facts = "{\"applicant\": {\"age\": 10, \"monthlyIncome\": 1, \"monthlyDebt\": 0, \"segment\": \"R\","
                 + " \"blacklisted\": false}, \"amount\": 1}";
-        Map<String, Object> values = FactsConverter.convert(Json.parse(facts), table.inputs());
         return RuleStone.builder().decision(table).build()
                 .evaluate(DecisionRef.of(table.id()).version(table.version()).asOf(LocalDate.of(2026, 12, 1)),
-                        Facts.from(values))
+                        FactsJson.readFacts(facts, table.inputs()))
                 .ruleVersion();
     }
 }

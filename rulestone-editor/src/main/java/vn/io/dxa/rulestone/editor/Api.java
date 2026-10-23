@@ -26,7 +26,9 @@ import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.api.TraceStep;
 import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
+import vn.io.dxa.rulestone.core.FactsJson;
 import vn.io.dxa.rulestone.core.InvalidDecisionException;
+import vn.io.dxa.rulestone.core.InvalidFactsException;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 /** The JSON API under {@code /api}. See docs/editor.md for the reference. */
@@ -325,14 +327,27 @@ final class Api {
         } catch (InvalidDecisionException e) {
             return invalidTable(new ProblemParser(body.get("table")).parseAll(e.problems()));
         }
-        Map<String, Object> facts = FactsConverter.convert(body.get("facts"), table.inputs());
+        JsonNode factsJson = body.get("facts");
+        Facts facts;
+        try {
+            facts = FactsJson.readFacts(factsJson == null || factsJson.isNull() ? Json.object() : factsJson, table);
+        } catch (InvalidFactsException e) {
+            // FactsJson messages name locations and expected forms, never values.
+            ObjectNode error = Json.object();
+            ObjectNode detail = error.putObject("error");
+            detail.put("code", "invalid_facts");
+            detail.put("message", String.join("; ", e.problems()));
+            ArrayNode list = error.putArray("factProblems");
+            e.problems().forEach(list::add);
+            return new Response(422, error);
+        }
         DecisionRef ref = DecisionRef.of(table.id()).version(table.version());
         if (asOf != null) {
             ref = ref.asOf(asOf);
         }
         DecisionResult result;
         try {
-            result = engine.evaluate(ref, Facts.from(facts));
+            result = engine.evaluate(ref, facts);
         } catch (DecisionEvaluationException e) {
             throw new ApiException(422, "evaluation_failed", e.getMessage());
         } catch (DecisionNotFoundException e) {
@@ -346,8 +361,7 @@ final class Api {
             response.put("effectiveOnAsOf", table.isEffectiveOn(asOf));
         }
         response.put("matched", result.matched());
-        ObjectNode output = response.putObject("output");
-        result.output().forEach((name, value) -> output.set(name, Json.MAPPER.valueToTree(FactsConverter.outputValue(value))));
+        response.set("output", FactsJson.writeValues(result.output()));
         ArrayNode reasons = response.putArray("reasonCodes");
         result.reasonCodes().forEach(reasons::add);
         ArrayNode matched = response.putArray("matchedRules");
