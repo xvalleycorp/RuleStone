@@ -45,6 +45,7 @@ const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
       ['fuzzy-matching.md', 'Fuzzy matching'],
       ['java-api.md', 'Java API'],
       ['testing.md', 'Testing'],
+      ['temporal.md', 'Temporal integration'],
     ],
   },
   {
