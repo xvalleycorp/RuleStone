@@ -32,3 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Bilingual website (English and Vietnamese) with checks that keep translations and their code blocks in step with the English pages.
 - Design proposal for hybrid AI decisioning: model outputs as rule inputs, models as nodes in decision flows, and a decision record for every decision.
 - Decision records: every evaluation, successful or not, produces a `DecisionRecord` with the exact version, path, matched rules, reason codes and a hash of the inputs (SHA-256, or HMAC-SHA256 with `factsHashKey`), but no input values. Records go to `AuditSink`s, are returned on `DecisionResult.record()`, and are written as JSON by `DecisionRecordJson`. `DecisionRef.correlationId` links them to the business transaction. A sink that throws fails the evaluation with `AuditException`, so a decision is never returned unrecorded.
+- Browser SDK (`sdk/`): `@rulestone/engine` (provisional name), a TypeScript engine with no runtime dependencies that reads `.stone.json` tables, type-checks and evaluates CEL with exact `decimal`, `money` and `date` types, selects versions by effective date and produces decision records. A conformance suite checks it against fixtures written by the Java engine: rule versions, every example test case with its decision record, the expressions in the documentation, and several hundred expression probes. CI runs it on Node 24.
+- `Iso4217`: the fixed table of ISO 4217 codes and minor units that both engines use.
+
+### Changed
+
+- Money accepts the same currency codes on every JDK: a fixed ISO 4217 table (amendment 177, plus withdrawn codes that Java has long accepted) replaces `java.util.Currency`, whose codes differ between JDK versions. `XCG` and `ZWG` are now accepted on Java 17 and 21 too.
+- Errors of CEL's standard conversions, list indexing and `matches()` no longer quote the argument: `int('x')` fails with `int() argument is not a valid integer` instead of `For input string: "x"`, and an index out of range with `list index out of bounds` instead of `Index out of bounds: 5`.

@@ -1,0 +1,24 @@
+{
+  "name": "rulestone-sdk",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Browser SDK for RuleStone decision tables: an npm workspace of the SDK packages.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "licenses": "node scripts/licenses.mjs",
+    "typecheck": "npm run typecheck --workspaces",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "size": "npm run size --workspaces"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "overrides": {
+    "vite": "7.3.7"
+  }
+}

@@ -1,0 +1,2582 @@
+{
+  "variables": {
+    "i": "int",
+    "d": "decimal",
+    "s": "string",
+    "m": "money",
+    "dt": "date",
+    "names": [
+      "string"
+    ],
+    "p": {
+      "age": "int",
+      "name": "string",
+      "tags": [
+        "string"
+      ]
+    },
+    "big": "int",
+    "text": "string",
+    "position": "int"
+  },
+  "inputs": {
+    "i": 7,
+    "d": "1.50",
+    "s": "Hello",
+    "m": "1500000 VND",
+    "dt": "2026-11-01",
+    "names": [
+      "a",
+      "b"
+    ],
+    "p": {
+      "age": 30
+    },
+    "big": 9223372036854775807,
+    "text": "S3CRET-4711",
+    "position": 4711
+  },
+  "maxIterations": 5,
+  "currencyScales": {
+    "XAU": 4
+  },
+  "probes": [
+    {
+      "expr": "p.agee > 1"
+    },
+    {
+      "expr": "x > 1"
+    },
+    {
+      "expr": "d == 1"
+    },
+    {
+      "expr": "m + 1"
+    },
+    {
+      "expr": "0.5 + 0.25"
+    },
+    {
+      "expr": "0.5 + d"
+    },
+    {
+      "expr": "0.5 > 0.25"
+    },
+    {
+      "expr": "1.0 == 1.0"
+    },
+    {
+      "expr": "i / 0"
+    },
+    {
+      "expr": "i % 0"
+    },
+    {
+      "expr": "big + 1"
+    },
+    {
+      "expr": "-9223372036854775808"
+    },
+    {
+      "expr": "9223372036854775808"
+    },
+    {
+      "expr": "-big - 2"
+    },
+    {
+      "expr": "big * 2"
+    },
+    {
+      "expr": "p.name == 'x'"
+    },
+    {
+      "expr": "has(p.name)"
+    },
+    {
+      "expr": "has(p.age)"
+    },
+    {
+      "expr": "has(i)"
+    },
+    {
+      "expr": "p.tags.size()"
+    },
+    {
+      "expr": "names.all(x, x != '')"
+    },
+    {
+      "expr": "[1,2,3,4,5,6].exists(x, x > 10)"
+    },
+    {
+      "expr": "[1,2,3,4,5].exists(x, x > 10)"
+    },
+    {
+      "expr": "[1,2,3].map(x, x * 2)"
+    },
+    {
+      "expr": "[1,2,3].map(x, x > 1, x * 2)"
+    },
+    {
+      "expr": "[1,2,3].filter(x, x > 1)"
+    },
+    {
+      "expr": "[1,2,3].exists_one(x, x > 1)"
+    },
+    {
+      "expr": "'abc'.size()"
+    },
+    {
+      "expr": "size('héllo')"
+    },
+    {
+      "expr": "'abc' + 'd'"
+    },
+    {
+      "expr": "int('42')"
+    },
+    {
+      "expr": "int('x')"
+    },
+    {
+      "expr": "string(42)"
+    },
+    {
+      "expr": "string(true)"
+    },
+    {
+      "expr": "string(d)"
+    },
+    {
+      "expr": "string(m)"
+    },
+    {
+      "expr": "string(dt)"
+    },
+    {
+      "expr": "string('a')"
+    },
+    {
+      "expr": "uint(1)"
+    },
+    {
+      "expr": "1u"
+    },
+    {
+      "expr": "double(1)"
+    },
+    {
+      "expr": "int(d)"
+    },
+    {
+      "expr": "'Hello'.matches('^H.*')"
+    },
+    {
+      "expr": "'Hello'.contains('ell')"
+    },
+    {
+      "expr": "s[0]"
+    },
+    {
+      "expr": "names[5]"
+    },
+    {
+      "expr": "names[-1]"
+    },
+    {
+      "expr": "names[0]"
+    },
+    {
+      "expr": "1 in [1,2]"
+    },
+    {
+      "expr": "d in [decimal('1.5')]"
+    },
+    {
+      "expr": "decimal('1E+3')"
+    },
+    {
+      "expr": "decimal(' 1.5 ')"
+    },
+    {
+      "expr": "decimal('.5')"
+    },
+    {
+      "expr": "decimal('1.')"
+    },
+    {
+      "expr": "decimal('+1')"
+    },
+    {
+      "expr": "decimal('abc')"
+    },
+    {
+      "expr": "decimal(1) / 3"
+    },
+    {
+      "expr": "decimal(10) / 4"
+    },
+    {
+      "expr": "decimal(100) / decimal('0.5')"
+    },
+    {
+      "expr": "decimal('0.00') / decimal('0.5')"
+    },
+    {
+      "expr": "decimal(0) / 0"
+    },
+    {
+      "expr": "decimal('2.345').round(2)"
+    },
+    {
+      "expr": "decimal('1535123').round(-3)"
+    },
+    {
+      "expr": "decimal('2.5').round(0, 'half_up')"
+    },
+    {
+      "expr": "decimal('2.5').round(0, 'UNNECESSARY')"
+    },
+    {
+      "expr": "decimal('2.5').round(0, 'X')"
+    },
+    {
+      "expr": "decimal('2.5').round(1001)"
+    },
+    {
+      "expr": "money('1', 'XAU').round()"
+    },
+    {
+      "expr": "money('1.234567', 'XAU').round()"
+    },
+    {
+      "expr": "money('1', 'XAG').round()"
+    },
+    {
+      "expr": "money('1', 'vnd')"
+    },
+    {
+      "expr": "money('1', 'ABC')"
+    },
+    {
+      "expr": "money(1, 'VND') < money(1, 'USD')"
+    },
+    {
+      "expr": "money(1, 'VND') == money(1, 'USD')"
+    },
+    {
+      "expr": "min(money(1, 'VND'), money(1, 'USD'))"
+    },
+    {
+      "expr": "m / 0"
+    },
+    {
+      "expr": "m / decimal(0)"
+    },
+    {
+      "expr": "date('2026-02-30')"
+    },
+    {
+      "expr": "date('+12345-01-01')"
+    },
+    {
+      "expr": "date('12345-01-01')"
+    },
+    {
+      "expr": "date('-0001-01-01')"
+    },
+    {
+      "expr": "date('0000-01-01')"
+    },
+    {
+      "expr": "date('2026-1-01')"
+    },
+    {
+      "expr": "date(' 2026-01-01')"
+    },
+    {
+      "expr": "dt.plusDays(9223372036854775807)"
+    },
+    {
+      "expr": "dt.plusYears(1000000000)"
+    },
+    {
+      "expr": "dt.plusMonths(-24)"
+    },
+    {
+      "expr": "date('2024-02-29').plusYears(1)"
+    },
+    {
+      "expr": "monthsBetween(date('2026-01-31'), date('2026-02-28'))"
+    },
+    {
+      "expr": "yearsBetween(date('2008-11-02'), date('2026-11-01'))"
+    },
+    {
+      "expr": "daysBetween(date('2026-11-01'), date('2026-10-01'))"
+    },
+    {
+      "expr": "true ? 1 : 'a'"
+    },
+    {
+      "expr": "true ? 1 : 2"
+    },
+    {
+      "expr": "[]"
+    },
+    {
+      "expr": "[1, 'a']"
+    },
+    {
+      "expr": "[d, 1]"
+    },
+    {
+      "expr": "null"
+    },
+    {
+      "expr": "s == null"
+    },
+    {
+      "expr": "{'a': 1}"
+    },
+    {
+      "expr": "{'a': 1}['a']"
+    },
+    {
+      "expr": "i == d"
+    },
+    {
+      "expr": "dt == date('2026-11-01')"
+    },
+    {
+      "expr": "!true"
+    },
+    {
+      "expr": "-i"
+    },
+    {
+      "expr": "-d"
+    },
+    {
+      "expr": "-m"
+    },
+    {
+      "expr": "--i"
+    },
+    {
+      "expr": "i < d"
+    },
+    {
+      "expr": "d < i"
+    },
+    {
+      "expr": "d + i"
+    },
+    {
+      "expr": "i + d"
+    },
+    {
+      "expr": "i * m"
+    },
+    {
+      "expr": "m * i"
+    },
+    {
+      "expr": "d * m"
+    },
+    {
+      "expr": "m / i"
+    },
+    {
+      "expr": "i / m"
+    },
+    {
+      "expr": "m - m"
+    },
+    {
+      "expr": "m.amount()"
+    },
+    {
+      "expr": "m.currency()"
+    },
+    {
+      "expr": "m.abs()"
+    },
+    {
+      "expr": "d.abs()"
+    },
+    {
+      "expr": "max(d, decimal(2))"
+    },
+    {
+      "expr": "max(1, 2)"
+    },
+    {
+      "expr": "min(d, 1)"
+    },
+    {
+      "expr": "1 + 2 * 3 - 4 / 3 % 2"
+    },
+    {
+      "expr": "7 / -2"
+    },
+    {
+      "expr": "-7 % 2"
+    },
+    {
+      "expr": "'a' < 'b'"
+    },
+    {
+      "expr": "true < false"
+    },
+    {
+      "expr": "true && 1/0 == 1"
+    },
+    {
+      "expr": "false && 1/0 == 1"
+    },
+    {
+      "expr": "1/0 == 1 || true"
+    },
+    {
+      "expr": "1/0 == 1 && false"
+    },
+    {
+      "expr": "names.exists(x, 1/0 == 1)"
+    },
+    {
+      "expr": "type(1)"
+    },
+    {
+      "expr": "dyn(1)"
+    },
+    {
+      "expr": "'abc'.startsWith('a')"
+    },
+    {
+      "expr": "'abc'.endsWith('c')"
+    },
+    {
+      "expr": "i > 0.5"
+    },
+    {
+      "expr": "0.5 < i"
+    },
+    {
+      "expr": "1u < 2"
+    },
+    {
+      "expr": "1u + 2u > 2u"
+    },
+    {
+      "expr": "i == 1u"
+    },
+    {
+      "expr": "1.5 > 1.0 && 2.0 * 3.0 == 6.0"
+    },
+    {
+      "expr": "string(1.5) == '1.5'"
+    },
+    {
+      "expr": "string(1u) == '1'"
+    },
+    {
+      "expr": "int(1.9) == 1"
+    },
+    {
+      "expr": "double(i) > 1.0"
+    },
+    {
+      "expr": "uint(i) > 1u"
+    },
+    {
+      "expr": "'Hello'.matches('ell')"
+    },
+    {
+      "expr": "matches('Hello', 'ell')"
+    },
+    {
+      "expr": "'Hello'.lowerAscii() == 'hello'"
+    },
+    {
+      "expr": "size(names) == 2"
+    },
+    {
+      "expr": "size({'a': 1}) == 1"
+    },
+    {
+      "expr": "'a' in {'a': 1}"
+    },
+    {
+      "expr": "{'a': 1}.a == 1"
+    },
+    {
+      "expr": "[1, 'a'][0] == 1"
+    },
+    {
+      "expr": "[1, 'a'][0] + 1 == 2"
+    },
+    {
+      "expr": "[[1], [2]][1][0] == 2"
+    },
+    {
+      "expr": "p.tags == []"
+    },
+    {
+      "expr": "names + [] == names"
+    },
+    {
+      "expr": "[] == []"
+    },
+    {
+      "expr": "dyn(1) == 1"
+    },
+    {
+      "expr": "dyn(d) == d"
+    },
+    {
+      "expr": "1 == 1 ? 'a' : 'b'"
+    },
+    {
+      "expr": "!!true"
+    },
+    {
+      "expr": "-(-i) == 7"
+    },
+    {
+      "expr": "- 5 == -5"
+    },
+    {
+      "expr": "(-9223372036854775807 - 1) == -9223372036854775808"
+    },
+    {
+      "expr": "-(-9223372036854775807 - 1) == 1"
+    },
+    {
+      "expr": "-big == -9223372036854775807"
+    },
+    {
+      "expr": "0x10 == 16"
+    },
+    {
+      "expr": "-0x10 == -16"
+    },
+    {
+      "expr": "'a\\nb' == \"a\\nb\""
+    },
+    {
+      "expr": "r'\\n' == '\\\\n'"
+    },
+    {
+      "expr": "'''x''' == 'x'"
+    },
+    {
+      "expr": "\"é\" == 'é'"
+    },
+    {
+      "expr": "b'abc' == b'abc'"
+    },
+    {
+      "expr": "size(b'abc') == 3"
+    },
+    {
+      "expr": "'abc'[1] == 'b'"
+    },
+    {
+      "expr": "[1,2,3].all(x, x > 0)"
+    },
+    {
+      "expr": "[1,2,3].exists(x, x == 2)"
+    },
+    {
+      "expr": "names.map(n, n + '!') == ['a!', 'b!']"
+    },
+    {
+      "expr": "names.filter(n, n == 'a').size() == 1"
+    },
+    {
+      "expr": "names.exists(n, n == 'a') && names.all(n, size(n) == 1)"
+    },
+    {
+      "expr": "[1,2].map(x, [1,2].map(y, x * y)) == [[1,2],[2,4]]"
+    },
+    {
+      "expr": "[1,2,3,4,5,6].size() == 6"
+    },
+    {
+      "expr": "[1,2,3].map(x, [1,2,3].exists(y, y == x)).size() == 3"
+    },
+    {
+      "expr": "[1,2].exists(x, [1,2].exists(y, x == y))"
+    },
+    {
+      "expr": "d == decimal('1.5')"
+    },
+    {
+      "expr": "d != decimal('1.5')"
+    },
+    {
+      "expr": "[d] == [decimal('1.5')]"
+    },
+    {
+      "expr": "p == p"
+    },
+    {
+      "expr": "has(p.tags)"
+    },
+    {
+      "expr": "p.age == 30"
+    },
+    {
+      "expr": "p.name.size() > 0 || true"
+    },
+    {
+      "expr": "true || p.name.size() > 0"
+    },
+    {
+      "expr": "p.name.size() > 0 && false"
+    },
+    {
+      "expr": "false ? p.name : 'x'"
+    },
+    {
+      "expr": "true ? 'x' : p.name"
+    },
+    {
+      "expr": "i in [1, 2] || i == 7"
+    },
+    {
+      "expr": "x.y > 1"
+    },
+    {
+      "expr": "p.age.foo"
+    },
+    {
+      "expr": "has(p.nope)"
+    },
+    {
+      "expr": "foo(1)"
+    },
+    {
+      "expr": "i.foo()"
+    },
+    {
+      "expr": "'a'.size(1)"
+    },
+    {
+      "expr": "size()"
+    },
+    {
+      "expr": "names.exists(n)"
+    },
+    {
+      "expr": "names.exists(1, true)"
+    },
+    {
+      "expr": "1 +"
+    },
+    {
+      "expr": "(1 + 2"
+    },
+    {
+      "expr": "'unterminated"
+    },
+    {
+      "expr": "1 2"
+    },
+    {
+      "expr": "if > 1"
+    },
+    {
+      "expr": "p.in > 1"
+    },
+    {
+      "expr": "null == null"
+    },
+    {
+      "expr": "[null] == [null]"
+    },
+    {
+      "expr": "i % 2 == 1"
+    },
+    {
+      "expr": "-i % 4"
+    },
+    {
+      "expr": "9223372036854775807 + 0 == big"
+    },
+    {
+      "expr": "-9223372036854775808 / -1 == 0"
+    },
+    {
+      "expr": "-9223372036854775808 % -1 == 0"
+    },
+    {
+      "expr": "string(-0)"
+    },
+    {
+      "expr": "decimal('-0.00')"
+    },
+    {
+      "expr": "string(decimal('-0.00'))"
+    },
+    {
+      "expr": "decimal('1e-3')"
+    },
+    {
+      "expr": "decimal('1E400')"
+    },
+    {
+      "expr": "decimal('00012.3400')"
+    },
+    {
+      "expr": "decimal('1_000')"
+    },
+    {
+      "expr": "decimal('١٢٣')"
+    },
+    {
+      "expr": "decimal('Infinity')"
+    },
+    {
+      "expr": "decimal('0x10')"
+    },
+    {
+      "expr": "decimal(' ')"
+    },
+    {
+      "expr": "decimal('')"
+    },
+    {
+      "expr": "decimal('-')"
+    },
+    {
+      "expr": "decimal('1e')"
+    },
+    {
+      "expr": "money(' 12.5 ', 'USD')"
+    },
+    {
+      "expr": "money('12.5', 'USD ')"
+    },
+    {
+      "expr": "date('2026-11-01T00:00')"
+    },
+    {
+      "expr": "date('2026-13-01')"
+    },
+    {
+      "expr": "date('2026-00-10')"
+    },
+    {
+      "expr": "date('2026-04-31')"
+    },
+    {
+      "expr": "date('1900-02-29')"
+    },
+    {
+      "expr": "date('2000-02-29')"
+    },
+    {
+      "expr": "date('-999999999-01-01')"
+    },
+    {
+      "expr": "date('+999999999-12-31')"
+    },
+    {
+      "expr": "date('+1000000000-01-01')"
+    },
+    {
+      "expr": "date('+2026-01-01')"
+    },
+    {
+      "expr": "date('-2026-01-01')"
+    },
+    {
+      "expr": "date('99-01-01')"
+    },
+    {
+      "expr": "date('2026-11-01').dayOfWeek()"
+    },
+    {
+      "expr": "date('0001-01-01').dayOfWeek()"
+    },
+    {
+      "expr": "date('-0001-03-01').year()"
+    },
+    {
+      "expr": "daysBetween(date('-999999999-01-01'), date('+999999999-12-31'))"
+    },
+    {
+      "expr": "date('+999999999-12-31').plusDays(1)"
+    },
+    {
+      "expr": "date('-999999999-01-01').plusDays(-1)"
+    },
+    {
+      "expr": "date('2026-01-31').plusMonths(1)"
+    },
+    {
+      "expr": "date('2026-03-31').plusMonths(-1)"
+    },
+    {
+      "expr": "date('2026-11-01').plusMonths(9223372036854775807)"
+    },
+    {
+      "expr": "date('2026-11-01').plusYears(-9223372036854775808)"
+    },
+    {
+      "expr": "date('2026-11-01').plusDays(-9223372036854775808)"
+    },
+    {
+      "expr": "monthsBetween(date('2026-01-31'), date('2026-03-01'))"
+    },
+    {
+      "expr": "monthsBetween(date('2026-03-31'), date('2026-02-28'))"
+    },
+    {
+      "expr": "monthsBetween(date('2026-03-01'), date('2026-01-31'))"
+    },
+    {
+      "expr": "yearsBetween(date('2024-02-29'), date('2025-02-28'))"
+    },
+    {
+      "expr": "yearsBetween(date('2025-02-28'), date('2024-02-29'))"
+    },
+    {
+      "expr": "yearsBetween(date('2026-11-01'), date('2008-11-02'))"
+    },
+    {
+      "expr": "[1,2,3,4,5,6].exists(x, x == 1)"
+    },
+    {
+      "expr": "[1,2,3,4,5,6].exists(x, x == 5)"
+    },
+    {
+      "expr": "[1,2,3,4,5,6].exists(x, x == 6)"
+    },
+    {
+      "expr": "[1,2,3,4,5,6].all(x, x > 1)"
+    },
+    {
+      "expr": "[1,2,3].map(x, x).size() + [1,2,3].map(x, x).size() == 6"
+    },
+    {
+      "expr": "[1,2,3].map(x, x).size() + [1,2].map(x, x).size() == 5"
+    },
+    {
+      "expr": "[0, 1].exists(x, 1/x == 1)"
+    },
+    {
+      "expr": "[1, 0].exists(x, 1/x == 1)"
+    },
+    {
+      "expr": "[0, 1].all(x, 1/x == 1)"
+    },
+    {
+      "expr": "[0, 2].all(x, 1/x == 1)"
+    },
+    {
+      "expr": "[0, 2].exists_one(x, 1/x == 1)"
+    },
+    {
+      "expr": "[0, 2].map(x, 1/x)"
+    },
+    {
+      "expr": "[0, 2].filter(x, 1/x == 1)"
+    },
+    {
+      "expr": "1/0 == 1 && 2/0 == 1"
+    },
+    {
+      "expr": "1/0 == 1 || 2/0 == 1"
+    },
+    {
+      "expr": "1/0 == 1 && true"
+    },
+    {
+      "expr": "false || 1/0 == 1"
+    },
+    {
+      "expr": "1/0 == 1 || false"
+    },
+    {
+      "expr": "(1/0 == 1) == true"
+    },
+    {
+      "expr": "1/0 == 1 ? 1 : 2"
+    },
+    {
+      "expr": "[1/0][0] == 1"
+    },
+    {
+      "expr": "!(1/0 == 1)"
+    },
+    {
+      "expr": "p.name.size() == 1 || 1/0 == 1"
+    },
+    {
+      "expr": "1/0 == 1 || p.name.size() == 1"
+    },
+    {
+      "expr": "[1,2,3,4,5].map(x, x) == [1,2,3,4,5]"
+    },
+    {
+      "expr": "names.exists(x, [1,2,3].all(y, y > 0))"
+    },
+    {
+      "expr": "[1,2].exists(x, [1,2,3].all(y, y > 0))"
+    },
+    {
+      "expr": "[1,2,3].exists(x, [1,2,3].exists(y, y == 3))"
+    },
+    {
+      "expr": "[1,2,3,4,5].exists_one(x, x == 1)"
+    },
+    {
+      "expr": "[1,2,3,4,5].filter(x, x > 2).size() == 3"
+    },
+    {
+      "expr": "[[1,2],[3]].exists(l, l.exists(x, x == 3))"
+    },
+    {
+      "expr": "size(names.map(n, n)) + size(names.map(n, n)) + size(names) == 6"
+    },
+    {
+      "expr": "[1,2,3].map(x, x, x)"
+    },
+    {
+      "expr": "[1,2,3].map(x, x > 1, x * 2, 1)"
+    },
+    {
+      "expr": "[1,2,3].exists(x, y, true)"
+    },
+    {
+      "expr": "[1,2,3].all(i, i > 0)"
+    },
+    {
+      "expr": "[1,2,3].all(x, x > 0) && x > 0"
+    },
+    {
+      "expr": "1 in names"
+    },
+    {
+      "expr": "'a' in names"
+    },
+    {
+      "expr": "'a' in 'abc'"
+    },
+    {
+      "expr": "decimal('1.0') in [decimal('1.00')]"
+    },
+    {
+      "expr": "money('1.0', 'VND') in [money('1', 'VND')]"
+    },
+    {
+      "expr": "dt in [date('2026-11-01')]"
+    },
+    {
+      "expr": "[decimal(1), decimal(2)] == [decimal('1.0'), decimal('2.00')]"
+    },
+    {
+      "expr": "[1, 2] + [3] == [1, 2, 3]"
+    },
+    {
+      "expr": "[1] + ['a']"
+    },
+    {
+      "expr": "[d] + [1]"
+    },
+    {
+      "expr": "size([1, 'a'])"
+    },
+    {
+      "expr": "[1, 2][1u]"
+    },
+    {
+      "expr": "names[1u]"
+    },
+    {
+      "expr": "[1,2,3][2] == 3"
+    },
+    {
+      "expr": "[1,2,3][3]"
+    },
+    {
+      "expr": "d.round(2)"
+    },
+    {
+      "expr": "d.round(2, 'up')"
+    },
+    {
+      "expr": "round(d, 2)"
+    },
+    {
+      "expr": "decimal(5) == 5"
+    },
+    {
+      "expr": "decimal(5) != decimal('5.000')"
+    },
+    {
+      "expr": "decimal('1') / decimal('3') * 3"
+    },
+    {
+      "expr": "decimal('2') / decimal('3')"
+    },
+    {
+      "expr": "decimal('-2') / decimal('3')"
+    },
+    {
+      "expr": "decimal('1E+40') / decimal('3')"
+    },
+    {
+      "expr": "decimal('12345678901234567890123456789012345678') / decimal('1')"
+    },
+    {
+      "expr": "decimal('99999999999999999999999999999999999') / decimal('1')"
+    },
+    {
+      "expr": "decimal('9999999999999999999999999999999999.5') / decimal('1')"
+    },
+    {
+      "expr": "decimal('1') / decimal('8')"
+    },
+    {
+      "expr": "decimal('1') / decimal('1024')"
+    },
+    {
+      "expr": "decimal('100') / decimal('100')"
+    },
+    {
+      "expr": "decimal('1.000') / decimal('1')"
+    },
+    {
+      "expr": "decimal('100') / decimal('0.001')"
+    },
+    {
+      "expr": "decimal('0') / decimal('0.001')"
+    },
+    {
+      "expr": "decimal('0') / decimal('7')"
+    },
+    {
+      "expr": "decimal('-1.5').round(0, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('-2.5').round(0, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('-2.5').round(0, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('-2.5').round(0, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('-2.5').round(0, 'UP')"
+    },
+    {
+      "expr": "decimal('-2.5').round(0, 'DOWN')"
+    },
+    {
+      "expr": "decimal('-2.5').round(0, 'CEILING')"
+    },
+    {
+      "expr": "decimal('-2.5').round(0, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('-2.51').round(0, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('1.5').round(3)"
+    },
+    {
+      "expr": "decimal('15').round(-1)"
+    },
+    {
+      "expr": "decimal('25').round(-1)"
+    },
+    {
+      "expr": "decimal('0.0001').round(2, 'UP')"
+    },
+    {
+      "expr": "decimal('-0.0001').round(2, 'CEILING')"
+    },
+    {
+      "expr": "string(decimal('1E+3'))"
+    },
+    {
+      "expr": "string(decimal('0.000001'))"
+    },
+    {
+      "expr": "string(decimal('1535123').round(-3))"
+    },
+    {
+      "expr": "decimal(1) / 3 == decimal('0.3333333333333333333333333333333333')"
+    },
+    {
+      "expr": "[]",
+      "type": "list<string>"
+    },
+    {
+      "expr": "['a', 1]",
+      "type": "list<string>"
+    },
+    {
+      "expr": "names.map(n, dyn(n))",
+      "type": "list<string>"
+    },
+    {
+      "expr": "[1]",
+      "type": "list<string>"
+    },
+    {
+      "expr": "[1, 'a']",
+      "type": "list<int>"
+    },
+    {
+      "expr": "[1, 'a']",
+      "type": "list<string>"
+    },
+    {
+      "expr": "[[1], []]",
+      "type": "list<list<int>>"
+    },
+    {
+      "expr": "[]",
+      "type": "list<list<int>>"
+    },
+    {
+      "expr": "dyn(1)",
+      "type": "string"
+    },
+    {
+      "expr": "dyn(1)",
+      "type": "bool"
+    },
+    {
+      "expr": "dyn(1)",
+      "type": "int"
+    },
+    {
+      "expr": "dyn([1])",
+      "type": "list<string>"
+    },
+    {
+      "expr": "dyn(['a'])",
+      "type": "list<string>"
+    },
+    {
+      "expr": "dyn(1)",
+      "type": "decimal"
+    },
+    {
+      "expr": "[1, 'a'][0] + 1 == 2",
+      "type": "bool"
+    },
+    {
+      "expr": "[1, 'a'][1] + 1 == 2",
+      "type": "bool"
+    },
+    {
+      "expr": "dyn(d) + 1 == decimal(3)",
+      "type": "bool"
+    },
+    {
+      "expr": "dyn(d) == 1",
+      "type": "bool"
+    },
+    {
+      "expr": "dyn(1) == decimal(1)",
+      "type": "bool"
+    },
+    {
+      "expr": "dyn(1) == 1u",
+      "type": "bool"
+    },
+    {
+      "expr": "dyn(1) == 1.0",
+      "type": "bool"
+    },
+    {
+      "expr": "[1, 'a'] == [1, 'a']",
+      "type": "bool"
+    },
+    {
+      "expr": "dyn(1) < 1.5",
+      "type": "bool"
+    },
+    {
+      "expr": "dyn([d, 1]) == [d, 1]",
+      "type": "bool"
+    },
+    {
+      "expr": "p",
+      "type": "bool"
+    },
+    {
+      "expr": "p.age",
+      "type": "bool"
+    },
+    {
+      "expr": "p.age",
+      "type": "int"
+    },
+    {
+      "expr": "p",
+      "type": "int"
+    },
+    {
+      "expr": "names",
+      "type": "int"
+    },
+    {
+      "expr": "names[0] + p.name",
+      "type": "string"
+    },
+    {
+      "expr": "has(p.tags) || p.tags.size() > 0",
+      "type": "bool"
+    },
+    {
+      "expr": "size(p.tags) > 0",
+      "type": "bool"
+    },
+    {
+      "expr": "p.tags.exists(t, t == 'x')",
+      "type": "bool"
+    },
+    {
+      "expr": "names.exists(n, n == 1)",
+      "type": "bool"
+    },
+    {
+      "expr": "true ? 1 : 2",
+      "type": "bool"
+    },
+    {
+      "expr": "true ? 1 : 2",
+      "type": "int"
+    },
+    {
+      "expr": "false ? 1 : dyn('a')",
+      "type": "int"
+    },
+    {
+      "expr": "1 == 1 == true",
+      "type": "bool"
+    },
+    {
+      "expr": "1 < 2 < 3",
+      "type": "bool"
+    },
+    {
+      "expr": "(1 < 2) == true",
+      "type": "bool"
+    },
+    {
+      "expr": "!!!true",
+      "type": "bool"
+    },
+    {
+      "expr": "---i",
+      "type": "int"
+    },
+    {
+      "expr": "- - 1",
+      "type": "int"
+    },
+    {
+      "expr": "-(1)",
+      "type": "int"
+    },
+    {
+      "expr": "'a' + 'b' == 'ab' && 'x' in ['x']",
+      "type": "bool"
+    },
+    {
+      "expr": "i in [i, 1] && 'a' in names",
+      "type": "bool"
+    },
+    {
+      "expr": "[1,2,3][0] == 1",
+      "type": "bool"
+    },
+    {
+      "expr": "names.filter(n, n > 'a') == ['b']",
+      "type": "bool"
+    },
+    {
+      "expr": "names.map(n, size(n)) == [1, 1]",
+      "type": "bool"
+    },
+    {
+      "expr": "names.all(n, n.startsWith('a') || n.endsWith('b'))",
+      "type": "bool"
+    },
+    {
+      "expr": "names.exists_one(n, n.contains('a'))",
+      "type": "bool"
+    },
+    {
+      "expr": "'x'.matches('[')",
+      "type": "bool"
+    },
+    {
+      "expr": "'aaa'.matches('a{2}')",
+      "type": "bool"
+    },
+    {
+      "expr": "'Ab'.matches('(?i)ab')",
+      "type": "bool"
+    },
+    {
+      "expr": "'ab\\ncd'.matches('^cd$')",
+      "type": "bool"
+    },
+    {
+      "expr": "'café'.matches('^caf.$')",
+      "type": "bool"
+    },
+    {
+      "expr": "'😀'.matches('^.$')",
+      "type": "bool"
+    },
+    {
+      "expr": "size('😀')",
+      "type": "int"
+    },
+    {
+      "expr": "size('é')",
+      "type": "int"
+    },
+    {
+      "expr": "'abc' < 'abd' && 'B' < 'a' && '' < 'a'",
+      "type": "bool"
+    },
+    {
+      "expr": "'é' > 'z'",
+      "type": "bool"
+    },
+    {
+      "expr": "'😀' > '￿'",
+      "type": "bool"
+    },
+    {
+      "expr": "int('  42')",
+      "type": "int"
+    },
+    {
+      "expr": "int('+42')",
+      "type": "int"
+    },
+    {
+      "expr": "int('-0')",
+      "type": "int"
+    },
+    {
+      "expr": "int('9223372036854775808')",
+      "type": "int"
+    },
+    {
+      "expr": "int('١٢')",
+      "type": "int"
+    },
+    {
+      "expr": "string(-5)",
+      "type": "string"
+    },
+    {
+      "expr": "string(true) + string(false)",
+      "type": "string"
+    },
+    {
+      "expr": "string(i) == '7'",
+      "type": "bool"
+    },
+    {
+      "expr": "int(i)",
+      "type": "int"
+    },
+    {
+      "expr": "string(s)",
+      "type": "string"
+    },
+    {
+      "expr": "bool('true')",
+      "type": "bool"
+    },
+    {
+      "expr": "bool('TRUE')",
+      "type": "bool"
+    },
+    {
+      "expr": "bool('t')",
+      "type": "bool"
+    },
+    {
+      "expr": "bool('1')",
+      "type": "bool"
+    },
+    {
+      "expr": "bool('yes')",
+      "type": "bool"
+    },
+    {
+      "expr": "int(true)",
+      "type": "int"
+    },
+    {
+      "expr": "i.size()",
+      "type": "int"
+    },
+    {
+      "expr": "size(i)",
+      "type": "int"
+    },
+    {
+      "expr": "size('abc') + 'abc'.size() + size(names) + names.size()",
+      "type": "int"
+    },
+    {
+      "expr": "type(1) == int",
+      "type": "bool"
+    },
+    {
+      "expr": "in",
+      "type": "bool"
+    },
+    {
+      "expr": "i.age",
+      "type": "bool"
+    },
+    {
+      "expr": "names.age",
+      "type": "bool"
+    },
+    {
+      "expr": "names.size",
+      "type": "bool"
+    },
+    {
+      "expr": "int(text) > 0"
+    },
+    {
+      "expr": "uint(text) > 0u"
+    },
+    {
+      "expr": "double(text) > 0.0"
+    },
+    {
+      "expr": "bool(text)"
+    },
+    {
+      "expr": "names[position] == ''"
+    },
+    {
+      "expr": "'abc'.matches(text + '[')"
+    },
+    {
+      "expr": "matches('abc', text + '(')"
+    },
+    {
+      "expr": "decimal(text) > decimal(0)"
+    },
+    {
+      "expr": "money(text, 'VND') > money(0, 'VND')"
+    },
+    {
+      "expr": "money(1, text) > money(0, 'VND')"
+    },
+    {
+      "expr": "date(text) > date('2026-01-01')"
+    },
+    {
+      "expr": "money('1.005', 'XCG').round()"
+    },
+    {
+      "expr": "money('1.005', 'ZWG').round()"
+    },
+    {
+      "expr": "money('1.5', 'DEM').round()"
+    },
+    {
+      "expr": "money('1', 'XXX').round()"
+    },
+    {
+      "expr": "money('1.23456', 'CLF').round()"
+    },
+    {
+      "expr": "money('1.23456', 'KWD').round()"
+    },
+    {
+      "expr": "money('1', 'ZZZ')"
+    },
+    {
+      "expr": "normalizeName('  NGUYỄN  Văn Đức, Jr. ')"
+    },
+    {
+      "expr": "normalizeName('İSTANBUL')"
+    },
+    {
+      "expr": "normalizeName('O\\'Brien\\tJr.\\n')"
+    },
+    {
+      "expr": "normalizeName('Владимир Путин')"
+    },
+    {
+      "expr": "normalizeName('𠀋-x')"
+    },
+    {
+      "expr": "normalizeName('ΟΔΥΣΣΕΥΣ')"
+    },
+    {
+      "expr": "normalizeName('Ǆemal Ǉubić')"
+    },
+    {
+      "expr": "similarity('MARTHA', 'MARHTA')"
+    },
+    {
+      "expr": "similarity('JONES', 'JOHNSON')"
+    },
+    {
+      "expr": "similarity('CRATE', 'TRACE')"
+    },
+    {
+      "expr": "similarity('kitten', 'sitting')"
+    },
+    {
+      "expr": "similarity('abcdefgh', 'abcdefgx')"
+    },
+    {
+      "expr": "similarity('𠀋a', '𠀋a')"
+    },
+    {
+      "expr": "nameSimilarity('Tran Van Binh', 'Van An Nguyen')"
+    },
+    {
+      "expr": "nameSimilarity('Nguyen Van An', 'Nguyen Van Anh')"
+    },
+    {
+      "expr": "levenshtein('flaw', 'lawn')"
+    },
+    {
+      "expr": "levenshtein('𠀋', '𠀌')"
+    },
+    {
+      "expr": "levenshtein('', 'abc')"
+    },
+    {
+      "expr": "maxNameSimilarity('Nguyen Van An', ['Tran Van Binh', 'Nguyen Van Anh', 'Le Thi Hoa', '', 'Nguyen An'])"
+    },
+    {
+      "expr": "similarity('a' + 'a', 'aa')"
+    },
+    {
+      "expr": "[1,2,3].exists(x, x == 3) && [1].all(x, true)"
+    },
+    {
+      "expr": "[1,2,3,4].filter(x, x % 2 == 0).map(x, x * 10)"
+    },
+    {
+      "expr": "[[1,2],[3]].map(l, size(l))"
+    },
+    {
+      "expr": "names.exists(n, n == s)"
+    },
+    {
+      "expr": "names.all(n, n.size() == 1) || 1/0 == 1"
+    },
+    {
+      "expr": "date('2026-12-31').plusDays(1)"
+    },
+    {
+      "expr": "date('2024-02-29').plusMonths(12)"
+    },
+    {
+      "expr": "date('2026-01-31').plusMonths(-2)"
+    },
+    {
+      "expr": "monthsBetween(date('2025-02-28'), date('2024-02-29'))"
+    },
+    {
+      "expr": "daysBetween(date('2026-03-29'), date('2026-03-30'))"
+    },
+    {
+      "expr": "date('1970-01-01').dayOfWeek()"
+    },
+    {
+      "expr": "date('-0001-12-31').plusDays(1)"
+    },
+    {
+      "expr": "string(date('+10000-01-01'))"
+    },
+    {
+      "expr": "money('100', 'VND') / 3"
+    },
+    {
+      "expr": "money('1.0', 'USD') == money('1.00', 'USD')"
+    },
+    {
+      "expr": "money(5, 'USD') * decimal('0.333')"
+    },
+    {
+      "expr": "max(money(2000, 'VND'), (money('1500000', 'VND') * decimal('0.0005')).round())"
+    },
+    {
+      "expr": "-money('0.00', 'USD')"
+    },
+    {
+      "expr": "money('-0.5', 'USD').round('HALF_UP')"
+    },
+    {
+      "expr": "money('2.5', 'VND').round()"
+    },
+    {
+      "expr": "money('1E+3', 'VND')"
+    },
+    {
+      "expr": "money(' 7 ', 'VND')"
+    },
+    {
+      "expr": "'Straße'.contains('ß')"
+    },
+    {
+      "expr": "size('ẞ')"
+    },
+    {
+      "expr": "'a' + 'b' + string(1) + string(decimal('2.50'))"
+    },
+    {
+      "expr": "'x'.startsWith('')"
+    },
+    {
+      "expr": "decimal('802446200262022426800420.28840066') / decimal('-44448608246860204626082.08')"
+    },
+    {
+      "expr": "decimal('2E+2') / decimal('46400460280604206E+2')"
+    },
+    {
+      "expr": "decimal('-262208686444244866404602248680.84') / decimal('-0.000000000268480422')"
+    },
+    {
+      "expr": "decimal('448688008462262404208.2068') / decimal('-0.000000000008')"
+    },
+    {
+      "expr": "decimal('-8840060684420044426.88882020026648') / decimal('8E+8')"
+    },
+    {
+      "expr": "decimal('-82882442244044402E+6') / decimal('-6222246642662428202886828062846E+2')"
+    },
+    {
+      "expr": "decimal('-0.00000004') / decimal('-0.02')"
+    },
+    {
+      "expr": "decimal('-622844046686602040002246') / decimal('-0.0000000000000002')"
+    },
+    {
+      "expr": "decimal('-400882424.8248284802486086') / decimal('-4466440042222648468468082')"
+    },
+    {
+      "expr": "decimal('82268284840422866') / decimal('84684624840466420E+2')"
+    },
+    {
+      "expr": "decimal('62284062404628882688226428840.6608') / decimal('0.0000000006')"
+    },
+    {
+      "expr": "decimal('220462222008480262446.062680846864') / decimal('448842602806680884426602048.284288')"
+    },
+    {
+      "expr": "decimal('48208420882606.68') / decimal('220044286028268802844868048868228E+6')"
+    },
+    {
+      "expr": "decimal('0.00000000000004') / decimal('44042442460869862004844664264.4860')"
+    },
+    {
+      "expr": "decimal('-62242.6246') / decimal('-8.48464824')"
+    },
+    {
+      "expr": "decimal('-0E+8') / decimal('-642802468.4206848044882444')"
+    },
+    {
+      "expr": "decimal('-6E+6') / decimal('26008060884682008')"
+    },
+    {
+      "expr": "decimal('24326446862828268E+8') / decimal('0.02')"
+    },
+    {
+      "expr": "decimal('260044882260204244464.448268088224') / decimal('-6464862248084.28406686642802628648')"
+    },
+    {
+      "expr": "decimal('-40488280840642842486282.64') / decimal('246028460204428608420.8806')"
+    },
+    {
+      "expr": "decimal('648262428') / decimal('6E+8')"
+    },
+    {
+      "expr": "decimal('-2926688026848028686.46244444606826') / decimal('-0.000000')"
+    },
+    {
+      "expr": "decimal('0.0008') / decimal('8.28248840')"
+    },
+    {
+      "expr": "decimal('2888058480466406842284684266444.88') / decimal('622.80800400880040')"
+    },
+    {
+      "expr": "decimal('4486426400428644026826600866462.44') / decimal('-4422288820886446826682268E+6')"
+    },
+    {
+      "expr": "decimal('-8.4044084604866420') / decimal('4246446.086848208006022240')"
+    },
+    {
+      "expr": "decimal('-466086E+6') / decimal('-8084644622864446068.60028048224242')"
+    },
+    {
+      "expr": "decimal('58086082E+6') / decimal('668084088E+8')"
+    },
+    {
+      "expr": "decimal('-68866640824666084E+8') / decimal('-8082026084846868664426.22')"
+    },
+    {
+      "expr": "decimal('-4464606644486422460.482448') / decimal('0.000000000002')"
+    },
+    {
+      "expr": "decimal('8202628820862244864842666E+6') / decimal('84286868008608666806.8288')"
+    },
+    {
+      "expr": "decimal('2') / decimal('-0.0426848842')"
+    },
+    {
+      "expr": "decimal('-0.000924884062') / decimal('22224266882040420E+8')"
+    },
+    {
+      "expr": "decimal('244882828004462.6044820220') / decimal('8026040882.268466')"
+    },
+    {
+      "expr": "decimal('0.06') / decimal('0.00000006')"
+    },
+    {
+      "expr": "decimal('4664064044888.6008') / decimal('-0.000008')"
+    },
+    {
+      "expr": "decimal('0.0000000000000000') / decimal('622860262040.04846486282824842820')"
+    },
+    {
+      "expr": "decimal('-846644008') / decimal('-0.00000000000462688406')"
+    },
+    {
+      "expr": "decimal('462624840844204862288226082202244E+8') / decimal('0.0000000004')"
+    },
+    {
+      "expr": "decimal('2622442220602200442028.26') / decimal('826024004220241462628668882.604068')"
+    },
+    {
+      "expr": "decimal('0.000000000006') / decimal('2828084264002006200420860E+4')"
+    },
+    {
+      "expr": "decimal('64424.4022') / decimal('240242600')"
+    },
+    {
+      "expr": "decimal('0.00000000000000000004') / decimal('0.0000000000')"
+    },
+    {
+      "expr": "decimal('4400642688028.2280') / decimal('0.022068020262020288')"
+    },
+    {
+      "expr": "decimal('-408082844') / decimal('22888042800022200.60444428')"
+    },
+    {
+      "expr": "decimal('-80668206242020848E+2') / decimal('-2860642242262.02046842082208448242')"
+    },
+    {
+      "expr": "decimal('-0.00000004') / decimal('240.440802')"
+    },
+    {
+      "expr": "decimal('0.000000000004') / decimal('244266464044460.6282422880824804')"
+    },
+    {
+      "expr": "decimal('8E+4') / decimal('82228484226206666E+2')"
+    },
+    {
+      "expr": "decimal('2E+2') / decimal('84462442026202646.20680824')"
+    },
+    {
+      "expr": "decimal('-2880084088828064424688264E+4') / decimal('0.000000000626666426')"
+    },
+    {
+      "expr": "decimal('6804422448604664888266088') / decimal('-0.00000006')"
+    },
+    {
+      "expr": "decimal('262668064E+2') / decimal('0.00004886848824888046')"
+    },
+    {
+      "expr": "decimal('0.000884666888') / decimal('4E+4')"
+    },
+    {
+      "expr": "decimal('0.00000000000002') / decimal('4206208656608622.4406248406826642')"
+    },
+    {
+      "expr": "decimal('0.020482466844088882') / decimal('0.0006')"
+    },
+    {
+      "expr": "decimal('-6E+4') / decimal('84682228082206640.66880880')"
+    },
+    {
+      "expr": "decimal('4406882208060088.0648448800082294') / decimal('44002648640640642.22060464')"
+    },
+    {
+      "expr": "decimal('284022420448248E+4') / decimal('-86840668040028224040442664260.6624')"
+    },
+    {
+      "expr": "decimal('82686.42244662244824296824') / decimal('-0.000000000000000008')"
+    },
+    {
+      "expr": "decimal('-462008440806682.684084462426242448') / decimal('0.00000000000244840808')"
+    },
+    {
+      "expr": "decimal('-6.60466286') / decimal('6020288426286480684006288E+2')"
+    },
+    {
+      "expr": "decimal('8024084620606848604002206E+2') / decimal('8802806444228444860486428E+4')"
+    },
+    {
+      "expr": "decimal('-48406004246022062E+8') / decimal('82048482086848220866.600008088646')"
+    },
+    {
+      "expr": "decimal('60644802280424660.00044804') / decimal('6068828224460.66608644286066680880')"
+    },
+    {
+      "expr": "decimal('448846864204242242066428864020884') / decimal('68402478022682060406244.8040262442')"
+    },
+    {
+      "expr": "decimal('24604047664484626808044.2062808268') / decimal('-204.688480')"
+    },
+    {
+      "expr": "decimal('0.00000440822668') / decimal('0.00000000000008')"
+    },
+    {
+      "expr": "decimal('466288608840826208464042622.866280') / decimal('0.0000')"
+    },
+    {
+      "expr": "decimal('0.00000000000006') / decimal('62202644024466840E+6')"
+    },
+    {
+      "expr": "decimal('828264060086688424608820624820240E+2') / decimal('2E+8')"
+    },
+    {
+      "expr": "decimal('8.28226644') / decimal('8082262226264468E+8')"
+    },
+    {
+      "expr": "decimal('624426622E+6') / decimal('-4646020206446280E+8')"
+    },
+    {
+      "expr": "decimal('-866420466E+6') / decimal('846204686662080886640.8680')"
+    },
+    {
+      "expr": "decimal('-22402244226860826E+4') / decimal('-6864462.826604244024828270')"
+    },
+    {
+      "expr": "decimal('46842400E+4') / decimal('480800824240460444244264026464288E+6')"
+    },
+    {
+      "expr": "decimal('-46240084426288640424620228046040E+8') / decimal('0.00000000000082402820')"
+    },
+    {
+      "expr": "decimal('-4E+4') / decimal('6400800248820642480802002.48860442')"
+    },
+    {
+      "expr": "decimal('408084688068420088668048060.666240') / decimal('-6602400828006822464660226E+6')"
+    },
+    {
+      "expr": "decimal('0.000000000000000006') / decimal('2260860.48')"
+    },
+    {
+      "expr": "decimal('442406666642424666228.2268228206') / decimal('60840002840426288E+8')"
+    },
+    {
+      "expr": "decimal('0.000682488286') / decimal('-2002882.06')"
+    },
+    {
+      "expr": "decimal('2048004224884804868660402804446.20') / decimal('86484244862808488E+6')"
+    },
+    {
+      "expr": "decimal('-400884468') / decimal('-4048008448884864644408228.46680840')"
+    },
+    {
+      "expr": "decimal('8822608.62') / decimal('-20488802864866860.08486448')"
+    },
+    {
+      "expr": "decimal('0.000000000000000004') / decimal('8E+8')"
+    },
+    {
+      "expr": "decimal('0.00000006') / decimal('86080484040008682080224E+4')"
+    },
+    {
+      "expr": "decimal('-0.8682628224688246') / decimal('-0.00000006')"
+    },
+    {
+      "expr": "decimal('4E+6') / decimal('60468.4064')"
+    },
+    {
+      "expr": "decimal('-0.0000000000000002') / decimal('-0.0000000000000004')"
+    },
+    {
+      "expr": "decimal('-288804466E+8') / decimal('0E+6')"
+    },
+    {
+      "expr": "decimal('4480042200026488.4424006002066206') / decimal('84402022')"
+    },
+    {
+      "expr": "decimal('688282806662886646460444804484488E+2') / decimal('-868042640662240020224404E+6')"
+    },
+    {
+      "expr": "decimal('8842828488.602662') / decimal('0.000000000540080822')"
+    },
+    {
+      "expr": "decimal('-64882086642240008648866660.202400') / decimal('-6262204844626876862286400E+2')"
+    },
+    {
+      "expr": "decimal('-4048422462646808028466828') / decimal('-866006406E+4')"
+    },
+    {
+      "expr": "decimal('24648648084068480806.4646') / decimal('0.66804426')"
+    },
+    {
+      "expr": "decimal('4.8048680248680068') / decimal('-0.000000000204608828')"
+    },
+    {
+      "expr": "decimal('-0.000466242408') / decimal('0.00000000000000000002')"
+    },
+    {
+      "expr": "decimal('8') / decimal('-20036002008.468206')"
+    },
+    {
+      "expr": "decimal('6606080426002024226042088488002.84') / decimal('-6686624204468268488868804226048E+6')"
+    },
+    {
+      "expr": "decimal('4E+2') / decimal('622.420628')"
+    },
+    {
+      "expr": "decimal('-66.480028') / decimal('4E+4')"
+    },
+    {
+      "expr": "decimal('-286.66228268464800') / decimal('-280400604484048820682408424662488E+2')"
+    },
+    {
+      "expr": "decimal('88228.828648224208') / decimal('6006008.064628662088408468')"
+    },
+    {
+      "expr": "decimal('0.0000000000000000') / decimal('0.00068824408086842440')"
+    },
+    {
+      "expr": "decimal('82220260624002488226468242648222E+2') / decimal('424088282282468082842264026608208E+6')"
+    },
+    {
+      "expr": "decimal('4682444004200644668428400') / decimal('628628688464268020628840204680420E+2')"
+    },
+    {
+      "expr": "decimal('64602022866480666') / decimal('0.00000000000000000008')"
+    },
+    {
+      "expr": "decimal('-88288.400084026640') / decimal('0.00000002')"
+    },
+    {
+      "expr": "decimal('844.04802862468804') / decimal('-48442624020226868')"
+    },
+    {
+      "expr": "decimal('84.64086628684662') / decimal('-608466286224066040822680862.268820')"
+    },
+    {
+      "expr": "decimal('-628606828E+4') / decimal('0.000000000608066004')"
+    },
+    {
+      "expr": "decimal('0.000440862828') / decimal('804806680E+8')"
+    },
+    {
+      "expr": "decimal('-0.00000000000002') / decimal('400448844608066226820468226222408')"
+    },
+    {
+      "expr": "decimal('282286226606868.660202460222824202') / decimal('0.00000000000242882802')"
+    },
+    {
+      "expr": "decimal('-684648860446.08082628662426222268') / decimal('602648602482044.628400422284084662')"
+    },
+    {
+      "expr": "decimal('-4E+2') / decimal('0.04')"
+    },
+    {
+      "expr": "decimal('2240424026686808004.246286220600') / decimal('0.00000000000000000000')"
+    },
+    {
+      "expr": "decimal('0.0000000004') / decimal('-4')"
+    },
+    {
+      "expr": "decimal('-0.00000022806400') + decimal('-0.00000000000002') * decimal('0.00000000000000000004') - decimal('-6840426.86')"
+    },
+    {
+      "expr": "decimal('4E+8') + decimal('-0.00000000000002') * decimal('2620068260020804E+8') - decimal('464866600E+2')"
+    },
+    {
+      "expr": "decimal('0.0000000000000006') + decimal('-266028620.4242064688022484') * decimal('-42884400E+4') - decimal('6422048404088468468.086646')"
+    },
+    {
+      "expr": "decimal('-806248.2484402064') + decimal('0.000002') * decimal('0.00000644248208') - decimal('4684480204642602008.24222')"
+    },
+    {
+      "expr": "decimal('6604806266088864020644608') + decimal('0.00000006') * decimal('0.000000000000') - decimal('4442066026480024822866686')"
+    },
+    {
+      "expr": "decimal('-26006.082206240484') + decimal('-0.0000000000') * decimal('80022.46046222026086204684') - decimal('-0.000000')"
+    },
+    {
+      "expr": "decimal('6284268442262420E+6') + decimal('8606086488646888486288864') * decimal('-242082882286286.0') - decimal('-664.80084640240482')"
+    },
+    {
+      "expr": "decimal('-806824644228842024404226202426080') + decimal('0.00000400048006') * decimal('624.020462') - decimal('0.0000000440026824')"
+    },
+    {
+      "expr": "decimal('0.00000002') + decimal('-6666848244242220624086608E+8') * decimal('-264620248.26068024') - decimal('42088408662446888248486604064.2440')"
+    },
+    {
+      "expr": "decimal('0.00046208802660044420') + decimal('0E+2') * decimal('26802404082486484200002844200664') - decimal('24880422666404024E+6')"
+    },
+    {
+      "expr": "decimal('-64066204026044062882662.46') + decimal('2E+6') * decimal('882.880442') - decimal('62662626408420440206.0422')"
+    },
+    {
+      "expr": "decimal('0.04') + decimal('-6E+4') * decimal('-0.00000000000202280446') - decimal('868244662E+2')"
+    },
+    {
+      "expr": "decimal('0.00000006') + decimal('-0.0000') * decimal('6E+8') - decimal('0.000000000462800228')"
+    },
+    {
+      "expr": "decimal('6400662080602020442444006E+8') + decimal('-0.0000000000') * decimal('2') - decimal('8E+8')"
+    },
+    {
+      "expr": "decimal('4.4240002288044868') + decimal('4') * decimal('822468004280280462262446E+6') - decimal('-470464000444668640248608604688202E+6')"
+    },
+    {
+      "expr": "decimal('86822028624.8282') + decimal('-8042406082888262042626848E+4') * decimal('622660844660680442482626602460620E+2') - decimal('0.000004')"
+    },
+    {
+      "expr": "decimal('0.000884602200') + decimal('-0.06') * decimal('860480462') - decimal('-840884846220848664660.486688600602')"
+    },
+    {
+      "expr": "decimal('2268882640288.46662246228222008200') + decimal('24428268244482686') * decimal('0.000000000008') - decimal('-860642404040.2284')"
+    },
+    {
+      "expr": "decimal('0.000000000000000008') + decimal('20224242') * decimal('6844442422462008848406204E+6') - decimal('-62662.200866444648')"
+    },
+    {
+      "expr": "decimal('844600634286204.6082802644') + decimal('-2046044888868400400266622E+6') * decimal('6028420240068400406.248208') - decimal('-4688086668168862.44680602')"
+    },
+    {
+      "expr": "decimal('-0.0000000000000008') + decimal('8002202642622466642600660.08246284') * decimal('282288684484846.82') - decimal('-6424242482826.8468')"
+    },
+    {
+      "expr": "decimal('0.00080622448444408626') + decimal('468448684660240.2044448800') * decimal('-0.00000000000000000006') - decimal('4682285680242022244602848.04248824')"
+    },
+    {
+      "expr": "decimal('6E+2') + decimal('62224202424064248E+2') * decimal('6464826646422.46848280866048604404') - decimal('-8408020008662622006428260404262.72')"
+    },
+    {
+      "expr": "decimal('8820226888028042024884280.22482608') + decimal('804468446E+8') * decimal('0.000000000000000002') - decimal('-4202860028442408002428602E+6')"
+    },
+    {
+      "expr": "decimal('480642868284.264666862688') + decimal('-666482000240422202644002048428640E+8') * decimal('-0.000000000000648002468') - decimal('620824246440860.240440488488826264')"
+    },
+    {
+      "expr": "decimal('-68880.88604044820666448886') + decimal('-2202444040826248026486244820442.64') * decimal('6648844648468826668.84622284022640') - decimal('-8602022820884422E+4')"
+    },
+    {
+      "expr": "decimal('-6') + decimal('482046868648.086444882864') * decimal('0.000004') - decimal('2')"
+    },
+    {
+      "expr": "decimal('66840286006224468801846688626482E+6') + decimal('-48826884884486208E+8') * decimal('-0.00000000000204242026') - decimal('820868622608420622204828088202026E+4')"
+    },
+    {
+      "expr": "decimal('-624.468646') + decimal('0.0000000600462244') * decimal('2260822468600624662068004204062E+2') - decimal('26280.24922802006640686002')"
+    },
+    {
+      "expr": "decimal('40086.28064666608442486440') + decimal('286.260422') * decimal('-88022240048466804E+6') - decimal('0.00000662080266')"
+    },
+    {
+      "expr": "decimal('-62000.864882202088') + decimal('6868688068844626800866E+8') * decimal('278488880802084.664842066824606420') - decimal('204622282E+8')"
+    },
+    {
+      "expr": "decimal('-4244620248462882482.460020') + decimal('-0.06') * decimal('260666842') - decimal('-404864640860886028262882248684004E+8')"
+    },
+    {
+      "expr": "decimal('0.000000000202484846') + decimal('-664040826082824880268404860486428E+4') * decimal('2480206080.2408') - decimal('66642086828404488E+2')"
+    },
+    {
+      "expr": "decimal('4020060.86') + decimal('88266086086642222') * decimal('8E+8') - decimal('-0.000006')"
+    },
+    {
+      "expr": "decimal('48864066860080826626288.46') + decimal('406000642848464284642826400200464E+8') * decimal('480.648022') - decimal('8.8646080640822664')"
+    },
+    {
+      "expr": "decimal('42842042E+2') + decimal('-8') * decimal('880448844226428840200882006.248888') - decimal('-66086.286080408826')"
+    },
+    {
+      "expr": "decimal('2246822888846.280886468402') + decimal('8628640.86') * decimal('866.82408620604024') - decimal('6062664.4824466202')"
+    },
+    {
+      "expr": "decimal('60026262486.220408') + decimal('0.0000000282082806') * decimal('628882460206644420E+6') - decimal('-0E+8')"
+    },
+    {
+      "expr": "decimal('-20822068244466080E+2') + decimal('0.000448204288') * decimal('-2440040406846468648484202.40806222') - decimal('-0.0064')"
+    },
+    {
+      "expr": "decimal('6E+2') + decimal('64660660228608222460268480040660') * decimal('484604808240460040860.8426') - decimal('262242826244882242646068644464820')"
+    },
+    {
+      "expr": "decimal('0.000006284400').round(0, 'UP')"
+    },
+    {
+      "expr": "decimal('28000446088400602.2444066866004404').round(4, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('0.02').round(0, 'UP')"
+    },
+    {
+      "expr": "decimal('0.0000000000288228').round(-4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('-62844466620666062').round(4, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('2.4820604644044068').round(0, 'DOWN')"
+    },
+    {
+      "expr": "decimal('28.08800002204804').round(4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('0.00000000000000000000').round(0, 'CEILING')"
+    },
+    {
+      "expr": "decimal('-807882026E+4').round(-4, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('4626842046842248E+4').round(-4, 'UP')"
+    },
+    {
+      "expr": "decimal('8E+4').round(0, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('-0.060664840888464026').round(-4, 'DOWN')"
+    },
+    {
+      "expr": "decimal('-0.00000000000240240026').round(4, 'CEILING')"
+    },
+    {
+      "expr": "decimal('-0.000000000000000004').round(0, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('486686426E+6').round(0, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('4024084228888228604268260.04246208').round(0, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('-220884064').round(0, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('686080066E+2').round(4, 'DOWN')"
+    },
+    {
+      "expr": "decimal('-6826626202620082480040004E+2').round(4, 'DOWN')"
+    },
+    {
+      "expr": "decimal('-8.2042222806021680').round(-4, 'DOWN')"
+    },
+    {
+      "expr": "decimal('0.0000000264264800').round(-4, 'DOWN')"
+    },
+    {
+      "expr": "decimal('2268664806400860846402406E+2').round(4, 'DOWN')"
+    },
+    {
+      "expr": "decimal('-6042068486006626464.84240206606684').round(-4, 'CEILING')"
+    },
+    {
+      "expr": "decimal('0.00000000000008').round(4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('-0.026628822448064240').round(4, 'CEILING')"
+    },
+    {
+      "expr": "decimal('644488822422686684428600086884248E+6').round(0, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('0.0000000000000008').round(0, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('42264042862.02266028880048').round(0, 'UP')"
+    },
+    {
+      "expr": "decimal('2020246400440886460.082646').round(4, 'CEILING')"
+    },
+    {
+      "expr": "decimal('6424806.20').round(-4, 'UP')"
+    },
+    {
+      "expr": "decimal('84466608.26006042').round(4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('-2422860860242.680260428000').round(4, 'UP')"
+    },
+    {
+      "expr": "decimal('624.444462').round(0, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('0.0000000086426646').round(0, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('-0.00012206208606088468').round(0, 'DOWN')"
+    },
+    {
+      "expr": "decimal('840280668062080846282608E+2').round(0, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('0.00000000000268848604').round(0, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('0.000000000266626704').round(-4, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('-684082600E+2').round(-4, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('-2884808.008206082260646624').round(4, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('-84406680462600026').round(-4, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('646888400008668620688.668042246861').round(0, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('-8440040004468.862082200264').round(0, 'UP')"
+    },
+    {
+      "expr": "decimal('0.8286242628662628').round(4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('0.0000000486604802').round(4, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('0').round(-4, 'UP')"
+    },
+    {
+      "expr": "decimal('602084080682482380200.2808').round(4, 'UP')"
+    },
+    {
+      "expr": "decimal('494882664844606204028622684202400E+2').round(-4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('-8408.06288282082680802440').round(4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('649202426848688E+2').round(-4, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('-0.000000000004').round(0, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('-4820680082688240480868608').round(-4, 'CEILING')"
+    },
+    {
+      "expr": "decimal('3246408488626800062088640E+4').round(4, 'CEILING')"
+    },
+    {
+      "expr": "decimal('-86224864482242420.88860248').round(-4, 'CEILING')"
+    },
+    {
+      "expr": "decimal('-84260046288.860680').round(4, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('22662.0266').round(0, 'DOWN')"
+    },
+    {
+      "expr": "decimal('-648264208E+4').round(-4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('46060664082240228').round(4, 'HALF_UP')"
+    },
+    {
+      "expr": "decimal('6062086022440226686.460084').round(0, 'DOWN')"
+    },
+    {
+      "expr": "decimal('2644486068226200.8226008688284828').round(4, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('880660660046200084488240068486686E+4').round(4, 'UP')"
+    },
+    {
+      "expr": "decimal('6246084264664680440644042460668.88').round(-4, 'FLOOR')"
+    },
+    {
+      "expr": "decimal('8.40428048842024').round(0, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('0.08').round(4, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('-8626420884888422664.68464282242806').round(4, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('0.0000000000').round(-4, 'CEILING')"
+    },
+    {
+      "expr": "decimal('620.06446840244206').round(-4, 'HALF_DOWN')"
+    },
+    {
+      "expr": "decimal('-0.080289400888428682').round(4, 'HALF_EVEN')"
+    },
+    {
+      "expr": "decimal('-4820082842642284088.802488').round(0, 'DOWN')"
+    },
+    {
+      "expr": "decimal('88402648002666288.84082846').round(4, 'HALF_EVEN')"
+    },
+    {
+      "expr": "string(decimal('-2246644826440066446244888') / 10)"
+    },
+    {
+      "expr": "string(decimal('0.0000000004') / 56)"
+    },
+    {
+      "expr": "string(decimal('8840806.642806888482288202') / 38)"
+    },
+    {
+      "expr": "string(decimal('-0.06') / 59)"
+    },
+    {
+      "expr": "string(decimal('80026008480684020E+8') / 10)"
+    },
+    {
+      "expr": "string(decimal('2E+4') / 62)"
+    },
+    {
+      "expr": "string(decimal('420602888E+2') / 2)"
+    },
+    {
+      "expr": "string(decimal('-604.84380282608048') / 92)"
+    },
+    {
+      "expr": "string(decimal('8202.42640028428468480840') / 38)"
+    },
+    {
+      "expr": "string(decimal('84244044082822.240224608066442824') / 34)"
+    },
+    {
+      "expr": "string(decimal('-4022620824200.8802') / 86)"
+    },
+    {
+      "expr": "string(decimal('0.00000026424484') / 19)"
+    },
+    {
+      "expr": "string(decimal('0.00000000000684822804') / 51)"
+    },
+    {
+      "expr": "string(decimal('60260240428666860.84046826') / 47)"
+    },
+    {
+      "expr": "string(decimal('-868226446426224.844642860642442846') / 59)"
+    },
+    {
+      "expr": "string(decimal('0.000000000020040484') / 62)"
+    },
+    {
+      "expr": "string(decimal('-0.0000000000000000') / 19)"
+    },
+    {
+      "expr": "string(decimal('-486620462020048044880.0842') / 96)"
+    },
+    {
+      "expr": "string(decimal('642064060E+8') / 10)"
+    },
+    {
+      "expr": "string(decimal('42288.222868206288') / 74)"
+    },
+    {
+      "expr": "decimal('862668622802600846646866220424860E+6') == decimal('0.0008804664')"
+    },
+    {
+      "expr": "decimal('84688464488866.4422286480') == decimal('-4E+6')"
+    },
+    {
+      "expr": "decimal('684024') == decimal('0.00044448668060000404')"
+    },
+    {
+      "expr": "decimal('-6264688820602662462400206E+4') == decimal('-20026.62646884640484026688')"
+    },
+    {
+      "expr": "decimal('262648208E+8') == decimal('8.80642060')"
+    },
+    {
+      "expr": "decimal('0.040022844484020020') == decimal('0.0')"
+    },
+    {
+      "expr": "decimal('0.00000266244088') == decimal('2486666.4840446264')"
+    },
+    {
+      "expr": "decimal('-22086288808620262204622.42') == decimal('6844640228.46304620202000')"
+    },
+    {
+      "expr": "decimal('8842644684262246244886668E+6') == decimal('-2628.2288804244')"
+    },
+    {
+      "expr": "decimal('6') == decimal('-466464288E+2')"
+    },
+    {
+      "expr": "decimal('606860060424222002822680422.842804') == decimal('0.000220220262')"
+    },
+    {
+      "expr": "decimal('648260206E+8') == decimal('-0.0000000004400282')"
+    },
+    {
+      "expr": "decimal('260.466022') == decimal('2868208046048280604880.0002420686')"
+    },
+    {
+      "expr": "decimal('8E+6') == decimal('66262828402480682E+4')"
+    },
+    {
+      "expr": "decimal('64220288848024666404826404206428E+8') == decimal('68442.624482486400')"
+    },
+    {
+      "expr": "decimal('4088408.6206686444') == decimal('-68288600002444684.00248060')"
+    },
+    {
+      "expr": "decimal('680224280428642260466.8706') == decimal('800406688524468286226.6468')"
+    },
+    {
+      "expr": "decimal('-64.260880') == decimal('-6260840626044222006204020E+4')"
+    },
+    {
+      "expr": "decimal('-2024848824482662482.44066400042882') == decimal('-84440608022626466E+4')"
+    },
+    {
+      "expr": "decimal('2E+2') == decimal('-602.88424464480024')"
+    },
+    {
+      "expr": "decimal('1') / decimal('1')"
+    },
+    {
+      "expr": "decimal('1') / decimal('3')"
+    },
+    {
+      "expr": "decimal('1') / decimal('7')"
+    },
+    {
+      "expr": "decimal('1') / decimal('9')"
+    },
+    {
+      "expr": "decimal('1') / decimal('11')"
+    },
+    {
+      "expr": "decimal('1') / decimal('12')"
+    },
+    {
+      "expr": "decimal('1') / decimal('13')"
+    },
+    {
+      "expr": "decimal('1') / decimal('17')"
+    },
+    {
+      "expr": "decimal('1') / decimal('19')"
+    },
+    {
+      "expr": "decimal('1') / decimal('3.0')"
+    },
+    {
+      "expr": "decimal('1') / decimal('0.07')"
+    },
+    {
+      "expr": "[0, 1].map(x, [1, 2, 3].exists(y, y == 3) ? 1/x : 1)"
+    },
+    {
+      "expr": "[0, 1].map(x, 1/x)"
+    },
+    {
+      "expr": "[0, 1, 2, 3, 4, 5].map(x, 1/x)"
+    },
+    {
+      "expr": "[0, 1].map(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)"
+    },
+    {
+      "expr": "[0, 1].filter(x, 1/x == 1)"
+    },
+    {
+      "expr": "[0, 1, 2, 3, 4, 5].filter(x, 1/x == 1)"
+    },
+    {
+      "expr": "[0, 1].filter(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)"
+    },
+    {
+      "expr": "[0, 1, 2, 3, 4, 5].exists_one(x, 1/x == 1)"
+    },
+    {
+      "expr": "[0, 1].exists_one(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)"
+    },
+    {
+      "expr": "[0, 1, 2].exists(x, 1/x == 5)"
+    },
+    {
+      "expr": "[0, 1, 2, 3, 4, 5].exists(x, 1/x == 5)"
+    },
+    {
+      "expr": "[0, 1].exists(x, x == 1 ? [1,2,3,4].exists(y, y == 4) && false : 1/x == 1)"
+    },
+    {
+      "expr": "[0, 1].all(x, x == 1 ? [1,2,3,4].exists(y, y == 4) : 1/x == 1)"
+    },
+    {
+      "expr": "[1, 0].map(x, 1/x)"
+    },
+    {
+      "expr": "[0, 1].map(x, x == 0 ? 1/x : [1].map(y, 2/(y - 1))[0])"
+    },
+    {
+      "expr": "[0, 1].map(x, x == 0 ? 1/x : [1, 2, 3, 4].map(y, y)[0])"
+    },
+    {
+      "expr": "[0, 1, 2, 3].map(x, x == 0 ? 1/x : [1, 2].map(y, y)[0])"
+    },
+    {
+      "expr": "[0, 1, 2, 3].exists(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))"
+    },
+    {
+      "expr": "[0, 1, 2, 3].all(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3) || true)"
+    },
+    {
+      "expr": "[0, 1, 2, 3].filter(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))"
+    },
+    {
+      "expr": "[0, 1, 2, 3].exists_one(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))"
+    },
+    {
+      "expr": "[0, 1].filter(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1)"
+    },
+    {
+      "expr": "[0, 1].exists_one(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1)"
+    },
+    {
+      "expr": "[0, 1].map(x, x == 0 ? 1/x : 2/(x - 1))"
+    },
+    {
+      "expr": "[0, 1].map(x, x == 1, x == 0 ? 1/x : 2/(x - 1))"
+    },
+    {
+      "expr": "[0, 1].map(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1, x)"
+    },
+    {
+      "expr": "[0, 1].map(x, x == 0, 1/x)"
+    },
+    {
+      "expr": "[0, 1, 2, 3].map(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3), x)"
+    },
+    {
+      "expr": "[0, 1, 2, 3].map(x, x != 0, x == 0 ? 1/x : [1, 2].map(y, y)[0])"
+    }
+  ]
+}

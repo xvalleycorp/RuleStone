@@ -82,6 +82,10 @@ public final class ExpressionEnvironment {
         this.compiler = compilerBuilder.setTypeProvider(new StructTypeProvider(structs)).build();
         this.runtime = CelRuntimeFactory.standardCelRuntimeBuilder()
                 .setOptions(options)
+                // Standard functions whose errors would quote an argument get value-free messages.
+                .setStandardEnvironmentEnabled(false)
+                .setStandardFunctions(SafeStandardFunctions.standardFunctions())
+                .addFunctionBindings(SafeStandardFunctions.bindings(options))
                 .addFunctionBindings(DecimalLibrary.bindings())
                 .addFunctionBindings(MoneyLibrary.bindings(currencyScales))
                 .addFunctionBindings(DateLibrary.bindings())
