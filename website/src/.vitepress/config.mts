@@ -1,6 +1,7 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vitepress';
 // Translations: which pages exist in Vietnamese, and whether they are up to date.
 import { LOCALES, englishDocs, englishUrl, parseFrontMatter, readText, sha256, translatedUrl, translations } from '../../scripts/i18n-lib.mjs';
@@ -98,6 +99,21 @@ export default defineConfig({
   titleTemplate: ':title · RuleStone',
   description: DESCRIPTION,
   cleanUrls: true,
+  vite: {
+    resolve: {
+      // Replace the default theme's language switchers with ones that show flags.
+      alias: [
+        {
+          find: /^.*\/VPNavBarTranslations\.vue$/,
+          replacement: fileURLToPath(new URL('./theme/LanguageSwitcher.vue', import.meta.url)),
+        },
+        {
+          find: /^.*\/VPNavScreenTranslations\.vue$/,
+          replacement: fileURLToPath(new URL('./theme/LanguageSwitcherScreen.vue', import.meta.url)),
+        },
+      ],
+    },
+  },
   sitemap: {
     hostname: SITE,
     // Placeholder pages for untranslated guides only point to the English page.
