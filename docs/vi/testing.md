@@ -1,6 +1,6 @@
 ---
 source: testing.md
-sourceHash: 4eb993823a50993f27cb1c1f889295affaf14f5741b96961651bc407903dd585
+sourceHash: d3eb30a5e01925654ef0e94c59840943bb887f353cf548373580d762c9ffac1c
 ---
 
 # Kiểm thử bảng quyết định
@@ -106,11 +106,47 @@ Mỗi ca kiểm thử đánh giá quyết định một lần với các `facts`
 | `ruleVersion` | Phiên bản được dùng: `"3"` chấp nhận mọi nội dung của phiên bản 3; `"3@sha256:…"` (giá trị `ruleVersion` đầy đủ của một kết quả) chỉ chấp nhận đúng nội dung đó. |
 | `error` | Việc đánh giá thất bại với một `RuleStoneException` có thông báo chứa đoạn văn bản này, ví dụ `"division by zero"`, `"balance: missing input"` hoặc `"no version of decision 'loan_eligibility' is effective on 2025-12-31"`. Không thể kết hợp với các trường khác. |
 
-### Số
+### Giá trị
+
+Khi các tệp kiểm thử được chạy cùng với các bảng (xem [Độ bao phủ luật](#độ-bao-phủ-luật), hoặc truyền các bảng vào `StoneTests.dynamicTests` hay `StoneTestJson.read`), `facts` và `expect.output` được đọc theo các kiểu mà bảng khai báo, với cùng các dạng JSON như [`FactsJson`](java-api.md#fact-và-kết-quả-dạng-json-factsjson):
+
+| Kiểu | Cách viết | Ví dụ |
+|---|---|---|
+| `bool` | `true` hoặc `false` | `"blacklisted": false` |
+| `int` | một số nguyên | `"age": 30` |
+| `string` | một chuỗi | `"segment": "RETAIL"` |
+| `decimal` | một số, hoặc một chuỗi theo cách viết thông thường | `"monthlyIncome": 25750000.50`, `"rate": "0.0980"` |
+| `money` | một chuỗi gồm số tiền, một khoảng trắng và mã ISO 4217 | `"amount": "1500000.50 VND"` |
+| `date` | một chuỗi `yyyy-MM-dd` | `"valueDate": "2026-11-02"` |
+| danh sách | một mảng | `"cashDepositsLast7d": ["250000000 VND", "270000000 VND"]` |
+| struct | một đối tượng | `"account": { "openedOn": "2019-04-10", "riskRating": "LOW" }` |
+
+Một ca kiểm thử trong [`examples/aml_transaction_monitoring.stone-test.json`](../../examples/aml_transaction_monitoring.stone-test.json) dùng tiền và ngày:
+
+```json
+{
+  "name": "large cash deposit is a large cash transaction",
+  "asOf": "2026-11-02",
+  "facts": {
+    "account": { "openedOn": "2019-04-10", "lastActivityBeforeToday": "2026-10-30", "riskRating": "LOW", "customerIsPep": false },
+    "transaction": { "amount": "350000000 VND", "type": "CASH_DEPOSIT", "valueDate": "2026-11-02" },
+    "history": { "cashDepositsLast7d": ["350000000 VND"], "totalInLast24h": "350000000 VND", "totalOutLast24h": "0 VND" }
+  },
+  "expect": {
+    "output": { "alert": ["LARGE_CASH"], "score": [10] },
+    "reasonCodes": ["LARGE_CASH_TRANSACTION"],
+    "matchedRules": ["LARGE_CASH"]
+  }
+}
+```
+
+Khi đọc theo kiểu, một giá trị không khớp với kiểu của nó là lỗi trong tệp, được báo kèm đường dẫn, ví dụ `$.cases[3].facts.transaction.amount: expected money as "<amount> <CCY>", e.g. "1500000 VND"`. Các đầu vào, trường struct và đầu ra mà bảng không khai báo cũng vậy. Một trường struct bị bỏ qua sẽ ở trạng thái chưa đặt, nên luật nhận biết nó qua `has()`. Với `COLLECT`, mọi đầu ra kỳ vọng đều là danh sách. Các kiểu lấy từ phiên bản mà ca kiểm thử đánh giá: phiên bản được chỉ định bằng `version`, hoặc phiên bản có hiệu lực vào ngày `asOf`. Nếu không có cả hai, mọi phiên bản của quyết định phải khai báo cùng các đầu vào và đầu ra. Các ca kiểm thử cho một quyết định không nằm trong các bảng được truyền vào sẽ được đọc không theo kiểu.
+
+Khi không có các bảng, giá trị giữ nguyên kiểu JSON và quyết định tự chuyển đổi chúng, nên không thể viết đầu vào `money` và `date`: quyết định từ chối một chuỗi ở chỗ cần `Money` hoặc `LocalDate`.
 
 Số được đọc chính xác và không bao giờ đi qua dấu phẩy động: số nguyên trở thành `Long` (`BigInteger` nếu vượt quá 64 bit) và mọi số khác trở thành `BigDecimal`, giữ nguyên scale như khi viết, nên `25750000.50` được truyền cho quyết định đúng là `25750000.50`.
 
-Số kỳ vọng được so sánh **theo giá trị**: `309000000`, `309000000.0` và `309000000.00` đều khớp với hạn mức `309000000`. Danh sách được so sánh lần lượt từng phần tử, theo thứ tự: `"fee": [25000, 10000]` khớp với đầu ra `COLLECT` `[25000, 10000]`.
+Số kỳ vọng được so sánh **theo giá trị**: `309000000`, `309000000.0` và `309000000.00` đều khớp với hạn mức `309000000`. Số tiền cùng loại tiền tệ cũng vậy: `"25000.00 VND"` khớp với `25000 VND`. Danh sách được so sánh lần lượt từng phần tử, theo thứ tự: `"fee": [25000, 10000]` khớp với đầu ra `COLLECT` `[25000, 10000]`.
 
 ### Đọc chặt chẽ
 
@@ -152,7 +188,9 @@ loan_eligibility.v3.stone-test.json, case "adult with low debt is approved", eva
 
 Thông báo hiển thị đầu ra kỳ vọng và đầu ra thực tế, không bao giờ hiển thị các fact đầu vào. Một tệp không đọc được sẽ trở thành một test thất bại duy nhất, mang tên tệp, liệt kê các lỗi của tệp; các tệp khác vẫn chạy. Một đường dẫn không tồn tại, hoặc không chứa tệp kiểm thử nào, làm test factory thất bại, nên một đường dẫn sai không thể lọt qua mà không ai biết.
 
-Để đọc tệp kiểm thử mà không dùng JUnit, hãy dùng `StoneTestJson.read(path)` và gọi `check(engine)` trên từng `StoneTestCase`. Phương thức này ném `AssertionError` liệt kê các điểm không khớp.
+Để đọc giá trị theo kiểu đã khai báo, nhờ đó viết được tiền và ngày (xem [Giá trị](#giá-trị)), hãy truyền thêm các bảng: `StoneTests.dynamicTests(engine, path, tables)`. Overload nhận một `RuleCoverage` ở dưới dùng các bảng của nó.
+
+Để đọc tệp kiểm thử mà không dùng JUnit, hãy dùng `StoneTestJson.read(path, tables)` (hoặc `StoneTestJson.read(path)`, không theo kiểu) và gọi `check(engine)` trên từng `StoneTestCase`. Phương thức này ném `AssertionError` liệt kê các điểm không khớp.
 
 ## Độ bao phủ luật
 
