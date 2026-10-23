@@ -7,6 +7,7 @@ package vn.io.dxa.rulestone.test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -14,13 +15,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import vn.io.dxa.rulestone.api.DecisionResult;
+import vn.io.dxa.rulestone.api.Money;
 
 /**
  * Compares a {@link DecisionResult} with expected values and describes each mismatch.
  * Shared by {@link DecisionCheck} and {@link StoneTestCase} so both report alike.
  *
- * <p>Numbers are compared by value ({@code 309000000} equals {@code 309000000.00}); lists
- * element by element and maps entry by entry, with the same rule.
+ * <p>Numbers are compared by value ({@code 309000000} equals {@code 309000000.00}), and so are
+ * money amounts in the same currency; lists element by element and maps entry by entry, with the
+ * same rule.
  */
 final class Expectations {
 
@@ -110,6 +113,9 @@ final class Expectations {
         if (expectedNumber != null && actualNumber != null) {
             return expectedNumber.compareTo(actualNumber) == 0;
         }
+        if (expected instanceof Money e && actual instanceof Money a) {
+            return e.currency().equals(a.currency()) && e.amount().compareTo(a.amount()) == 0;
+        }
         if (expected instanceof List<?> e && actual instanceof List<?> a) {
             if (e.size() != a.size()) {
                 return false;
@@ -138,6 +144,9 @@ final class Expectations {
         }
         if (value instanceof BigDecimal d) {
             return d.toPlainString();
+        }
+        if (value instanceof Money || value instanceof LocalDate) {
+            return quote(value.toString());
         }
         if (value instanceof List<?> list) {
             return list.stream().map(Expectations::format).collect(Collectors.joining(", ", "[", "]"));

@@ -117,8 +117,10 @@ public final class StoneTestCase {
     }
 
     /**
-     * The input facts, with numbers as {@code Long} (or {@code BigInteger} beyond 64 bits) and
-     * {@code BigDecimal}, objects as {@code Map} and arrays as {@code List}.
+     * The input facts. Read with the tables' types, they are as {@code FactsJson} produces them:
+     * {@code Money}, {@code LocalDate}, {@code BigDecimal}, {@code Long} and so on. Read without
+     * types, numbers are {@code Long} (or {@code BigInteger} beyond 64 bits) and
+     * {@code BigDecimal}, objects {@code Map} and arrays {@code List}.
      *
      * @return the {@code "facts"} field
      */
