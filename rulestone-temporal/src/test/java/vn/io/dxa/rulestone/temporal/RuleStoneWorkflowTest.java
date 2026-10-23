@@ -183,19 +183,20 @@ class RuleStoneWorkflowTest {
 
         Throwable thrown = catchThrowable(() -> replay(history, engine(List.of(loanV2(), edited)), HCM));
 
-        RuleVersionMismatchException mismatch = causeOfType(thrown, RuleVersionMismatchException.class);
-        assertThat(mismatch).isNotNull();
+        // WorkflowReplayer reports the workflow task failure as text.
         String recorded = engine(List.of(loanV3())).evaluate(
                 vn.io.dxa.rulestone.api.DecisionRef.of("loan_eligibility").version("3"),
                 vn.io.dxa.rulestone.api.Facts.of("applicant", APPROVABLE.applicant(), "amount", APPROVABLE.amount()))
                 .ruleVersion();
-        assertThat(mismatch.recordedRuleVersion()).contains(recorded);
-        assertThat(mismatch.registeredRuleVersion()).hasValueSatisfying(v -> assertThat(v)
-                .startsWith("3@sha256:").isNotEqualTo(recorded));
-        assertThat(mismatch.getMessage())
-                .contains("RuleStone replay mismatch for decision 'loan_eligibility'")
-                .contains("rule content changed without a new version label")
-                .contains(recorded);
+        String registered = engine(List.of(edited)).evaluate(
+                vn.io.dxa.rulestone.api.DecisionRef.of("loan_eligibility").version("3"),
+                vn.io.dxa.rulestone.api.Facts.of("applicant", APPROVABLE.applicant(), "amount", APPROVABLE.amount()))
+                .ruleVersion();
+        assertThat(registered).isNotEqualTo(recorded);
+        assertThat(thrown).hasMessageContaining(RuleVersionMismatchException.class.getName())
+                .hasMessageContaining("RuleStone replay mismatch for decision 'loan_eligibility': workflow history"
+                        + " recorded rule version " + recorded + ", but version '3' now registered in the engine is "
+                        + registered + ". The rule content changed without a new version label.");
     }
 
     @Test
@@ -204,11 +205,9 @@ class RuleStoneWorkflowTest {
 
         Throwable thrown = catchThrowable(() -> replay(history, engine(List.of(loanV2())), HCM));
 
-        RuleVersionMismatchException mismatch = causeOfType(thrown, RuleVersionMismatchException.class);
-        assertThat(mismatch).isNotNull();
-        assertThat(mismatch.getMessage())
-                .contains("the engine has no version '3'")
-                .contains("Keep every rule version registered");
+        assertThat(thrown).hasMessageContaining(RuleVersionMismatchException.class.getName())
+                .hasMessageContaining("but the engine has no version '3'. Keep every rule version registered"
+                        + " while workflows that used it can still replay.");
     }
 
     @Test

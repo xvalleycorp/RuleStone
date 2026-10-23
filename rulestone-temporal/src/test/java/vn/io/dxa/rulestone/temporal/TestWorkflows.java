@@ -42,7 +42,7 @@ final class TestWorkflows {
         private final RuleStoneActivities rules = Workflow.newActivityStub(RuleStoneActivities.class,
                 ActivityOptions.newBuilder()
                         .setStartToCloseTimeout(Duration.ofSeconds(10))
-                        .setRetryPolicy(RetryOptions.newBuilder()
+                        .setRetryOptions(RetryOptions.newBuilder()
                                 .setInitialInterval(Duration.ofSeconds(1))
                                 .setMaximumAttempts(MAX_ATTEMPTS)
                                 .build())

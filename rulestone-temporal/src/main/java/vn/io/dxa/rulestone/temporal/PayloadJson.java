@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import vn.io.dxa.rulestone.api.Money;
 import vn.io.dxa.rulestone.core.FactsJson;
 
 /**
@@ -46,9 +47,9 @@ final class PayloadJson {
         return FactsJson.writeValues(plain);
     }
 
-    /** Records become maps of their non-null components (a null struct field is unset). */
+    /** Records other than {@link Money} become maps of their non-null components (a null struct field is unset). */
     private static Object recordsAsMaps(Object value, String path) {
-        if (value instanceof Record rec) {
+        if (value instanceof Record rec && !(value instanceof Money)) {
             Map<String, Object> map = new LinkedHashMap<>();
             for (RecordComponent component : rec.getClass().getRecordComponents()) {
                 Object field = read(rec, component, path);

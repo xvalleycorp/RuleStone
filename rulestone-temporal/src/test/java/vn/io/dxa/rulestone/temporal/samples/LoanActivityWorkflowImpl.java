@@ -23,7 +23,7 @@ public class LoanActivityWorkflowImpl implements LoanActivityWorkflow {
     static final ActivityOptions RULESTONE_OPTIONS = ActivityOptions.newBuilder()
             // Evaluation does no I/O: a short timeout detects a lost worker quickly.
             .setStartToCloseTimeout(Duration.ofSeconds(10))
-            .setRetryPolicy(RetryOptions.newBuilder()
+            .setRetryOptions(RetryOptions.newBuilder()
                     .setInitialInterval(Duration.ofSeconds(1))
                     .setMaximumInterval(Duration.ofMinutes(1))
                     // Bounded: an unexpected error is a bug or an outage; do not retry forever.
