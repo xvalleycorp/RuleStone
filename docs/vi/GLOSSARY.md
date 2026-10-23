@@ -86,6 +86,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 |---|---|---|
 | adverse-action notice | thông báo từ chối (adverse action) | Thông báo lý do từ chối gửi khách hàng. |
 | AML (anti-money laundering) | phòng, chống rửa tiền (AML) | |
+| alias | bí danh | |
 | applicant | người vay | Trong ví dụ xét điều kiện vay. |
 | audit, auditable | kiểm toán, kiểm toán được | |
 | audit trail | dấu vết kiểm toán | |
@@ -94,26 +95,36 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | core banking | core banking | Giữ nguyên (hệ thống ngân hàng lõi). |
 | credit scoring | chấm điểm tín dụng | |
 | debt-to-income ratio (DTI) | tỷ lệ nợ trên thu nhập (DTI) | |
+| dormant account | tài khoản ngủ đông | |
+| enhanced due diligence | thẩm định tăng cường | |
 | deposit rate | lãi suất tiền gửi | |
 | deterministic | tất định | |
 | eligibility | điều kiện; xét điều kiện (vay) | "Loan eligibility" → "xét điều kiện vay". |
 | explainability | khả năng giải thích | |
+| false positive / false negative | dương tính giả / âm tính giả | Cảnh báo sai / bỏ sót. |
 | fraud | gian lận | |
 | fuzzy matching | so khớp gần đúng | |
 | KYC (know your customer) | KYC (nhận biết khách hàng) | |
 | governance | quản trị | |
 | limit (credit limit) | hạn mức | |
+| large cash transaction report (CTR) | báo cáo giao dịch tiền mặt lớn | |
 | maker-checker | maker-checker (người lập – người duyệt) | |
 | mask (data masking) | che (che dữ liệu) | |
+| PEP (politically exposed person) | người có ảnh hưởng chính trị (PEP) | |
 | personal data protection | bảo vệ dữ liệu cá nhân | |
 | policy (credit policy) | chính sách | |
 | reproducible | tái lập được | |
 | sanctions screening | sàng lọc danh sách cấm vận | |
+| structuring | chia nhỏ giao dịch | Chia nhỏ để né ngưỡng báo cáo. |
+| suspicious transaction report (STR) | báo cáo giao dịch đáng ngờ | |
 | segregation of duties | phân tách nhiệm vụ | |
 | tamper-evident | chống giả mạo | |
 | transfer fee | phí chuyển tiền | |
+| transliteration | chuyển tự | |
 | underwriting | thẩm định tín dụng | |
 | unsecured (consumer) loan | khoản vay (tiêu dùng) tín chấp | |
+| value date | ngày giá trị | |
+| watchlist | danh sách theo dõi | |
 
 ## Software supply chain and project
 

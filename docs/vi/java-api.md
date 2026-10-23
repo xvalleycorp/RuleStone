@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: 92b48a3542edc8279eeaa6abf8b43b8440a9e73b5f7c225bb566307fae953e7a
+sourceHash: 286c170dc785e57cf86aedd44364f9c65f78c8798b22080e66902b5a3e3e2fdc
 ---
 
 # Java API
@@ -13,6 +13,7 @@ Trang này giải thích cách nhúng RuleStone vào một ứng dụng Java: t�
 - [Đầu vào: `Facts`](#đầu-vào-facts)
 - [Tiền, ngày và ngày nghiệp vụ](#tiền-ngày-và-ngày-nghiệp-vụ)
 - [Kết quả: `DecisionResult`](#kết-quả-decisionresult)
+- [Fact và kết quả dạng JSON: `FactsJson`](#fact-và-kết-quả-dạng-json-factsjson)
 - [Lỗi](#lỗi)
 - [Nạp lại luật](#nạp-lại-luật)
 - [Đa luồng và hiệu năng](#đa-luồng-và-hiệu-năng)
@@ -196,6 +197,46 @@ if (!result.matched()) {
 
 hoặc kết thúc bảng bằng một luật `"when": "true"` để mọi trường hợp đều có câu trả lời.
 
+## Fact và kết quả dạng JSON: `FactsJson`
+
+Khi fact đến dưới dạng JSON, ví dụ từ một REST request, một workflow engine hay một trình soạn luật, `FactsJson` (core) chuyển chúng thành các giá trị Java mà quyết định nhận, dựa trên các kiểu mà bảng khai báo. JSON không có kiểu tiền, ngày hay số thập phân chính xác, nên dùng các dạng sau:
+
+| Kiểu | JSON | Java |
+|---|---|---|
+| `bool` | `true`, `false` | `Boolean` |
+| `int` | một số nguyên, ví dụ `30` | `Long` |
+| `string` | một chuỗi | `String` |
+| `decimal` | một số, ví dụ `25750000.50`, hoặc một chuỗi theo cách viết thông thường, ví dụ `"0.0980"` | `BigDecimal`, giữ nguyên scale như khi viết |
+| `money` | `"<amount> <CCY>"`, ví dụ `"1500000.50 VND"`, đúng dạng của `Money.toString()` | `Money` |
+| `date` | `"yyyy-MM-dd"`, ví dụ `"2026-11-01"` | `LocalDate` |
+| danh sách | một mảng | `List` |
+| struct | một đối tượng | `Map` |
+
+Với bảng `card_fee` ở trên:
+
+```java
+DecisionTable cardFee = DecisionTableJson.read(Path.of("rules/card_fee.stone.json"));
+
+Facts facts = FactsJson.readFacts("""
+        { "customer": { "birthDate": "1990-05-20" }, "spend": "123456789 VND" }""", cardFee.inputs());
+DecisionResult result = engine.evaluate(DecisionRef.of("card_fee").asOf(LocalDate.of(2026, 11, 1)), facts);
+
+String json = FactsJson.write(result.output());   // {"fee":"123457 VND","nextReview":"2027-05-01"}
+```
+
+Việc đọc là chặt chẽ. Mọi lỗi được báo cáo cùng lúc trong một `InvalidFactsException`, với `problems()` cho biết vị trí và dạng mong đợi nhưng không bao giờ nêu giá trị, ví dụ `customer.birthDate: expected a date as "yyyy-MM-dd"` hoặc `spend: expected money as "<amount> <CCY>", e.g. "1500000 VND"`. Các đầu vào và trường struct mà bảng không khai báo cũng là lỗi. Một trường struct vắng mặt, hoặc `null`, được coi là chưa đặt, nên luật nhận biết nó qua `has()`; một đầu vào vắng mặt được để engine xử lý, và engine sẽ báo là thiếu. Số không bao giờ đi qua dấu phẩy động: `readFacts(String, …)` phân tích số thập phân một cách chính xác, còn một `JsonNode` bạn tự phân tích phải được đọc với `DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS`, nếu không các số dấu phẩy động trong đó sẽ bị từ chối.
+
+Khi ghi, kết quả có cùng các dạng đó, với số thập phân là chuỗi theo cách viết thông thường (`"0.0980"`, không bao giờ là `9.8E-2`), nên giá trị đọc lại không bị thay đổi:
+
+| Phương thức | Chuyển đổi |
+|---|---|
+| `readFacts(String json, Map<String, ValueType> inputs)`, `readFacts(JsonNode, Map<String, ValueType>)`, `readFacts(JsonNode, DecisionTable)` | một đối tượng JSON chứa các đầu vào thành `Facts` |
+| `readValues(JsonNode json, Map<String, ValueType> types)` | một đối tượng JSON chứa các giá trị có tên thành một `Map`, ví dụ các đầu ra kỳ vọng với kiểu lấy từ `resultTypes(table)` |
+| `readValue(JsonNode json, ValueType type)` | một giá trị |
+| `resultTypes(DecisionTable table)` | kiểu của các giá trị trong `DecisionResult.output()`: các đầu ra đã khai báo, mỗi đầu ra là một danh sách khi dùng `COLLECT` |
+| `writeValue(Object value)`, `writeValues(Map<String, ?> values)` | giá trị Java thành một `JsonNode` hoặc một `ObjectNode` |
+| `write(Map<String, ?> values)` | giá trị Java thành văn bản JSON dạng gọn |
+
 ## Lỗi
 
 Mọi ngoại lệ đều kế thừa `RuleStoneException`, một unchecked exception.
@@ -203,6 +244,7 @@ Mọi ngoại lệ đều kế thừa `RuleStoneException`, một unchecked exce
 | Ngoại lệ | Khi nào | Cách xử lý |
 |---|---|---|
 | `InvalidDecisionException` (core) | Khi nạp tệp hoặc tạo engine. `problems()` liệt kê mọi lỗi kèm vị trí. | Sửa định nghĩa. Lúc khởi động, hãy dừng ngay (fail fast); khi nạp lại, hãy giữ engine trước đó (xem bên dưới). |
+| `InvalidFactsException` (core) | Khi đọc fact hoặc giá trị JSON bằng `FactsJson`. `problems()` liệt kê mọi lỗi kèm vị trí. | Từ chối yêu cầu vì đầu vào không hợp lệ, ví dụ trả về HTTP 400 kèm danh sách lỗi. |
 | `DecisionNotFoundException` (api) | Không có quyết định với id đó, không có phiên bản đó, hoặc không có phiên bản nào có hiệu lực vào ngày đó. | Lỗi cấu hình: kiểm tra các phiên bản đã đăng ký và ngày hiệu lực của chúng. |
 | `DecisionEvaluationException` (api) | Đầu vào không hợp lệ (thiếu, sai kiểu, số dấu phẩy động cho một decimal, một fact tên `businessDate`), một biểu thức lỗi lúc chạy, hoặc một bảng `UNIQUE` có nhiều luật cùng khớp. `decisionId()` và `ruleVersion()` xác định quyết định. | Coi như lỗi hệ thống đối với hồ sơ này, ví dụ chuyển sang xem xét thủ công. **Không thay bằng một quyết định mặc định.** |
 
