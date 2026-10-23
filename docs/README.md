@@ -17,6 +17,7 @@
 | Page | Content |
 |---|---|
 | [Architecture](architecture.md) | Goals, design principles, modules, integration modes, banking requirements, AI integration and roadmap. |
+| [Hybrid AI decisioning](hybrid-ai.md) | Design proposal: model scores as rule inputs, models as nodes in decision flows, and the decision record that explains every decision. |
 
 ## Project
 

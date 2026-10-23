@@ -45,21 +45,32 @@ function rewriteLinks(markdown, replace) {
 // ---------------------------------------------------------------------------------------
 // English
 
-function rewriteLink(link) {
+// GitHub slugs "### 4.4 Reason codes" as "44-reason-codes", VitePress as "_4-4-reason-codes".
+// Anchors into guides are converted with the target page's headings (anchorMap); anything
+// unmatched keeps the old "_<digit>" fallback and is reported by check-site.mjs.
+const englishMarkdown = new Map();
+
+function siteAnchor(file, anchor) {
+  const map = englishMarkdown.has(file) ? anchorMap(englishMarkdown.get(file)) : new Map();
+  if (map.has(anchor)) {
+    return map.get(anchor);
+  }
+  return /^\d/.test(anchor) ? `_${anchor}` : anchor;
+}
+
+function rewriteLink(link, currentFile) {
   if (/^[a-z]+:/i.test(link)) {
     return link;
   }
   const [path, anchor] = link.split('#');
-  // GitHub slugs "## 9. Roadmap" as "9-roadmap"; VitePress as "_9-roadmap".
-  const vitepressAnchor = anchor && /^\d/.test(anchor) ? `_${anchor}` : anchor;
-  const hash = anchor ? `#${path.startsWith('../') ? anchor : vitepressAnchor}` : '';
-  if (path === 'README.md') {
-    return `./${hash}`;
-  }
   if (path.startsWith('../')) {
     const repoPath = path.slice(3);
     const kind = repoPath === '' || repoPath.endsWith('/') ? 'tree' : 'blob';
-    return `${REPO}/${kind}/main/${repoPath}${hash}`;
+    return `${REPO}/${kind}/main/${repoPath}${anchor ? `#${anchor}` : ''}`;
+  }
+  const hash = anchor ? `#${siteAnchor(path === '' ? currentFile : path, anchor)}` : '';
+  if (path === 'README.md') {
+    return `./${hash}`;
   }
   return path + hash;
 }
@@ -69,10 +80,13 @@ await mkdir(target, { recursive: true });
 
 const files = (await readdir(source)).filter((f) => f.endsWith('.md'));
 for (const file of files) {
-  const markdown = await readFile(join(source, file), 'utf8');
+  englishMarkdown.set(file, await readFile(join(source, file), 'utf8'));
+}
+for (const file of files) {
+  const markdown = englishMarkdown.get(file);
   const name = file === 'README.md' ? 'index.md' : file;
   const banner = `<!-- Generated from docs/${file} by website/scripts/sync-docs.mjs. Edit the original. -->\n\n`;
-  await writeFile(join(target, name), banner + rewriteLinks(markdown, rewriteLink));
+  await writeFile(join(target, name), banner + rewriteLinks(markdown, (link) => rewriteLink(link, file)));
 }
 console.log(`Synced ${files.length} pages from docs/ to website/src/docs/`);
 
