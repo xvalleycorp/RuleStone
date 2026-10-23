@@ -15,7 +15,7 @@ export interface Language {
 }
 
 const FLAGS: Record<string, { code: string; flag: string }> = {
-  'en-US': { code: 'EN', flag: '/flags/gb.svg' },
+  'en-US': { code: 'EN', flag: '/flags/us.svg' },
   'vi-VN': { code: 'VI', flag: '/flags/vn.svg' },
 };
 
