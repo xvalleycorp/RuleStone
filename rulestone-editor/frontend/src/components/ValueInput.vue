@@ -10,9 +10,11 @@ const props = withDefaults(defineProps<{
   type: TypeSpec | undefined
   label: string
   invalid?: boolean
-  /** For optional values (test form): an empty choice for booleans. */
+  /** For optional values (test form, output cells): an empty choice for booleans. */
   allowEmpty?: boolean
-}>(), { invalid: false, allowEmpty: false })
+  /** Shown when empty; by default a sample value of the type. */
+  placeholder?: string
+}>(), { invalid: false, allowEmpty: false, placeholder: undefined })
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const kind = computed(() => (typeof props.type === 'string' ? props.type : 'other'))
@@ -42,14 +44,14 @@ const currency = computed({
     :aria-label="label"
     :class="{ invalid }"
     class="number"
-    :placeholder="kind === 'int' ? '0' : '0.00'"
+    :placeholder="placeholder ?? (kind === 'int' ? '0' : '0.00')"
   >
   <span v-else-if="kind === 'money'" class="money">
     <input v-model="amount" type="text" inputmode="decimal" :aria-label="`${label}: ${t('value.amount')}`" :class="{ invalid }" class="number" placeholder="1500000">
     <input v-model="currency" type="text" maxlength="3" :aria-label="`${label}: ${t('value.currency')}`" :class="{ invalid }" class="currency" placeholder="VND">
   </span>
   <input v-else-if="kind === 'date'" v-model="value" type="date" :aria-label="label" :class="{ invalid }">
-  <input v-else v-model="value" type="text" :aria-label="label" :class="{ invalid }">
+  <input v-else v-model="value" type="text" :aria-label="label" :class="{ invalid }" :placeholder="placeholder">
 </template>
 
 <style scoped>

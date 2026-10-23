@@ -84,7 +84,7 @@ const canToggleToValue = computed(() => literalPossible.value && parseOutput(pro
       @escape="emit('escape')"
     />
     <TagInput v-else-if="Array.isArray(type)" v-model="items" :label="label" :invalid="invalid || !!localError" />
-    <ValueInput v-else v-model="text" :type="type" :label="label" :invalid="invalid || !!localError" allow-empty />
+    <ValueInput v-else v-model="text" :type="type" :label="label" :invalid="invalid || !!localError" allow-empty :placeholder="t('output.notSet')" />
     <button
       v-if="literalPossible"
       type="button"

@@ -72,5 +72,6 @@ function fieldError(name: string, index: number): string | null {
 .fields { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-left: 3px solid var(--gold-soft); margin-left: 4px; background: var(--surface-2); border-radius: 0 var(--radius) var(--radius) 0; }
 .field-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
 .field-row .error-text { flex-basis: 100%; }
+.fields > button { align-self: flex-start; }
 .name { width: 12em; }
 </style>
