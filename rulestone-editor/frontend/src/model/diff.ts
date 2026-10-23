@@ -30,12 +30,12 @@ export function diffLines(before: string, after: string): DiffLine[] {
       out.push({ kind: 'same', text: a[i], oldLine: i + 1, newLine: j + 1 })
       i++
       j++
-    } else if (j < m && (i >= n || lcs[i][j + 1] >= lcs[i + 1][j])) {
-      out.push({ kind: 'added', text: b[j], newLine: j + 1 })
-      j++
-    } else {
+    } else if (i < n && (j >= m || lcs[i + 1][j] >= lcs[i][j + 1])) {
       out.push({ kind: 'removed', text: a[i], oldLine: i + 1 })
       i++
+    } else {
+      out.push({ kind: 'added', text: b[j], newLine: j + 1 })
+      j++
     }
   }
   return out

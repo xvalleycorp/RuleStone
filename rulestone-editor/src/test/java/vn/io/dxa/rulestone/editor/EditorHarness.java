@@ -38,6 +38,19 @@ final class EditorHarness implements AutoCloseable {
         return start(tempDir, EditorServer.DEFAULT_MAX_BODY_BYTES);
     }
 
+    /** Starts an editor over a copy of the named files of examples/. */
+    static EditorHarness start(Path tempDir, java.util.List<String> exampleFiles) {
+        try {
+            Path dir = Files.createDirectories(tempDir.resolve("rules"));
+            for (String file : exampleFiles) {
+                Files.copy(EXAMPLES.resolve(file), dir.resolve(file));
+            }
+            return new EditorHarness(dir, EditorServer.builder().rulesDir(dir).port(0).start());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     static EditorHarness start(Path tempDir, long maxBodyBytes) {
         try {
             Path dir = Files.createDirectories(tempDir.resolve("rules"));

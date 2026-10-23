@@ -219,11 +219,43 @@
                                 </filter>
                                 <!-- Same files as this module's: the editor's THIRD-PARTY.txt covers every dependency. -->
                                 <filter>
-                                    <artifact>vn.io.dxa.rulestone:*</artifact>
+                                    <artifact>vn.io.dxa.rulestone:rulestone-api</artifact>
                                     <excludes>
                                         <exclude>META-INF/LICENSE</exclude>
                                         <exclude>META-INF/NOTICE</exclude>
                                         <exclude>META-INF/THIRD-PARTY.txt</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>vn.io.dxa.rulestone:rulestone-cel</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
+                                        <exclude>META-INF/THIRD-PARTY.txt</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>vn.io.dxa.rulestone:rulestone-core</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
+                                        <exclude>META-INF/THIRD-PARTY.txt</exclude>
+                                    </excludes>
+                                </filter>
+                                <!--
+                                  Byte-for-byte the same Apache License 2.0 text as RuleStone's own
+                                  META-INF/LICENSE, which the jar keeps. Their NOTICE files are kept.
+                                -->
+                                <filter>
+                                    <artifact>com.google.guava:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.fasterxml.jackson.core:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
                                     </excludes>
                                 </filter>
                             </filters>

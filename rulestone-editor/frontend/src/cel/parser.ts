@@ -8,6 +8,8 @@
 export interface Span {
   start: number
   end: number
+  /** Written in parentheses; the span then includes them. */
+  parenthesized?: boolean
 }
 
 export type Node = Span &
@@ -286,7 +288,7 @@ export function parse(source: string): Node {
       const open = next()
       const inner = expression()
       const close = expect(')')
-      return { ...inner, start: open.start, end: close.end, parenthesized: true } as Node
+      return { ...inner, start: open.start, end: close.end, parenthesized: true }
     }
     if (is('[')) {
       const open = next()
@@ -336,5 +338,5 @@ export function pathOf(node: Node): string | null {
 
 /** Whether the node was written in parentheses (the parser marks it). */
 export function isParenthesized(node: Node): boolean {
-  return (node as { parenthesized?: boolean }).parenthesized === true
+  return node.parenthesized === true
 }

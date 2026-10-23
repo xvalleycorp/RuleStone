@@ -53,6 +53,8 @@ export const api = {
   validate: (table: TableJson, name?: string) =>
     call<ValidationResult>('POST', 'api/validate' + (name ? '?file=' + encodeURIComponent(name) : ''), table),
   format: (table: TableJson) => call<{ content: string }>('POST', 'api/format', table),
-  evaluate: (table: TableJson, facts: unknown, asOf?: string) =>
-    call<EvaluationResult>('POST', 'api/evaluate', { table, facts, ...(asOf ? { asOf } : {}) }),
+  /** `factsJson` is sent as written, so its numbers never pass through JavaScript floating point. */
+  evaluate: (table: TableJson, factsJson: string, asOf?: string) =>
+    call<EvaluationResult>('POST', 'api/evaluate',
+      `{"table": ${JSON.stringify(table)}, "facts": ${factsJson}${asOf ? `, "asOf": ${JSON.stringify(asOf)}` : ''}}`),
 }
