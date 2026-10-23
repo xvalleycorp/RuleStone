@@ -9,6 +9,7 @@ The [`examples/`](../examples/) directory holds complete decision tables for com
 | [`transfer_fees.stone.json`](../examples/transfer_fees.stone.json) | Fees on a money transfer | `COLLECT`, `max`, rounding a percentage fee |
 | [`card_fraud_signals.stone.json`](../examples/card_fraud_signals.stone.json), [`card_fraud_action.stone.json`](../examples/card_fraud_action.stone.json) | Card fraud screening | `COLLECT` for risk signals and `FIRST` for the action, chained by the application; `in` lists |
 | [`consumer_loan_underwriting.stone.json`](../examples/consumer_loan_underwriting.stone.json), [`consumer_loan_conditions.stone.json`](../examples/consumer_loan_conditions.stone.json) | Consumer loan underwriting | `FIRST` with declines, referrals and risk grades; optional fields with `has()`; `min`, rounding modes; `COLLECT` for approval conditions |
+| [`aml_name_screening.stone.json`](../examples/aml_name_screening.stone.json), [`aml_transaction_monitoring.stone.json`](../examples/aml_transaction_monitoring.stone.json), [`aml_alert_action.stone.json`](../examples/aml_alert_action.stone.json) | Anti-money laundering: watchlist screening and transaction monitoring | Fuzzy name matching with aliases and dates of birth; `money` arithmetic and comparisons; date functions and `businessDate`; `COLLECT` alerts chained to a `FIRST` action |
 
 ## Loan eligibility: priorities and versions
 
@@ -278,3 +279,204 @@ Pitfalls:
 - **Name the rounding mode.** The rate rounds `HALF_UP`: a grade B applicant with a DTI of exactly 30.1% gets 12.005%, shown as `0.1201`; the default `HALF_EVEN` would give `0.1200`. `maxAmount` rounds `FLOOR`, so the bank never offers more than the policy allows.
 - **Declines and referrals set fewer outputs.** `{decision=DECLINE}` has no `riskGrade`, `interestRate` or `maxAmount`. Check the decision before reading them.
 - **`interestRate` keeps its scale.** It prints as `0.0980`, not `0.098`. Compare `BigDecimal` values with `compareTo`, not `equals`.
+
+## Anti-money laundering: screening and transaction monitoring
+
+Banks must know who their customers are and watch how money moves through their accounts. Two controls are at the heart of an anti-money laundering (AML) programme:
+
+1. **Screening.** When a customer is onboarded, and again whenever the lists change, compare the customer with watchlists: sanctions lists (people and companies nobody may do business with) and lists of politically exposed persons (PEPs, who need enhanced due diligence).
+2. **Transaction monitoring.** Look at each transaction together with the account's recent activity for patterns typical of money laundering, such as large cash, structuring or money that only passes through, and decide whether an analyst must look at it and whether a report must be filed with the authorities.
+
+The example implements both with three tables.
+
+> **Important.** This is an illustration of the rule format, not an AML system. All names are invented and refer to no real person, company or listed entity. All thresholds, bands and scores are invented and are **not** taken from any regulation: each institution must use the reporting thresholds, deadlines and obligations of the regulations that apply to it, and calibrate its own alert thresholds on its own data. The fuzzy functions are not a certified screening product; see [Fuzzy matching](fuzzy-matching.md#limitations).
+
+### Screening a customer against a watchlist
+
+[`aml_name_screening.stone.json`](../examples/aml_name_screening.stone.json) takes the customer and the watchlist, both with aliases and dates of birth:
+
+```json
+"inputs": {
+  "customer":  { "fullName": "string", "aliases": ["string"], "dateOfBirth": "date", "nationality": "string" },
+  "watchlist": [ { "name": "string", "aliases": ["string"], "dateOfBirth": "date", "listType": "string" } ]
+},
+"outputs": { "result": "string", "bestScore": "decimal" }
+```
+
+It uses `FIRST`, because the outcomes have a strict priority, from the most to the least severe:
+
+| Order | Rule | `result` | Reason code | When |
+|---|---|---|---|---|
+| 1 | `NAME_MISSING` | `REVIEW` | `NAME_MISSING` | the name is missing or blank |
+| 2 | `SANCTIONS_MATCH` | `BLOCK` | `SANCTIONS_MATCH` | a name or alias of the customer scores 0.92 or more against a name or alias of a sanctions entry, **and** both have the same date of birth |
+| 3 | `SANCTIONS_POSSIBLE_MATCH` | `REVIEW` | `SANCTIONS_POSSIBLE_MATCH` | the same name test, without a matching date of birth |
+| 4 | `SANCTIONS_WEAK_MATCH` | `REVIEW` | `SANCTIONS_WEAK_MATCH` | a name or alias scores from 0.85 to just below 0.92 against a sanctions entry |
+| 5 | `PEP_MATCH` | `ENHANCED_DUE_DILIGENCE` | `PEP_MATCH` | a name or alias scores 0.92 or more against a PEP |
+| 6 | `CLEAR` | `CLEAR` | — | anything else |
+
+The order carries meaning:
+
+- `NAME_MISSING` comes first because a blank name scores 0 against every entry and would otherwise pass as `CLEAR`.
+- `SANCTIONS_MATCH` comes before `SANCTIONS_POSSIBLE_MATCH` because both match on the name; the strong rule adds the date of birth. A watchlist entry without a date of birth (a company, or a person whose date is unknown) can therefore never block, only be reviewed.
+- `SANCTIONS_WEAK_MATCH` only tests `>= decimal('0.85')`: every score of 0.92 or more was already taken by the two rules above, so under `FIRST` the rule covers exactly the band from 0.85 to just below 0.92. Moving it up would turn strong matches into weak ones.
+- Sanctions come before PEPs. A customer who is on both lists gets the sanctions outcome.
+
+The name test compares every name of the customer (full name and aliases) with every name of the entry (name and aliases). `maxNameSimilarity` scores one name against a list, using `nameSimilarity`, which ignores diacritics, case, punctuation and word order:
+
+```json
+{ "id": "SANCTIONS_MATCH",
+  "when": "has(customer.dateOfBirth) && watchlist.exists(w, w.listType == 'SANCTIONS' && has(w.dateOfBirth) && w.dateOfBirth == customer.dateOfBirth && ([customer.fullName] + customer.aliases).exists(n, normalizeName(n) != '' && maxNameSimilarity(n, [w.name] + w.aliases) >= decimal('0.92')))",
+  "then": { "result": "'BLOCK'", "bestScore": "maxNameSimilarity(customer.fullName, watchlist.map(w, w.name))" },
+  "reasonCode": "SANCTIONS_MATCH" },
+{ "id": "SANCTIONS_WEAK_MATCH",
+  "when": "watchlist.exists(w, w.listType == 'SANCTIONS' && ([customer.fullName] + customer.aliases).exists(n, normalizeName(n) != '' && maxNameSimilarity(n, [w.name] + w.aliases) >= decimal('0.85')))",
+  "then": { "result": "'REVIEW'", "bestScore": "maxNameSimilarity(customer.fullName, watchlist.map(w, w.name))" },
+  "reasonCode": "SANCTIONS_WEAK_MATCH" }
+```
+
+Dates of birth are optional on both sides and tested with `has()`. Aliases are required: pass an empty list when there are none. `normalizeName(n) != ''` skips a blank alias of the customer, which would otherwise score 1 against a blank alias on the list. `bestScore` is the best `nameSimilarity` of the customer's full name against the watchlist's primary names, so that the analyst who reviews the alert sees how close the name is. `nationality` is part of the customer record but not used by these rules.
+
+In Java, records are the simplest way to pass the customer and the list; a `null` date of birth is left unset:
+
+```java
+record Customer(String fullName, List<String> aliases, LocalDate dateOfBirth, String nationality) {}
+
+record WatchlistEntry(String name, List<String> aliases, LocalDate dateOfBirth, String listType) {}
+
+List<WatchlistEntry> watchlist = List.of(
+        new WatchlistEntry("Trần Thị Bích Ngọc", List.of("Jade Tran"), LocalDate.of(1975, 3, 14), "SANCTIONS"),
+        new WatchlistEntry("Mekong Phantom Trading Co., Ltd", List.of("MPT Trading"), null, "SANCTIONS"),
+        new WatchlistEntry("Phạm Văn Quyết", List.of(), LocalDate.of(1959, 7, 20), "PEP"));
+
+DecisionResult screening = engine.evaluate(DecisionRef.of("aml_name_screening"),
+        Facts.of("customer", new Customer("TRAN THI BICH NGOC", List.of(), LocalDate.of(1975, 3, 14), "VN"),
+                "watchlist", watchlist));
+// {result=BLOCK, bestScore=1.0000}, reason SANCTIONS_MATCH
+```
+
+Customers screened against that watchlist:
+
+| Customer | Date of birth | `output()` | Rule and reason code |
+|---|---|---|---|
+| `TRAN THI BICH NGOC` | 1975-03-14 | `{result=BLOCK, bestScore=1.0000}` | `SANCTIONS_MATCH` |
+| `Ngoc Tran Thi Bich` | 1990-05-01 | `{result=REVIEW, bestScore=1.0000}` | `SANCTIONS_POSSIBLE_MATCH` |
+| `Trần Thị Bích Ngọc` | none | `{result=REVIEW, bestScore=1.0000}` | `SANCTIONS_POSSIBLE_MATCH` |
+| `Lê Thị Hoa`, alias `Jade Tran` | 1975-03-14 | `{result=BLOCK, bestScore=0.6206}` | `SANCTIONS_MATCH` |
+| `Tran Thi Bich Hong` | 1992-06-30 | `{result=REVIEW, bestScore=0.9660}` | `SANCTIONS_POSSIBLE_MATCH` |
+| `Tran Thi Mai` | 1988-01-09 | `{result=REVIEW, bestScore=0.8778}` | `SANCTIONS_WEAK_MATCH` |
+| `Mekong Phantom Trading Company Limited` | none | `{result=REVIEW, bestScore=0.9526}` | `SANCTIONS_POSSIBLE_MATCH` |
+| `Pham Van Quyet` | 1959-07-20 | `{result=ENHANCED_DUE_DILIGENCE, bestScore=1.0000}` | `PEP_MATCH` |
+| `Lê Thị Hoa` | 1990-02-02 | `{result=CLEAR, bestScore=0.6206}` | `CLEAR`, no reason code |
+| ` - ` | 1990-02-02 | `{result=REVIEW}` | `NAME_MISSING` |
+
+The first three rows are the listed name written in capitals without diacritics, in another word order, and with diacritics: all score `1.0000`, and only the date of birth decides between blocking and review. The fourth row matches through an alias, so its `bestScore`, computed on the full name, is low: read the reason code, not the score, to know what matched. The fifth and sixth rows are, by construction, different people: they share the very common family name Trần and middle name Thị (and in the fifth, Bích) with the listed person, which is enough to reach the thresholds. The company in the seventh row has no date of birth on the list, so it can only be reviewed.
+
+### Monitoring transactions
+
+[`aml_transaction_monitoring.stone.json`](../examples/aml_transaction_monitoring.stone.json) uses `COLLECT`: each rule detects one pattern independently and outputs an `alert` code and a `score`, like the [card fraud signals](#card-fraud-signals-with-collect-action-with-first). Amounts are `money` in VND, dates are `date`:
+
+```json
+"inputs": {
+  "account":     { "openedOn": "date", "lastActivityBeforeToday": "date", "riskRating": "string", "customerIsPep": "bool" },
+  "transaction": { "amount": "money", "type": "string", "counterpartyCountry": "string", "valueDate": "date" },
+  "history":     { "cashDepositsLast7d": ["money"], "totalInLast24h": "money", "totalOutLast24h": "money" }
+}
+```
+
+The alerts, with invented thresholds and scores. The cash reporting threshold is set at 300,000,000 VND for the example:
+
+| Rule | `alert` | Fires when | Score | Reason code |
+|---|---|---|---|---|
+| `LARGE_CASH` | `LARGE_CASH` | cash deposit or withdrawal of 300,000,000 or more | 10 | `LARGE_CASH_TRANSACTION` |
+| `STRUCTURING` | `STRUCTURING` | 3 or more cash deposits in 7 days, each from 80% of the threshold (240,000,000) to just below it | 50 | `POSSIBLE_STRUCTURING` |
+| `RAPID_IN_OUT` | `RAPID_IN_OUT` | money out in 24 hours is 90% or more of money in, and money in is at least 500,000,000 (100,000,000 for customers rated `HIGH`) | 40 | `RAPID_MOVEMENT_OF_FUNDS` |
+| `HIGH_RISK_COUNTRY` | `HIGH_RISK_COUNTRY` | counterparty country is `XA`, `XB` or `XC` | 30 | `HIGH_RISK_JURISDICTION` |
+| `DORMANT_REACTIVATED` | `DORMANT_ACCOUNT` | no activity for 365 days or more before the business date (since opening, if never active), and an inflow of 100,000,000 or more | 30 | `DORMANT_ACCOUNT_REACTIVATED` |
+| `NEW_ACCOUNT_LARGE_TRANSFER` | `NEW_ACCOUNT_LARGE_TRANSFER` | transfer in or out of 200,000,000 or more on an account less than 30 days old on the value date | 25 | `NEW_ACCOUNT_LARGE_TRANSFER` |
+| `PEP_LARGE_TRANSACTION` | `PEP_LARGE_TRANSACTION` | the customer is a PEP and the amount is 500,000,000 or more | 20 | `PEP_LARGE_TRANSACTION` |
+
+`XA`, `XB` and `XC` are codes that ISO 3166 leaves for private use; they stand for your institution's list of high-risk jurisdictions. Large cash alone scores only 10: it must be reported, but it is not suspicious in itself.
+
+The rules compare `money` with `money`, never with plain numbers, and compute thresholds with money arithmetic. Dates come from the account and from the implicit `businessDate`:
+
+```json
+{ "id": "STRUCTURING",
+  "when": "history.cashDepositsLast7d.filter(d, d >= money(300000000, 'VND') * decimal('0.8') && d < money(300000000, 'VND')).size() >= 3",
+  "then": { "alert": "'STRUCTURING'", "score": "50" }, "reasonCode": "POSSIBLE_STRUCTURING" },
+{ "id": "RAPID_IN_OUT",
+  "when": "history.totalInLast24h >= (account.riskRating == 'HIGH' ? money(100000000, 'VND') : money(500000000, 'VND')) && history.totalOutLast24h >= history.totalInLast24h * decimal('0.9')",
+  "then": { "alert": "'RAPID_IN_OUT'", "score": "40" }, "reasonCode": "RAPID_MOVEMENT_OF_FUNDS" },
+{ "id": "DORMANT_REACTIVATED",
+  "when": "daysBetween(has(account.lastActivityBeforeToday) ? account.lastActivityBeforeToday : account.openedOn, businessDate) >= 365 && transaction.type in ['CASH_DEPOSIT', 'TRANSFER_IN'] && transaction.amount >= money(100000000, 'VND')",
+  "then": { "alert": "'DORMANT_ACCOUNT'", "score": "30" }, "reasonCode": "DORMANT_ACCOUNT_REACTIVATED" }
+```
+
+`RAPID_IN_OUT` multiplies the inflow by 90% instead of dividing the outflow by the inflow, so it cannot divide by zero. Had a ratio been needed, it would be written with the amounts as decimals, `history.totalOutLast24h.amount() / history.totalInLast24h.amount()`, because money divided by money is a type error.
+
+### Choosing the action
+
+[`aml_alert_action.stone.json`](../examples/aml_alert_action.stone.json) uses `FIRST` to turn the total score into a recommended action. Its second output, `fileCtr`, says whether a large cash transaction report is due, whatever the action:
+
+| Order | Rule | `action` | `fileCtr` | Reason code | When |
+|---|---|---|---|---|---|
+| 1 | `FILE_STR` | `FILE_STR` | `hasLargeCash` | `SUSPICION_SCORE_HIGH` | score 70 or more |
+| 2 | `ANALYST_REVIEW` | `ANALYST_REVIEW` | `hasLargeCash` | `SUSPICION_SCORE_ELEVATED` | score 30 or more |
+| 3 | `FILE_CTR_ONLY` | `FILE_CTR_ONLY` | `true` | `LARGE_CASH_REPORTABLE` | large cash, nothing else suspicious |
+| 4 | `NO_ACTION` | `NO_ACTION` | `false` | — | anything else |
+
+`FILE_STR` means: prepare a suspicious transaction report for the compliance officer, who decides whether to file it.
+
+As in the card fraud example, the application chains the two tables: it sums the scores and derives `hasLargeCash` from the alerts. Both evaluations use the same business date, so the dormancy rule and the version selection agree:
+
+```java
+record Account(LocalDate openedOn, LocalDate lastActivityBeforeToday, String riskRating, boolean customerIsPep) {}
+
+record Transaction(Money amount, String type, String counterpartyCountry, LocalDate valueDate) {}
+
+record History(List<Money> cashDepositsLast7d, Money totalInLast24h, Money totalOutLast24h) {}
+
+DecisionResult alerts = engine.evaluate(DecisionRef.of("aml_transaction_monitoring").asOf(businessDate),
+        Facts.of("account", account, "transaction", transaction, "history", history));
+
+long riskScore = ((List<?>) alerts.output().get("score")).stream()
+        .mapToLong(score -> (Long) score)
+        .sum();
+boolean hasLargeCash = ((List<?>) alerts.output().get("alert")).contains("LARGE_CASH");
+
+DecisionResult action = engine.evaluate(DecisionRef.of("aml_alert_action").asOf(businessDate),
+        Facts.of("riskScore", riskScore, "hasLargeCash", hasLargeCash));
+```
+
+Sample transactions with a business date of 2 November 2026, which is also the value date (amounts in VND; the history includes the transaction itself):
+
+| Account | Transaction | History | Alerts (scores) | Score | `action.output()` (rule) |
+|---|---|---|---|---|---|
+| opened 2019, last active 2026-10-30, risk `LOW` | `TRANSFER_IN` 15,000,000 from VN | in 15,000,000, out 2,000,000 | none | 0 | `{action=NO_ACTION, fileCtr=false}` (`NO_ACTION`) |
+| same | `CASH_DEPOSIT` 350,000,000 | cash deposits 350,000,000 | `LARGE_CASH` (10) | 10 | `{action=FILE_CTR_ONLY, fileCtr=true}` (`FILE_CTR_ONLY`) |
+| same | `CASH_DEPOSIT` 290,000,000 | cash deposits 250,000,000, 270,000,000, 290,000,000 | `STRUCTURING` (50) | 50 | `{action=ANALYST_REVIEW, fileCtr=false}` (`ANALYST_REVIEW`) |
+| same | `TRANSFER_OUT` 950,000,000 to XB | in 1,000,000,000, out 950,000,000 | `RAPID_IN_OUT`, `HIGH_RISK_COUNTRY` (40, 30) | 70 | `{action=FILE_STR, fileCtr=false}` (`FILE_STR`) |
+| opened 2018, last active 2025-09-01 | `TRANSFER_IN` 180,000,000 from VN | in 180,000,000 | `DORMANT_ACCOUNT` (30) | 30 | `{action=ANALYST_REVIEW, fileCtr=false}` (`ANALYST_REVIEW`) |
+| opened 2026-10-20, never active | `TRANSFER_IN` 250,000,000 from XA | in 250,000,000 | `HIGH_RISK_COUNTRY`, `NEW_ACCOUNT_LARGE_TRANSFER` (30, 25) | 55 | `{action=ANALYST_REVIEW, fileCtr=false}` (`ANALYST_REVIEW`) |
+| PEP, risk `HIGH`, last active 2026-10-28 | `CASH_DEPOSIT` 600,000,000 | cash deposits 600,000,000 | `LARGE_CASH`, `PEP_LARGE_TRANSACTION` (10, 20) | 30 | `{action=ANALYST_REVIEW, fileCtr=true}` (`ANALYST_REVIEW`) |
+| PEP, risk `HIGH`, last active 2026-11-01 | `CASH_DEPOSIT` 520,000,000 | cash deposits 245,000,000, 255,000,000, 265,000,000, 520,000,000 | `LARGE_CASH`, `STRUCTURING`, `PEP_LARGE_TRANSACTION` (10, 50, 20) | 80 | `{action=FILE_STR, fileCtr=true}` (`FILE_STR`) |
+
+For the fourth transaction, `alerts.output()` prints:
+
+```
+{alert=[RAPID_IN_OUT, HIGH_RISK_COUNTRY], score=[40, 30]}
+```
+
+and `alerts.reasonCodes()` prints `[RAPID_MOVEMENT_OF_FUNDS, HIGH_RISK_JURISDICTION]`.
+
+Pitfalls:
+
+- **False positives.** Vietnamese names share a few family and middle names, so different people often score high: `Tran Thi Bich Hong` scores 0.9660 and `Tran Thi Mai` 0.8778 against `Trần Thị Bích Ngọc`. Every alert costs an analyst's time, and a flood of alerts hides the real ones. Corroborating attributes, such as the date of birth in `SANCTIONS_MATCH`, are what make a name match precise.
+- **False negatives.** Missing a listed person is far more serious than raising an extra alert. Names in another script, transliterations, nicknames and titles are not matched (see [Fuzzy matching](fuzzy-matching.md#limitations)); record known spellings as aliases. In monitoring, a fixed amount threshold invites splitting payments just below it, which is what `STRUCTURING` looks for, and launderers adapt to any rule they can guess.
+- **Tune thresholds on your own data.** The 0.92 and 0.85 bands, the amounts and the scores here are invented. Calibrate them on labelled samples of your own customers and transactions (see [Choosing a threshold](fuzzy-matching.md#choosing-a-threshold)), take the reporting thresholds from the regulations that apply to your institution, document the choices, and test both sides of every threshold, as `AmlExampleTest` does: `Tram Van Bich Ngoc` scores exactly 0.9200 and is a possible match, while `Tran Kim Bich Ngoc` scores 0.9181 and is only a weak one.
+- **`bestScore` compares the full name with primary names.** A match found through an alias can show a low `bestScore`, as in the fourth screening row. The reason code says which rule matched; the analyst still needs to see which entry and which name matched, which the table does not output.
+- **Not a certified screening system.** `CLEAR` means "no alert from these rules", not that the customer is cleared. `BLOCK` and `FILE_STR` are recommendations for the people who decide under your institution's AML policy.
+- **Keep watchlists current.** Load the official lists and your internal lists from their source on every update, re-screen existing customers when they change, and record which list version each screening used, next to the `ruleVersion()` of the decision. RuleStone does not maintain lists.
+- **Large lists.** `watchlist.exists(...)` is a comprehension, limited to 10,000 iterations by default (see [Limits](expressions.md#limits)). For large lists, measure the latency, raise the limit with `maxIterations`, or use a dedicated screening service.
+- **Never log names.** Customer and watchlist names are personal data. Evaluation errors and traces never contain input values; keep it that way in your own logs, and store the reason codes, `bestScore` and `ruleVersion()` instead of the names.
+- **One currency.** Every amount must be in VND. A transaction in another currency fails the evaluation with `money currencies differ` instead of silently escaping the thresholds: convert amounts before monitoring them, or write rules per currency.
+- **Agree on the history.** `cashDepositsLast7d`, `totalInLast24h` and `totalOutLast24h` include the current transaction, and `lastActivityBeforeToday` excludes the business date. Write such conventions down next to the tables; the rules cannot check them.

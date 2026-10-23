@@ -1,0 +1,80 @@
+{
+  "id": "aml_transaction_monitoring",
+  "version": "1",
+  "description": "AML alerts for a transaction and the account's recent activity; the application sums the scores and passes them to aml_alert_action. Amounts in VND; thresholds are invented for illustration",
+  "hitPolicy": "COLLECT",
+  "inputs": {
+    "account": {
+      "openedOn": "date",
+      "lastActivityBeforeToday": "date",
+      "riskRating": "string",
+      "customerIsPep": "bool"
+    },
+    "transaction": {
+      "amount": "money",
+      "type": "string",
+      "counterpartyCountry": "string",
+      "valueDate": "date"
+    },
+    "history": {
+      "cashDepositsLast7d": ["money"],
+      "totalInLast24h": "money",
+      "totalOutLast24h": "money"
+    }
+  },
+  "outputs": {
+    "alert": "string",
+    "score": "int"
+  },
+  "rules": [
+    {
+      "id": "LARGE_CASH",
+      "description": "Cash deposit or withdrawal at or above the (invented) reporting threshold of 300,000,000 VND",
+      "when": "transaction.type in ['CASH_DEPOSIT', 'CASH_WITHDRAWAL'] && transaction.amount >= money(300000000, 'VND')",
+      "then": { "alert": "'LARGE_CASH'", "score": "10" },
+      "reasonCode": "LARGE_CASH_TRANSACTION"
+    },
+    {
+      "id": "STRUCTURING",
+      "description": "3 or more cash deposits in 7 days, each from 80% of the reporting threshold up to just below it; history includes this transaction",
+      "when": "history.cashDepositsLast7d.filter(d, d >= money(300000000, 'VND') * decimal('0.8') && d < money(300000000, 'VND')).size() >= 3",
+      "then": { "alert": "'STRUCTURING'", "score": "50" },
+      "reasonCode": "POSSIBLE_STRUCTURING"
+    },
+    {
+      "id": "RAPID_IN_OUT",
+      "description": "Money out within 24 hours is 90% or more of money in, above a minimum inflow of 500,000,000 VND (100,000,000 VND for high-risk customers)",
+      "when": "history.totalInLast24h >= (account.riskRating == 'HIGH' ? money(100000000, 'VND') : money(500000000, 'VND')) && history.totalOutLast24h >= history.totalInLast24h * decimal('0.9')",
+      "then": { "alert": "'RAPID_IN_OUT'", "score": "40" },
+      "reasonCode": "RAPID_MOVEMENT_OF_FUNDS"
+    },
+    {
+      "id": "HIGH_RISK_COUNTRY",
+      "description": "Counterparty in a high-risk jurisdiction; XA, XB and XC are placeholders for your institution's list",
+      "when": "has(transaction.counterpartyCountry) && transaction.counterpartyCountry in ['XA', 'XB', 'XC']",
+      "then": { "alert": "'HIGH_RISK_COUNTRY'", "score": "30" },
+      "reasonCode": "HIGH_RISK_JURISDICTION"
+    },
+    {
+      "id": "DORMANT_REACTIVATED",
+      "description": "No activity for 365 days or more before the business date (since opening if never active) and an inflow of 100,000,000 VND or more",
+      "when": "daysBetween(has(account.lastActivityBeforeToday) ? account.lastActivityBeforeToday : account.openedOn, businessDate) >= 365 && transaction.type in ['CASH_DEPOSIT', 'TRANSFER_IN'] && transaction.amount >= money(100000000, 'VND')",
+      "then": { "alert": "'DORMANT_ACCOUNT'", "score": "30" },
+      "reasonCode": "DORMANT_ACCOUNT_REACTIVATED"
+    },
+    {
+      "id": "NEW_ACCOUNT_LARGE_TRANSFER",
+      "description": "Transfer of 200,000,000 VND or more on an account less than 30 days old on the value date",
+      "when": "daysBetween(account.openedOn, transaction.valueDate) < 30 && transaction.type in ['TRANSFER_IN', 'TRANSFER_OUT'] && transaction.amount >= money(200000000, 'VND')",
+      "then": { "alert": "'NEW_ACCOUNT_LARGE_TRANSFER'", "score": "25" },
+      "reasonCode": "NEW_ACCOUNT_LARGE_TRANSFER"
+    },
+    {
+      "id": "PEP_LARGE_TRANSACTION",
+      "description": "Politically exposed customer moving 500,000,000 VND or more",
+      "when": "account.customerIsPep && transaction.amount >= money(500000000, 'VND')",
+      "then": { "alert": "'PEP_LARGE_TRANSACTION'", "score": "20" },
+      "reasonCode": "PEP_LARGE_TRANSACTION"
+    }
+  ]
+}

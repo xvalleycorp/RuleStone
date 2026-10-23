@@ -1,0 +1,69 @@
+{
+  "id": "aml_name_screening",
+  "version": "1",
+  "description": "Screens a customer against a sanctions and PEP watchlist by name, aliases and date of birth; thresholds are invented for illustration",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "customer": {
+      "fullName": "string",
+      "aliases": ["string"],
+      "dateOfBirth": "date",
+      "nationality": "string"
+    },
+    "watchlist": [
+      {
+        "name": "string",
+        "aliases": ["string"],
+        "dateOfBirth": "date",
+        "listType": "string"
+      }
+    ]
+  },
+  "outputs": {
+    "result": "string",
+    "bestScore": "decimal"
+  },
+  "rules": [
+    {
+      "id": "NAME_MISSING",
+      "description": "A missing or blank name cannot be screened; without this rule it would score 0 and pass as CLEAR",
+      "when": "!has(customer.fullName) || normalizeName(customer.fullName) == ''",
+      "then": { "result": "'REVIEW'" },
+      "reasonCode": "NAME_MISSING"
+    },
+    {
+      "id": "SANCTIONS_MATCH",
+      "description": "A name or alias of the customer scores 0.92 or more against a name or alias of a sanctions entry with the same date of birth",
+      "when": "has(customer.dateOfBirth) && watchlist.exists(w, w.listType == 'SANCTIONS' && has(w.dateOfBirth) && w.dateOfBirth == customer.dateOfBirth && ([customer.fullName] + customer.aliases).exists(n, normalizeName(n) != '' && maxNameSimilarity(n, [w.name] + w.aliases) >= decimal('0.92')))",
+      "then": { "result": "'BLOCK'", "bestScore": "maxNameSimilarity(customer.fullName, watchlist.map(w, w.name))" },
+      "reasonCode": "SANCTIONS_MATCH"
+    },
+    {
+      "id": "SANCTIONS_POSSIBLE_MATCH",
+      "description": "Name or alias scores 0.92 or more against a sanctions entry, but a date of birth is missing or differs",
+      "when": "watchlist.exists(w, w.listType == 'SANCTIONS' && ([customer.fullName] + customer.aliases).exists(n, normalizeName(n) != '' && maxNameSimilarity(n, [w.name] + w.aliases) >= decimal('0.92')))",
+      "then": { "result": "'REVIEW'", "bestScore": "maxNameSimilarity(customer.fullName, watchlist.map(w, w.name))" },
+      "reasonCode": "SANCTIONS_POSSIBLE_MATCH"
+    },
+    {
+      "id": "SANCTIONS_WEAK_MATCH",
+      "description": "Name or alias scores from 0.85 to below 0.92 against a sanctions entry; scores of 0.92 or more were caught above",
+      "when": "watchlist.exists(w, w.listType == 'SANCTIONS' && ([customer.fullName] + customer.aliases).exists(n, normalizeName(n) != '' && maxNameSimilarity(n, [w.name] + w.aliases) >= decimal('0.85')))",
+      "then": { "result": "'REVIEW'", "bestScore": "maxNameSimilarity(customer.fullName, watchlist.map(w, w.name))" },
+      "reasonCode": "SANCTIONS_WEAK_MATCH"
+    },
+    {
+      "id": "PEP_MATCH",
+      "description": "Name or alias scores 0.92 or more against a politically exposed person; checked after sanctions, which take priority",
+      "when": "watchlist.exists(w, w.listType == 'PEP' && ([customer.fullName] + customer.aliases).exists(n, normalizeName(n) != '' && maxNameSimilarity(n, [w.name] + w.aliases) >= decimal('0.92')))",
+      "then": { "result": "'ENHANCED_DUE_DILIGENCE'", "bestScore": "maxNameSimilarity(customer.fullName, watchlist.map(w, w.name))" },
+      "reasonCode": "PEP_MATCH"
+    },
+    {
+      "id": "CLEAR",
+      "description": "No alert from these rules; not a clearance",
+      "when": "true",
+      "then": { "result": "'CLEAR'", "bestScore": "maxNameSimilarity(customer.fullName, watchlist.map(w, w.name))" }
+    }
+  ]
+}

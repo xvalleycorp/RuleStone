@@ -1,0 +1,26 @@
+{
+  "decision": "aml_transaction_monitoring",
+  "description": "Every rule of this table reads money or dates, which cannot be written in test files yet; its rules are tested in AmlExampleTest (Java). These cases document the limitation and fail once it is lifted",
+  "cases": [
+    {
+      "name": "amounts cannot be written in test files yet",
+      "description": "A money input needs a vn.io.dxa.rulestone.api.Money, and test files pass numbers",
+      "facts": {
+        "account": { "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "amount": 350000000, "type": "CASH_DEPOSIT" },
+        "history": { "cashDepositsLast7d": [] }
+      },
+      "expect": { "error": "transaction.amount: expected money but got java.lang.Long" }
+    },
+    {
+      "name": "dates cannot be written in test files yet",
+      "description": "A date input needs a java.time.LocalDate, and test files pass text",
+      "facts": {
+        "account": { "openedOn": "2026-10-20", "riskRating": "LOW", "customerIsPep": false },
+        "transaction": { "type": "TRANSFER_IN" },
+        "history": { "cashDepositsLast7d": [] }
+      },
+      "expect": { "error": "account.openedOn: expected date but got java.lang.String" }
+    }
+  ]
+}
