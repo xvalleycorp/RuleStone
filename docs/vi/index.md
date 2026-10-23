@@ -1,6 +1,6 @@
 ---
 source: README.md
-sourceHash: e416af542e0b1a52d7c438e8828f90fff90f6918b0c66e5805f3c1da095cc31e
+sourceHash: 60c69bb2a8d1d8e916629fce75aee5836fce1cc5220ac2248f3ab215d41fd56a
 ---
 
 # Tài liệu RuleStone
@@ -17,13 +17,17 @@ sourceHash: e416af542e0b1a52d7c438e8828f90fff90f6918b0c66e5805f3c1da095cc31e
 | [So khớp gần đúng](fuzzy-matching.md) | So sánh tên khi sàng lọc AML/KYC: chuẩn hoá, điểm tương đồng, ngưỡng và các giới hạn. |
 | [Java API](java-api.md) | Nhúng engine vào ứng dụng: đầu vào, kết quả, lỗi, nạp lại luật, đa luồng. |
 | [Kiểm thử](testing.md) | Kiểm thử bảng quyết định: ca kiểm thử bằng JSON, tích hợp JUnit 5, độ bao phủ luật và assertion dạng fluent. |
-| [Ví dụ](examples.md) | Tìm hiểu các bảng quyết định hoàn chỉnh cho khoản vay, lãi suất tiền gửi và phí chuyển tiền. |
+| [Trình soạn thảo web](editor.md) | Tạo và sửa bảng quyết định trên trình duyệt, thử với các fact mẫu và lưu tệp `.stone.json`. |
+| [Tích hợp Temporal](temporal.md) | Đánh giá quyết định từ workflow Temporal, dưới dạng activity hoặc ngay trong mã workflow với phiên bản luật được ghim. |
+| [Tích hợp Camunda](camunda.md) | Gọi quyết định từ quy trình BPMN bằng job worker của Camunda 8 hoặc delegate của Camunda 7. |
+| [Ví dụ](examples.md) | Tìm hiểu các bảng quyết định hoàn chỉnh cho khoản vay, lãi suất tiền gửi, phí chuyển tiền, gian lận thẻ, thẩm định tín dụng và AML. |
 
 ## Thiết kế
 
 | Trang | Nội dung |
 |---|---|
 | [Kiến trúc](architecture.md) | Mục tiêu, nguyên tắc thiết kế, các mô-đun, các chế độ tích hợp, yêu cầu của ngân hàng, tích hợp AI và lộ trình. |
+| [Ra quyết định AI lai](hybrid-ai.md) | Đề xuất thiết kế: điểm số của mô hình làm đầu vào cho luật, mô hình là nút trong luồng quyết định, và bản ghi quyết định giải thích mọi quyết định. |
 
 ## Dự án
 

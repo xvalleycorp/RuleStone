@@ -1,6 +1,6 @@
 ---
 source: architecture.md
-sourceHash: 4a49ed6f3f01b618c417cd08dd5d54127096f0cc332eef538f0084cfbe9a5c69
+sourceHash: f3f6543dea33ff0fc5895b2e0f22349dd61ffe3207b60d34c0b537f711cbdaa0
 ---
 
 # Kiến trúc RuleStone
@@ -125,7 +125,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 | Hiệu lực theo ngày | Mỗi phiên bản có `effectiveFrom`/`effectiveTo`; các phiên bản chồng lấn bị từ chối; một quyết định cho ngày X có thể chạy lại với bộ luật có hiệu lực vào ngày X. | đã có |
 | Phân tách nhiệm vụ (maker-checker) | Vòng đời luật `DRAFT → SUBMITTED → APPROVED → ACTIVE → RETIRED`; người lập và người duyệt phải khác nhau, được kiểm soát ở tầng quản trị (governance). | dự kiến |
 | Kiểm toán chống giả mạo | Bản ghi kiểm toán liên kết bằng chuỗi băm, có thể ký số, chứa đầu vào đã che, phiên bản luật, vết thực thi và kết quả. | dự kiến |
-| Khả năng giải thích | Mã lý do tường minh cùng vết thực thi có cấu trúc; AI chỉ diễn đạt lại vết thực thi. | đã có (mã lý do, vết thực thi) |
+| Khả năng giải thích | Mã lý do tường minh cùng vết thực thi có cấu trúc; AI chỉ diễn đạt lại vết thực thi. Một bản ghi quyết định cho mọi quyết định, gồm cả phiên bản, đầu ra và attribution của mô hình, được đặc tả trong [Ra quyết định AI lai](hybrid-ai.md#4-bản-ghi-quyết-định). | đã có (mã lý do, vết thực thi); bản ghi dự kiến |
 | Bảo vệ dữ liệu cá nhân | Không có giá trị đầu vào trong vết thực thi hay thông báo ngoại lệ (đã có). `DataMasker` bật mặc định cho bản ghi kiểm toán (dự kiến). | một phần |
 | An toàn khi thực thi | CEL không có reflection hay eval; các thao tác trên danh sách có giới hạn (đã có). Thời gian chờ tối đa cho mỗi quyết định (dự kiến). | một phần |
 | Tính sẵn sàng cao | Chế độ nhúng không phụ thuộc mạng trên luồng xử lý chính; nếu kho luật gặp sự cố, phiên bản đã nạp vẫn tiếp tục chạy. | đã có (chế độ nhúng) |
@@ -155,6 +155,8 @@ Số thư viện phụ thuộc được giữ ở mức tối thiểu: mỗi th�
 - **Quốc tế:** PCI DSS v4 (nếu xử lý dữ liệu thẻ); BCBS 239 (truy xuất nguồn gốc dữ liệu rủi ro); SR 11-7 và quản lý rủi ro mô hình (cho các nút AI); Đạo luật AI của EU (chấm điểm tín dụng là AI rủi ro cao, đòi hỏi khả năng giải thích, sự giám sát của con người và lưu trữ hồ sơ).
 
 ## 7. Tích hợp AI (dự kiến)
+
+Các cơ chế kết hợp luật với mô hình học máy được đặc tả trong [Ra quyết định AI lai](hybrid-ai.md). Trang đó trình bày điểm số của mô hình làm đầu vào cho luật, mô hình là nút trong luồng quyết định, và bản ghi quyết định.
 
 | Mẫu | Mô tả | Rào chắn |
 |---|---|---|
