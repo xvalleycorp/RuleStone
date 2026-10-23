@@ -1,0 +1,33 @@
+{
+  "name": "rulestone-editor-ui",
+  "private": true,
+  "version": "0.1.0",
+  "description": "User interface of the RuleStone decision table editor. Built by Maven into the rulestone-editor jar.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "test": "vitest run",
+    "licenses": "node scripts/licenses.mjs"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "6.20.3",
+    "@codemirror/commands": "6.11.1",
+    "@codemirror/language": "6.13.1",
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.14",
+    "@lezer/highlight": "1.2.5",
+    "vue": "3.5.43"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.9",
+    "typescript": "5.9.3",
+    "vite": "7.3.7",
+    "vitest": "4.1.11",
+    "vue-tsc": "3.3.12"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

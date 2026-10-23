@@ -1,0 +1,59 @@
+{
+  "decision": "transfer_fees",
+  "description": "Transfer fees: every fee alone, fees combined, and no fee",
+  "cases": [
+    {
+      "name": "interbank transfer at the counter pays both fees",
+      "facts": { "transfer": { "amount": 50000000, "channel": "COUNTER", "interbank": true, "express": false } },
+      "expect": {
+        "output": { "feeCode": ["IBT", "CTR"], "fee": [25000, 10000] },
+        "reasonCodes": [],
+        "matchedRules": ["INTERBANK", "COUNTER"]
+      }
+    },
+    {
+      "name": "small interbank transfer pays the minimum fee",
+      "facts": { "transfer": { "amount": 1000000, "channel": "APP", "interbank": true, "express": false } },
+      "expect": {
+        "output": { "feeCode": ["IBT"], "fee": [2000] },
+        "matchedRules": ["INTERBANK"]
+      }
+    },
+    {
+      "name": "interbank fee is rounded half up to the dong",
+      "description": "12,345,678 x 0.05% = 6,172.839",
+      "facts": { "transfer": { "amount": 12345678, "channel": "APP", "interbank": true, "express": false } },
+      "expect": {
+        "output": { "feeCode": ["IBT"], "fee": [6173] },
+        "matchedRules": ["INTERBANK"]
+      }
+    },
+    {
+      "name": "express transfer pays the express fee",
+      "facts": { "transfer": { "amount": 5000000, "channel": "APP", "interbank": false, "express": true } },
+      "expect": {
+        "output": { "feeCode": ["EXP"], "fee": [5000] },
+        "matchedRules": ["EXPRESS"]
+      }
+    },
+    {
+      "name": "express interbank transfer at the counter pays all three fees",
+      "facts": { "transfer": { "amount": 10000000, "channel": "COUNTER", "interbank": true, "express": true } },
+      "expect": {
+        "output": { "feeCode": ["IBT", "EXP", "CTR"], "fee": [5000, 5000, 10000] },
+        "exactOutput": true,
+        "matchedRules": ["INTERBANK", "EXPRESS", "COUNTER"]
+      }
+    },
+    {
+      "name": "internal transfer in the app is free",
+      "facts": { "transfer": { "amount": 1, "channel": "APP", "interbank": false, "express": false } },
+      "expect": {
+        "output": { "feeCode": [], "fee": [] },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": []
+      }
+    }
+  ]
+}

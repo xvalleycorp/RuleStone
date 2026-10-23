@@ -7,7 +7,9 @@
 | [Getting started](getting-started.md) | Write and evaluate your first decision table in ten minutes. |
 | [Decision tables](decision-tables.md) | Learn the `.stone.json` format, hit policies, versions, effective dates and validation. |
 | [Expression language](expressions.md) | Write conditions and outputs: operators, decimals, rounding, lists, missing fields, errors. |
+| [Fuzzy matching](fuzzy-matching.md) | Compare names for AML/KYC screening: normalization, similarity scores, thresholds and limitations. |
 | [Java API](java-api.md) | Embed the engine: inputs, results, errors, reloading rules, threading. |
+| [Testing](testing.md) | Test decision tables: JSON test cases, JUnit 5 integration, rule coverage and fluent assertions. |
 | [Examples](examples.md) | Study complete tables for loans, deposit rates and transfer fees. |
 
 ## Design
@@ -15,6 +17,7 @@
 | Page | Content |
 |---|---|
 | [Architecture](architecture.md) | Goals, design principles, modules, integration modes, banking requirements, AI integration and roadmap. |
+| [Hybrid AI decisioning](hybrid-ai.md) | Design proposal: model scores as rule inputs, models as nodes in decision flows, and the decision record that explains every decision. |
 
 ## Project
 

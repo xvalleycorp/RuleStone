@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <!-- Decision block: a squared stone block; its gold top face carries the engraved rows of a decision table. -->
+  <polygon fill="#e7e5e4" points="8.6,18.5 32,32 32,59 8.6,45.5"/>
+  <polygon fill="#a8a29e" points="32,32 55.4,18.5 55.4,45.5 32,59"/>
+  <polygon fill="#fbbf24" points="32,5 55.4,18.5 32,32 8.6,18.5"/>
+  <path fill="none" stroke="#b45309" stroke-width="2.5" d="M24.2 27.5L47.6 14M16.4 23L39.8 9.5"/>
+</svg>

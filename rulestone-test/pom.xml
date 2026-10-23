@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2026 The RuleStone Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>vn.io.dxa.rulestone</groupId>
+        <artifactId>rulestone-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>rulestone-test</artifactId>
+    <name>RuleStone Test</name>
+    <description>Unit-testing tools for decision tables: fluent assertions, data-driven .stone-test.json files run as JUnit 5 dynamic tests, and rule coverage.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>vn.io.dxa.rulestone</groupId>
+            <artifactId>rulestone-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>vn.io.dxa.rulestone</groupId>
+            <artifactId>rulestone-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!--
+          Only StoneTests uses JUnit, and a project that runs it already has JUnit on its test
+          classpath. "provided" keeps JUnit (EPL-2.0) out of this module's runtime dependencies.
+        -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

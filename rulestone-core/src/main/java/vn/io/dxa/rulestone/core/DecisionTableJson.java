@@ -43,8 +43,9 @@ import vn.io.dxa.rulestone.cel.ValueType;
  * }
  * }</pre>
  *
- * <p>Types are {@code "bool"}, {@code "int"}, {@code "string"}, {@code "decimal"}, an object of
- * named field types (a struct), or a one-element array (a list of that element type).
+ * <p>Types are {@code "bool"}, {@code "int"}, {@code "string"}, {@code "decimal"}, {@code "money"},
+ * {@code "date"}, an object of named field types (a struct), or a one-element array (a list of
+ * that element type).
  * Reading is strict: unknown or duplicate keys are errors, so a misspelt
  * {@code "efectiveFrom"} cannot silently change which rules are in force.
  */

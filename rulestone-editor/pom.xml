@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2026 The RuleStone Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>vn.io.dxa.rulestone</groupId>
+        <artifactId>rulestone-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>rulestone-editor</artifactId>
+    <name>RuleStone Editor</name>
+    <description>Self-hosted web editor for decision tables: a small HTTP server (JDK httpserver + Jackson) serving a Vue user interface and a JSON API over a directory of .stone.json files.</description>
+
+    <properties>
+        <!-- Pinned toolchain for the user interface, downloaded into target/ by frontend-maven-plugin. -->
+        <frontend.node.version>v24.21.0</frontend.node.version>
+        <frontend.npm.version>11.19.0</frontend.npm.version>
+        <frontend-maven-plugin.version>1.15.4</frontend-maven-plugin.version>
+        <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
+        <!-- -DskipTests also skips the frontend unit tests; -Dfrontend.skip skips the whole frontend build. -->
+        <skipTests>false</skipTests>
+        <frontend.skip>false</frontend.skip>
+        <frontend.test.skip>${skipTests}</frontend.test.skip>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>frontend-skip</id>
+            <activation>
+                <property>
+                    <name>frontend.skip</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <frontend.test.skip>true</frontend.test.skip>
+            </properties>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>vn.io.dxa.rulestone</groupId>
+            <artifactId>rulestone-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- Replaces the parent's list, so it repeats the LICENSE, NOTICE and THIRD-PARTY entries. -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>**/editor.properties</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/editor.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>${maven.multiModuleProjectDirectory}</directory>
+                <targetPath>META-INF</targetPath>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>${project.build.directory}/generated-resources/third-party</directory>
+            </resource>
+            <!-- The built user interface (frontend/dist is written here by Vite) ... -->
+            <resource>
+                <directory>${project.build.directory}/generated-resources/web</directory>
+                <targetPath>vn/io/dxa/rulestone/editor/web</targetPath>
+            </resource>
+            <!-- ... and the licenses of the npm packages bundled into it. -->
+            <resource>
+                <directory>${project.build.directory}/generated-resources/web-licenses</directory>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>${frontend-maven-plugin.version}</version>
+                <configuration>
+                    <workingDirectory>frontend</workingDirectory>
+                    <installDirectory>${project.build.directory}</installDirectory>
+                    <nodeVersion>${frontend.node.version}</nodeVersion>
+                    <npmVersion>${frontend.npm.version}</npmVersion>
+                    <skip>${frontend.skip}</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>npm-ci</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>ci --no-audit --no-fund --ignore-scripts</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-licenses</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run licenses -- ${project.build.directory}/generated-resources/web-licenses/META-INF/THIRD-PARTY-WEB.txt</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build -- --outDir ${project.build.directory}/generated-resources/web --emptyOutDir</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>test</arguments>
+                            <skip>${frontend.test.skip}</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>vn.io.dxa.rulestone.editor.EditorMain</mainClass>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!--
+              Executable jar with every dependency: target/rulestone-editor-<version>-all.jar.
+              Keeps all LICENSE and NOTICE files: NOTICE files are appended, the dependencies'
+              Apache-2.0 LICENSE files are the same text as RuleStone's, and differently named
+              license files (e.g. Jackson's FastDoubleParser-LICENSE) are copied as they are.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${maven-shade-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>executable-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>all</shadedClassifierName>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                    </excludes>
+                                </filter>
+                                <!-- Same files as this module's: the editor's THIRD-PARTY.txt covers every dependency. -->
+                                <filter>
+                                    <artifact>vn.io.dxa.rulestone:rulestone-api</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
+                                        <exclude>META-INF/THIRD-PARTY.txt</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>vn.io.dxa.rulestone:rulestone-cel</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
+                                        <exclude>META-INF/THIRD-PARTY.txt</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>vn.io.dxa.rulestone:rulestone-core</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
+                                        <exclude>META-INF/THIRD-PARTY.txt</exclude>
+                                    </excludes>
+                                </filter>
+                                <!--
+                                  Byte-for-byte the same Apache License 2.0 text as RuleStone's own
+                                  META-INF/LICENSE, which the jar keeps. Their NOTICE files are kept.
+                                -->
+                                <filter>
+                                    <artifact>com.google.guava:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.fasterxml.jackson.core:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>vn.io.dxa.rulestone.editor.EditorMain</mainClass>
+                                    <manifestEntries>
+                                        <Implementation-Title>${project.name}</Implementation-Title>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
+                                        <Multi-Release>true</Multi-Release>
+                                    </manifestEntries>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/NOTICE</resource>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

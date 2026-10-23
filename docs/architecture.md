@@ -118,7 +118,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 | Effective dating | Each version has `effectiveFrom`/`effectiveTo`; overlaps are rejected; a decision for day X can be re-run with the rules in force on day X. | available |
 | Segregation of duties (maker-checker) | Rule lifecycle `DRAFT → SUBMITTED → APPROVED → ACTIVE → RETIRED`; author and approver must differ, enforced in the governance layer. | planned |
 | Tamper-evident audit | Hash-chained, optionally signed audit records holding masked inputs, rule version, trace and result. | planned |
-| Explainability | Explicit reason codes plus a structured trace; AI only rephrases the trace. | available (codes, trace) |
+| Explainability | Explicit reason codes plus a structured trace; AI only rephrases the trace. A decision record for every decision, including model versions, outputs and attributions, is specified in [Hybrid AI decisioning](hybrid-ai.md#4-the-decision-record). | available (codes, trace); record planned |
 | Personal data protection | No input values in traces or exception messages (available). `DataMasker` on by default for audit records (planned). | partial |
 | Execution safety | CEL without reflection or eval; bounded list operations (available). Per-decision timeout (planned). | partial |
 | High availability | Embedded mode has no network dependency on the hot path; if the rule repository fails, the loaded version keeps running. | available (embedded) |
@@ -148,6 +148,8 @@ This is a checklist to review while the specification matures. Current texts mus
 - **International:** PCI DSS v4 (if card data is processed); BCBS 239 (risk data lineage); SR 11-7 and model risk management (for AI nodes); the EU AI Act (credit scoring is high-risk AI, requiring explainability, human oversight and record-keeping).
 
 ## 7. AI integration (planned)
+
+The mechanisms for combining rules with machine-learning models are specified in [Hybrid AI decisioning](hybrid-ai.md). That page covers model scores as rule inputs, models as nodes in decision flows, and the decision record.
 
 | Pattern | Description | Guardrail |
 |---|---|---|

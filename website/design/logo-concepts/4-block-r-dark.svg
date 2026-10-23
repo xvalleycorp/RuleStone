@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RuleStone">
+  <!-- Block R: the letter R laid in courses of cut stone, like the rows of a decision table; the gold leg strides forward. -->
+  <polygon fill="#d6d3d1" points="9,6 23,6 23,58 9,58"/>
+  <polygon fill="#d6d3d1" points="27,6 48,6 55,13 55,17 27,17"/>
+  <polygon fill="#d6d3d1" points="43,21 55,21 55,29 43,29"/>
+  <polygon fill="#d6d3d1" points="27,33 55,33 55,37 49,43 27,43"/>
+  <polygon fill="#fbbf24" points="29,47 43,47 55,58 41,58"/>
+</svg>

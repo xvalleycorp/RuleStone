@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,12 +44,14 @@ public final class RuleStone {
         private final List<DecisionTable> tables = new ArrayList<>();
         private Clock clock = Clock.systemDefaultZone();
         private int maxIterations = ExpressionEnvironment.DEFAULT_MAX_ITERATIONS;
+        private final Map<String, Integer> currencyScales = new HashMap<>();
 
         private Builder() {}
 
         /**
-         * Clock used to pick the business date when a request does not specify one.
-         * Set it to the bank's time zone; the default is the JVM's.
+         * Clock used to pick the business date when a request does not specify one. The business
+         * date selects the decision version and is the value of every rule's implicit
+         * {@code businessDate} input. Set it to the bank's time zone; the default is the JVM's.
          */
         public Builder clock(Clock clock) {
             this.clock = Objects.requireNonNull(clock, "clock");
@@ -72,6 +75,21 @@ public final class RuleStone {
         }
 
         /**
+         * Overrides the ISO 4217 minor units that {@code money.round()} uses for {@code currency}
+         * in every rule; see {@link ExpressionEnvironment.Builder#currencyScale}. Needed for
+         * currencies without minor units in ISO 4217, such as {@code XAU}.
+         *
+         * @param currency an upper-case ISO 4217 code, e.g. {@code VND}
+         * @param digits   digits after the decimal point, 0 to 18
+         * @throws IllegalArgumentException if the code is not ISO 4217 or {@code digits} is out of range
+         */
+        public Builder currencyScale(String currency, int digits) {
+            ExpressionEnvironment.builder().currencyScale(currency, digits); // validates the arguments
+            currencyScales.put(currency, digits);
+            return this;
+        }
+
+        /**
          * @throws InvalidDecisionException listing every problem in every registered table,
          *         including duplicate versions and overlapping effective periods
          */
@@ -79,7 +97,7 @@ public final class RuleStone {
             List<String> problems = new ArrayList<>();
             Map<String, List<CompiledDecision>> byId = new LinkedHashMap<>();
             for (DecisionTable table : tables) {
-                CompiledDecision.compile(table, maxIterations, problems)
+                CompiledDecision.compile(table, maxIterations, currencyScales, problems)
                         .ifPresent(d -> byId.computeIfAbsent(table.id(), id -> new ArrayList<>()).add(d));
             }
             byId.values().forEach(versions -> checkVersions(versions, problems));

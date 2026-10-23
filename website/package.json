@@ -7,8 +7,11 @@
   "scripts": {
     "sync": "node scripts/sync-docs.mjs",
     "dev": "npm run sync && vitepress dev src",
-    "build": "npm run sync && vitepress build src",
+    "build": "npm run sync && vitepress build src && npm run check:links",
     "preview": "vitepress preview src",
+    "check:links": "node scripts/check-site.mjs",
+    "i18n:status": "node scripts/i18n-status.mjs",
+    "i18n:stamp": "node scripts/i18n-stamp.mjs",
     "deploy": "npm run build && wrangler deploy"
   },
   "devDependencies": {

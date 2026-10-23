@@ -1,0 +1,41 @@
+{
+  "id": "aml_alert_action",
+  "version": "1",
+  "description": "Recommended action from the total score produced by aml_transaction_monitoring; score bands are invented for illustration",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "riskScore": "int",
+    "hasLargeCash": "bool"
+  },
+  "outputs": {
+    "action": "string",
+    "fileCtr": "bool"
+  },
+  "rules": [
+    {
+      "id": "FILE_STR",
+      "description": "Prepare a suspicious transaction report for the compliance officer; a large cash transaction is reported as well",
+      "when": "riskScore >= 70",
+      "then": { "action": "'FILE_STR'", "fileCtr": "hasLargeCash" },
+      "reasonCode": "SUSPICION_SCORE_HIGH"
+    },
+    {
+      "id": "ANALYST_REVIEW",
+      "when": "riskScore >= 30",
+      "then": { "action": "'ANALYST_REVIEW'", "fileCtr": "hasLargeCash" },
+      "reasonCode": "SUSPICION_SCORE_ELEVATED"
+    },
+    {
+      "id": "FILE_CTR_ONLY",
+      "description": "Large cash transaction without other suspicion: the large-value report only",
+      "when": "hasLargeCash",
+      "then": { "action": "'FILE_CTR_ONLY'", "fileCtr": "true" },
+      "reasonCode": "LARGE_CASH_REPORTABLE"
+    },
+    {
+      "id": "NO_ACTION",
+      "when": "true",
+      "then": { "action": "'NO_ACTION'", "fileCtr": "false" }
+    }
+  ]
+}
