@@ -16,9 +16,9 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Currency;
 import java.util.List;
 import java.util.Map;
+import vn.io.dxa.rulestone.api.Iso4217;
 
 /**
  * The {@code money} type: an exact amount in an ISO 4217 currency.
@@ -36,7 +36,7 @@ import java.util.Map;
  *   <li>{@code m.abs()}, {@code min(a, b)}, {@code max(a, b)}, {@code string(m)}</li>
  * </ul>
  *
- * <p>Minor units come from ISO 4217 ({@link Currency#getDefaultFractionDigits()}) unless the
+ * <p>Minor units come from RuleStone's fixed ISO 4217 table ({@link Iso4217}) unless the
  * environment overrides them.
  */
 final class MoneyLibrary {
@@ -141,17 +141,9 @@ final class MoneyLibrary {
         return bindings;
     }
 
-    /** Whether {@code code} is an upper-case ISO 4217 code known to {@link Currency}. */
+    /** Whether {@code code} is an upper-case ISO 4217 code in RuleStone's table ({@link Iso4217}). */
     static boolean isCurrencyCode(String code) {
-        if (code.length() != 3 || !code.chars().allMatch(c -> c >= 'A' && c <= 'Z')) {
-            return false;
-        }
-        try {
-            Currency.getInstance(code);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+        return Iso4217.isCurrencyCode(code);
     }
 
     // Error messages never quote amounts or argument text: they may come from customer inputs.
@@ -194,7 +186,7 @@ final class MoneyLibrary {
     private static CelMoney round(CelMoney m, RoundingMode mode, Map<String, Integer> scales)
             throws CelEvaluationException {
         Integer override = scales.get(m.currency);
-        int scale = override != null ? override : Currency.getInstance(m.currency).getDefaultFractionDigits();
+        int scale = override != null ? override : Iso4217.minorUnits(m.currency).orElse(-1);
         if (scale < 0) {
             throw new CelEvaluationException("currency " + m.currency
                     + " has no minor unit in ISO 4217; configure one with currencyScale(\"" + m.currency + "\", digits)");

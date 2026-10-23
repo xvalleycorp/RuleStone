@@ -1,0 +1,65 @@
+[ {
+  "name" : "unknown, misspelt and missing fields",
+  "read" : [ [ "$.efectiveFrom: unknown field (allowed: description, effectiveFrom, effectiveTo, hitPolicy, id, inputs, outputs, rules, version)", "$.rules[0].reason: unknown field (allowed: description, id, reasonCode, then, when)" ] ],
+  "build" : [ ]
+}, {
+  "name" : "duplicate key",
+  "read" : [ [ "invalid JSON: Duplicate field 'id' (line 3, column 7)" ] ],
+  "build" : [ ]
+}, {
+  "name" : "invalid JSON",
+  "read" : [ [ "invalid JSON: Unexpected character ('}' (code 125)): was expecting double-quote to start field name (line 1, column 14)" ] ],
+  "build" : [ ]
+}, {
+  "name" : "not an object",
+  "read" : [ [ "$: expected a JSON object" ] ],
+  "build" : [ ]
+}, {
+  "name" : "empty text",
+  "read" : [ [ "$: expected a JSON object" ] ],
+  "build" : [ ]
+}, {
+  "name" : "trailing text is ignored",
+  "read" : [ null ],
+  "build" : [ ]
+}, {
+  "name" : "wrong JSON types everywhere",
+  "read" : [ [ "$.id: required non-empty string", "$.version: required non-empty string", "$.description: expected a string", "$.effectiveFrom: expected an ISO date (yyyy-MM-dd) but got '2026-02-30'", "$.effectiveTo: expected an ISO date (yyyy-MM-dd) but got 'tomorrow'", "$.hitPolicy: unknown hit policy 'LAST' (expected UNIQUE, FIRST or COLLECT)", "$.inputs: required object of name to type", "$.outputs.a: unknown type 'double' (floating point is not supported; use decimal)", "$.outputs.b: a list type is written as a one-element array, e.g. [\"decimal\"]", "$.outputs.c: a struct type must declare at least one field", "$.outputs.d: expected a type name, a struct object or a one-element list array", "$.outputs.e[]: unknown type 'number' (floating point is not supported; use decimal)", "$.outputs.f.g: unknown type 'float' (floating point is not supported; use decimal)", "$.rules[0]: expected an object", "$.rules[1].then.a: expected a CEL expression string (string literals need inner quotes, e.g. \"'APPROVE'\")", "$.rules[1].reasonCode: expected a string", "$.rules[2].then: expected an object of output expressions" ] ],
+  "build" : [ ]
+}, {
+  "name" : "null fields",
+  "read" : [ [ "$.hitPolicy: required non-empty string", "$.inputs: required object of name to type", "$.rules: required array" ] ],
+  "build" : [ ]
+}, {
+  "name" : "effective dates out of order",
+  "read" : [ [ "$.effectiveTo: must be after effectiveFrom" ] ],
+  "build" : [ ]
+}, {
+  "name" : "table checks",
+  "read" : [ null ],
+  "build" : [ "1table@v 1 id: must match [A-Za-z][A-Za-z0-9_.-]*", "1table@v 1 version: must be letters, digits, '.', '_' or '-'", "1table@v 1 outputs.who: outputs must be bool, int, string, decimal, money, date or lists of them", "1table@v 1 outputs.many: outputs must be bool, int, string, decimal, money, date or lists of them", "1table@v 1 rules: a decision table needs at least one rule", "1table@v 1 inputs.businessDate: reserved name; every decision receives businessDate implicitly (DecisionRef.asOf, else the engine clock)" ]
+}, {
+  "name" : "invalid input names stop compilation",
+  "read" : [ null ],
+  "build" : [ "t@1 inputs: invalid variable name: 'in'" ]
+}, {
+  "name" : "invalid struct field name",
+  "read" : [ null ],
+  "build" : [ "t@1 inputs: invalid field name: 'no way'" ]
+}, {
+  "name" : "rule checks",
+  "read" : [ null ],
+  "build" : [ "t@2026.11 rules[R1].reasonCode: must be UPPER_SNAKE_CASE, e.g. DTI_HIGH", "t@2026.11 rules[R1].when: ERROR: <input>:1:10: undefined field 'agee'\n | applicant.agee >= 18\n | .........^", "t@2026.11 rules[R1].then.nope: undeclared output (declared: [decision, limit, fees])", "t@2026.11 rules[R1]: duplicate rule id", "t@2026.11 rules[R1].when: ERROR: <input>:1:18: found no matching overload for '_==_' applied to '(decimal, int)' (candidates: (%A0, %A0))\n | applicant.income == 5\n | .................^", "t@2026.11 rules[R1].then.limit: ERROR: <input>:1:8: found no matching overload for '_+_' applied to '(money, int)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(list(%A0), list(%A0)),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(google.protobuf.Timestamp, google.protobuf.Duration),(google.protobuf.Duration, google.protobuf.Timestamp),(int, int),(uint, uint))\n | amount + 2000\n | .......^", "t@2026.11 rules[R3].when: expression must produce bool but produces int: applicant.age", "t@2026.11 rules[R3].then.limit: ERROR: <input>:1:18: found no matching overload for '_*_' applied to '(decimal, double)' (candidates: (decimal, money),(money, int),(double, double),(decimal, int),(money, decimal),(int, int),(decimal, decimal),(int, decimal),(int, money),(uint, uint))\n | applicant.income * 0.5\n | .................^", "t@2026.11 rules[R3].then.decision: expression must produce string but produces int: 1", "t@2026.11 rules[R4].when: ERROR: <input>:1:1: undeclared reference to 'x' (in container '')\n | x > 1 && y\n | ^\nERROR: <input>:1:10: undeclared reference to 'y' (in container '')\n | x > 1 && y\n | .........^", "t@2026.11 rules[R4].then.fees: expression must produce list<money> but produces list: []", "t@2026.11 rules[R5].then.limit: ERROR: <input>:1:4: found no matching overload for 'min' applied to '(decimal, int)' (candidates: (decimal, decimal),(money, money))\n | min(applicant.income, 1)\n | ...^" ]
+}, {
+  "name" : "multi-line expression error",
+  "read" : [ null ],
+  "build" : [ "t@1 rules[R].when: ERROR: <input>:2:4: type 'int' does not support field selection\n |   a.b == 2\n | ...^" ]
+}, {
+  "name" : "versions: duplicate and overlapping",
+  "read" : [ null, null, null, null, null ],
+  "build" : [ "u@1 rules[R].when: expression must produce bool but produces int: 1", "t@1 and t@2: effective periods overlap; set effectiveTo of the earlier version", "t@2: version registered more than once", "t@2 and t@2: effective periods overlap; set effectiveTo of the earlier version" ]
+}, {
+  "name" : "valid versions sharing a boundary",
+  "read" : [ null, null ],
+  "build" : [ ]
+} ]

@@ -115,6 +115,8 @@ Rounding to a multiple, e.g. down to the nearest million:
 
 The currency is an upper-case ISO 4217 code. An unknown code or an unparsable amount fails the evaluation.
 
+RuleStone accepts a fixed list of codes, so every Java version accepts and rounds the same codes: the current codes of ISO 4217 up to amendment 177 (June 2024, which added `ZWG`), and withdrawn codes that Java has long accepted, such as `DEM`. In Java the list is `vn.io.dxa.rulestone.api.Iso4217`.
+
 ### Arithmetic and comparison
 
 | Expression | Result |
@@ -288,7 +290,7 @@ Found when evaluating, and reported as `DecisionEvaluationException` with the ru
 - date arithmetic beyond the supported range of years;
 - exceeding the iteration limit.
 
-Error messages name inputs, fields, rules and currency codes, never input values or amounts.
+Error messages name inputs, fields, rules and currency codes, never input values or amounts. This includes the standard functions: `int('x')` fails with `int() argument is not a valid integer`, and an index beyond the end of a list with `list index out of bounds`.
 
 An evaluation error **fails the whole decision**. RuleStone does not skip the rule and carry on, because a skipped rejection rule could turn into an approval. Treat the failure as you would any other system error, for example by routing the case to manual review.
 

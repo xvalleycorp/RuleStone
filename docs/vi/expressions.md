@@ -1,6 +1,6 @@
 ---
 source: expressions.md
-sourceHash: 22ac599c6426b1716c3698f511b44047c663a5294f87819aac14fa5b03e91a1d
+sourceHash: 897ac3de1ee0ebbb6886ad93c5d55f300f70b32d6b2b26475643253d69289245
 ---
 
 # Ngôn ngữ biểu thức
@@ -119,6 +119,8 @@ Làm tròn tới bội số, ví dụ làm tròn xuống tới hàng triệu g�
 | một đầu vào khai báo `"money"` | giá trị `Money` được truyền vào |
 
 Mã tiền tệ là mã ISO 4217 viết hoa. Mã không xác định hoặc số tiền không phân tích được làm việc đánh giá thất bại.
+
+RuleStone chấp nhận một danh sách mã cố định, nên mọi phiên bản Java đều chấp nhận và làm tròn các mã như nhau: các mã hiện hành của ISO 4217 đến bản sửa đổi 177 (tháng 6 năm 2024, bổ sung `ZWG`), cùng các mã đã ngừng sử dụng mà Java vẫn chấp nhận từ lâu, như `DEM`. Trong Java, danh sách này là `vn.io.dxa.rulestone.api.Iso4217`.
 
 ### Số học và so sánh
 
@@ -293,7 +295,7 @@ Phát hiện khi đánh giá, và được báo dưới dạng `DecisionEvaluati
 - tính toán ngày vượt ngoài phạm vi năm được hỗ trợ;
 - vượt quá giới hạn số vòng lặp.
 
-Thông báo lỗi nêu tên đầu vào, trường, luật và mã tiền tệ, không bao giờ nêu giá trị đầu vào hay số tiền.
+Thông báo lỗi nêu tên đầu vào, trường, luật và mã tiền tệ, không bao giờ nêu giá trị đầu vào hay số tiền. Điều này cũng áp dụng cho các hàm chuẩn: `int('x')` thất bại với `int() argument is not a valid integer`, và chỉ số vượt quá cuối danh sách thất bại với `list index out of bounds`.
 
 Một lỗi khi đánh giá **làm thất bại toàn bộ quyết định**. RuleStone không bỏ qua luật đó rồi chạy tiếp, vì một luật từ chối bị bỏ qua có thể biến thành một quyết định phê duyệt. Hãy xử lý lỗi này như mọi lỗi hệ thống khác, ví dụ chuyển hồ sơ sang xem xét thủ công.
 

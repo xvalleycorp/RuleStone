@@ -6,7 +6,6 @@
 package vn.io.dxa.rulestone.api;
 
 import java.math.BigDecimal;
-import java.util.Currency;
 import java.util.Objects;
 
 /**
@@ -18,7 +17,7 @@ import java.util.Objects;
  * when scale does not matter. Inside rules, {@code ==} compares numeric value.
  *
  * @param amount   the amount, of any sign and scale
- * @param currency an ISO 4217 alphabetic code in upper case, e.g. {@code VND}
+ * @param currency an ISO 4217 alphabetic code in upper case, e.g. {@code VND}, from {@link Iso4217}
  */
 public record Money(BigDecimal amount, String currency) {
 
@@ -31,7 +30,7 @@ public record Money(BigDecimal amount, String currency) {
     public Money {
         Objects.requireNonNull(amount, "amount");
         Objects.requireNonNull(currency, "currency");
-        if (!isCurrencyCode(currency)) {
+        if (!Iso4217.isCurrencyCode(currency)) {
             // The text is not quoted: it may come from customer data.
             throw new IllegalArgumentException("currency must be an ISO 4217 code in upper case, e.g. VND");
         }
@@ -70,15 +69,4 @@ public record Money(BigDecimal amount, String currency) {
         return amount.toPlainString() + " " + currency;
     }
 
-    private static boolean isCurrencyCode(String code) {
-        if (code.length() != 3 || !code.chars().allMatch(c -> c >= 'A' && c <= 'Z')) {
-            return false;
-        }
-        try {
-            Currency.getInstance(code);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
 }

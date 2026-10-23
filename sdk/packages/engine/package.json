@@ -1,0 +1,37 @@
+{
+  "name": "@rulestone/engine",
+  "private": true,
+  "version": "0.1.0",
+  "description": "RuleStone decision tables in the browser: strict .stone.json reader, type-checked CEL with exact decimal, money and date types, and an engine that gives the same results as the Java engine.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "size": "node scripts/size.mjs",
+    "generate:iso4217": "node scripts/generate-iso4217.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

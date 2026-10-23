@@ -1,0 +1,25 @@
+{
+  "rules": [
+    {
+      "when": "customer.name != 'Đặng \\'Ngọc\\' \"Hân\"' && size(customer.accounts) >= 0",
+      "then": { "zLabel": "'ü\\tö'", "aLabel": "'\\u00e9 / </script>'" },
+      "reasonCode": "ESCAPED",
+      "id": "ESCAPE",
+      "description": "Control \u0001\u001f, tab \t, newline \n, quote \", backslash \\, slash /, line separator  , emoji 😀, Vietnamese Nguyễn"
+    },
+    { "id": "PLAIN", "when": "true" }
+  ],
+  "outputs": { "zLabel": "string", "aLabel": "string", "amounts": ["money"] },
+  "inputs": {
+    "zeta": "date",
+    "customer": { "name": "string", "accounts": [{ "type": "string", "balance": "decimal" }], "Age": "int", "age": "int" },
+    "Alpha": ["string"],
+    "_under": "bool"
+  },
+  "hitPolicy": "FIRST",
+  "effectiveTo": "2030-01-01",
+  "effectiveFrom": "2026-01-01",
+  "description": "Écriture canonique: keys out of order, nested structs, \"quotes\" and ∑ symbols",
+  "version": "2026.11-rc_1",
+  "id": "escaping.table-1"
+}

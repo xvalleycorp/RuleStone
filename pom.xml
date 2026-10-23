@@ -286,6 +286,7 @@
                             <excludes>
                                 <exclude>**/target/**</exclude>
                                 <exclude>website/**</exclude>
+                                <exclude>sdk/**</exclude>
                                 <exclude>rulestone-editor/frontend/node_modules/**</exclude>
                                 <exclude>rulestone-editor/frontend/dist/**</exclude>
                             </excludes>

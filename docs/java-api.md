@@ -143,7 +143,7 @@ price.currency();                                   // "VND"
 price.toString();                                   // "1500000.50 VND"
 ```
 
-The constructor and factories reject a `null` amount and a currency that is not an upper-case ISO 4217 code. `Money` never rounds. Its `equals`, like `BigDecimal`'s, is scale-sensitive (`1.0 VND` is not equal to `1.00 VND`); compare amounts with `compareTo` when that matters. Inside rules, `==` compares numerically.
+The constructor and factories reject a `null` amount and a currency that is not an upper-case ISO 4217 code. The valid codes and their minor units come from `Iso4217`, a fixed table (ISO 4217 up to amendment 177, plus withdrawn codes that Java has long accepted), not from `java.util.Currency`, whose codes differ between JDK versions. `Money` never rounds. Its `equals`, like `BigDecimal`'s, is scale-sensitive (`1.0 VND` is not equal to `1.00 VND`); compare amounts with `compareTo` when that matters. Inside rules, `==` compares numerically.
 
 Dates are `java.time.LocalDate`, both as inputs and as outputs. Every rule can also read `businessDate`, the date of the request (see [The business date](expressions.md#the-business-date)). For example, this table charges an annual card fee of 0.1% of the year's spending, waived for customers under 25:
 

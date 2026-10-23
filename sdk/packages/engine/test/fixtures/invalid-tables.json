@@ -1,0 +1,75 @@
+[
+  {
+    "name": "unknown, misspelt and missing fields",
+    "tables": ["{ \"id\": \"t\", \"version\": \"1\", \"efectiveFrom\": \"2026-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\", \"reason\": \"X\" } ] }"]
+  },
+  {
+    "name": "duplicate key",
+    "tables": ["{\n  \"id\": \"t\",\n  \"id\": \"u\"\n}"]
+  },
+  {
+    "name": "invalid JSON",
+    "tables": ["{ \"id\": \"t\", }"]
+  },
+  {
+    "name": "not an object",
+    "tables": ["[1, 2]"]
+  },
+  {
+    "name": "empty text",
+    "tables": ["   "]
+  },
+  {
+    "name": "trailing text is ignored",
+    "tables": ["{ \"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] } trailing"]
+  },
+  {
+    "name": "wrong JSON types everywhere",
+    "tables": ["{ \"id\": 1, \"version\": \" \", \"description\": 2, \"effectiveFrom\": \"2026-02-30\", \"effectiveTo\": \"tomorrow\", \"hitPolicy\": \"LAST\", \"inputs\": [], \"outputs\": { \"a\": \"double\", \"b\": [\"int\", \"int\"], \"c\": {}, \"d\": 5, \"e\": [\"number\"], \"f\": { \"g\": \"float\" } }, \"rules\": [ 7, { \"id\": \"R\", \"when\": \"true\", \"then\": { \"a\": 1 }, \"reasonCode\": 3 }, { \"id\": \"S\", \"when\": \"true\", \"then\": [] } ] }"]
+  },
+  {
+    "name": "null fields",
+    "tables": ["{ \"id\": \"t\", \"version\": \"1\", \"description\": null, \"effectiveFrom\": null, \"hitPolicy\": null, \"inputs\": null, \"outputs\": {}, \"rules\": null }"]
+  },
+  {
+    "name": "effective dates out of order",
+    "tables": ["{ \"id\": \"t\", \"version\": \"1\", \"effectiveFrom\": \"2027-01-01\", \"effectiveTo\": \"2027-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }"]
+  },
+  {
+    "name": "table checks",
+    "tables": ["{ \"id\": \"1table\", \"version\": \"v 1\", \"hitPolicy\": \"UNIQUE\", \"inputs\": { \"businessDate\": \"date\", \"amount\": \"decimal\" }, \"outputs\": { \"who\": { \"name\": \"string\" }, \"many\": [{ \"name\": \"string\" }] }, \"rules\": [] }"]
+  },
+  {
+    "name": "invalid input names stop compilation",
+    "tables": ["{ \"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": { \"ok\": \"int\", \"in\": \"int\", \"bad-name\": \"int\" }, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"nonsense(\" } ] }"]
+  },
+  {
+    "name": "invalid struct field name",
+    "tables": ["{ \"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": { \"a\": { \"ok\": \"int\", \"no way\": \"int\" } }, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }"]
+  },
+  {
+    "name": "rule checks",
+    "tables": ["{ \"id\": \"t\", \"version\": \"2026.11\", \"hitPolicy\": \"FIRST\", \"inputs\": { \"applicant\": { \"age\": \"int\", \"income\": \"decimal\" }, \"amount\": \"money\" }, \"outputs\": { \"decision\": \"string\", \"limit\": \"decimal\", \"fees\": [\"money\"] }, \"rules\": [ { \"id\": \"R1\", \"when\": \"applicant.agee >= 18\", \"then\": { \"decision\": \"'A'\", \"nope\": \"1\" }, \"reasonCode\": \"lower_case\" }, { \"id\": \"R1\", \"when\": \"applicant.income == 5\", \"then\": { \"limit\": \"amount + 2000\" } }, { \"id\": \"R3\", \"when\": \"applicant.age\", \"then\": { \"limit\": \"applicant.income * 0.5\", \"decision\": \"1\" } }, { \"id\": \"R4\", \"when\": \"x > 1 && y\", \"then\": { \"fees\": \"[]\" } }, { \"id\": \"R5\", \"when\": \"true\", \"then\": { \"fees\": \"[amount, amount * 2]\", \"limit\": \"min(applicant.income, 1)\" } } ] }"]
+  },
+  {
+    "name": "multi-line expression error",
+    "tables": ["{ \"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": { \"a\": \"int\" }, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"a > 1 &&\\n  a.b == 2\" } ] }"]
+  },
+  {
+    "name": "versions: duplicate and overlapping",
+    "tables": [
+      "{ \"id\": \"t\", \"version\": \"1\", \"effectiveTo\": \"2026-06-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }",
+      "{ \"id\": \"t\", \"version\": \"2\", \"effectiveFrom\": \"2026-05-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }",
+      "{ \"id\": \"t\", \"version\": \"2\", \"effectiveFrom\": \"2027-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }",
+      "{ \"id\": \"u\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"1\" } ] }",
+      "{ \"id\": \"u\", \"version\": \"2\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }"
+    ]
+  },
+  {
+    "name": "valid versions sharing a boundary",
+    "tables": [
+      "{ \"id\": \"t\", \"version\": \"2\", \"effectiveFrom\": \"2026-11-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }",
+      "{ \"id\": \"t\", \"version\": \"1\", \"effectiveTo\": \"2026-11-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }"
+    ]
+  }
+]

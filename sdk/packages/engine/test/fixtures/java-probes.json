@@ -1,0 +1,3788 @@
+[ {
+  "expr" : "p.agee > 1",
+  "compileError" : "ERROR: <input>:1:2: undefined field 'agee'\n | p.agee > 1\n | .^"
+}, {
+  "expr" : "x > 1",
+  "compileError" : "ERROR: <input>:1:1: undeclared reference to 'x' (in container '')\n | x > 1\n | ^"
+}, {
+  "expr" : "d == 1",
+  "compileError" : "ERROR: <input>:1:3: found no matching overload for '_==_' applied to '(decimal, int)' (candidates: (%A0, %A0))\n | d == 1\n | ..^"
+}, {
+  "expr" : "m + 1",
+  "compileError" : "ERROR: <input>:1:3: found no matching overload for '_+_' applied to '(money, int)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(list(%A0), list(%A0)),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(google.protobuf.Timestamp, google.protobuf.Duration),(google.protobuf.Duration, google.protobuf.Timestamp),(int, int),(uint, uint))\n | m + 1\n | ..^"
+}, {
+  "expr" : "0.5 + 0.25",
+  "compileError" : "expression must produce bool but produces double: 0.5 + 0.25"
+}, {
+  "expr" : "0.5 + d",
+  "compileError" : "ERROR: <input>:1:5: found no matching overload for '_+_' applied to '(double, decimal)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(list(%A0), list(%A0)),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(google.protobuf.Timestamp, google.protobuf.Duration),(google.protobuf.Duration, google.protobuf.Timestamp),(int, int),(uint, uint))\n | 0.5 + d\n | ....^"
+}, {
+  "expr" : "0.5 > 0.25",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "1.0 == 1.0",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "i / 0",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:2: / by zero in: i / 0"
+}, {
+  "expr" : "i % 0",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:2: / by zero in: i % 0"
+}, {
+  "expr" : "big + 1",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:4: long overflow in: big + 1"
+}, {
+  "expr" : "-9223372036854775808",
+  "type" : "int",
+  "json" : -9223372036854775808,
+  "text" : "-9223372036854775808"
+}, {
+  "expr" : "9223372036854775808",
+  "compileError" : "ERROR: <input>:1:1: For input string: \"9223372036854775808\"\n | 9223372036854775808\n | ^"
+}, {
+  "expr" : "-big - 2",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:5: long overflow in: -big - 2"
+}, {
+  "expr" : "big * 2",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:4: long overflow in: big * 2"
+}, {
+  "expr" : "p.name == 'x'",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: key 'name' is not present in map. in: p.name == 'x'"
+}, {
+  "expr" : "has(p.name)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "has(p.age)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "has(i)",
+  "compileError" : "ERROR: <input>:1:4: invalid argument to has() macro\n | has(i)\n | ...^"
+}, {
+  "expr" : "p.tags.size()",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:1: key 'tags' is not present in map. in: p.tags.size()"
+}, {
+  "expr" : "names.all(x, x != '')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3,4,5,6].exists(x, x > 10)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:20: Iteration budget exceeded: 5 in: [1,2,3,4,5,6].exists(x, x > 10)"
+}, {
+  "expr" : "[1,2,3,4,5].exists(x, x > 10)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "[1,2,3].map(x, x * 2)",
+  "type" : "list<int>",
+  "json" : [ 2, 4, 6 ],
+  "text" : "[2, 4, 6]"
+}, {
+  "expr" : "[1,2,3].map(x, x > 1, x * 2)",
+  "type" : "list<int>",
+  "json" : [ 4, 6 ],
+  "text" : "[4, 6]"
+}, {
+  "expr" : "[1,2,3].filter(x, x > 1)",
+  "type" : "list<int>",
+  "json" : [ 2, 3 ],
+  "text" : "[2, 3]"
+}, {
+  "expr" : "[1,2,3].exists_one(x, x > 1)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "'abc'.size()",
+  "type" : "int",
+  "json" : 3,
+  "text" : "3"
+}, {
+  "expr" : "size('héllo')",
+  "type" : "int",
+  "json" : 5,
+  "text" : "5"
+}, {
+  "expr" : "'abc' + 'd'",
+  "type" : "string",
+  "json" : "abcd",
+  "text" : "abcd"
+}, {
+  "expr" : "int('42')",
+  "type" : "int",
+  "json" : 42,
+  "text" : "42"
+}, {
+  "expr" : "int('x')",
+  "type" : "int",
+  "evalError" : "int() argument is not a valid integer in: int('x')"
+}, {
+  "expr" : "string(42)",
+  "type" : "string",
+  "json" : "42",
+  "text" : "42"
+}, {
+  "expr" : "string(true)",
+  "type" : "string",
+  "json" : "true",
+  "text" : "true"
+}, {
+  "expr" : "string(d)",
+  "type" : "string",
+  "json" : "1.50",
+  "text" : "1.50"
+}, {
+  "expr" : "string(m)",
+  "type" : "string",
+  "json" : "1500000 VND",
+  "text" : "1500000 VND"
+}, {
+  "expr" : "string(dt)",
+  "type" : "string",
+  "json" : "2026-11-01",
+  "text" : "2026-11-01"
+}, {
+  "expr" : "string('a')",
+  "type" : "string",
+  "json" : "a",
+  "text" : "a"
+}, {
+  "expr" : "uint(1)",
+  "compileError" : "expression must produce bool but produces uint: uint(1)"
+}, {
+  "expr" : "1u",
+  "compileError" : "expression must produce bool but produces uint: 1u"
+}, {
+  "expr" : "double(1)",
+  "compileError" : "expression must produce bool but produces double: double(1)"
+}, {
+  "expr" : "int(d)",
+  "compileError" : "ERROR: <input>:1:4: found no matching overload for 'int' applied to '(decimal)' (candidates: (int),(uint),(double),(string),(google.protobuf.Timestamp))\n | int(d)\n | ...^"
+}, {
+  "expr" : "'Hello'.matches('^H.*')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'Hello'.contains('ell')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "s[0]",
+  "compileError" : "ERROR: <input>:1:2: found no matching overload for '_[_]' applied to '(string, int)' (candidates: (list(%A0), int),(map(%A1, %B2), %A1))\n | s[0]\n | .^"
+}, {
+  "expr" : "names[5]",
+  "type" : "string",
+  "evalError" : "list index out of bounds in: names[5]"
+}, {
+  "expr" : "names[-1]",
+  "type" : "string",
+  "evalError" : "list index out of bounds in: names[-1]"
+}, {
+  "expr" : "names[0]",
+  "type" : "string",
+  "json" : "a",
+  "text" : "a"
+}, {
+  "expr" : "1 in [1,2]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "d in [decimal('1.5')]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "decimal('1E+3')",
+  "type" : "decimal",
+  "json" : "1000",
+  "text" : "1E+3"
+}, {
+  "expr" : "decimal(' 1.5 ')",
+  "type" : "decimal",
+  "json" : "1.5",
+  "text" : "1.5"
+}, {
+  "expr" : "decimal('.5')",
+  "type" : "decimal",
+  "json" : "0.5",
+  "text" : "0.5"
+}, {
+  "expr" : "decimal('1.')",
+  "type" : "decimal",
+  "json" : "1",
+  "text" : "1"
+}, {
+  "expr" : "decimal('+1')",
+  "type" : "decimal",
+  "json" : "1",
+  "text" : "1"
+}, {
+  "expr" : "decimal('abc')",
+  "type" : "decimal",
+  "evalError" : "decimal() argument is not a valid number in: decimal('abc')"
+}, {
+  "expr" : "decimal(1) / 3",
+  "type" : "decimal",
+  "json" : "0.3333333333333333333333333333333333",
+  "text" : "0.3333333333333333333333333333333333"
+}, {
+  "expr" : "decimal(10) / 4",
+  "type" : "decimal",
+  "json" : "2.5",
+  "text" : "2.5"
+}, {
+  "expr" : "decimal(100) / decimal('0.5')",
+  "type" : "decimal",
+  "json" : "200",
+  "text" : "2.0E+2"
+}, {
+  "expr" : "decimal('0.00') / decimal('0.5')",
+  "type" : "decimal",
+  "json" : "0.0",
+  "text" : "0.0"
+}, {
+  "expr" : "decimal(0) / 0",
+  "type" : "decimal",
+  "evalError" : "decimal division by zero in: decimal(0) / 0"
+}, {
+  "expr" : "decimal('2.345').round(2)",
+  "type" : "decimal",
+  "json" : "2.34",
+  "text" : "2.34"
+}, {
+  "expr" : "decimal('1535123').round(-3)",
+  "type" : "decimal",
+  "json" : "1535000",
+  "text" : "1.535E+6"
+}, {
+  "expr" : "decimal('2.5').round(0, 'half_up')",
+  "type" : "decimal",
+  "json" : "3",
+  "text" : "3"
+}, {
+  "expr" : "decimal('2.5').round(0, 'UNNECESSARY')",
+  "type" : "decimal",
+  "evalError" : "unknown rounding mode (expected HALF_EVEN, HALF_UP, HALF_DOWN, UP, DOWN, CEILING or FLOOR) in: decimal('2.5').round(0, 'UNNECESSARY')"
+}, {
+  "expr" : "decimal('2.5').round(0, 'X')",
+  "type" : "decimal",
+  "evalError" : "unknown rounding mode (expected HALF_EVEN, HALF_UP, HALF_DOWN, UP, DOWN, CEILING or FLOOR) in: decimal('2.5').round(0, 'X')"
+}, {
+  "expr" : "decimal('2.5').round(1001)",
+  "type" : "decimal",
+  "evalError" : "round() scale must be between -1000 and 1000 in: decimal('2.5').round(1001)"
+}, {
+  "expr" : "money('1', 'XAU').round()",
+  "type" : "money",
+  "json" : "1.0000 XAU",
+  "text" : "1.0000 XAU"
+}, {
+  "expr" : "money('1.234567', 'XAU').round()",
+  "type" : "money",
+  "json" : "1.2346 XAU",
+  "text" : "1.2346 XAU"
+}, {
+  "expr" : "money('1', 'XAG').round()",
+  "type" : "money",
+  "evalError" : "currency XAG has no minor unit in ISO 4217; configure one with currencyScale(\"XAG\", digits) in: money('1', 'XAG').round()"
+}, {
+  "expr" : "money('1', 'vnd')",
+  "type" : "money",
+  "evalError" : "money() currency is not an ISO 4217 code in upper case in: money('1', 'vnd')"
+}, {
+  "expr" : "money('1', 'ABC')",
+  "type" : "money",
+  "evalError" : "money() currency is not an ISO 4217 code in upper case in: money('1', 'ABC')"
+}, {
+  "expr" : "money(1, 'VND') < money(1, 'USD')",
+  "type" : "bool",
+  "evalError" : "money currencies differ: VND and USD in: money(1, 'VND') < money(1, 'USD')"
+}, {
+  "expr" : "money(1, 'VND') == money(1, 'USD')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "min(money(1, 'VND'), money(1, 'USD'))",
+  "type" : "money",
+  "evalError" : "money currencies differ: VND and USD in: min(money(1, 'VND'), money(1, 'USD'))"
+}, {
+  "expr" : "m / 0",
+  "type" : "money",
+  "evalError" : "money division by zero in: m / 0"
+}, {
+  "expr" : "m / decimal(0)",
+  "type" : "money",
+  "evalError" : "money division by zero in: m / decimal(0)"
+}, {
+  "expr" : "date('2026-02-30')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('2026-02-30')"
+}, {
+  "expr" : "date('+12345-01-01')",
+  "type" : "date",
+  "json" : "+12345-01-01",
+  "text" : "+12345-01-01"
+}, {
+  "expr" : "date('12345-01-01')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('12345-01-01')"
+}, {
+  "expr" : "date('-0001-01-01')",
+  "type" : "date",
+  "json" : "-0001-01-01",
+  "text" : "-0001-01-01"
+}, {
+  "expr" : "date('0000-01-01')",
+  "type" : "date",
+  "json" : "0000-01-01",
+  "text" : "0000-01-01"
+}, {
+  "expr" : "date('2026-1-01')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('2026-1-01')"
+}, {
+  "expr" : "date(' 2026-01-01')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date(' 2026-01-01')"
+}, {
+  "expr" : "dt.plusDays(9223372036854775807)",
+  "type" : "date",
+  "evalError" : "plusDays() result is outside the supported date range in: dt.plusDays(9223372036854775807)"
+}, {
+  "expr" : "dt.plusYears(1000000000)",
+  "type" : "date",
+  "evalError" : "plusYears() result is outside the supported date range in: dt.plusYears(1000000000)"
+}, {
+  "expr" : "dt.plusMonths(-24)",
+  "type" : "date",
+  "json" : "2024-11-01",
+  "text" : "2024-11-01"
+}, {
+  "expr" : "date('2024-02-29').plusYears(1)",
+  "type" : "date",
+  "json" : "2025-02-28",
+  "text" : "2025-02-28"
+}, {
+  "expr" : "monthsBetween(date('2026-01-31'), date('2026-02-28'))",
+  "type" : "int",
+  "json" : 0,
+  "text" : "0"
+}, {
+  "expr" : "yearsBetween(date('2008-11-02'), date('2026-11-01'))",
+  "type" : "int",
+  "json" : 17,
+  "text" : "17"
+}, {
+  "expr" : "daysBetween(date('2026-11-01'), date('2026-10-01'))",
+  "type" : "int",
+  "json" : -31,
+  "text" : "-31"
+}, {
+  "expr" : "true ? 1 : 'a'",
+  "compileError" : "ERROR: <input>:1:6: found no matching overload for '_?_:_' applied to '(bool, int, string)' (candidates: (bool, %A0, %A0))\n | true ? 1 : 'a'\n | .....^"
+}, {
+  "expr" : "true ? 1 : 2",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "[]",
+  "compileError" : "expression must produce bool but produces list: []"
+}, {
+  "expr" : "[1, 'a']",
+  "compileError" : "expression must produce bool but produces list: [1, 'a']"
+}, {
+  "expr" : "[d, 1]",
+  "compileError" : "expression must produce bool but produces list: [d, 1]"
+}, {
+  "expr" : "null",
+  "compileError" : "expression must produce bool but produces null_type: null"
+}, {
+  "expr" : "s == null",
+  "compileError" : "ERROR: <input>:1:3: found no matching overload for '_==_' applied to '(string, null)' (candidates: (%A0, %A0))\n | s == null\n | ..^"
+}, {
+  "expr" : "{'a': 1}",
+  "compileError" : "expression must produce bool but produces map: {'a': 1}"
+}, {
+  "expr" : "{'a': 1}['a']",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "i == d",
+  "compileError" : "ERROR: <input>:1:3: found no matching overload for '_==_' applied to '(int, decimal)' (candidates: (%A0, %A0))\n | i == d\n | ..^"
+}, {
+  "expr" : "dt == date('2026-11-01')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "!true",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "-i",
+  "type" : "int",
+  "json" : -7,
+  "text" : "-7"
+}, {
+  "expr" : "-d",
+  "type" : "decimal",
+  "json" : "-1.50",
+  "text" : "-1.50"
+}, {
+  "expr" : "-m",
+  "type" : "money",
+  "json" : "-1500000 VND",
+  "text" : "-1500000 VND"
+}, {
+  "expr" : "--i",
+  "type" : "int",
+  "json" : 7,
+  "text" : "7"
+}, {
+  "expr" : "i < d",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "d < i",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "d + i",
+  "type" : "decimal",
+  "json" : "8.50",
+  "text" : "8.50"
+}, {
+  "expr" : "i + d",
+  "type" : "decimal",
+  "json" : "8.50",
+  "text" : "8.50"
+}, {
+  "expr" : "i * m",
+  "type" : "money",
+  "json" : "10500000 VND",
+  "text" : "10500000 VND"
+}, {
+  "expr" : "m * i",
+  "type" : "money",
+  "json" : "10500000 VND",
+  "text" : "10500000 VND"
+}, {
+  "expr" : "d * m",
+  "type" : "money",
+  "json" : "2250000.00 VND",
+  "text" : "2250000.00 VND"
+}, {
+  "expr" : "m / i",
+  "type" : "money",
+  "json" : "214285.7142857142857142857142857143 VND",
+  "text" : "214285.7142857142857142857142857143 VND"
+}, {
+  "expr" : "i / m",
+  "compileError" : "ERROR: <input>:1:3: found no matching overload for '_/_' applied to '(int, money)' (candidates: (money, int),(double, double),(decimal, int),(money, decimal),(int, int),(decimal, decimal),(int, decimal),(uint, uint))\n | i / m\n | ..^"
+}, {
+  "expr" : "m - m",
+  "type" : "money",
+  "json" : "0 VND",
+  "text" : "0 VND"
+}, {
+  "expr" : "m.amount()",
+  "type" : "decimal",
+  "json" : "1500000",
+  "text" : "1500000"
+}, {
+  "expr" : "m.currency()",
+  "type" : "string",
+  "json" : "VND",
+  "text" : "VND"
+}, {
+  "expr" : "m.abs()",
+  "type" : "money",
+  "json" : "1500000 VND",
+  "text" : "1500000 VND"
+}, {
+  "expr" : "d.abs()",
+  "type" : "decimal",
+  "json" : "1.50",
+  "text" : "1.50"
+}, {
+  "expr" : "max(d, decimal(2))",
+  "type" : "decimal",
+  "json" : "2",
+  "text" : "2"
+}, {
+  "expr" : "max(1, 2)",
+  "compileError" : "ERROR: <input>:1:4: found no matching overload for 'max' applied to '(int, int)' (candidates: (decimal, decimal),(money, money))\n | max(1, 2)\n | ...^"
+}, {
+  "expr" : "min(d, 1)",
+  "compileError" : "ERROR: <input>:1:4: found no matching overload for 'min' applied to '(decimal, int)' (candidates: (decimal, decimal),(money, money))\n | min(d, 1)\n | ...^"
+}, {
+  "expr" : "1 + 2 * 3 - 4 / 3 % 2",
+  "type" : "int",
+  "json" : 6,
+  "text" : "6"
+}, {
+  "expr" : "7 / -2",
+  "type" : "int",
+  "json" : -3,
+  "text" : "-3"
+}, {
+  "expr" : "-7 % 2",
+  "type" : "int",
+  "json" : -1,
+  "text" : "-1"
+}, {
+  "expr" : "'a' < 'b'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "true < false",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "true && 1/0 == 1",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:9: / by zero in: true && 1/0 == 1"
+}, {
+  "expr" : "false && 1/0 == 1",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "1/0 == 1 || true",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "1/0 == 1 && false",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "names.exists(x, 1/0 == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:17: / by zero in: names.exists(x, 1/0 == 1)"
+}, {
+  "expr" : "type(1)",
+  "compileError" : "expression must produce bool but produces type: type(1)"
+}, {
+  "expr" : "dyn(1)",
+  "type" : "bool",
+  "evalError" : "result: expected bool but expression produced Long"
+}, {
+  "expr" : "'abc'.startsWith('a')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'abc'.endsWith('c')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "i > 0.5",
+  "compileError" : "ERROR: <input>:1:3: found no matching overload for '_>_' applied to '(int, double)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(bool, bool),(date, date),(google.protobuf.Timestamp, google.protobuf.Timestamp),(int, int),(uint, uint))\n | i > 0.5\n | ..^"
+}, {
+  "expr" : "0.5 < i",
+  "compileError" : "ERROR: <input>:1:5: found no matching overload for '_<_' applied to '(double, int)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(bool, bool),(date, date),(google.protobuf.Timestamp, google.protobuf.Timestamp),(int, int),(uint, uint))\n | 0.5 < i\n | ....^"
+}, {
+  "expr" : "1u < 2",
+  "compileError" : "ERROR: <input>:1:4: found no matching overload for '_<_' applied to '(uint, int)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(bool, bool),(date, date),(google.protobuf.Timestamp, google.protobuf.Timestamp),(int, int),(uint, uint))\n | 1u < 2\n | ...^"
+}, {
+  "expr" : "1u + 2u > 2u",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "i == 1u",
+  "compileError" : "ERROR: <input>:1:3: found no matching overload for '_==_' applied to '(int, uint)' (candidates: (%A0, %A0))\n | i == 1u\n | ..^"
+}, {
+  "expr" : "1.5 > 1.0 && 2.0 * 3.0 == 6.0",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "string(1.5) == '1.5'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "string(1u) == '1'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "int(1.9) == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "double(i) > 1.0",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "uint(i) > 1u",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'Hello'.matches('ell')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "matches('Hello', 'ell')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'Hello'.lowerAscii() == 'hello'",
+  "compileError" : "ERROR: <input>:1:19: undeclared reference to 'lowerAscii' (in container '')\n | 'Hello'.lowerAscii() == 'hello'\n | ..................^"
+}, {
+  "expr" : "size(names) == 2",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "size({'a': 1}) == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'a' in {'a': 1}",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "{'a': 1}.a == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1, 'a'][0] == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1, 'a'][0] + 1 == 2",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[[1], [2]][1][0] == 2",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "p.tags == []",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: key 'tags' is not present in map. in: p.tags == []"
+}, {
+  "expr" : "names + [] == names",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[] == []",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "dyn(1) == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "dyn(d) == d",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "1 == 1 ? 'a' : 'b'",
+  "type" : "string",
+  "json" : "a",
+  "text" : "a"
+}, {
+  "expr" : "!!true",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "-(-i) == 7",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "- 5 == -5",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "(-9223372036854775807 - 1) == -9223372036854775808",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "-(-9223372036854775807 - 1) == 1",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:0: long overflow in: -(-9223372036854775807 - 1) == 1"
+}, {
+  "expr" : "-big == -9223372036854775807",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "0x10 == 16",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "-0x10 == -16",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'a\\nb' == \"a\\nb\"",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "r'\\n' == '\\\\n'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'''x''' == 'x'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "\"é\" == 'é'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "b'abc' == b'abc'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "size(b'abc') == 3",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'abc'[1] == 'b'",
+  "compileError" : "ERROR: <input>:1:6: found no matching overload for '_[_]' applied to '(string, int)' (candidates: (list(%A0), int),(map(%A1, %B2), %A1))\n | 'abc'[1] == 'b'\n | .....^"
+}, {
+  "expr" : "[1,2,3].all(x, x > 0)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3].exists(x, x == 2)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "names.map(n, n + '!') == ['a!', 'b!']",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "names.filter(n, n == 'a').size() == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "names.exists(n, n == 'a') && names.all(n, size(n) == 1)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2].map(x, [1,2].map(y, x * y)) == [[1,2],[2,4]]",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:22: Iteration budget exceeded: 5 in: [1,2].map(x, [1,2].map(y, x * y)) == [[1,2],[2,4]]"
+}, {
+  "expr" : "[1,2,3,4,5,6].size() == 6",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3].map(x, [1,2,3].exists(y, y == x)).size() == 3",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:11: Iteration budget exceeded: 5 in: [1,2,3].map(x, [1,2,3].exists(y, y == x)).size() == 3"
+}, {
+  "expr" : "[1,2].exists(x, [1,2].exists(y, x == y))",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "d == decimal('1.5')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "d != decimal('1.5')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "[d] == [decimal('1.5')]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "p == p",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "has(p.tags)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "p.age == 30",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "p.name.size() > 0 || true",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "true || p.name.size() > 0",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "p.name.size() > 0 && false",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "false ? p.name : 'x'",
+  "type" : "string",
+  "json" : "x",
+  "text" : "x"
+}, {
+  "expr" : "true ? 'x' : p.name",
+  "type" : "string",
+  "json" : "x",
+  "text" : "x"
+}, {
+  "expr" : "i in [1, 2] || i == 7",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "x.y > 1",
+  "compileError" : "ERROR: <input>:1:1: undeclared reference to 'x' (in container '')\n | x.y > 1\n | ^"
+}, {
+  "expr" : "p.age.foo",
+  "compileError" : "ERROR: <input>:1:6: type 'int' does not support field selection\n | p.age.foo\n | .....^"
+}, {
+  "expr" : "has(p.nope)",
+  "compileError" : "ERROR: <input>:1:4: undefined field 'nope'\n | has(p.nope)\n | ...^"
+}, {
+  "expr" : "foo(1)",
+  "compileError" : "ERROR: <input>:1:4: undeclared reference to 'foo' (in container '')\n | foo(1)\n | ...^"
+}, {
+  "expr" : "i.foo()",
+  "compileError" : "ERROR: <input>:1:6: undeclared reference to 'foo' (in container '')\n | i.foo()\n | .....^"
+}, {
+  "expr" : "'a'.size(1)",
+  "compileError" : "ERROR: <input>:1:9: found no matching overload for 'size' applied to 'string.(int)' (candidates: string.(),bytes.(),list(%A0).(),map(%A1, %B2).())\n | 'a'.size(1)\n | ........^"
+}, {
+  "expr" : "size()",
+  "compileError" : "ERROR: <input>:1:5: found no matching overload for 'size' applied to '()' (candidates: (string),(bytes),(list(%A0)),(map(%A1, %B2)))\n | size()\n | ....^"
+}, {
+  "expr" : "names.exists(n)",
+  "compileError" : "ERROR: <input>:1:13: undeclared reference to 'exists' (in container '')\n | names.exists(n)\n | ............^\nERROR: <input>:1:14: undeclared reference to 'n' (in container '')\n | names.exists(n)\n | .............^"
+}, {
+  "expr" : "names.exists(1, true)",
+  "compileError" : "ERROR: <input>:1:14: The argument must be a simple name\n | names.exists(1, true)\n | .............^"
+}, {
+  "expr" : "1 +",
+  "compileError" : "ERROR: <input>:1:4: mismatched input '<EOF>' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}\n | 1 +\n | ...^"
+}, {
+  "expr" : "(1 + 2",
+  "compileError" : "ERROR: <input>:1:7: missing ')' at '<EOF>'\n | (1 + 2\n | ......^"
+}, {
+  "expr" : "'unterminated",
+  "compileError" : "ERROR: <input>:1:1: token recognition error at: ''unterminated'\n | 'unterminated\n | ^\nERROR: <input>:1:14: mismatched input '<EOF>' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}\n | 'unterminated\n | .............^"
+}, {
+  "expr" : "1 2",
+  "compileError" : "ERROR: <input>:1:3: extraneous input '2' expecting <EOF>\n | 1 2\n | ..^"
+}, {
+  "expr" : "if > 1",
+  "compileError" : "ERROR: <input>:1:1: reserved identifier: if\n | if > 1\n | ^"
+}, {
+  "expr" : "p.in > 1",
+  "compileError" : "ERROR: <input>:1:3: no viable alternative at input '.in'\n | p.in > 1\n | ..^\nERROR: <input>:1:6: extraneous input '>' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}\n | p.in > 1\n | .....^"
+}, {
+  "expr" : "null == null",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[null] == [null]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "i % 2 == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "-i % 4",
+  "type" : "int",
+  "json" : -3,
+  "text" : "-3"
+}, {
+  "expr" : "9223372036854775807 + 0 == big",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "-9223372036854775808 / -1 == 0",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:21: most negative number wraps in: -9223372036854775808 / -1 == 0"
+}, {
+  "expr" : "-9223372036854775808 % -1 == 0",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "string(-0)",
+  "type" : "string",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('-0.00')",
+  "type" : "decimal",
+  "json" : "0.00",
+  "text" : "0.00"
+}, {
+  "expr" : "string(decimal('-0.00'))",
+  "type" : "string",
+  "json" : "0.00",
+  "text" : "0.00"
+}, {
+  "expr" : "decimal('1e-3')",
+  "type" : "decimal",
+  "json" : "0.001",
+  "text" : "0.001"
+}, {
+  "expr" : "decimal('1E400')",
+  "type" : "decimal",
+  "json" : "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "text" : "1E+400"
+}, {
+  "expr" : "decimal('00012.3400')",
+  "type" : "decimal",
+  "json" : "12.3400",
+  "text" : "12.3400"
+}, {
+  "expr" : "decimal('1_000')",
+  "type" : "decimal",
+  "evalError" : "decimal() argument is not a valid number in: decimal('1_000')"
+}, {
+  "expr" : "decimal('١٢٣')",
+  "type" : "decimal",
+  "json" : "123",
+  "text" : "123"
+}, {
+  "expr" : "decimal('Infinity')",
+  "type" : "decimal",
+  "evalError" : "decimal() argument is not a valid number in: decimal('Infinity')"
+}, {
+  "expr" : "decimal('0x10')",
+  "type" : "decimal",
+  "evalError" : "decimal() argument is not a valid number in: decimal('0x10')"
+}, {
+  "expr" : "decimal(' ')",
+  "type" : "decimal",
+  "evalError" : "decimal() argument is not a valid number in: decimal(' ')"
+}, {
+  "expr" : "decimal('')",
+  "type" : "decimal",
+  "evalError" : "decimal() argument is not a valid number in: decimal('')"
+}, {
+  "expr" : "decimal('-')",
+  "type" : "decimal",
+  "evalError" : "decimal() argument is not a valid number in: decimal('-')"
+}, {
+  "expr" : "decimal('1e')",
+  "type" : "decimal",
+  "evalError" : "decimal() argument is not a valid number in: decimal('1e')"
+}, {
+  "expr" : "money(' 12.5 ', 'USD')",
+  "type" : "money",
+  "json" : "12.5 USD",
+  "text" : "12.5 USD"
+}, {
+  "expr" : "money('12.5', 'USD ')",
+  "type" : "money",
+  "evalError" : "money() currency is not an ISO 4217 code in upper case in: money('12.5', 'USD ')"
+}, {
+  "expr" : "date('2026-11-01T00:00')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('2026-11-01T00:00')"
+}, {
+  "expr" : "date('2026-13-01')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('2026-13-01')"
+}, {
+  "expr" : "date('2026-00-10')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('2026-00-10')"
+}, {
+  "expr" : "date('2026-04-31')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('2026-04-31')"
+}, {
+  "expr" : "date('1900-02-29')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('1900-02-29')"
+}, {
+  "expr" : "date('2000-02-29')",
+  "type" : "date",
+  "json" : "2000-02-29",
+  "text" : "2000-02-29"
+}, {
+  "expr" : "date('-999999999-01-01')",
+  "type" : "date",
+  "json" : "-999999999-01-01",
+  "text" : "-999999999-01-01"
+}, {
+  "expr" : "date('+999999999-12-31')",
+  "type" : "date",
+  "json" : "+999999999-12-31",
+  "text" : "+999999999-12-31"
+}, {
+  "expr" : "date('+1000000000-01-01')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('+1000000000-01-01')"
+}, {
+  "expr" : "date('+2026-01-01')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('+2026-01-01')"
+}, {
+  "expr" : "date('-2026-01-01')",
+  "type" : "date",
+  "json" : "-2026-01-01",
+  "text" : "-2026-01-01"
+}, {
+  "expr" : "date('99-01-01')",
+  "type" : "date",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date('99-01-01')"
+}, {
+  "expr" : "date('2026-11-01').dayOfWeek()",
+  "type" : "int",
+  "json" : 7,
+  "text" : "7"
+}, {
+  "expr" : "date('0001-01-01').dayOfWeek()",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "date('-0001-03-01').year()",
+  "type" : "int",
+  "json" : -1,
+  "text" : "-1"
+}, {
+  "expr" : "daysBetween(date('-999999999-01-01'), date('+999999999-12-31'))",
+  "type" : "int",
+  "json" : 730484999633,
+  "text" : "730484999633"
+}, {
+  "expr" : "date('+999999999-12-31').plusDays(1)",
+  "type" : "date",
+  "evalError" : "plusDays() result is outside the supported date range in: date('+999999999-12-31').plusDays(1)"
+}, {
+  "expr" : "date('-999999999-01-01').plusDays(-1)",
+  "type" : "date",
+  "evalError" : "plusDays() result is outside the supported date range in: date('-999999999-01-01').plusDays(-1)"
+}, {
+  "expr" : "date('2026-01-31').plusMonths(1)",
+  "type" : "date",
+  "json" : "2026-02-28",
+  "text" : "2026-02-28"
+}, {
+  "expr" : "date('2026-03-31').plusMonths(-1)",
+  "type" : "date",
+  "json" : "2026-02-28",
+  "text" : "2026-02-28"
+}, {
+  "expr" : "date('2026-11-01').plusMonths(9223372036854775807)",
+  "type" : "date",
+  "evalError" : "plusMonths() result is outside the supported date range in: date('2026-11-01').plusMonths(9223372036854775807)"
+}, {
+  "expr" : "date('2026-11-01').plusYears(-9223372036854775808)",
+  "type" : "date",
+  "evalError" : "plusYears() result is outside the supported date range in: date('2026-11-01').plusYears(-9223372036854775808)"
+}, {
+  "expr" : "date('2026-11-01').plusDays(-9223372036854775808)",
+  "type" : "date",
+  "evalError" : "plusDays() result is outside the supported date range in: date('2026-11-01').plusDays(-9223372036854775808)"
+}, {
+  "expr" : "monthsBetween(date('2026-01-31'), date('2026-03-01'))",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "monthsBetween(date('2026-03-31'), date('2026-02-28'))",
+  "type" : "int",
+  "json" : -1,
+  "text" : "-1"
+}, {
+  "expr" : "monthsBetween(date('2026-03-01'), date('2026-01-31'))",
+  "type" : "int",
+  "json" : -1,
+  "text" : "-1"
+}, {
+  "expr" : "yearsBetween(date('2024-02-29'), date('2025-02-28'))",
+  "type" : "int",
+  "json" : 0,
+  "text" : "0"
+}, {
+  "expr" : "yearsBetween(date('2025-02-28'), date('2024-02-29'))",
+  "type" : "int",
+  "json" : 0,
+  "text" : "0"
+}, {
+  "expr" : "yearsBetween(date('2026-11-01'), date('2008-11-02'))",
+  "type" : "int",
+  "json" : -17,
+  "text" : "-17"
+}, {
+  "expr" : "[1,2,3,4,5,6].exists(x, x == 1)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3,4,5,6].exists(x, x == 5)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:20: Iteration budget exceeded: 5 in: [1,2,3,4,5,6].exists(x, x == 5)"
+}, {
+  "expr" : "[1,2,3,4,5,6].exists(x, x == 6)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:20: Iteration budget exceeded: 5 in: [1,2,3,4,5,6].exists(x, x == 6)"
+}, {
+  "expr" : "[1,2,3,4,5,6].all(x, x > 1)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "[1,2,3].map(x, x).size() + [1,2,3].map(x, x).size() == 6",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:38: Iteration budget exceeded: 5 in: [1,2,3].map(x, x).size() + [1,2,3].map(x, x).size() == 6"
+}, {
+  "expr" : "[1,2,3].map(x, x).size() + [1,2].map(x, x).size() == 5",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[0, 1].exists(x, 1/x == 1)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1, 0].exists(x, 1/x == 1)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[0, 1].all(x, 1/x == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:15: / by zero in: [0, 1].all(x, 1/x == 1)"
+}, {
+  "expr" : "[0, 2].all(x, 1/x == 1)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "[0, 2].exists_one(x, 1/x == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:22: / by zero in: [0, 2].exists_one(x, 1/x == 1)"
+}, {
+  "expr" : "[0, 2].map(x, 1/x)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:15: / by zero in: [0, 2].map(x, 1/x)"
+}, {
+  "expr" : "[0, 2].filter(x, 1/x == 1)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:18: / by zero in: [0, 2].filter(x, 1/x == 1)"
+}, {
+  "expr" : "1/0 == 1 && 2/0 == 1",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: / by zero in: 1/0 == 1 && 2/0 == 1"
+}, {
+  "expr" : "1/0 == 1 || 2/0 == 1",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: / by zero in: 1/0 == 1 || 2/0 == 1"
+}, {
+  "expr" : "1/0 == 1 && true",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: / by zero in: 1/0 == 1 && true"
+}, {
+  "expr" : "false || 1/0 == 1",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:10: / by zero in: false || 1/0 == 1"
+}, {
+  "expr" : "1/0 == 1 || false",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: / by zero in: 1/0 == 1 || false"
+}, {
+  "expr" : "(1/0 == 1) == true",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:2: / by zero in: (1/0 == 1) == true"
+}, {
+  "expr" : "1/0 == 1 ? 1 : 2",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:1: / by zero in: 1/0 == 1 ? 1 : 2"
+}, {
+  "expr" : "[1/0][0] == 1",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:2: / by zero in: [1/0][0] == 1"
+}, {
+  "expr" : "!(1/0 == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:3: / by zero in: !(1/0 == 1)"
+}, {
+  "expr" : "p.name.size() == 1 || 1/0 == 1",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: key 'name' is not present in map. in: p.name.size() == 1 || 1/0 == 1"
+}, {
+  "expr" : "1/0 == 1 || p.name.size() == 1",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: / by zero in: 1/0 == 1 || p.name.size() == 1"
+}, {
+  "expr" : "[1,2,3,4,5].map(x, x) == [1,2,3,4,5]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "names.exists(x, [1,2,3].all(y, y > 0))",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2].exists(x, [1,2,3].all(y, y > 0))",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3].exists(x, [1,2,3].exists(y, y == 3))",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3,4,5].exists_one(x, x == 1)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3,4,5].filter(x, x > 2).size() == 3",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[[1,2],[3]].exists(l, l.exists(x, x == 3))",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "size(names.map(n, n)) + size(names.map(n, n)) + size(names) == 6",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3].map(x, x, x)",
+  "compileError" : "ERROR: <input>:1:12: found no matching overload for '_?_:_' applied to '(int, list(int), list(int))' (candidates: (bool, %A2, %A2))\n | [1,2,3].map(x, x, x)\n | ...........^"
+}, {
+  "expr" : "[1,2,3].map(x, x > 1, x * 2, 1)",
+  "compileError" : "ERROR: <input>:1:12: undeclared reference to 'map' (in container '')\n | [1,2,3].map(x, x > 1, x * 2, 1)\n | ...........^\nERROR: <input>:1:13: undeclared reference to 'x' (in container '')\n | [1,2,3].map(x, x > 1, x * 2, 1)\n | ............^\nERROR: <input>:1:16: undeclared reference to 'x' (in container '')\n | [1,2,3].map(x, x > 1, x * 2, 1)\n | ...............^\nERROR: <input>:1:23: undeclared reference to 'x' (in container '')\n | [1,2,3].map(x, x > 1, x * 2, 1)\n | ......................^"
+}, {
+  "expr" : "[1,2,3].exists(x, y, true)",
+  "compileError" : "ERROR: <input>:1:15: undeclared reference to 'exists' (in container '')\n | [1,2,3].exists(x, y, true)\n | ..............^\nERROR: <input>:1:16: undeclared reference to 'x' (in container '')\n | [1,2,3].exists(x, y, true)\n | ...............^\nERROR: <input>:1:19: undeclared reference to 'y' (in container '')\n | [1,2,3].exists(x, y, true)\n | ..................^"
+}, {
+  "expr" : "[1,2,3].all(i, i > 0)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3].all(x, x > 0) && x > 0",
+  "compileError" : "ERROR: <input>:1:26: undeclared reference to 'x' (in container '')\n | [1,2,3].all(x, x > 0) && x > 0\n | .........................^"
+}, {
+  "expr" : "1 in names",
+  "compileError" : "ERROR: <input>:1:3: found no matching overload for '@in' applied to '(int, list(string))' (candidates: (%A0, list(%A0)),(%A1, map(%A1, %B2)))\n | 1 in names\n | ..^"
+}, {
+  "expr" : "'a' in names",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'a' in 'abc'",
+  "compileError" : "ERROR: <input>:1:5: found no matching overload for '@in' applied to '(string, string)' (candidates: (%A0, list(%A0)),(%A1, map(%A1, %B2)))\n | 'a' in 'abc'\n | ....^"
+}, {
+  "expr" : "decimal('1.0') in [decimal('1.00')]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "money('1.0', 'VND') in [money('1', 'VND')]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "dt in [date('2026-11-01')]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[decimal(1), decimal(2)] == [decimal('1.0'), decimal('2.00')]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1, 2] + [3] == [1, 2, 3]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1] + ['a']",
+  "compileError" : "ERROR: <input>:1:5: found no matching overload for '_+_' applied to '(list(int), list(string))' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(list(%A0), list(%A0)),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(google.protobuf.Timestamp, google.protobuf.Duration),(google.protobuf.Duration, google.protobuf.Timestamp),(int, int),(uint, uint))\n | [1] + ['a']\n | ....^"
+}, {
+  "expr" : "[d] + [1]",
+  "compileError" : "ERROR: <input>:1:5: found no matching overload for '_+_' applied to '(list(decimal), list(int))' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(list(%A0), list(%A0)),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(google.protobuf.Timestamp, google.protobuf.Duration),(google.protobuf.Duration, google.protobuf.Timestamp),(int, int),(uint, uint))\n | [d] + [1]\n | ....^"
+}, {
+  "expr" : "size([1, 'a'])",
+  "type" : "int",
+  "json" : 2,
+  "text" : "2"
+}, {
+  "expr" : "[1, 2][1u]",
+  "compileError" : "ERROR: <input>:1:7: found no matching overload for '_[_]' applied to '(list(int), uint)' (candidates: (list(%A0), int),(map(%A1, %B2), %A1))\n | [1, 2][1u]\n | ......^"
+}, {
+  "expr" : "names[1u]",
+  "compileError" : "ERROR: <input>:1:6: found no matching overload for '_[_]' applied to '(list(string), uint)' (candidates: (list(%A0), int),(map(%A1, %B2), %A1))\n | names[1u]\n | .....^"
+}, {
+  "expr" : "[1,2,3][2] == 3",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3][3]",
+  "type" : "int",
+  "evalError" : "list index out of bounds in: [1,2,3][3]"
+}, {
+  "expr" : "d.round(2)",
+  "type" : "decimal",
+  "json" : "1.50",
+  "text" : "1.50"
+}, {
+  "expr" : "d.round(2, 'up')",
+  "type" : "decimal",
+  "json" : "1.50",
+  "text" : "1.50"
+}, {
+  "expr" : "round(d, 2)",
+  "compileError" : "ERROR: <input>:1:6: found no matching overload for 'round' applied to '(decimal, int)'\n | round(d, 2)\n | .....^"
+}, {
+  "expr" : "decimal(5) == 5",
+  "compileError" : "ERROR: <input>:1:12: found no matching overload for '_==_' applied to '(decimal, int)' (candidates: (%A0, %A0))\n | decimal(5) == 5\n | ...........^"
+}, {
+  "expr" : "decimal(5) != decimal('5.000')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('1') / decimal('3') * 3",
+  "type" : "decimal",
+  "json" : "0.9999999999999999999999999999999999",
+  "text" : "0.9999999999999999999999999999999999"
+}, {
+  "expr" : "decimal('2') / decimal('3')",
+  "type" : "decimal",
+  "json" : "0.6666666666666666666666666666666667",
+  "text" : "0.6666666666666666666666666666666667"
+}, {
+  "expr" : "decimal('-2') / decimal('3')",
+  "type" : "decimal",
+  "json" : "-0.6666666666666666666666666666666667",
+  "text" : "-0.6666666666666666666666666666666667"
+}, {
+  "expr" : "decimal('1E+40') / decimal('3')",
+  "type" : "decimal",
+  "json" : "3333333333333333333333333333333333000000",
+  "text" : "3.333333333333333333333333333333333E+39"
+}, {
+  "expr" : "decimal('12345678901234567890123456789012345678') / decimal('1')",
+  "type" : "decimal",
+  "json" : "12345678901234567890123456789012350000",
+  "text" : "1.234567890123456789012345678901235E+37"
+}, {
+  "expr" : "decimal('99999999999999999999999999999999999') / decimal('1')",
+  "type" : "decimal",
+  "json" : "100000000000000000000000000000000000",
+  "text" : "1.000000000000000000000000000000000E+35"
+}, {
+  "expr" : "decimal('9999999999999999999999999999999999.5') / decimal('1')",
+  "type" : "decimal",
+  "json" : "10000000000000000000000000000000000",
+  "text" : "1.000000000000000000000000000000000E+34"
+}, {
+  "expr" : "decimal('1') / decimal('8')",
+  "type" : "decimal",
+  "json" : "0.125",
+  "text" : "0.125"
+}, {
+  "expr" : "decimal('1') / decimal('1024')",
+  "type" : "decimal",
+  "json" : "0.0009765625",
+  "text" : "0.0009765625"
+}, {
+  "expr" : "decimal('100') / decimal('100')",
+  "type" : "decimal",
+  "json" : "1",
+  "text" : "1"
+}, {
+  "expr" : "decimal('1.000') / decimal('1')",
+  "type" : "decimal",
+  "json" : "1.000",
+  "text" : "1.000"
+}, {
+  "expr" : "decimal('100') / decimal('0.001')",
+  "type" : "decimal",
+  "json" : "100000",
+  "text" : "1.00E+5"
+}, {
+  "expr" : "decimal('0') / decimal('0.001')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+3"
+}, {
+  "expr" : "decimal('0') / decimal('7')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('-1.5').round(0, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "-2",
+  "text" : "-2"
+}, {
+  "expr" : "decimal('-2.5').round(0, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "-2",
+  "text" : "-2"
+}, {
+  "expr" : "decimal('-2.5').round(0, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "-3",
+  "text" : "-3"
+}, {
+  "expr" : "decimal('-2.5').round(0, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "-2",
+  "text" : "-2"
+}, {
+  "expr" : "decimal('-2.5').round(0, 'UP')",
+  "type" : "decimal",
+  "json" : "-3",
+  "text" : "-3"
+}, {
+  "expr" : "decimal('-2.5').round(0, 'DOWN')",
+  "type" : "decimal",
+  "json" : "-2",
+  "text" : "-2"
+}, {
+  "expr" : "decimal('-2.5').round(0, 'CEILING')",
+  "type" : "decimal",
+  "json" : "-2",
+  "text" : "-2"
+}, {
+  "expr" : "decimal('-2.5').round(0, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "-3",
+  "text" : "-3"
+}, {
+  "expr" : "decimal('-2.51').round(0, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "-3",
+  "text" : "-3"
+}, {
+  "expr" : "decimal('1.5').round(3)",
+  "type" : "decimal",
+  "json" : "1.500",
+  "text" : "1.500"
+}, {
+  "expr" : "decimal('15').round(-1)",
+  "type" : "decimal",
+  "json" : "20",
+  "text" : "2E+1"
+}, {
+  "expr" : "decimal('25').round(-1)",
+  "type" : "decimal",
+  "json" : "20",
+  "text" : "2E+1"
+}, {
+  "expr" : "decimal('0.0001').round(2, 'UP')",
+  "type" : "decimal",
+  "json" : "0.01",
+  "text" : "0.01"
+}, {
+  "expr" : "decimal('-0.0001').round(2, 'CEILING')",
+  "type" : "decimal",
+  "json" : "0.00",
+  "text" : "0.00"
+}, {
+  "expr" : "string(decimal('1E+3'))",
+  "type" : "string",
+  "json" : "1000",
+  "text" : "1000"
+}, {
+  "expr" : "string(decimal('0.000001'))",
+  "type" : "string",
+  "json" : "0.000001",
+  "text" : "0.000001"
+}, {
+  "expr" : "string(decimal('1535123').round(-3))",
+  "type" : "string",
+  "json" : "1535000",
+  "text" : "1535000"
+}, {
+  "expr" : "decimal(1) / 3 == decimal('0.3333333333333333333333333333333333')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[]",
+  "compileError" : "expression must produce list<string> but produces list: []"
+}, {
+  "expr" : "['a', 1]",
+  "compileError" : "expression must produce list<string> but produces list: ['a', 1]"
+}, {
+  "expr" : "names.map(n, dyn(n))",
+  "compileError" : "expression must produce list<string> but produces list: names.map(n, dyn(n))"
+}, {
+  "expr" : "[1]",
+  "compileError" : "expression must produce list<string> but produces list: [1]"
+}, {
+  "expr" : "[1, 'a']",
+  "compileError" : "expression must produce list<int> but produces list: [1, 'a']"
+}, {
+  "expr" : "[1, 'a']",
+  "compileError" : "expression must produce list<string> but produces list: [1, 'a']"
+}, {
+  "expr" : "[[1], []]",
+  "type" : "list<list<int>>",
+  "json" : [ [ 1 ], [ ] ],
+  "text" : "[[1], []]"
+}, {
+  "expr" : "[]",
+  "compileError" : "expression must produce list<list<int>> but produces list: []"
+}, {
+  "expr" : "dyn(1)",
+  "type" : "string",
+  "evalError" : "result: expected string but expression produced Long"
+}, {
+  "expr" : "dyn(1)",
+  "type" : "bool",
+  "evalError" : "result: expected bool but expression produced Long"
+}, {
+  "expr" : "dyn(1)",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "dyn([1])",
+  "type" : "list<string>",
+  "evalError" : "result[0]: expected string but expression produced Long"
+}, {
+  "expr" : "dyn(['a'])",
+  "type" : "list<string>",
+  "json" : [ "a" ],
+  "text" : "[a]"
+}, {
+  "expr" : "dyn(1)",
+  "type" : "decimal",
+  "evalError" : "result: expected decimal but expression produced Long"
+}, {
+  "expr" : "[1, 'a'][0] + 1 == 2",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1, 'a'][1] + 1 == 2",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:12: No matching overload for function '_+_'. Overload candidates: rulestone_add_decimal_int,add_int64 in: [1, 'a'][1] + 1 == 2"
+}, {
+  "expr" : "dyn(d) + 1 == decimal(3)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "dyn(d) == 1",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "dyn(1) == decimal(1)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "dyn(1) == 1u",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "dyn(1) == 1.0",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1, 'a'] == [1, 'a']",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "dyn(1) < 1.5",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:7: No matching overload for function '_<_'. Overload candidates: less_double in: dyn(1) < 1.5"
+}, {
+  "expr" : "dyn([d, 1]) == [d, 1]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "p",
+  "compileError" : "expression must produce bool but produces rulestone.input.p: p"
+}, {
+  "expr" : "p.age",
+  "compileError" : "expression must produce bool but produces int: p.age"
+}, {
+  "expr" : "p.age",
+  "type" : "int",
+  "json" : 30,
+  "text" : "30"
+}, {
+  "expr" : "p",
+  "compileError" : "expression must produce int but produces rulestone.input.p: p"
+}, {
+  "expr" : "names",
+  "compileError" : "expression must produce int but produces list: names"
+}, {
+  "expr" : "names[0] + p.name",
+  "type" : "string",
+  "evalError" : "evaluation error at <input>:12: key 'name' is not present in map. in: names[0] + p.name"
+}, {
+  "expr" : "has(p.tags) || p.tags.size() > 0",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:16: key 'tags' is not present in map. in: has(p.tags) || p.tags.size() > 0"
+}, {
+  "expr" : "size(p.tags) > 0",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:6: key 'tags' is not present in map. in: size(p.tags) > 0"
+}, {
+  "expr" : "p.tags.exists(t, t == 'x')",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:1: key 'tags' is not present in map. in: p.tags.exists(t, t == 'x')"
+}, {
+  "expr" : "names.exists(n, n == 1)",
+  "compileError" : "ERROR: <input>:1:19: found no matching overload for '_==_' applied to '(string, int)' (candidates: (%A0, %A0))\n | names.exists(n, n == 1)\n | ..................^"
+}, {
+  "expr" : "true ? 1 : 2",
+  "compileError" : "expression must produce bool but produces int: true ? 1 : 2"
+}, {
+  "expr" : "true ? 1 : 2",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "false ? 1 : dyn('a')",
+  "type" : "int",
+  "evalError" : "result: expected int but expression produced String"
+}, {
+  "expr" : "1 == 1 == true",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "1 < 2 < 3",
+  "compileError" : "ERROR: <input>:1:7: found no matching overload for '_<_' applied to '(bool, int)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(bool, bool),(date, date),(google.protobuf.Timestamp, google.protobuf.Timestamp),(int, int),(uint, uint))\n | 1 < 2 < 3\n | ......^"
+}, {
+  "expr" : "(1 < 2) == true",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "!!!true",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "---i",
+  "type" : "int",
+  "json" : -7,
+  "text" : "-7"
+}, {
+  "expr" : "- - 1",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "-(1)",
+  "type" : "int",
+  "json" : -1,
+  "text" : "-1"
+}, {
+  "expr" : "'a' + 'b' == 'ab' && 'x' in ['x']",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "i in [i, 1] && 'a' in names",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3][0] == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "names.filter(n, n > 'a') == ['b']",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "names.map(n, size(n)) == [1, 1]",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "names.all(n, n.startsWith('a') || n.endsWith('b'))",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "names.exists_one(n, n.contains('a'))",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'x'.matches('[')",
+  "type" : "bool",
+  "evalError" : "matches() pattern is not a valid regular expression in: 'x'.matches('[')"
+}, {
+  "expr" : "'aaa'.matches('a{2}')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'Ab'.matches('(?i)ab')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'ab\\ncd'.matches('^cd$')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "'café'.matches('^caf.$')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'😀'.matches('^.$')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "size('😀')",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "size('é')",
+  "type" : "int",
+  "json" : 2,
+  "text" : "2"
+}, {
+  "expr" : "'abc' < 'abd' && 'B' < 'a' && '' < 'a'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'é' > 'z'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "'😀' > '￿'",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "int('  42')",
+  "type" : "int",
+  "evalError" : "int() argument is not a valid integer in: int('  42')"
+}, {
+  "expr" : "int('+42')",
+  "type" : "int",
+  "json" : 42,
+  "text" : "42"
+}, {
+  "expr" : "int('-0')",
+  "type" : "int",
+  "json" : 0,
+  "text" : "0"
+}, {
+  "expr" : "int('9223372036854775808')",
+  "type" : "int",
+  "evalError" : "int() argument is not a valid integer in: int('9223372036854775808')"
+}, {
+  "expr" : "int('١٢')",
+  "type" : "int",
+  "json" : 12,
+  "text" : "12"
+}, {
+  "expr" : "string(-5)",
+  "type" : "string",
+  "json" : "-5",
+  "text" : "-5"
+}, {
+  "expr" : "string(true) + string(false)",
+  "type" : "string",
+  "json" : "truefalse",
+  "text" : "truefalse"
+}, {
+  "expr" : "string(i) == '7'",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "int(i)",
+  "type" : "int",
+  "json" : 7,
+  "text" : "7"
+}, {
+  "expr" : "string(s)",
+  "type" : "string",
+  "json" : "Hello",
+  "text" : "Hello"
+}, {
+  "expr" : "bool('true')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "bool('TRUE')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "bool('t')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "bool('1')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "bool('yes')",
+  "type" : "bool",
+  "evalError" : "bool() argument is not a valid boolean in: bool('yes')"
+}, {
+  "expr" : "int(true)",
+  "compileError" : "ERROR: <input>:1:4: found no matching overload for 'int' applied to '(bool)' (candidates: (int),(uint),(double),(string),(google.protobuf.Timestamp))\n | int(true)\n | ...^"
+}, {
+  "expr" : "i.size()",
+  "compileError" : "ERROR: <input>:1:7: found no matching overload for 'size' applied to 'int.()' (candidates: string.(),bytes.(),list(%A0).(),map(%A1, %B2).())\n | i.size()\n | ......^"
+}, {
+  "expr" : "size(i)",
+  "compileError" : "ERROR: <input>:1:5: found no matching overload for 'size' applied to '(int)' (candidates: (string),(bytes),(list(%A0)),(map(%A1, %B2)))\n | size(i)\n | ....^"
+}, {
+  "expr" : "size('abc') + 'abc'.size() + size(names) + names.size()",
+  "type" : "int",
+  "json" : 10,
+  "text" : "10"
+}, {
+  "expr" : "type(1) == int",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "in",
+  "compileError" : "ERROR: <input>:1:1: mismatched input 'in' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}\n | in\n | ^\nERROR: <input>:1:3: mismatched input '<EOF>' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}\n | in\n | ..^"
+}, {
+  "expr" : "i.age",
+  "compileError" : "ERROR: <input>:1:2: type 'int' does not support field selection\n | i.age\n | .^"
+}, {
+  "expr" : "names.age",
+  "compileError" : "ERROR: <input>:1:6: type 'list(string)' does not support field selection\n | names.age\n | .....^"
+}, {
+  "expr" : "names.size",
+  "compileError" : "ERROR: <input>:1:6: type 'list(string)' does not support field selection\n | names.size\n | .....^"
+}, {
+  "expr" : "int(text) > 0",
+  "type" : "bool",
+  "evalError" : "int() argument is not a valid integer in: int(text) > 0"
+}, {
+  "expr" : "uint(text) > 0u",
+  "type" : "bool",
+  "evalError" : "uint() argument is not a valid unsigned integer in: uint(text) > 0u"
+}, {
+  "expr" : "double(text) > 0.0",
+  "type" : "bool",
+  "evalError" : "double() argument is not a valid number in: double(text) > 0.0"
+}, {
+  "expr" : "bool(text)",
+  "type" : "bool",
+  "evalError" : "bool() argument is not a valid boolean in: bool(text)"
+}, {
+  "expr" : "names[position] == ''",
+  "type" : "bool",
+  "evalError" : "list index out of bounds in: names[position] == ''"
+}, {
+  "expr" : "'abc'.matches(text + '[')",
+  "type" : "bool",
+  "evalError" : "matches() pattern is not a valid regular expression in: 'abc'.matches(text + '[')"
+}, {
+  "expr" : "matches('abc', text + '(')",
+  "type" : "bool",
+  "evalError" : "matches() pattern is not a valid regular expression in: matches('abc', text + '(')"
+}, {
+  "expr" : "decimal(text) > decimal(0)",
+  "type" : "bool",
+  "evalError" : "decimal() argument is not a valid number in: decimal(text) > decimal(0)"
+}, {
+  "expr" : "money(text, 'VND') > money(0, 'VND')",
+  "type" : "bool",
+  "evalError" : "money() amount is not a valid number in: money(text, 'VND') > money(0, 'VND')"
+}, {
+  "expr" : "money(1, text) > money(0, 'VND')",
+  "type" : "bool",
+  "evalError" : "money() currency is not an ISO 4217 code in upper case in: money(1, text) > money(0, 'VND')"
+}, {
+  "expr" : "date(text) > date('2026-01-01')",
+  "type" : "bool",
+  "evalError" : "date() argument is not a valid ISO date (yyyy-MM-dd) in: date(text) > date('2026-01-01')"
+}, {
+  "expr" : "money('1.005', 'XCG').round()",
+  "type" : "money",
+  "json" : "1.00 XCG",
+  "text" : "1.00 XCG"
+}, {
+  "expr" : "money('1.005', 'ZWG').round()",
+  "type" : "money",
+  "json" : "1.00 ZWG",
+  "text" : "1.00 ZWG"
+}, {
+  "expr" : "money('1.5', 'DEM').round()",
+  "type" : "money",
+  "json" : "1.50 DEM",
+  "text" : "1.50 DEM"
+}, {
+  "expr" : "money('1', 'XXX').round()",
+  "type" : "money",
+  "evalError" : "currency XXX has no minor unit in ISO 4217; configure one with currencyScale(\"XXX\", digits) in: money('1', 'XXX').round()"
+}, {
+  "expr" : "money('1.23456', 'CLF').round()",
+  "type" : "money",
+  "json" : "1.2346 CLF",
+  "text" : "1.2346 CLF"
+}, {
+  "expr" : "money('1.23456', 'KWD').round()",
+  "type" : "money",
+  "json" : "1.235 KWD",
+  "text" : "1.235 KWD"
+}, {
+  "expr" : "money('1', 'ZZZ')",
+  "type" : "money",
+  "evalError" : "money() currency is not an ISO 4217 code in upper case in: money('1', 'ZZZ')"
+}, {
+  "expr" : "normalizeName('  NGUYỄN  Văn Đức, Jr. ')",
+  "type" : "string",
+  "json" : "nguyen van duc jr",
+  "text" : "nguyen van duc jr"
+}, {
+  "expr" : "normalizeName('İSTANBUL')",
+  "type" : "string",
+  "json" : "istanbul",
+  "text" : "istanbul"
+}, {
+  "expr" : "normalizeName('O\\'Brien\\tJr.\\n')",
+  "type" : "string",
+  "json" : "o brien jr",
+  "text" : "o brien jr"
+}, {
+  "expr" : "normalizeName('Владимир Путин')",
+  "type" : "string",
+  "json" : "владимир путин",
+  "text" : "владимир путин"
+}, {
+  "expr" : "normalizeName('𠀋-x')",
+  "type" : "string",
+  "json" : "𠀋 x",
+  "text" : "𠀋 x"
+}, {
+  "expr" : "normalizeName('ΟΔΥΣΣΕΥΣ')",
+  "type" : "string",
+  "json" : "οδυσσευς",
+  "text" : "οδυσσευς"
+}, {
+  "expr" : "normalizeName('Ǆemal Ǉubić')",
+  "type" : "string",
+  "json" : "ǆemal ǉubic",
+  "text" : "ǆemal ǉubic"
+}, {
+  "expr" : "similarity('MARTHA', 'MARHTA')",
+  "type" : "decimal",
+  "json" : "0.9611",
+  "text" : "0.9611"
+}, {
+  "expr" : "similarity('JONES', 'JOHNSON')",
+  "type" : "decimal",
+  "json" : "0.8324",
+  "text" : "0.8324"
+}, {
+  "expr" : "similarity('CRATE', 'TRACE')",
+  "type" : "decimal",
+  "json" : "0.7333",
+  "text" : "0.7333"
+}, {
+  "expr" : "similarity('kitten', 'sitting')",
+  "type" : "decimal",
+  "json" : "0.7460",
+  "text" : "0.7460"
+}, {
+  "expr" : "similarity('abcdefgh', 'abcdefgx')",
+  "type" : "decimal",
+  "json" : "0.9500",
+  "text" : "0.9500"
+}, {
+  "expr" : "similarity('𠀋a', '𠀋a')",
+  "type" : "decimal",
+  "json" : "1.0000",
+  "text" : "1.0000"
+}, {
+  "expr" : "nameSimilarity('Tran Van Binh', 'Van An Nguyen')",
+  "type" : "decimal",
+  "json" : "0.6603",
+  "text" : "0.6603"
+}, {
+  "expr" : "nameSimilarity('Nguyen Van An', 'Nguyen Van Anh')",
+  "type" : "decimal",
+  "json" : "0.9857",
+  "text" : "0.9857"
+}, {
+  "expr" : "levenshtein('flaw', 'lawn')",
+  "type" : "int",
+  "json" : 2,
+  "text" : "2"
+}, {
+  "expr" : "levenshtein('𠀋', '𠀌')",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "levenshtein('', 'abc')",
+  "type" : "int",
+  "json" : 3,
+  "text" : "3"
+}, {
+  "expr" : "maxNameSimilarity('Nguyen Van An', ['Tran Van Binh', 'Nguyen Van Anh', 'Le Thi Hoa', '', 'Nguyen An'])",
+  "type" : "decimal",
+  "json" : "0.9857",
+  "text" : "0.9857"
+}, {
+  "expr" : "similarity('a' + 'a', 'aa')",
+  "type" : "decimal",
+  "json" : "1.0000",
+  "text" : "1.0000"
+}, {
+  "expr" : "[1,2,3].exists(x, x == 3) && [1].all(x, true)",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "[1,2,3,4].filter(x, x % 2 == 0).map(x, x * 10)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:35: Iteration budget exceeded: 5 in: [1,2,3,4].filter(x, x % 2 == 0).map(x, x * 10)"
+}, {
+  "expr" : "[[1,2],[3]].map(l, size(l))",
+  "type" : "list<int>",
+  "json" : [ 2, 1 ],
+  "text" : "[2, 1]"
+}, {
+  "expr" : "names.exists(n, n == s)",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "names.all(n, n.size() == 1) || 1/0 == 1",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "date('2026-12-31').plusDays(1)",
+  "type" : "date",
+  "json" : "2027-01-01",
+  "text" : "2027-01-01"
+}, {
+  "expr" : "date('2024-02-29').plusMonths(12)",
+  "type" : "date",
+  "json" : "2025-02-28",
+  "text" : "2025-02-28"
+}, {
+  "expr" : "date('2026-01-31').plusMonths(-2)",
+  "type" : "date",
+  "json" : "2025-11-30",
+  "text" : "2025-11-30"
+}, {
+  "expr" : "monthsBetween(date('2025-02-28'), date('2024-02-29'))",
+  "type" : "int",
+  "json" : -11,
+  "text" : "-11"
+}, {
+  "expr" : "daysBetween(date('2026-03-29'), date('2026-03-30'))",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "date('1970-01-01').dayOfWeek()",
+  "type" : "int",
+  "json" : 4,
+  "text" : "4"
+}, {
+  "expr" : "date('-0001-12-31').plusDays(1)",
+  "type" : "date",
+  "json" : "0000-01-01",
+  "text" : "0000-01-01"
+}, {
+  "expr" : "string(date('+10000-01-01'))",
+  "type" : "string",
+  "json" : "+10000-01-01",
+  "text" : "+10000-01-01"
+}, {
+  "expr" : "money('100', 'VND') / 3",
+  "type" : "money",
+  "json" : "33.33333333333333333333333333333333 VND",
+  "text" : "33.33333333333333333333333333333333 VND"
+}, {
+  "expr" : "money('1.0', 'USD') == money('1.00', 'USD')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "money(5, 'USD') * decimal('0.333')",
+  "type" : "money",
+  "json" : "1.665 USD",
+  "text" : "1.665 USD"
+}, {
+  "expr" : "max(money(2000, 'VND'), (money('1500000', 'VND') * decimal('0.0005')).round())",
+  "type" : "money",
+  "json" : "2000 VND",
+  "text" : "2000 VND"
+}, {
+  "expr" : "-money('0.00', 'USD')",
+  "type" : "money",
+  "json" : "0.00 USD",
+  "text" : "0.00 USD"
+}, {
+  "expr" : "money('-0.5', 'USD').round('HALF_UP')",
+  "type" : "money",
+  "json" : "-0.50 USD",
+  "text" : "-0.50 USD"
+}, {
+  "expr" : "money('2.5', 'VND').round()",
+  "type" : "money",
+  "json" : "2 VND",
+  "text" : "2 VND"
+}, {
+  "expr" : "money('1E+3', 'VND')",
+  "type" : "money",
+  "json" : "1000 VND",
+  "text" : "1000 VND"
+}, {
+  "expr" : "money(' 7 ', 'VND')",
+  "type" : "money",
+  "json" : "7 VND",
+  "text" : "7 VND"
+}, {
+  "expr" : "'Straße'.contains('ß')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "size('ẞ')",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "'a' + 'b' + string(1) + string(decimal('2.50'))",
+  "type" : "string",
+  "json" : "ab12.50",
+  "text" : "ab12.50"
+}, {
+  "expr" : "'x'.startsWith('')",
+  "type" : "bool",
+  "json" : true,
+  "text" : "true"
+}, {
+  "expr" : "decimal('802446200262022426800420.28840066') / decimal('-44448608246860204626082.08')",
+  "type" : "decimal",
+  "json" : "-18.05334816796443217908683493448790",
+  "text" : "-18.05334816796443217908683493448790"
+}, {
+  "expr" : "decimal('2E+2') / decimal('46400460280604206E+2')",
+  "type" : "decimal",
+  "json" : "0.00000000000000004310302070076699886293611513900743",
+  "text" : "4.310302070076699886293611513900743E-17"
+}, {
+  "expr" : "decimal('-262208686444244866404602248680.84') / decimal('-0.000000000268480422')",
+  "type" : "decimal",
+  "json" : "976639877466539688337506593612401300000",
+  "text" : "9.766398774665396883375065936124013E+38"
+}, {
+  "expr" : "decimal('448688008462262404208.2068') / decimal('-0.000000000008')",
+  "type" : "decimal",
+  "json" : "-56086001057782800526025850000000",
+  "text" : "-5.608600105778280052602585E+31"
+}, {
+  "expr" : "decimal('-8840060684420044426.88882020026648') / decimal('8E+8')",
+  "type" : "decimal",
+  "json" : "-11050075855.5250555336110252503331",
+  "text" : "-11050075855.5250555336110252503331"
+}, {
+  "expr" : "decimal('-82882442244044402E+6') / decimal('-6222246642662428202886828062846E+2')",
+  "type" : "decimal",
+  "json" : "0.0000000001332034022498663802773136269050688",
+  "text" : "1.332034022498663802773136269050688E-10"
+}, {
+  "expr" : "decimal('-0.00000004') / decimal('-0.02')",
+  "type" : "decimal",
+  "json" : "0.000002",
+  "text" : "0.000002"
+}, {
+  "expr" : "decimal('-622844046686602040002246') / decimal('-0.0000000000000002')",
+  "type" : "decimal",
+  "json" : "3114220233433010200011230000000000000000",
+  "text" : "3.11422023343301020001123E+39"
+}, {
+  "expr" : "decimal('-400882424.8248284802486086') / decimal('-4466440042222648468468082')",
+  "type" : "decimal",
+  "json" : "0.00000000000000008975435045252193974979751614670884",
+  "text" : "8.975435045252193974979751614670884E-17"
+}, {
+  "expr" : "decimal('82268284840422866') / decimal('84684624840466420E+2')",
+  "type" : "decimal",
+  "json" : "0.009714666032400144780155678664179577",
+  "text" : "0.009714666032400144780155678664179577"
+}, {
+  "expr" : "decimal('62284062404628882688226428840.6608') / decimal('0.0000000006')",
+  "type" : "decimal",
+  "json" : "103806770674381471147044048067768000000",
+  "text" : "1.03806770674381471147044048067768E+38"
+}, {
+  "expr" : "decimal('220462222008480262446.062680846864') / decimal('448842602806680884426602048.284288')",
+  "type" : "decimal",
+  "json" : "0.0000004911793591559636814288815742785070",
+  "text" : "4.911793591559636814288815742785070E-7"
+}, {
+  "expr" : "decimal('48208420882606.68') / decimal('220044286028268802844868048868228E+6')",
+  "type" : "decimal",
+  "json" : "0.0000000000000000000000002190850839744750606924380850393945",
+  "text" : "2.190850839744750606924380850393945E-25"
+}, {
+  "expr" : "decimal('0.00000000000004') / decimal('44042442460869862004844664264.4860')",
+  "type" : "decimal",
+  "json" : "0.0000000000000000000000000000000000000000009082148437961534982305292050214609",
+  "text" : "9.082148437961534982305292050214609E-43"
+}, {
+  "expr" : "decimal('-62242.6246') / decimal('-8.48464824')",
+  "type" : "decimal",
+  "json" : "7335.911028881970479898174305455944",
+  "text" : "7335.911028881970479898174305455944"
+}, {
+  "expr" : "decimal('-0E+8') / decimal('-642802468.4206848044882444')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+24"
+}, {
+  "expr" : "decimal('-6E+6') / decimal('26008060884682008')",
+  "type" : "decimal",
+  "json" : "-0.0000000002306977066304018699288282118854478",
+  "text" : "-2.306977066304018699288282118854478E-10"
+}, {
+  "expr" : "decimal('24326446862828268E+8') / decimal('0.02')",
+  "type" : "decimal",
+  "json" : "121632234314141340000000000",
+  "text" : "1.2163223431414134E+26"
+}, {
+  "expr" : "decimal('260044882260204244464.448268088224') / decimal('-6464862248084.28406686642802628648')",
+  "type" : "decimal",
+  "json" : "-40224350.07602252821473918218244168",
+  "text" : "-40224350.07602252821473918218244168"
+}, {
+  "expr" : "decimal('-40488280840642842486282.64') / decimal('246028460204428608420.8806')",
+  "type" : "decimal",
+  "json" : "-164.5674683611828645265622153918561",
+  "text" : "-164.5674683611828645265622153918561"
+}, {
+  "expr" : "decimal('648262428') / decimal('6E+8')",
+  "type" : "decimal",
+  "json" : "1.08043738",
+  "text" : "1.08043738"
+}, {
+  "expr" : "decimal('-2926688026848028686.46244444606826') / decimal('-0.000000')",
+  "type" : "decimal",
+  "evalError" : "decimal division by zero in: decimal('-2926688026848028686.46244444606826') / decimal('-0.000000')"
+}, {
+  "expr" : "decimal('0.0008') / decimal('8.28248840')",
+  "type" : "decimal",
+  "json" : "0.00009658932936145132421797294639132848",
+  "text" : "0.00009658932936145132421797294639132848"
+}, {
+  "expr" : "decimal('2888058480466406842284684266444.88') / decimal('622.80800400880040')",
+  "type" : "decimal",
+  "json" : "4637156975949201202034553358.415887",
+  "text" : "4637156975949201202034553358.415887"
+}, {
+  "expr" : "decimal('4486426400428644026826600866462.44') / decimal('-4422288820886446826682268E+6')",
+  "type" : "decimal",
+  "json" : "-1.014503254341795983455572219151311",
+  "text" : "-1.014503254341795983455572219151311"
+}, {
+  "expr" : "decimal('-8.4044084604866420') / decimal('4246446.086848208006022240')",
+  "type" : "decimal",
+  "json" : "-0.000001979162878463518116891787701813604",
+  "text" : "-0.000001979162878463518116891787701813604"
+}, {
+  "expr" : "decimal('-466086E+6') / decimal('-8084644622864446068.60028048224242')",
+  "type" : "decimal",
+  "json" : "0.00000005765077152332052341445424269868503",
+  "text" : "5.765077152332052341445424269868503E-8"
+}, {
+  "expr" : "decimal('58086082E+6') / decimal('668084088E+8')",
+  "type" : "decimal",
+  "json" : "0.0008694426800956828057248985100809645",
+  "text" : "0.0008694426800956828057248985100809645"
+}, {
+  "expr" : "decimal('-68866640824666084E+8') / decimal('-8082026084846868664426.22')",
+  "type" : "decimal",
+  "json" : "852.0962454425301494312138304946050",
+  "text" : "852.0962454425301494312138304946050"
+}, {
+  "expr" : "decimal('-4464606644486422460.482448') / decimal('0.000000000002')",
+  "type" : "decimal",
+  "json" : "-2232303322243211230241224000000",
+  "text" : "-2.232303322243211230241224E+30"
+}, {
+  "expr" : "decimal('8202628820862244864842666E+6') / decimal('84286868008608666806.8288')",
+  "type" : "decimal",
+  "json" : "97317992881.45890875689970170479394",
+  "text" : "97317992881.45890875689970170479394"
+}, {
+  "expr" : "decimal('2') / decimal('-0.0426848842')",
+  "type" : "decimal",
+  "json" : "-46.85499416207857487873892369608443",
+  "text" : "-46.85499416207857487873892369608443"
+}, {
+  "expr" : "decimal('-0.000924884062') / decimal('22224266882040420E+8')",
+  "type" : "decimal",
+  "json" : "-0.0000000000000000000000000004161595371892357223676545251856960",
+  "text" : "-4.161595371892357223676545251856960E-28"
+}, {
+  "expr" : "decimal('244882828004462.6044820220') / decimal('8026040882.268466')",
+  "type" : "decimal",
+  "json" : "30511.03671119718431809424923819601",
+  "text" : "30511.03671119718431809424923819601"
+}, {
+  "expr" : "decimal('0.06') / decimal('0.00000006')",
+  "type" : "decimal",
+  "json" : "1000000",
+  "text" : "1E+6"
+}, {
+  "expr" : "decimal('4664064044888.6008') / decimal('-0.000008')",
+  "type" : "decimal",
+  "json" : "-583008005611075100",
+  "text" : "-5.830080056110751E+17"
+}, {
+  "expr" : "decimal('0.0000000000000000') / decimal('622860262040.04846486282824842820')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('-846644008') / decimal('-0.00000000000462688406')",
+  "type" : "decimal",
+  "json" : "182983622891990079388.3302967397026",
+  "text" : "182983622891990079388.3302967397026"
+}, {
+  "expr" : "decimal('462624840844204862288226082202244E+8') / decimal('0.0000000004')",
+  "type" : "decimal",
+  "json" : "115656210211051215572056520550561000000000000000000",
+  "text" : "1.15656210211051215572056520550561E+50"
+}, {
+  "expr" : "decimal('2622442220602200442028.26') / decimal('826024004220241462628668882.604068')",
+  "type" : "decimal",
+  "json" : "0.000003174777254902852503410089069665844",
+  "text" : "0.000003174777254902852503410089069665844"
+}, {
+  "expr" : "decimal('0.000000000006') / decimal('2828084264002006200420860E+4')",
+  "type" : "decimal",
+  "json" : "0.0000000000000000000000000000000000000002121577520292635697182289402630739",
+  "text" : "2.121577520292635697182289402630739E-40"
+}, {
+  "expr" : "decimal('64424.4022') / decimal('240242600')",
+  "type" : "decimal",
+  "json" : "0.0002681639401171981988206920837520073",
+  "text" : "0.0002681639401171981988206920837520073"
+}, {
+  "expr" : "decimal('0.00000000000000000004') / decimal('0.0000000000')",
+  "type" : "decimal",
+  "evalError" : "decimal division by zero in: decimal('0.00000000000000000004') / decimal('0.0000000000')"
+}, {
+  "expr" : "decimal('4400642688028.2280') / decimal('0.022068020262020288')",
+  "type" : "decimal",
+  "json" : "199412663019974.8144445785968331076",
+  "text" : "199412663019974.8144445785968331076"
+}, {
+  "expr" : "decimal('-408082844') / decimal('22888042800022200.60444428')",
+  "type" : "decimal",
+  "json" : "-0.00000001782952118560369757141171992814262",
+  "text" : "-1.782952118560369757141171992814262E-8"
+}, {
+  "expr" : "decimal('-80668206242020848E+2') / decimal('-2860642242262.02046842082208448242')",
+  "type" : "decimal",
+  "json" : "2819933.406920306718942457866563706",
+  "text" : "2819933.406920306718942457866563706"
+}, {
+  "expr" : "decimal('-0.00000004') / decimal('240.440802')",
+  "type" : "decimal",
+  "json" : "-0.0000000001663611153651034652596109706870800",
+  "text" : "-1.663611153651034652596109706870800E-10"
+}, {
+  "expr" : "decimal('0.000000000004') / decimal('244266464044460.6282422880824804')",
+  "type" : "decimal",
+  "json" : "0.00000000000000000000000001637555943525645968203629281819004",
+  "text" : "1.637555943525645968203629281819004E-26"
+}, {
+  "expr" : "decimal('8E+4') / decimal('82228484226206666E+2')",
+  "type" : "decimal",
+  "json" : "0.000000000000009728988774732097526161702986280440",
+  "text" : "9.728988774732097526161702986280440E-15"
+}, {
+  "expr" : "decimal('2E+2') / decimal('84462442026202646.20680824')",
+  "type" : "decimal",
+  "json" : "0.000000000000002367916380371222570593292664966884",
+  "text" : "2.367916380371222570593292664966884E-15"
+}, {
+  "expr" : "decimal('-2880084088828064424688264E+4') / decimal('0.000000000626666426')",
+  "type" : "decimal",
+  "json" : "-45958806301648980069793367229154860000",
+  "text" : "-4.595880630164898006979336722915486E+37"
+}, {
+  "expr" : "decimal('6804422448604664888266088') / decimal('-0.00000006')",
+  "type" : "decimal",
+  "json" : "-113407040810077748137768133333333.3",
+  "text" : "-113407040810077748137768133333333.3"
+}, {
+  "expr" : "decimal('262668064E+2') / decimal('0.00004886848824888046')",
+  "type" : "decimal",
+  "json" : "537499876530388.7339255032388520625",
+  "text" : "537499876530388.7339255032388520625"
+}, {
+  "expr" : "decimal('0.000884666888') / decimal('4E+4')",
+  "type" : "decimal",
+  "json" : "0.0000000221166722",
+  "text" : "2.21166722E-8"
+}, {
+  "expr" : "decimal('0.00000000000002') / decimal('4206208656608622.4406248406826642')",
+  "type" : "decimal",
+  "json" : "0.000000000000000000000000000004754875859184213482754805044271842",
+  "text" : "4.754875859184213482754805044271842E-30"
+}, {
+  "expr" : "decimal('0.020482466844088882') / decimal('0.0006')",
+  "type" : "decimal",
+  "json" : "34.13744474014813666666666666666667",
+  "text" : "34.13744474014813666666666666666667"
+}, {
+  "expr" : "decimal('-6E+4') / decimal('84682228082206640.66880880')",
+  "type" : "decimal",
+  "json" : "-0.0000000000007085311919492013235739287853328508",
+  "text" : "-7.085311919492013235739287853328508E-13"
+}, {
+  "expr" : "decimal('4406882208060088.0648448800082294') / decimal('44002648640640642.22060464')",
+  "type" : "decimal",
+  "json" : "0.1001503851290877089284544336679800",
+  "text" : "0.1001503851290877089284544336679800"
+}, {
+  "expr" : "decimal('284022420448248E+4') / decimal('-86840668040028224040442664260.6624')",
+  "type" : "decimal",
+  "json" : "-0.00000000003270615333328977578654745285227792",
+  "text" : "-3.270615333328977578654745285227792E-11"
+}, {
+  "expr" : "decimal('82686.42244662244824296824') / decimal('-0.000000000000000008')",
+  "type" : "decimal",
+  "json" : "-10335802805827806030371.03",
+  "text" : "-10335802805827806030371.03"
+}, {
+  "expr" : "decimal('-462008440806682.684084462426242448') / decimal('0.00000000000244840808')",
+  "type" : "decimal",
+  "json" : "-188697482491024406390809830.2969364",
+  "text" : "-188697482491024406390809830.2969364"
+}, {
+  "expr" : "decimal('-6.60466286') / decimal('6020288426286480684006288E+2')",
+  "type" : "decimal",
+  "json" : "-0.00000000000000000000000001097067514433686594281448008367874",
+  "text" : "-1.097067514433686594281448008367874E-26"
+}, {
+  "expr" : "decimal('8024084620606848604002206E+2') / decimal('8802806444228444860486428E+4')",
+  "type" : "decimal",
+  "json" : "0.009115370957483491203905619605999572",
+  "text" : "0.009115370957483491203905619605999572"
+}, {
+  "expr" : "decimal('-48406004246022062E+8') / decimal('82048482086848220866.600008088646')",
+  "type" : "decimal",
+  "json" : "-58996.83091612147557059284038679931",
+  "text" : "-58996.83091612147557059284038679931"
+}, {
+  "expr" : "decimal('60644802280424660.00044804') / decimal('6068828224460.66608644286066680880')",
+  "type" : "decimal",
+  "json" : "9992.835525644513540672294948061278",
+  "text" : "9992.835525644513540672294948061278"
+}, {
+  "expr" : "decimal('448846864204242242066428864020884') / decimal('68402478022682060406244.8040262442')",
+  "type" : "decimal",
+  "json" : "6561850932.584722191449970482557314",
+  "text" : "6561850932.584722191449970482557314"
+}, {
+  "expr" : "decimal('24604047664484626808044.2062808268') / decimal('-204.688480')",
+  "type" : "decimal",
+  "json" : "-120202405452835581211.2347811700336",
+  "text" : "-120202405452835581211.2347811700336"
+}, {
+  "expr" : "decimal('0.00000440822668') / decimal('0.00000000000008')",
+  "type" : "decimal",
+  "json" : "55102833.5",
+  "text" : "55102833.5"
+}, {
+  "expr" : "decimal('466288608840826208464042622.866280') / decimal('0.0000')",
+  "type" : "decimal",
+  "evalError" : "decimal division by zero in: decimal('466288608840826208464042622.866280') / decimal('0.0000')"
+}, {
+  "expr" : "decimal('0.00000000000006') / decimal('62202644024466840E+6')",
+  "type" : "decimal",
+  "json" : "0.0000000000000000000000000000000000009645892219050937745013471683660177",
+  "text" : "9.645892219050937745013471683660177E-37"
+}, {
+  "expr" : "decimal('828264060086688424608820624820240E+2') / decimal('2E+8')",
+  "type" : "decimal",
+  "json" : "414132030043344212304410312.410120",
+  "text" : "414132030043344212304410312.410120"
+}, {
+  "expr" : "decimal('8.28226644') / decimal('8082262226264468E+8')",
+  "type" : "decimal",
+  "json" : "0.00000000000000000000001024746068382388000088014789733540",
+  "text" : "1.024746068382388000088014789733540E-23"
+}, {
+  "expr" : "decimal('624426622E+6') / decimal('-4646020206446280E+8')",
+  "type" : "decimal",
+  "json" : "-0.000000001344003242029851437358754763137493",
+  "text" : "-1.344003242029851437358754763137493E-9"
+}, {
+  "expr" : "decimal('-866420466E+6') / decimal('846204686662080886640.8680')",
+  "type" : "decimal",
+  "json" : "-0.000001023889940172349790778664347459042",
+  "text" : "-0.000001023889940172349790778664347459042"
+}, {
+  "expr" : "decimal('-22402244226860826E+4') / decimal('-6864462.826604244024828270')",
+  "type" : "decimal",
+  "json" : "32635101671812.69470176370277242296",
+  "text" : "32635101671812.69470176370277242296"
+}, {
+  "expr" : "decimal('46842400E+4') / decimal('480800824240460444244264026464288E+6')",
+  "type" : "decimal",
+  "json" : "0.0000000000000000000000000009742578972072009452901310832858599",
+  "text" : "9.742578972072009452901310832858599E-28"
+}, {
+  "expr" : "decimal('-46240084426288640424620228046040E+8') / decimal('0.00000000000082402820')",
+  "type" : "decimal",
+  "json" : "-5611468688363898277342963268252227000000000000000000",
+  "text" : "-5.611468688363898277342963268252227E+51"
+}, {
+  "expr" : "decimal('-4E+4') / decimal('6400800248820642480802002.48860442')",
+  "type" : "decimal",
+  "json" : "-0.000000000000000000006249218604715881104176574323003029",
+  "text" : "-6.249218604715881104176574323003029E-21"
+}, {
+  "expr" : "decimal('408084688068420088668048060.666240') / decimal('-6602400828006822464660226E+6')",
+  "type" : "decimal",
+  "json" : "-0.00006180852976047130747725283639478948",
+  "text" : "-0.00006180852976047130747725283639478948"
+}, {
+  "expr" : "decimal('0.000000000000000006') / decimal('2260860.48')",
+  "type" : "decimal",
+  "json" : "0.000000000000000000000002653856818267706638845754869402644",
+  "text" : "2.653856818267706638845754869402644E-24"
+}, {
+  "expr" : "decimal('442406666642424666228.2268228206') / decimal('60840002840426288E+8')",
+  "type" : "decimal",
+  "json" : "0.00007271641124060881994474495286807575",
+  "text" : "0.00007271641124060881994474495286807575"
+}, {
+  "expr" : "decimal('0.000682488286') / decimal('-2002882.06')",
+  "type" : "decimal",
+  "json" : "-0.0000000003407531075494280477004222605099374",
+  "text" : "-3.407531075494280477004222605099374E-10"
+}, {
+  "expr" : "decimal('2048004224884804868660402804446.20') / decimal('86484244862808488E+6')",
+  "type" : "decimal",
+  "json" : "23680662.62396799300502026934975676",
+  "text" : "23680662.62396799300502026934975676"
+}, {
+  "expr" : "decimal('-400884468') / decimal('-4048008448884864644408228.46680840')",
+  "type" : "decimal",
+  "json" : "0.00000000000000009903251761009408509023261647155066",
+  "text" : "9.903251761009408509023261647155066E-17"
+}, {
+  "expr" : "decimal('8822608.62') / decimal('-20488802864866860.08486448')",
+  "type" : "decimal",
+  "json" : "-0.0000000004306063501215365367766691812886605",
+  "text" : "-4.306063501215365367766691812886605E-10"
+}, {
+  "expr" : "decimal('0.000000000000000004') / decimal('8E+8')",
+  "type" : "decimal",
+  "json" : "0.000000000000000000000000005",
+  "text" : "5E-27"
+}, {
+  "expr" : "decimal('0.00000006') / decimal('86080484040008682080224E+4')",
+  "type" : "decimal",
+  "json" : "0.00000000000000000000000000000000006970221028510139915586974006216978",
+  "text" : "6.970221028510139915586974006216978E-35"
+}, {
+  "expr" : "decimal('-0.8682628224688246') / decimal('-0.00000006')",
+  "type" : "decimal",
+  "json" : "14471047.04114707666666666666666667",
+  "text" : "14471047.04114707666666666666666667"
+}, {
+  "expr" : "decimal('4E+6') / decimal('60468.4064')",
+  "type" : "decimal",
+  "json" : "66.15024668485392728987149229717421",
+  "text" : "66.15024668485392728987149229717421"
+}, {
+  "expr" : "decimal('-0.0000000000000002') / decimal('-0.0000000000000004')",
+  "type" : "decimal",
+  "json" : "0.5",
+  "text" : "0.5"
+}, {
+  "expr" : "decimal('-288804466E+8') / decimal('0E+6')",
+  "type" : "decimal",
+  "evalError" : "decimal division by zero in: decimal('-288804466E+8') / decimal('0E+6')"
+}, {
+  "expr" : "decimal('4480042200026488.4424006002066206') / decimal('84402022')",
+  "type" : "decimal",
+  "json" : "53079797.06963049347799511493481282",
+  "text" : "53079797.06963049347799511493481282"
+}, {
+  "expr" : "decimal('688282806662886646460444804484488E+2') / decimal('-868042640662240020224404E+6')",
+  "type" : "decimal",
+  "json" : "-79291.35902100241693697830478270851",
+  "text" : "-79291.35902100241693697830478270851"
+}, {
+  "expr" : "decimal('8842828488.602662') / decimal('0.000000000540080822')",
+  "type" : "decimal",
+  "json" : "16373157735644725411.11633843573138",
+  "text" : "16373157735644725411.11633843573138"
+}, {
+  "expr" : "decimal('-64882086642240008648866660.202400') / decimal('-6262204844626876862286400E+2')",
+  "type" : "decimal",
+  "json" : "0.1036090135216678634071865984670834",
+  "text" : "0.1036090135216678634071865984670834"
+}, {
+  "expr" : "decimal('-4048422462646808028466828') / decimal('-866006406E+4')",
+  "type" : "decimal",
+  "json" : "467481814753.0894856298358605906202",
+  "text" : "467481814753.0894856298358605906202"
+}, {
+  "expr" : "decimal('24648648084068480806.4646') / decimal('0.66804426')",
+  "type" : "decimal",
+  "json" : "36896729094070025848.98282038977477",
+  "text" : "36896729094070025848.98282038977477"
+}, {
+  "expr" : "decimal('4.8048680248680068') / decimal('-0.000000000204608828')",
+  "type" : "decimal",
+  "json" : "-23483190201.68575913058844166782481",
+  "text" : "-23483190201.68575913058844166782481"
+}, {
+  "expr" : "decimal('-0.000466242408') / decimal('0.00000000000000000002')",
+  "type" : "decimal",
+  "json" : "-23312120400000000",
+  "text" : "-2.33121204E+16"
+}, {
+  "expr" : "decimal('8') / decimal('-20036002008.468206')",
+  "type" : "decimal",
+  "json" : "-0.0000000003992812536462515871272767108118313",
+  "text" : "-3.992812536462515871272767108118313E-10"
+}, {
+  "expr" : "decimal('6606080426002024226042088488002.84') / decimal('-6686624204468268488868804226048E+6')",
+  "type" : "decimal",
+  "json" : "-0.0000009879544930291698307800061845320085",
+  "text" : "-9.879544930291698307800061845320085E-7"
+}, {
+  "expr" : "decimal('4E+2') / decimal('622.420628')",
+  "type" : "decimal",
+  "json" : "0.6426522226380967566518377022684409",
+  "text" : "0.6426522226380967566518377022684409"
+}, {
+  "expr" : "decimal('-66.480028') / decimal('4E+4')",
+  "type" : "decimal",
+  "json" : "-0.0016620007",
+  "text" : "-0.0016620007"
+}, {
+  "expr" : "decimal('-286.66228268464800') / decimal('-280400604484048820682408424662488E+2')",
+  "type" : "decimal",
+  "json" : "0.00000000000000000000000000000001022331186525510461509131937278721",
+  "text" : "1.022331186525510461509131937278721E-32"
+}, {
+  "expr" : "decimal('88228.828648224208') / decimal('6006008.064628662088408468')",
+  "type" : "decimal",
+  "json" : "0.01469009493474251556372970476343483",
+  "text" : "0.01469009493474251556372970476343483"
+}, {
+  "expr" : "decimal('0.0000000000000000') / decimal('0.00068824408086842440')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('82220260624002488226468242648222E+2') / decimal('424088282282468082842264026608208E+6')",
+  "type" : "decimal",
+  "json" : "0.00001938753416658630812056320558603054",
+  "text" : "0.00001938753416658630812056320558603054"
+}, {
+  "expr" : "decimal('4682444004200644668428400') / decimal('628628688464268020628840204680420E+2')",
+  "type" : "decimal",
+  "json" : "0.00000000007448664195774768850395093935647226",
+  "text" : "7.448664195774768850395093935647226E-11"
+}, {
+  "expr" : "decimal('64602022866480666') / decimal('0.00000000000000000008')",
+  "type" : "decimal",
+  "json" : "807525285831008325000000000000000000",
+  "text" : "8.07525285831008325E+35"
+}, {
+  "expr" : "decimal('-88288.400084026640') / decimal('0.00000002')",
+  "type" : "decimal",
+  "json" : "-4414420004201.3320",
+  "text" : "-4414420004201.3320"
+}, {
+  "expr" : "decimal('844.04802862468804') / decimal('-48442624020226868')",
+  "type" : "decimal",
+  "json" : "-0.00000000000001742366450405869587081243357851408",
+  "text" : "-1.742366450405869587081243357851408E-14"
+}, {
+  "expr" : "decimal('84.64086628684662') / decimal('-608466286224066040822680862.268820')",
+  "type" : "decimal",
+  "json" : "-0.0000000000000000000000001391052687768437069454949956296062",
+  "text" : "-1.391052687768437069454949956296062E-25"
+}, {
+  "expr" : "decimal('-628606828E+4') / decimal('0.000000000608066004')",
+  "type" : "decimal",
+  "json" : "-10337805828065993967325.95496327073",
+  "text" : "-10337805828065993967325.95496327073"
+}, {
+  "expr" : "decimal('0.000440862828') / decimal('804806680E+8')",
+  "type" : "decimal",
+  "json" : "0.000000000000000000005477872375512588936264793428404446",
+  "text" : "5.477872375512588936264793428404446E-21"
+}, {
+  "expr" : "decimal('-0.00000000000002') / decimal('400448844608066226820468226222408')",
+  "type" : "decimal",
+  "json" : "-0.00000000000000000000000000000000000000000000004994395731013963502898974664071416",
+  "text" : "-4.994395731013963502898974664071416E-47"
+}, {
+  "expr" : "decimal('282286226606868.660202460222824202') / decimal('0.00000000000242882802')",
+  "type" : "decimal",
+  "json" : "116223225474345713535724206.1231663",
+  "text" : "116223225474345713535724206.1231663"
+}, {
+  "expr" : "decimal('-684648860446.08082628662426222268') / decimal('602648602482044.628400422284084662')",
+  "type" : "decimal",
+  "json" : "-0.001136066453363225581558658479643314",
+  "text" : "-0.001136066453363225581558658479643314"
+}, {
+  "expr" : "decimal('-4E+2') / decimal('0.04')",
+  "type" : "decimal",
+  "json" : "-10000",
+  "text" : "-1E+4"
+}, {
+  "expr" : "decimal('2240424026686808004.246286220600') / decimal('0.00000000000000000000')",
+  "type" : "decimal",
+  "evalError" : "decimal division by zero in: decimal('2240424026686808004.246286220600') / decimal('0.00000000000000000000')"
+}, {
+  "expr" : "decimal('0.0000000004') / decimal('-4')",
+  "type" : "decimal",
+  "json" : "-0.0000000001",
+  "text" : "-1E-10"
+}, {
+  "expr" : "decimal('-0.00000022806400') + decimal('-0.00000000000002') * decimal('0.00000000000000000004') - decimal('-6840426.86')",
+  "type" : "decimal",
+  "json" : "6840426.8599997719359999999999999999999992",
+  "text" : "6840426.8599997719359999999999999999999992"
+}, {
+  "expr" : "decimal('4E+8') + decimal('-0.00000000000002') * decimal('2620068260020804E+8') - decimal('464866600E+2')",
+  "type" : "decimal",
+  "json" : "-51326796520.041608",
+  "text" : "-51326796520.041608"
+}, {
+  "expr" : "decimal('0.0000000000000006') + decimal('-266028620.4242064688022484') * decimal('-42884400E+4') - decimal('6422048404088468468.086646')",
+  "type" : "decimal",
+  "json" : "107662729293109930438.9447668496000006",
+  "text" : "107662729293109930438.9447668496000006"
+}, {
+  "expr" : "decimal('-806248.2484402064') + decimal('0.000002') * decimal('0.00000644248208') - decimal('4684480204642602008.24222')",
+  "type" : "decimal",
+  "json" : "-4684480204643408256.49066020638711503584",
+  "text" : "-4684480204643408256.49066020638711503584"
+}, {
+  "expr" : "decimal('6604806266088864020644608') + decimal('0.00000006') * decimal('0.000000000000') - decimal('4442066026480024822866686')",
+  "type" : "decimal",
+  "json" : "2162740239608839197777922.00000000000000000000",
+  "text" : "2162740239608839197777922.00000000000000000000"
+}, {
+  "expr" : "decimal('-26006.082206240484') + decimal('-0.0000000000') * decimal('80022.46046222026086204684') - decimal('-0.000000')",
+  "type" : "decimal",
+  "json" : "-26006.082206240484000000000000000000",
+  "text" : "-26006.082206240484000000000000000000"
+}, {
+  "expr" : "decimal('6284268442262420E+6') + decimal('8606086488646888486288864') * decimal('-242082882286286.0') - decimal('-664.80084640240482')",
+  "type" : "decimal",
+  "json" : "-2083386222376701115297920356549321718439.19915359759518",
+  "text" : "-2083386222376701115297920356549321718439.19915359759518"
+}, {
+  "expr" : "decimal('-806824644228842024404226202426080') + decimal('0.00000400048006') * decimal('624.020462') - decimal('0.0000000440026824')",
+  "type" : "decimal",
+  "json" : "-806824644228842024404226202426079.99750366258741941228",
+  "text" : "-806824644228842024404226202426079.99750366258741941228"
+}, {
+  "expr" : "decimal('0.00000002') + decimal('-6666848244242220624086608E+8') * decimal('-264620248.26068024') - decimal('42088408662446888248486604064.2440')",
+  "type" : "decimal",
+  "json" : "176418303750723570988252920397614588818527.75600002",
+  "text" : "176418303750723570988252920397614588818527.75600002"
+}, {
+  "expr" : "decimal('0.00046208802660044420') + decimal('0E+2') * decimal('26802404082486484200002844200664') - decimal('24880422666404024E+6')",
+  "type" : "decimal",
+  "json" : "-24880422666404023999999.99953791197339955580",
+  "text" : "-24880422666404023999999.99953791197339955580"
+}, {
+  "expr" : "decimal('-64066204026044062882662.46') + decimal('2E+6') * decimal('882.880442') - decimal('62662626408420440206.0422')",
+  "type" : "decimal",
+  "json" : "-64128866652450717561984.5022",
+  "text" : "-64128866652450717561984.5022"
+}, {
+  "expr" : "decimal('0.04') + decimal('-6E+4') * decimal('-0.00000000000202280446') - decimal('868244662E+2')",
+  "type" : "decimal",
+  "json" : "-86824466199.9599998786317324",
+  "text" : "-86824466199.9599998786317324"
+}, {
+  "expr" : "decimal('0.00000006') + decimal('-0.0000') * decimal('6E+8') - decimal('0.000000000462800228')",
+  "type" : "decimal",
+  "json" : "0.000000059537199772",
+  "text" : "5.9537199772E-8"
+}, {
+  "expr" : "decimal('6400662080602020442444006E+8') + decimal('-0.0000000000') * decimal('2') - decimal('8E+8')",
+  "type" : "decimal",
+  "json" : "640066208060202044244399800000000.0000000000",
+  "text" : "640066208060202044244399800000000.0000000000"
+}, {
+  "expr" : "decimal('4.4240002288044868') + decimal('4') * decimal('822468004280280462262446E+6') - decimal('-470464000444668640248608604688202E+6')",
+  "type" : "decimal",
+  "json" : "470464003734540657369730453737986000004.4240002288044868",
+  "text" : "470464003734540657369730453737986000004.4240002288044868"
+}, {
+  "expr" : "decimal('86822028624.8282') + decimal('-8042406082888262042626848E+4') * decimal('622660844660680442482626602460620E+2') - decimal('0.000004')",
+  "type" : "decimal",
+  "json" : "-5007691364675399610622781879067226122925382066285274638937971375.171804",
+  "text" : "-5007691364675399610622781879067226122925382066285274638937971375.171804"
+}, {
+  "expr" : "decimal('0.000884602200') + decimal('-0.06') * decimal('860480462') - decimal('-840884846220848664660.486688600602')",
+  "type" : "decimal",
+  "json" : "840884846220797035832.767573202802",
+  "text" : "840884846220797035832.767573202802"
+}, {
+  "expr" : "decimal('2268882640288.46662246228222008200') + decimal('24428268244482686') * decimal('0.000000000008') - decimal('-860642404040.2284')",
+  "type" : "decimal",
+  "json" : "3129525239754.84097832377022008200",
+  "text" : "3129525239754.84097832377022008200"
+}, {
+  "expr" : "decimal('0.000000000000000008') + decimal('20224242') * decimal('6844442422462008848406204E+6') - decimal('-62662.200866444648')",
+  "type" : "decimal",
+  "json" : "138423659906937902756308383997368062662.200866444648000008",
+  "text" : "138423659906937902756308383997368062662.200866444648000008"
+}, {
+  "expr" : "decimal('844600634286204.6082802644') + decimal('-2046044888868400400266622E+6') * decimal('6028420240068400406.248208') - decimal('-4688086668168862.44680602')",
+  "type" : "decimal",
+  "json" : "-12334418420142765970992073638954321846910607258308.9449137156",
+  "text" : "-12334418420142765970992073638954321846910607258308.9449137156"
+}, {
+  "expr" : "decimal('-0.0000000000000008') + decimal('8002202642622466642600660.08246284') * decimal('282288684484846.82') - decimal('-6424242482826.8468')",
+  "type" : "decimal",
+  "json" : "2258931256967060921644738090855015636212.4525421687999992",
+  "text" : "2258931256967060921644738090855015636212.4525421687999992"
+}, {
+  "expr" : "decimal('0.00080622448444408626') + decimal('468448684660240.2044448800') * decimal('-0.00000000000000000006') - decimal('4682285680242022244602848.04248824')",
+  "type" : "decimal",
+  "json" : "-4682285680242022244602848.041710122436635528152266692800",
+  "text" : "-4682285680242022244602848.041710122436635528152266692800"
+}, {
+  "expr" : "decimal('6E+2') + decimal('62224202424064248E+2') * decimal('6464826646422.46848280866048604404') - decimal('-8408020008662622006428260404262.72')",
+  "type" : "decimal",
+  "json" : "48634888197010232654270820894760.526275766031748192",
+  "text" : "48634888197010232654270820894760.526275766031748192"
+}, {
+  "expr" : "decimal('8820226888028042024884280.22482608') + decimal('804468446E+8') * decimal('0.000000000000000002') - decimal('-4202860028442408002428602E+6')",
+  "type" : "decimal",
+  "json" : "4202868848669296030470626884280.3857197692",
+  "text" : "4202868848669296030470626884280.3857197692"
+}, {
+  "expr" : "decimal('480642868284.264666862688') + decimal('-666482000240422202644002048428640E+8') * decimal('-0.000000000000648002468') - decimal('620824246440860.240440488488826264')",
+  "type" : "decimal",
+  "json" : "43188198103336397723927372701.905650562551173736",
+  "text" : "43188198103336397723927372701.905650562551173736"
+}, {
+  "expr" : "decimal('-68880.88604044820666448886') + decimal('-2202444040826248026486244820442.64') * decimal('6648844648468826668.84622284022640') - decimal('-8602022820884422E+4')",
+  "type" : "decimal",
+  "json" : "-14643708274399657191804415400798566516142904911291.15274569402036048886",
+  "text" : "-14643708274399657191804415400798566516142904911291.15274569402036048886"
+}, {
+  "expr" : "decimal('-6') + decimal('482046868648.086444882864') * decimal('0.000004') - decimal('2')",
+  "type" : "decimal",
+  "json" : "1928179.474592345779531456",
+  "text" : "1928179.474592345779531456"
+}, {
+  "expr" : "decimal('66840286006224468801846688626482E+6') + decimal('-48826884884486208E+8') * decimal('-0.00000000000204242026') - decimal('820868622608420622204828088202026E+4')",
+  "type" : "decimal",
+  "json" : "58631599780140262579798417716963632076.239090977408",
+  "text" : "58631599780140262579798417716963632076.239090977408"
+}, {
+  "expr" : "decimal('-624.468646') + decimal('0.0000000600462244') * decimal('2260822468600624662068004204062E+2') - decimal('26280.24922802006640686002')",
+  "type" : "decimal",
+  "json" : "13575385327815506243844050.13185100428487313998",
+  "text" : "13575385327815506243844050.13185100428487313998"
+}, {
+  "expr" : "decimal('40086.28064666608442486440') + decimal('286.260422') * decimal('-88022240048466804E+6') - decimal('0.00000662080266')",
+  "type" : "decimal",
+  "json" : "-25197283581659407765991201.71935995471823513560",
+  "text" : "-25197283581659407765991201.71935995471823513560"
+}, {
+  "expr" : "decimal('-62000.864882202088') + decimal('6868688068844626800866E+8') * decimal('278488880802084.664842066824606420') - decimal('204622282E+8')",
+  "type" : "decimal",
+  "json" : "191285325287117237939510107699737629540265164.551633769912",
+  "text" : "191285325287117237939510107699737629540265164.551633769912"
+}, {
+  "expr" : "decimal('-4244620248462882482.460020') + decimal('-0.06') * decimal('260666842') - decimal('-404864640860886028262882248684004E+8')",
+  "type" : "decimal",
+  "json" : "40486464086088602826283980248151921477507.019980",
+  "text" : "40486464086088602826283980248151921477507.019980"
+}, {
+  "expr" : "decimal('0.000000000202484846') + decimal('-664040826082824880268404860486428E+4') * decimal('2480206080.2408') - decimal('66642086828404488E+2')",
+  "type" : "decimal",
+  "json" : "-16469580943787458825377139987150432417714167423.999999999797515154",
+  "text" : "-16469580943787458825377139987150432417714167423.999999999797515154"
+}, {
+  "expr" : "decimal('4020060.86') + decimal('88266086086642222') * decimal('8E+8') - decimal('-0.000006')",
+  "type" : "decimal",
+  "json" : "70612868869313777604020060.860006",
+  "text" : "70612868869313777604020060.860006"
+}, {
+  "expr" : "decimal('48864066860080826626288.46') + decimal('406000642848464284642826400200464E+8') * decimal('480.648022') - decimal('8.8646080640822664')",
+  "type" : "decimal",
+  "json" : "19514340591584280415170812641433423334847079.5953919359177336",
+  "text" : "19514340591584280415170812641433423334847079.5953919359177336"
+}, {
+  "expr" : "decimal('42842042E+2') + decimal('-8') * decimal('880448844226428840200882006.248888') - decimal('-66086.286080408826')",
+  "type" : "decimal",
+  "json" : "-7043590753811430717322785763.705023591174",
+  "text" : "-7043590753811430717322785763.705023591174"
+}, {
+  "expr" : "decimal('2246822888846.280886468402') + decimal('8628640.86') * decimal('866.82408620604024') - decimal('6062664.4824466202')",
+  "type" : "decimal",
+  "json" : "2254296339910.4680410418702064",
+  "text" : "2254296339910.4680410418702064"
+}, {
+  "expr" : "decimal('60026262486.220408') + decimal('0.0000000282082806') * decimal('628882460206644420E+6') - decimal('-0E+8')",
+  "type" : "decimal",
+  "json" : "17739752928189846.0041922520",
+  "text" : "17739752928189846.0041922520"
+}, {
+  "expr" : "decimal('-20822068244466080E+2') + decimal('0.000448204288') * decimal('-2440040406846468648484202.40806222') - decimal('-0.0064')",
+  "type" : "decimal",
+  "json" : "-1095718780066298413908.17781955341277479936",
+  "text" : "-1095718780066298413908.17781955341277479936"
+}, {
+  "expr" : "decimal('6E+2') + decimal('64660660228608222460268480040660') * decimal('484604808240460040860.8426') - decimal('262242826244882242646068644464820')",
+  "type" : "decimal",
+  "json" : "31334866850786228752977644758347742976026151638185640.1160",
+  "text" : "31334866850786228752977644758347742976026151638185640.1160"
+}, {
+  "expr" : "decimal('0.000006284400').round(0, 'UP')",
+  "type" : "decimal",
+  "json" : "1",
+  "text" : "1"
+}, {
+  "expr" : "decimal('28000446088400602.2444066866004404').round(4, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "28000446088400602.2444",
+  "text" : "28000446088400602.2444"
+}, {
+  "expr" : "decimal('0.02').round(0, 'UP')",
+  "type" : "decimal",
+  "json" : "1",
+  "text" : "1"
+}, {
+  "expr" : "decimal('0.0000000000288228').round(-4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('-62844466620666062').round(4, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "-62844466620666062.0000",
+  "text" : "-62844466620666062.0000"
+}, {
+  "expr" : "decimal('2.4820604644044068').round(0, 'DOWN')",
+  "type" : "decimal",
+  "json" : "2",
+  "text" : "2"
+}, {
+  "expr" : "decimal('28.08800002204804').round(4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "28.0880",
+  "text" : "28.0880"
+}, {
+  "expr" : "decimal('0.00000000000000000000').round(0, 'CEILING')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('-807882026E+4').round(-4, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "-8078820260000",
+  "text" : "-8.07882026E+12"
+}, {
+  "expr" : "decimal('4626842046842248E+4').round(-4, 'UP')",
+  "type" : "decimal",
+  "json" : "46268420468422480000",
+  "text" : "4.626842046842248E+19"
+}, {
+  "expr" : "decimal('8E+4').round(0, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "80000",
+  "text" : "80000"
+}, {
+  "expr" : "decimal('-0.060664840888464026').round(-4, 'DOWN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('-0.00000000000240240026').round(4, 'CEILING')",
+  "type" : "decimal",
+  "json" : "0.0000",
+  "text" : "0.0000"
+}, {
+  "expr" : "decimal('-0.000000000000000004').round(0, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('486686426E+6').round(0, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "486686426000000",
+  "text" : "486686426000000"
+}, {
+  "expr" : "decimal('4024084228888228604268260.04246208').round(0, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "4024084228888228604268260",
+  "text" : "4024084228888228604268260"
+}, {
+  "expr" : "decimal('-220884064').round(0, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "-220884064",
+  "text" : "-220884064"
+}, {
+  "expr" : "decimal('686080066E+2').round(4, 'DOWN')",
+  "type" : "decimal",
+  "json" : "68608006600.0000",
+  "text" : "68608006600.0000"
+}, {
+  "expr" : "decimal('-6826626202620082480040004E+2').round(4, 'DOWN')",
+  "type" : "decimal",
+  "json" : "-682662620262008248004000400.0000",
+  "text" : "-682662620262008248004000400.0000"
+}, {
+  "expr" : "decimal('-8.2042222806021680').round(-4, 'DOWN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('0.0000000264264800').round(-4, 'DOWN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('2268664806400860846402406E+2').round(4, 'DOWN')",
+  "type" : "decimal",
+  "json" : "226866480640086084640240600.0000",
+  "text" : "226866480640086084640240600.0000"
+}, {
+  "expr" : "decimal('-6042068486006626464.84240206606684').round(-4, 'CEILING')",
+  "type" : "decimal",
+  "json" : "-6042068486006620000",
+  "text" : "-6.04206848600662E+18"
+}, {
+  "expr" : "decimal('0.00000000000008').round(4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "0.0000",
+  "text" : "0.0000"
+}, {
+  "expr" : "decimal('-0.026628822448064240').round(4, 'CEILING')",
+  "type" : "decimal",
+  "json" : "-0.0266",
+  "text" : "-0.0266"
+}, {
+  "expr" : "decimal('644488822422686684428600086884248E+6').round(0, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "644488822422686684428600086884248000000",
+  "text" : "644488822422686684428600086884248000000"
+}, {
+  "expr" : "decimal('0.0000000000000008').round(0, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('42264042862.02266028880048').round(0, 'UP')",
+  "type" : "decimal",
+  "json" : "42264042863",
+  "text" : "42264042863"
+}, {
+  "expr" : "decimal('2020246400440886460.082646').round(4, 'CEILING')",
+  "type" : "decimal",
+  "json" : "2020246400440886460.0827",
+  "text" : "2020246400440886460.0827"
+}, {
+  "expr" : "decimal('6424806.20').round(-4, 'UP')",
+  "type" : "decimal",
+  "json" : "6430000",
+  "text" : "6.43E+6"
+}, {
+  "expr" : "decimal('84466608.26006042').round(4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "84466608.2601",
+  "text" : "84466608.2601"
+}, {
+  "expr" : "decimal('-2422860860242.680260428000').round(4, 'UP')",
+  "type" : "decimal",
+  "json" : "-2422860860242.6803",
+  "text" : "-2422860860242.6803"
+}, {
+  "expr" : "decimal('624.444462').round(0, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "624",
+  "text" : "624"
+}, {
+  "expr" : "decimal('0.0000000086426646').round(0, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('-0.00012206208606088468').round(0, 'DOWN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('840280668062080846282608E+2').round(0, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "84028066806208084628260800",
+  "text" : "84028066806208084628260800"
+}, {
+  "expr" : "decimal('0.00000000000268848604').round(0, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('0.000000000266626704').round(-4, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('-684082600E+2').round(-4, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "-68408260000",
+  "text" : "-6.840826E+10"
+}, {
+  "expr" : "decimal('-2884808.008206082260646624').round(4, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "-2884808.0083",
+  "text" : "-2884808.0083"
+}, {
+  "expr" : "decimal('-84406680462600026').round(-4, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "-84406680462600000",
+  "text" : "-8.440668046260E+16"
+}, {
+  "expr" : "decimal('646888400008668620688.668042246861').round(0, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "646888400008668620688",
+  "text" : "646888400008668620688"
+}, {
+  "expr" : "decimal('-8440040004468.862082200264').round(0, 'UP')",
+  "type" : "decimal",
+  "json" : "-8440040004469",
+  "text" : "-8440040004469"
+}, {
+  "expr" : "decimal('0.8286242628662628').round(4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "0.8286",
+  "text" : "0.8286"
+}, {
+  "expr" : "decimal('0.0000000486604802').round(4, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "0.0000",
+  "text" : "0.0000"
+}, {
+  "expr" : "decimal('0').round(-4, 'UP')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('602084080682482380200.2808').round(4, 'UP')",
+  "type" : "decimal",
+  "json" : "602084080682482380200.2808",
+  "text" : "602084080682482380200.2808"
+}, {
+  "expr" : "decimal('494882664844606204028622684202400E+2').round(-4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "49488266484460620402862268420240000",
+  "text" : "4.948826648446062040286226842024E+34"
+}, {
+  "expr" : "decimal('-8408.06288282082680802440').round(4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "-8408.0629",
+  "text" : "-8408.0629"
+}, {
+  "expr" : "decimal('649202426848688E+2').round(-4, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "64920242684870000",
+  "text" : "6.492024268487E+16"
+}, {
+  "expr" : "decimal('-0.000000000004').round(0, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "decimal('-4820680082688240480868608').round(-4, 'CEILING')",
+  "type" : "decimal",
+  "json" : "-4820680082688240480860000",
+  "text" : "-4.82068008268824048086E+24"
+}, {
+  "expr" : "decimal('3246408488626800062088640E+4').round(4, 'CEILING')",
+  "type" : "decimal",
+  "json" : "32464084886268000620886400000.0000",
+  "text" : "32464084886268000620886400000.0000"
+}, {
+  "expr" : "decimal('-86224864482242420.88860248').round(-4, 'CEILING')",
+  "type" : "decimal",
+  "json" : "-86224864482240000",
+  "text" : "-8.622486448224E+16"
+}, {
+  "expr" : "decimal('-84260046288.860680').round(4, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "-84260046288.8607",
+  "text" : "-84260046288.8607"
+}, {
+  "expr" : "decimal('22662.0266').round(0, 'DOWN')",
+  "type" : "decimal",
+  "json" : "22662",
+  "text" : "22662"
+}, {
+  "expr" : "decimal('-648264208E+4').round(-4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "-6482642080000",
+  "text" : "-6.48264208E+12"
+}, {
+  "expr" : "decimal('46060664082240228').round(4, 'HALF_UP')",
+  "type" : "decimal",
+  "json" : "46060664082240228.0000",
+  "text" : "46060664082240228.0000"
+}, {
+  "expr" : "decimal('6062086022440226686.460084').round(0, 'DOWN')",
+  "type" : "decimal",
+  "json" : "6062086022440226686",
+  "text" : "6062086022440226686"
+}, {
+  "expr" : "decimal('2644486068226200.8226008688284828').round(4, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "2644486068226200.8226",
+  "text" : "2644486068226200.8226"
+}, {
+  "expr" : "decimal('880660660046200084488240068486686E+4').round(4, 'UP')",
+  "type" : "decimal",
+  "json" : "8806606600462000844882400684866860000.0000",
+  "text" : "8806606600462000844882400684866860000.0000"
+}, {
+  "expr" : "decimal('6246084264664680440644042460668.88').round(-4, 'FLOOR')",
+  "type" : "decimal",
+  "json" : "6246084264664680440644042460000",
+  "text" : "6.24608426466468044064404246E+30"
+}, {
+  "expr" : "decimal('8.40428048842024').round(0, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "8",
+  "text" : "8"
+}, {
+  "expr" : "decimal('0.08').round(4, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "0.0800",
+  "text" : "0.0800"
+}, {
+  "expr" : "decimal('-8626420884888422664.68464282242806').round(4, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "-8626420884888422664.6846",
+  "text" : "-8626420884888422664.6846"
+}, {
+  "expr" : "decimal('0.0000000000').round(-4, 'CEILING')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('620.06446840244206').round(-4, 'HALF_DOWN')",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0E+4"
+}, {
+  "expr" : "decimal('-0.080289400888428682').round(4, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "-0.0803",
+  "text" : "-0.0803"
+}, {
+  "expr" : "decimal('-4820082842642284088.802488').round(0, 'DOWN')",
+  "type" : "decimal",
+  "json" : "-4820082842642284088",
+  "text" : "-4820082842642284088"
+}, {
+  "expr" : "decimal('88402648002666288.84082846').round(4, 'HALF_EVEN')",
+  "type" : "decimal",
+  "json" : "88402648002666288.8408",
+  "text" : "88402648002666288.8408"
+}, {
+  "expr" : "string(decimal('-2246644826440066446244888') / 10)",
+  "type" : "string",
+  "json" : "-224664482644006644624488.8",
+  "text" : "-224664482644006644624488.8"
+}, {
+  "expr" : "string(decimal('0.0000000004') / 56)",
+  "type" : "string",
+  "json" : "0.000000000007142857142857142857142857142857143",
+  "text" : "0.000000000007142857142857142857142857142857143"
+}, {
+  "expr" : "string(decimal('8840806.642806888482288202') / 38)",
+  "type" : "string",
+  "json" : "232652.8063896549600602158421052632",
+  "text" : "232652.8063896549600602158421052632"
+}, {
+  "expr" : "string(decimal('-0.06') / 59)",
+  "type" : "string",
+  "json" : "-0.001016949152542372881355932203389831",
+  "text" : "-0.001016949152542372881355932203389831"
+}, {
+  "expr" : "string(decimal('80026008480684020E+8') / 10)",
+  "type" : "string",
+  "json" : "800260084806840200000000",
+  "text" : "800260084806840200000000"
+}, {
+  "expr" : "string(decimal('2E+4') / 62)",
+  "type" : "string",
+  "json" : "322.5806451612903225806451612903226",
+  "text" : "322.5806451612903225806451612903226"
+}, {
+  "expr" : "string(decimal('420602888E+2') / 2)",
+  "type" : "string",
+  "json" : "21030144400",
+  "text" : "21030144400"
+}, {
+  "expr" : "string(decimal('-604.84380282608048') / 92)",
+  "type" : "string",
+  "json" : "-6.574389161153048695652173913043478",
+  "text" : "-6.574389161153048695652173913043478"
+}, {
+  "expr" : "string(decimal('8202.42640028428468480840') / 38)",
+  "type" : "string",
+  "json" : "215.8533263232706496002210526315789",
+  "text" : "215.8533263232706496002210526315789"
+}, {
+  "expr" : "string(decimal('84244044082822.240224608066442824') / 34)",
+  "type" : "string",
+  "json" : "2477766002435.948241900237248318353",
+  "text" : "2477766002435.948241900237248318353"
+}, {
+  "expr" : "string(decimal('-4022620824200.8802') / 86)",
+  "type" : "string",
+  "json" : "-46774660746.52186279069767441860465",
+  "text" : "-46774660746.52186279069767441860465"
+}, {
+  "expr" : "string(decimal('0.00000026424484') / 19)",
+  "type" : "string",
+  "json" : "0.00000001390762315789473684210526315789474",
+  "text" : "0.00000001390762315789473684210526315789474"
+}, {
+  "expr" : "string(decimal('0.00000000000684822804') / 51)",
+  "type" : "string",
+  "json" : "0.0000000000001342789811764705882352941176470588",
+  "text" : "0.0000000000001342789811764705882352941176470588"
+}, {
+  "expr" : "string(decimal('60260240428666860.84046826') / 47)",
+  "type" : "string",
+  "json" : "1282132775078018.315754643829787234",
+  "text" : "1282132775078018.315754643829787234"
+}, {
+  "expr" : "string(decimal('-868226446426224.844642860642442846') / 59)",
+  "type" : "string",
+  "json" : "-14715702481800.42109564170580411603",
+  "text" : "-14715702481800.42109564170580411603"
+}, {
+  "expr" : "string(decimal('0.000000000020040484') / 62)",
+  "type" : "string",
+  "json" : "0.0000000000003232336129032258064516129032258065",
+  "text" : "0.0000000000003232336129032258064516129032258065"
+}, {
+  "expr" : "string(decimal('-0.0000000000000000') / 19)",
+  "type" : "string",
+  "json" : "0.0000000000000000",
+  "text" : "0.0000000000000000"
+}, {
+  "expr" : "string(decimal('-486620462020048044880.0842') / 96)",
+  "type" : "string",
+  "json" : "-5068963146042167134.16754375",
+  "text" : "-5068963146042167134.16754375"
+}, {
+  "expr" : "string(decimal('642064060E+8') / 10)",
+  "type" : "string",
+  "json" : "6420640600000000",
+  "text" : "6420640600000000"
+}, {
+  "expr" : "string(decimal('42288.222868206288') / 74)",
+  "type" : "string",
+  "json" : "571.4624711919768648648648648648649",
+  "text" : "571.4624711919768648648648648648649"
+}, {
+  "expr" : "decimal('862668622802600846646866220424860E+6') == decimal('0.0008804664')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('84688464488866.4422286480') == decimal('-4E+6')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('684024') == decimal('0.00044448668060000404')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('-6264688820602662462400206E+4') == decimal('-20026.62646884640484026688')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('262648208E+8') == decimal('8.80642060')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('0.040022844484020020') == decimal('0.0')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('0.00000266244088') == decimal('2486666.4840446264')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('-22086288808620262204622.42') == decimal('6844640228.46304620202000')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('8842644684262246244886668E+6') == decimal('-2628.2288804244')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('6') == decimal('-466464288E+2')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('606860060424222002822680422.842804') == decimal('0.000220220262')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('648260206E+8') == decimal('-0.0000000004400282')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('260.466022') == decimal('2868208046048280604880.0002420686')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('8E+6') == decimal('66262828402480682E+4')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('64220288848024666404826404206428E+8') == decimal('68442.624482486400')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('4088408.6206686444') == decimal('-68288600002444684.00248060')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('680224280428642260466.8706') == decimal('800406688524468286226.6468')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('-64.260880') == decimal('-6260840626044222006204020E+4')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('-2024848824482662482.44066400042882') == decimal('-84440608022626466E+4')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('2E+2') == decimal('-602.88424464480024')",
+  "type" : "bool",
+  "json" : false,
+  "text" : "false"
+}, {
+  "expr" : "decimal('1') / decimal('1')",
+  "type" : "decimal",
+  "json" : "1",
+  "text" : "1"
+}, {
+  "expr" : "decimal('1') / decimal('3')",
+  "type" : "decimal",
+  "json" : "0.3333333333333333333333333333333333",
+  "text" : "0.3333333333333333333333333333333333"
+}, {
+  "expr" : "decimal('1') / decimal('7')",
+  "type" : "decimal",
+  "json" : "0.1428571428571428571428571428571429",
+  "text" : "0.1428571428571428571428571428571429"
+}, {
+  "expr" : "decimal('1') / decimal('9')",
+  "type" : "decimal",
+  "json" : "0.1111111111111111111111111111111111",
+  "text" : "0.1111111111111111111111111111111111"
+}, {
+  "expr" : "decimal('1') / decimal('11')",
+  "type" : "decimal",
+  "json" : "0.09090909090909090909090909090909091",
+  "text" : "0.09090909090909090909090909090909091"
+}, {
+  "expr" : "decimal('1') / decimal('12')",
+  "type" : "decimal",
+  "json" : "0.08333333333333333333333333333333333",
+  "text" : "0.08333333333333333333333333333333333"
+}, {
+  "expr" : "decimal('1') / decimal('13')",
+  "type" : "decimal",
+  "json" : "0.07692307692307692307692307692307692",
+  "text" : "0.07692307692307692307692307692307692"
+}, {
+  "expr" : "decimal('1') / decimal('17')",
+  "type" : "decimal",
+  "json" : "0.05882352941176470588235294117647059",
+  "text" : "0.05882352941176470588235294117647059"
+}, {
+  "expr" : "decimal('1') / decimal('19')",
+  "type" : "decimal",
+  "json" : "0.05263157894736842105263157894736842",
+  "text" : "0.05263157894736842105263157894736842"
+}, {
+  "expr" : "decimal('1') / decimal('3.0')",
+  "type" : "decimal",
+  "json" : "0.3333333333333333333333333333333333",
+  "text" : "0.3333333333333333333333333333333333"
+}, {
+  "expr" : "decimal('1') / decimal('0.07')",
+  "type" : "decimal",
+  "json" : "14.28571428571428571428571428571429",
+  "text" : "14.28571428571428571428571428571429"
+}, {
+  "expr" : "[0, 1].map(x, [1, 2, 3].exists(y, y == 3) ? 1/x : 1)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:45: / by zero in: [0, 1].map(x, [1, 2, 3].exists(y, y == 3) ? 1/x : 1)"
+}, {
+  "expr" : "[0, 1].map(x, 1/x)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:15: / by zero in: [0, 1].map(x, 1/x)"
+}, {
+  "expr" : "[0, 1, 2, 3, 4, 5].map(x, 1/x)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:22: Iteration budget exceeded: 5 in: [0, 1, 2, 3, 4, 5].map(x, 1/x)"
+}, {
+  "expr" : "[0, 1].map(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)",
+  "type" : "list<bool>",
+  "evalError" : "evaluation error at <input>:52: / by zero in: [0, 1].map(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)"
+}, {
+  "expr" : "[0, 1].filter(x, 1/x == 1)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:18: / by zero in: [0, 1].filter(x, 1/x == 1)"
+}, {
+  "expr" : "[0, 1, 2, 3, 4, 5].filter(x, 1/x == 1)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:25: Iteration budget exceeded: 5 in: [0, 1, 2, 3, 4, 5].filter(x, 1/x == 1)"
+}, {
+  "expr" : "[0, 1].filter(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:55: / by zero in: [0, 1].filter(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)"
+}, {
+  "expr" : "[0, 1, 2, 3, 4, 5].exists_one(x, 1/x == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:29: Iteration budget exceeded: 5 in: [0, 1, 2, 3, 4, 5].exists_one(x, 1/x == 1)"
+}, {
+  "expr" : "[0, 1].exists_one(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:59: / by zero in: [0, 1].exists_one(x, x == 1 ? [1,2,3].exists(y, y == 3) : 1/x == 1)"
+}, {
+  "expr" : "[0, 1, 2].exists(x, 1/x == 5)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:21: / by zero in: [0, 1, 2].exists(x, 1/x == 5)"
+}, {
+  "expr" : "[0, 1, 2, 3, 4, 5].exists(x, 1/x == 5)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:25: Iteration budget exceeded: 5 in: [0, 1, 2, 3, 4, 5].exists(x, 1/x == 5)"
+}, {
+  "expr" : "[0, 1].exists(x, x == 1 ? [1,2,3,4].exists(y, y == 4) && false : 1/x == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:66: / by zero in: [0, 1].exists(x, x == 1 ? [1,2,3,4].exists(y, y == 4) && false : 1/x == 1)"
+}, {
+  "expr" : "[0, 1].all(x, x == 1 ? [1,2,3,4].exists(y, y == 4) : 1/x == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:54: / by zero in: [0, 1].all(x, x == 1 ? [1,2,3,4].exists(y, y == 4) : 1/x == 1)"
+}, {
+  "expr" : "[1, 0].map(x, 1/x)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:15: / by zero in: [1, 0].map(x, 1/x)"
+}, {
+  "expr" : "[0, 1].map(x, x == 0 ? 1/x : [1].map(y, 2/(y - 1))[0])",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:24: / by zero in: [0, 1].map(x, x == 0 ? 1/x : [1].map(y, 2/(y - 1))[0])"
+}, {
+  "expr" : "[0, 1].map(x, x == 0 ? 1/x : [1, 2, 3, 4].map(y, y)[0])",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:24: / by zero in: [0, 1].map(x, x == 0 ? 1/x : [1, 2, 3, 4].map(y, y)[0])"
+}, {
+  "expr" : "[0, 1, 2, 3].map(x, x == 0 ? 1/x : [1, 2].map(y, y)[0])",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:30: / by zero in: [0, 1, 2, 3].map(x, x == 0 ? 1/x : [1, 2].map(y, y)[0])"
+}, {
+  "expr" : "[0, 1, 2, 3].exists(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:19: Iteration budget exceeded: 5 in: [0, 1, 2, 3].exists(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))"
+}, {
+  "expr" : "[0, 1, 2, 3].all(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3) || true)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:16: Iteration budget exceeded: 5 in: [0, 1, 2, 3].all(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3) || true)"
+}, {
+  "expr" : "[0, 1, 2, 3].filter(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:19: Iteration budget exceeded: 5 in: [0, 1, 2, 3].filter(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))"
+}, {
+  "expr" : "[0, 1, 2, 3].exists_one(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:23: Iteration budget exceeded: 5 in: [0, 1, 2, 3].exists_one(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3))"
+}, {
+  "expr" : "[0, 1].filter(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:38: / by zero in: [0, 1].filter(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1)"
+}, {
+  "expr" : "[0, 1].exists_one(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1)",
+  "type" : "bool",
+  "evalError" : "evaluation error at <input>:42: / by zero in: [0, 1].exists_one(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1)"
+}, {
+  "expr" : "[0, 1].map(x, x == 0 ? 1/x : 2/(x - 1))",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:24: / by zero in: [0, 1].map(x, x == 0 ? 1/x : 2/(x - 1))"
+}, {
+  "expr" : "[0, 1].map(x, x == 1, x == 0 ? 1/x : 2/(x - 1))",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:38: / by zero in: [0, 1].map(x, x == 1, x == 0 ? 1/x : 2/(x - 1))"
+}, {
+  "expr" : "[0, 1].map(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1, x)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:35: / by zero in: [0, 1].map(x, x == 0 ? 1/x == 1 : 2/(x - 1) == 1, x)"
+}, {
+  "expr" : "[0, 1].map(x, x == 0, 1/x)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:23: / by zero in: [0, 1].map(x, x == 0, 1/x)"
+}, {
+  "expr" : "[0, 1, 2, 3].map(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3), x)",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:16: Iteration budget exceeded: 5 in: [0, 1, 2, 3].map(x, x == 0 ? 1/x == 1 : [1, 2].exists(y, y == 3), x)"
+}, {
+  "expr" : "[0, 1, 2, 3].map(x, x != 0, x == 0 ? 1/x : [1, 2].map(y, y)[0])",
+  "type" : "list<int>",
+  "evalError" : "evaluation error at <input>:16: Iteration budget exceeded: 5 in: [0, 1, 2, 3].map(x, x != 0, x == 0 ? 1/x : [1, 2].map(y, y)[0])"
+} ]
