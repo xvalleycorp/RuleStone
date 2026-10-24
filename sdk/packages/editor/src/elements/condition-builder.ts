@@ -70,11 +70,16 @@ export class RulestoneConditionBuilder extends RulestoneElement {
       }
       .toolbar {
         display: flex;
+        flex-wrap: wrap;
         gap: 4px;
         align-items: center;
         margin-bottom: 6px;
       }
+      .toolbar button {
+        flex: none;
+      }
       .toolbar .hint {
+        flex: 1 1 16em;
         margin-left: 8px;
         font-size: 0.88em;
       }

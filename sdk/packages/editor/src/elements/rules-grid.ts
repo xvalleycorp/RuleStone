@@ -122,6 +122,11 @@ export class RulestoneRulesGrid extends RulestoneElement {
       td.description {
         min-width: 180px;
       }
+      td.id {
+        min-width: 8em;
+        max-width: 12em;
+        overflow-wrap: anywhere;
+      }
       td.when {
         min-width: 240px;
       }

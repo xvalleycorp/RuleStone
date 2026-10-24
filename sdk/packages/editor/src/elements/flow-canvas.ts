@@ -945,13 +945,15 @@ export class RulestoneFlowCanvas extends RulestoneElement {
 
   private zoomBy(factor: number, around?: { x: number; y: number }): void {
     const v = this._view
-    const zoom = Math.max(0.3, Math.min(2.5, v.zoom * factor))
+    const zoom = Math.max(0.15, Math.min(2.5, v.zoom * factor))
     const c = around ?? { x: v.x + this._size.w / v.zoom / 2, y: v.y + this._size.h / v.zoom / 2 }
     this._view = { zoom, x: c.x - (c.x - v.x) * (v.zoom / zoom), y: c.y - (c.y - v.y) * (v.zoom / zoom) }
   }
 
   /** Zooms and pans so that every node is visible. */
   fit(): void {
+    const rect = this.renderRoot.querySelector('svg')?.getBoundingClientRect()
+    if (rect && rect.width > 0 && rect.height > 0) this._size = { w: rect.width, h: rect.height }
     const points = Object.values(this.layout)
     if (points.length === 0) {
       this._view = { x: 0, y: 0, zoom: 1 }
@@ -961,7 +963,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     const minY = Math.min(...points.map((p) => p.y)) - 30
     const maxX = Math.max(...points.map((p) => p.x)) + NODE_WIDTH + 30
     const maxY = Math.max(...points.map((p) => p.y)) + NODE_HEIGHT + 30
-    const zoom = Math.max(0.3, Math.min(1.5, this._size.w / (maxX - minX), this._size.h / (maxY - minY)))
+    const zoom = Math.max(0.15, Math.min(1.5, this._size.w / (maxX - minX), this._size.h / (maxY - minY)))
     this._view = { zoom, x: minX - (this._size.w / zoom - (maxX - minX)) / 2, y: minY - (this._size.h / zoom - (maxY - minY)) / 2 }
   }
 

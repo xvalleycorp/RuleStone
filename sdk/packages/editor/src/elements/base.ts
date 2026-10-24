@@ -1,7 +1,7 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { LitElement, html, type PropertyDeclarations, type TemplateResult } from 'lit'
+import { LitElement, html, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
 import { format, resolveMessages, type MessageKey, type MessageOverrides, type Messages } from '../i18n/index.js'
 import { tokenize } from '../model/cel-text.js'
 import { base, tokens } from './styles.js'
@@ -37,6 +37,17 @@ export class RulestoneElement extends LitElement {
     super()
     this.readonly = false
     this._announcement = ''
+  }
+
+  /** Passes a forced theme on to the RuleStone elements this one renders. */
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed)
+    for (const child of Array.from(this.renderRoot.querySelectorAll('*'))) {
+      if (!(child instanceof RulestoneElement)) continue
+      if (this.theme) {
+        if (child.getAttribute('theme') !== this.theme) child.setAttribute('theme', this.theme)
+      } else if (child.hasAttribute('theme')) child.removeAttribute('theme')
+    }
   }
 
   /** The effective locale. */
