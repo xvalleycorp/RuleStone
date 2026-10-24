@@ -21,11 +21,16 @@ export class CelParseError extends Error {
 
 type TokenType = 'int' | 'uint' | 'double' | 'string' | 'bytes' | 'ident' | 'keyword' | 'punct' | 'eof'
 
-interface Token {
+interface RawToken {
   readonly type: TokenType
   readonly text: string
   readonly pos: number
   readonly value?: string | bigint | number
+}
+
+interface Token extends RawToken {
+  /** Offset after the token, in code points. */
+  readonly end: number
 }
 
 const KEYWORDS = new Set(['true', 'false', 'null', 'in'])
@@ -54,7 +59,7 @@ function isIdentStart(c: string | undefined): boolean {
 }
 
 function tokenize(cps: readonly string[]): Token[] {
-  const tokens: Token[] = []
+  const tokens: RawToken[] = []
   let i = 0
   function fail(at: number): never {
     throw new CelParseError([{ pos: at, message: `token recognition error at: '${cps.slice(at).join('')}'` }])
@@ -105,10 +110,10 @@ function tokenize(cps: readonly string[]): Token[] {
     fail(start)
   }
   tokens.push({ type: 'eof', text: '<EOF>', pos: cps.length })
-  return tokens
+  return tokens.map((t) => ({ ...t, end: t.type === 'eof' ? t.pos : t.pos + Array.from(t.text).length }))
 }
 
-function number(cps: readonly string[], start: number, tokens: Token[]): number {
+function number(cps: readonly string[], start: number, tokens: RawToken[]): number {
   let i = start
   const text = () => cps.slice(start, i).join('')
   if (cps[i] === '0' && (cps[i + 1] === 'x' || cps[i + 1] === 'X') && isHex(cps[i + 2])) {
@@ -223,7 +228,7 @@ export function parseCel(source: string): Expr {
       const then = or()
       expect(':')
       const otherwise = expr()
-      return call('_?_:_', q.pos, undefined, [cond, then, otherwise])
+      return call('_?_:_', q.pos, undefined, [cond, then, otherwise], cond.start, otherwise.end)
     }
     return cond
   }
@@ -234,7 +239,7 @@ export function parseCel(source: string): Expr {
       if (!((t.type === 'punct' || t.type === 'keyword') && ops(t))) return left
       next()
       const right = operand()
-      left = call(OPERATORS[t.text]!, t.pos, undefined, [left, right])
+      left = call(OPERATORS[t.text]!, t.pos, undefined, [left, right], left.start, right.end)
     }
   }
   function or(): Expr {
@@ -264,11 +269,13 @@ export function parseCel(source: string): Expr {
         p--
         ops.pop()
       }
-      let operand = member()
-      // As cel-java does, pairs of the same unary operator cancel out.
-      if (ops.length % 2 === 0) return operand
-      operand = call(op === '!' ? '!_' : '-_', ops[0]!.pos, undefined, [operand])
-      return operand
+      const operand = member()
+      // As cel-java does, pairs of the same unary operator cancel out; the span keeps them.
+      if (ops.length % 2 === 0) {
+        if (ops.length > 0) operand.start = ops[0]!.pos
+        return operand
+      }
+      return call(op === '!' ? '!_' : '-_', ops[0]!.pos, undefined, [operand], ops[0]!.pos, operand.end)
     }
     return member()
   }
@@ -287,15 +294,15 @@ export function parseCel(source: string): Expr {
         if (is('(')) {
           const open = next()
           const args = argumentList(')')
-          node = macroOrCall(name.text, open.pos, node, args)
+          node = macroOrCall(name.text, open.pos, node, args, node.start, tokens[p - 1]!.end)
         } else {
-          node = { kind: 'select', pos: dot.pos, operand: node, field: name.text, test: false }
+          node = { kind: 'select', pos: dot.pos, start: node.start, end: name.end, operand: node, field: name.text, fieldPos: name.pos, test: false }
         }
       } else if (is('[')) {
         const open = next()
         const index = expr()
-        expect(']')
-        node = call('_[_]', open.pos, undefined, [node, index])
+        const close = expect(']')
+        node = call('_[_]', open.pos, undefined, [node, index], node.start, close.end)
       } else {
         return node
       }
@@ -326,21 +333,21 @@ export function parseCel(source: string): Expr {
       }
       case 'uint':
         next()
-        return { kind: 'literal', pos: t.pos, literal: 'uint', value: checkRange(t, t.value as bigint, 0n, UINT64_MAX) }
+        return { kind: 'literal', pos: t.pos, start: t.pos, end: t.end, literal: 'uint', value: checkRange(t, t.value as bigint, 0n, UINT64_MAX) }
       case 'string':
         next()
-        return { kind: 'literal', pos: t.pos, literal: 'string', value: t.value as string }
+        return { kind: 'literal', pos: t.pos, start: t.pos, end: t.end, literal: 'string', value: t.value as string }
       case 'bytes':
         next()
-        return { kind: 'literal', pos: t.pos, literal: 'bytes', value: t.value as string }
+        return { kind: 'literal', pos: t.pos, start: t.pos, end: t.end, literal: 'bytes', value: t.value as string }
       case 'keyword':
         if (t.text === 'true' || t.text === 'false') {
           next()
-          return { kind: 'literal', pos: t.pos, literal: 'bool', value: t.text === 'true' }
+          return { kind: 'literal', pos: t.pos, start: t.pos, end: t.end, literal: 'bool', value: t.text === 'true' }
         }
         if (t.text === 'null') {
           next()
-          return { kind: 'literal', pos: t.pos, literal: 'null', value: null }
+          return { kind: 'literal', pos: t.pos, start: t.pos, end: t.end, literal: 'null', value: null }
         }
         break
       case 'ident': {
@@ -348,15 +355,16 @@ export function parseCel(source: string): Expr {
         reservedCheck(t)
         if (is('(')) {
           const open = next()
-          return macroOrCall(t.text, open.pos, undefined, argumentList(')'))
+          const args = argumentList(')')
+          return macroOrCall(t.text, open.pos, undefined, args, t.pos, tokens[p - 1]!.end)
         }
-        return { kind: 'ident', pos: t.pos, name: t.text, global: false }
+        return { kind: 'ident', pos: t.pos, start: t.pos, end: t.end, name: t.text, global: false }
       }
       case 'punct':
         if (t.text === '-' && (tokens[p + 1]!.type === 'int' || tokens[p + 1]!.type === 'double')) {
           next()
           const number = next()
-          return literal(number, true, t.pos)
+          return literal(number, true, t.pos, t.pos)
         }
         if (t.text === '.' && tokens[p + 1]!.type === 'ident') {
           next()
@@ -364,14 +372,17 @@ export function parseCel(source: string): Expr {
           reservedCheck(name)
           if (is('(')) {
             const open = next()
-            return macroOrCall(name.text, open.pos, undefined, argumentList(')'))
+            const args = argumentList(')')
+            return macroOrCall(name.text, open.pos, undefined, args, t.pos, tokens[p - 1]!.end)
           }
-          return { kind: 'ident', pos: name.pos, name: name.text, global: true }
+          return { kind: 'ident', pos: name.pos, start: t.pos, end: name.end, name: name.text, global: true }
         }
         if (t.text === '(') {
           next()
           const inner = expr()
-          expect(')')
+          const close = expect(')')
+          inner.start = t.pos
+          inner.end = close.end
           return inner
         }
         if (t.text === '[') {
@@ -385,8 +396,8 @@ export function parseCel(source: string): Expr {
               items.push(expr())
             }
           }
-          expect(']')
-          return { kind: 'list', pos: open.pos, items }
+          const close = expect(']')
+          return { kind: 'list', pos: open.pos, start: open.pos, end: close.end, items }
         }
         if (t.text === '{') {
           fail(t.pos, 'map literals are not supported by the browser engine')
@@ -397,27 +408,27 @@ export function parseCel(source: string): Expr {
     }
     return fail(t.pos, `mismatched input '${t.text}' expecting ${EXPECTING}`)
   }
-  function literal(t: Token, negative: boolean, pos = t.pos): Expr {
+  function literal(t: Token, negative: boolean, pos = t.pos, start = t.pos): Expr {
     if (t.type === 'double') {
       const v = t.value as number
-      return { kind: 'literal', pos, literal: 'double', value: negative ? -v : v }
+      return { kind: 'literal', pos, start, end: t.end, literal: 'double', value: negative ? -v : v }
     }
     const v = negative ? -(t.value as bigint) : (t.value as bigint)
-    return { kind: 'literal', pos, literal: 'int', value: checkRange(t, v, INT64_MIN, INT64_MAX, negative, pos) }
+    return { kind: 'literal', pos, start, end: t.end, literal: 'int', value: checkRange(t, v, INT64_MIN, INT64_MAX, negative, pos) }
   }
   function checkRange(t: Token, v: bigint, min: bigint, max: bigint, negative = false, pos = t.pos): bigint {
     if (v < min || v > max) fail(pos, `For input string: "${negative ? '-' : ''}${t.text}"`)
     return v
   }
-  function call(fn: string, pos: number, target: Expr | undefined, args: Expr[]): Call {
-    return { kind: 'call', pos, fn, target, args }
+  function call(fn: string, pos: number, target: Expr | undefined, args: Expr[], start: number, end: number): Call {
+    return { kind: 'call', pos, start, end, fn, target, args }
   }
-  function macroOrCall(name: string, pos: number, target: Expr | undefined, args: Expr[]): Expr {
+  function macroOrCall(name: string, pos: number, target: Expr | undefined, args: Expr[], start: number, end: number): Expr {
     if (target === undefined && name === 'has' && args.length === 1) {
       const arg = args[0]!
       if (arg.kind !== 'select') fail(pos, 'invalid argument to has() macro')
       // As in cel-java, the presence test takes the position of the has() call.
-      return { ...arg, pos, test: true }
+      return { ...arg, pos, start, end, test: true }
     }
     if (target !== undefined) {
       const two = args.length === 2
@@ -430,16 +441,19 @@ export function parseCel(source: string): Expr {
         const node: Comprehension = {
           kind: 'comprehension',
           pos,
+          start,
+          end,
           macro: name as Comprehension['macro'],
           range: target,
           variable: variable.name,
+          variablePos: variable.pos,
           predicate: name === 'map' ? (args.length === 3 ? args[1] : undefined) : args[1],
           transform: name === 'map' ? args[args.length - 1] : undefined,
         }
         return node
       }
     }
-    return call(name, pos, target, args)
+    return call(name, pos, target, args, start, end)
   }
 
   const root = expr()

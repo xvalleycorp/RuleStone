@@ -78,6 +78,11 @@ export function overloadsOf(fn: string): readonly Overload[] | undefined {
   return functions.get(fn)
 }
 
+/** Every function and operator with its overloads, for the function catalog. */
+export function allOverloads(): ReadonlyMap<string, readonly Overload[]> {
+  return functions
+}
+
 /** Functions of standard CEL that the browser engine does not provide. */
 export const UNSUPPORTED_FUNCTIONS = new Set([
   'bytes', 'timestamp', 'duration', 'type', 'getFullYear', 'getMonth', 'getDate', 'getDayOfMonth', 'getDayOfWeek',

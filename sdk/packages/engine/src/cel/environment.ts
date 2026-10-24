@@ -3,14 +3,13 @@
 
 import { ExpressionError, InvalidValueError } from '../errors.js'
 import { isCurrencyCode } from '../money.js'
-import { isPrimitive, typeToString, type ValueType } from '../types.js'
+import { isPrimitive, type ValueType } from '../types.js'
 import { canonicalValue, checkResult, toValue, type Value } from '../values.js'
+import { analyze } from './analysis.js'
 import type { Expr } from './ast.js'
-import { check } from './checker.js'
 import { EvalError } from './functions.js'
 import { evaluate } from './interpreter.js'
-import { CelParseError, parseCel, type Issue } from './parser.js'
-import { celTypeOf, formatType, sameType, typeName, type CelType } from './types.js'
+import { celTypeOf, formatType, type CelType } from './types.js'
 
 /** Default upper bound on the iterations of the list macros in one evaluation. */
 export const DEFAULT_MAX_ITERATIONS = 10_000
@@ -82,20 +81,9 @@ export class ExpressionEnvironment {
    */
   compile(source: string, expected: ValueType): CompiledExpression {
     if (!isPrimitive(expected) && expected.kind === 'struct') throw new RangeError('expressions cannot be required to produce a struct')
-    let ast: Expr
-    try {
-      ast = parseCel(source)
-    } catch (e) {
-      if (e instanceof CelParseError) throw new ExpressionError(formatIssues(source, e.issues))
-      throw e
-    }
-    const { type, issues } = check(ast, this.celVariables)
-    if (issues.length > 0) throw new ExpressionError(formatIssues(source, issues))
-    const wanted = celTypeOf(expected, '')
-    if (type.k !== 'dyn' && !sameType(wanted, type)) {
-      throw new ExpressionError(`expression must produce ${typeToString(expected)} but produces ${typeName(type)}: ${source}`)
-    }
-    return new CompiledExpression(this, source, expected, ast, formatType(type))
+    const { ast, type, message } = analyze(source, this.celVariables, expected)
+    if (message !== undefined) throw new ExpressionError(message)
+    return new CompiledExpression(this, source, expected, ast!, formatType(type!))
   }
 
   /**
@@ -160,26 +148,4 @@ export class CompiledExpression {
     }
     return checkResult(result, this.resultType)
   }
-}
-
-/** Issues formatted as cel-java formats them: ERROR: <input>:line:column: message, the line and a caret. */
-export function formatIssues(source: string, issues: readonly Issue[]): string {
-  const cps = Array.from(source)
-  return issues
-    .map(({ pos, message }) => {
-      let line = 1
-      let lineStart = 0
-      for (let k = 0; k < pos && k < cps.length; k++) {
-        if (cps[k] === '\n') {
-          line++
-          lineStart = k + 1
-        }
-      }
-      let lineEnd = lineStart
-      while (lineEnd < cps.length && cps[lineEnd] !== '\n') lineEnd++
-      const column = pos - lineStart + 1
-      const text = cps.slice(lineStart, lineEnd).join('')
-      return `ERROR: <input>:${line}:${column}: ${message}\n | ${text}\n | ${'.'.repeat(column - 1)}^`
-    })
-    .join('\n')
 }
