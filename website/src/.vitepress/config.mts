@@ -7,6 +7,10 @@ import { defineConfig } from 'vitepress';
 import { LOCALES, englishDocs, englishUrl, parseFrontMatter, readText, sha256, translatedUrl, translations } from '../../scripts/i18n-lib.mjs';
 
 const SITE = 'https://rulestone.dxa.io.vn';
+// The browser SDK's sources (sdk/packages), built into the playground page. Run `npm ci` in sdk/
+// first: the SDK's own dependency (lit) is installed there.
+const sdk = (path: string) => fileURLToPath(new URL(`../../../sdk/packages/${path}`, import.meta.url));
+const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const REPO = 'https://github.com/xvalleycorp/RuleStone';
 const DESCRIPTION =
   'Open-source business rules engine for banking and finance. Versioned, effective-dated decision tables ' +
@@ -19,6 +23,7 @@ const DESCRIPTION_VI =
 const vi = translations('vi').filter((t) => t.status !== 'invalid');
 const viDocs = new Map(vi.filter((t) => t.kind === 'docs').map((t) => [t.source, t]));
 const viTitles: Record<string, string> = LOCALES.vi.titles;
+const viPlayground = translatedUrl('vi', { kind: 'site', file: 'playground.md' });
 const viPlaceholders = new Set(
   englishDocs()
     .filter((f) => !viDocs.has(f))
@@ -48,6 +53,7 @@ const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
       ['testing.md', 'Testing'],
       ['temporal.md', 'Temporal integration'],
       ['editor.md', 'Web editor'],
+      ['editor-sdk.md', 'Editor SDK'],
       ['camunda.md', 'Camunda integration'],
     ],
   },
@@ -99,10 +105,20 @@ export default defineConfig({
   titleTemplate: ':title · RuleStone',
   description: DESCRIPTION,
   cleanUrls: true,
+  vue: {
+    // The SDK's Web Components (playground page): Vue leaves these tags to the browser.
+    template: { compilerOptions: { isCustomElement: (tag) => tag.startsWith('rulestone-') || tag.startsWith('rs-') } },
+  },
   vite: {
+    server: { fs: { allow: [repoRoot] } },
     resolve: {
-      // Replace the default theme's language switchers with ones that show flags.
       alias: [
+        // The playground uses the SDK packages from their sources.
+        { find: /^@rulestone\/engine$/, replacement: sdk('engine/src/index.ts') },
+        { find: /^@rulestone\/editor$/, replacement: sdk('editor/src/index.ts') },
+        { find: /^@rulestone\/editor\/model$/, replacement: sdk('editor/src/model/index.ts') },
+        { find: /^@rulestone\/editor\/([a-z-]+)$/, replacement: sdk('editor/src/elements/$1.ts') },
+        // Replace the default theme's language switchers with ones that show flags.
         {
           find: /^.*\/VPNavBarTranslations\.vue$/,
           replacement: fileURLToPath(new URL('./theme/LanguageSwitcher.vue', import.meta.url)),
@@ -136,8 +152,8 @@ export default defineConfig({
     const path = pageData.relativePath;
     const translation = path.startsWith('vi/docs/')
       ? `docs/vi/${path.slice('vi/docs/'.length)}`
-      : path === 'vi/index.md'
-        ? 'website/src/vi/index.md'
+      : LOCALES.vi.site.files.some((f: string) => path === `vi/${f}`)
+        ? `website/src/${path}`
         : null;
     if (!translation || pageData.frontmatter.translationPlaceholder) return;
     const { data } = parseFrontMatter(readText(translation));
@@ -202,6 +218,7 @@ export default defineConfig({
           { text: 'Reference', items: REFERENCE.map(enItem) },
           { text: 'Examples', link: '/docs/examples' },
           { text: 'Architecture', link: '/docs/architecture' },
+          { text: 'Playground', link: '/playground', activeMatch: '^/playground' },
           {
             text: '0.1 pre-release',
             items: [
@@ -238,6 +255,7 @@ export default defineConfig({
           { text: 'Tham khảo', items: REFERENCE.map(([file]) => viItem(file)) },
           viItem('examples.md'),
           { ...viItem('architecture.md'), activeMatch: '/vi/docs/architecture' },
+          { text: 'Sân thử', link: viPlayground, activeMatch: '^/vi/playground' },
           {
             text: 'Bản 0.1 tiền phát hành',
             items: [

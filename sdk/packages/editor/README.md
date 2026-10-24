@@ -3,6 +3,8 @@
 Visual editors for RuleStone decision tables and decision flows, as Web Components. Banks embed them in their own web applications (Angular, React, Vue or plain HTML) so that analysts can build decision tables and rules visually, with drag and drop, instead of typing JSON.
 
 > The package is private while its npm name is decided. Its name, `@rulestone/editor`, is provisional.
+>
+> Try the elements in the [playground](https://rulestone.dxa.io.vn/playground). The [editor SDK guide](../../../docs/editor-sdk.md) covers installing, embedding and server-side checks.
 
 - **Web Components** built with [Lit](https://lit.dev) (BSD-3-Clause). They work in any framework, or none.
 - **Instant feedback** from [`@rulestone/engine`](../engine): every expression is type-checked as it is typed, with the engine's own messages and positions, and the Try it panel runs the rules in the browser. The Java engine remains the engine of record.
@@ -44,9 +46,11 @@ Events are `CustomEvent`s that bubble and cross shadow roots (`composed`).
 | `table` | property | The table as parsed `.stone.json` (a plain object). The editor works on a copy and never changes the host's object. |
 | `validator` | property | Optional `async (table, localResult) => HostProblem[]`, for server-side checks such as calling the bank's Java RuleStone service. A `HostProblem` is `{ message, severity?, target? }`. |
 | `asOf` / `as-of` | property / attribute | The business date the Try it panel starts with. |
+| `facts` | property / attribute | Facts for the Try it panel as JSON text, for example from a `.stone-test.json` case. |
 | `getTable()` | method | A copy of the table being edited. |
 | `setTable(table)` | method | Replaces the table being edited. |
 | `validate()` | method | Validates now; resolves with `{ valid, problems, canonical, ruleVersion }`. |
+| `run()` | method | Runs the table in the Try it panel; resolves with the `rulestone-run` detail. |
 | `rulestone-change` | event | After each edit, once it is validated. `detail`: `{ table, canonical, problems, ruleVersion, valid }`. `canonical` is the canonical JSON that `ruleVersion` (`<version>@sha256:<hash>`, as in Java) is computed over. |
 | `rulestone-validate` | event | After each validation. `detail`: `{ valid, problems, ruleVersion, canonical }`. |
 | `rulestone-run` | event | After each Try it run (see `<rulestone-try-it>`). |
@@ -63,7 +67,7 @@ Problems are the engine's: the strict file reader's (unknown fields, bad types, 
 | `focusCell(rule, field, output?, index?)` | method | Moves focus to a cell; for an expression with a position, starts editing with the caret there. |
 | `rulestone-change` | event | `detail`: `{ table }` after every edit. |
 
-Columns: result, rule id, condition, one per output, reason code, description, actions. Rules can be added, duplicated, deleted and reordered by drag and drop or with the keyboard. The ⊞ action opens the condition builder below a rule.
+Columns: result, rule id, condition, one per output, reason code, description, actions. Rules can be added, duplicated, deleted and reordered by drag and drop or with the keyboard. The ⊞ action opens the condition builder below a rule. Expressions wrap at spaces and between tokens (around operators, after `.`, `(` and `,`), and break inside a name only when the name is wider than its column; reason codes and rule ids wrap after underscores.
 
 ### `<rulestone-condition-builder>`
 
@@ -94,9 +98,13 @@ Inputs and outputs are trees with every type: `bool`, `int`, `string`, `decimal`
 | `flow` | property | The flow, as `.flow.json` (the proposal in [docs/hybrid-ai.md](../../../docs/hybrid-ai.md) section 3). |
 | `layout` | property | Node positions by id. The file format has no layout, so it is kept apart; missing positions are laid out automatically. |
 | `tables` | property | Known decision ids; table nodes that use others are reported. |
-| `fit()`, `toJson()`, `importText(text)`, `addAt(type)`, `connectNodes(from, to)` | methods | |
+| `fit()` | method | Shows the flow at a readable size: whole if it fits at a zoom where node text stays legible (80%), otherwise from the top left, where the start node is; the rest is reached by panning. |
+| `arrange()` | method | Lays out every node again for the canvas's size (the Arrange button). |
+| `toJson()`, `importText(text)`, `addAt(type)`, `connectNodes(from, to)` | methods | |
 | `rulestone-change` | event | `detail`: `{ flow, layout, problems }`. |
 | `rulestone-export` | event | `detail`: `{ flow, json }` when the user exports. Call `preventDefault()` to handle the file yourself; otherwise it is downloaded. |
+
+Until a node is moved or the host sets a layout, the canvas arranges the flow for its own size: long chains wrap into rows below each other, like lines of text, so that the flow is readable without panning where it fits. The model's `layoutFor(flow, width, height)` gives the same layout.
 
 The palette has the node types `table`, `switch`, `derive`, `model`, `split`, `end` and `flow`. Checks: cycles, nodes the start cannot reach, paths that never reach an end, model nodes without `onFailure` or a pinned version, split percentages that do not add up to 100, unknown table references, switches without a final case, and end nodes that do not set every output. **The engine cannot run flows yet; the canvas says so.**
 
@@ -211,7 +219,7 @@ onMounted(() => import('@rulestone/editor/table-editor'))
 | Condition builder | On a block's handle: Alt+↑ / Alt+↓ move it within its group, Alt+→ moves it into the group above, Alt+← out of its group. Every block also has move buttons. |
 | Schema designer | ↑ / ↓ move between fields, → / ← show and hide nested fields, Alt+↑ / Alt+↓ reorder, Enter edits the name. |
 | CEL input | Ctrl+Space shows suggestions; ↑ / ↓ choose, Enter or Tab accept, Escape closes. |
-| Flow canvas | Palette buttons add a node. On the canvas: arrow keys pan, + and − zoom, 0 fits. On a node: arrow keys move it (Shift for larger steps), C starts a connection (F for a model's onFailure) and Enter on the target completes it, Delete removes it. Edges can also be set and removed in the properties panel. |
+| Flow canvas | Palette buttons add a node. On the canvas: drag the background or use the arrow keys to pan, + and − zoom, 0 fits; Ctrl or ⌘ with the mouse wheel zooms, the wheel alone scrolls the page. On a node: arrow keys move it (Shift for larger steps), C starts a connection (F for a model's onFailure) and Enter on the target completes it, Delete removes it. Edges can also be set and removed in the properties panel. |
 
 Moves and other changes are announced through a polite live region.
 
@@ -263,6 +271,7 @@ Set the tokens on the elements or any ancestor. Each has a light and a dark defa
 | `--rs-radius` | `6px` | same | Corner radius |
 | `--rs-space` | `8px` | same | Base spacing |
 | `--rs-focus-width` | `2px` | same | Focus outline width |
+| `--rs-flow-canvas-height` | `clamp(400px, 66vh, 780px)`; narrow: `clamp(340px, 60vh, 560px)` | same | Height of the flow canvas |
 
 `::part` names: `metadata`, `tabs`, `problems`, `try-it` (table editor); `toolbar`, `grid`, `row` (also `row matched`, `row not-matched`, `row not-evaluated`), `cell` (also `cell invalid`) (rules grid); `toolbar`, `group`, `block` (condition builder); `tree`, `item`, `report` (schema designer); `form`, `result` (Try it); `banner`, `palette`, `canvas`, `panel`, `problems` (flow canvas); `input` (CEL input).
 
@@ -285,14 +294,14 @@ Minified and minified + gzipped with esbuild (`npm run size`), with Lit and the 
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 275.8 KiB min, 80.4 KiB gzip | 187.0 KiB min, 51.5 KiB gzip |
-| `./table-editor` | 233.1 KiB min, 69.0 KiB gzip | 144.3 KiB min, 40.0 KiB gzip |
-| `./rules-grid` | 153.2 KiB min, 47.2 KiB gzip | 97.5 KiB min, 27.8 KiB gzip |
-| `./condition-builder` | 134.0 KiB min, 42.3 KiB gzip | 78.1 KiB min, 22.8 KiB gzip |
-| `./schema-designer` | 110.9 KiB min, 36.5 KiB gzip | 55.0 KiB min, 17.2 KiB gzip |
-| `./flow-canvas` | 92.0 KiB min, 28.0 KiB gzip | 77.0 KiB min, 22.4 KiB gzip |
-| `./try-it` | 141.0 KiB min, 45.3 KiB gzip | 52.6 KiB min, 16.0 KiB gzip |
-| `./cel-input` | 102.3 KiB min, 34.0 KiB gzip | 46.8 KiB min, 14.7 KiB gzip |
+| `@rulestone/editor` (all elements) | 280.4 KiB min, 82.3 KiB gzip | 191.6 KiB min, 53.3 KiB gzip |
+| `./table-editor` | 234.6 KiB min, 69.5 KiB gzip | 145.8 KiB min, 40.5 KiB gzip |
+| `./rules-grid` | 154.4 KiB min, 47.6 KiB gzip | 98.7 KiB min, 28.3 KiB gzip |
+| `./condition-builder` | 134.9 KiB min, 42.6 KiB gzip | 78.9 KiB min, 23.1 KiB gzip |
+| `./schema-designer` | 111.7 KiB min, 36.8 KiB gzip | 55.7 KiB min, 17.5 KiB gzip |
+| `./flow-canvas` | 95.8 KiB min, 29.5 KiB gzip | 80.7 KiB min, 24.0 KiB gzip |
+| `./try-it` | 141.7 KiB min, 45.5 KiB gzip | 53.3 KiB min, 16.3 KiB gzip |
+| `./cel-input` | 103.2 KiB min, 34.3 KiB gzip | 47.7 KiB min, 15.0 KiB gzip |
 
 The flow canvas does not load the engine.
 

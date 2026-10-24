@@ -7,7 +7,7 @@ JavaScript packages for running and editing RuleStone decision tables in the bro
 | [`packages/engine`](packages/engine) (`@rulestone/engine`, provisional name) | The rules engine: `.stone.json` reader, type-checked CEL with exact decimal, money and date types, versioned evaluation and decision records. It gives the same results as the Java engine on everything the conformance suite covers. |
 | [`packages/editor`](packages/editor) (`@rulestone/editor`, provisional name) | Embeddable visual editors as Web Components: the decision table editor, rules grid, condition builder, schema designer, decision-flow canvas (design only) and a Try it panel that runs rules with the engine. |
 
-Planned: the website sandbox that runs and edits tables in the browser.
+The [playground](https://rulestone.dxa.io.vn/playground) on the website runs these components on the example tables, and the [editor SDK guide](../docs/editor-sdk.md) explains how to embed them.
 
 The Java engine remains the engine of record. The browser engine is for instant feedback. Its conformance suite runs every example table, every example test case and the documented expressions against fixtures written by the Java engine. See the [engine README](packages/engine/README.md#conformance).
 

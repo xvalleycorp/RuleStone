@@ -129,3 +129,29 @@
   margin-top: 0;
   padding-top: 0;
 }
+
+/* Playground (src/playground.md, layout: page): the components get the full page width. */
+.rs-playground-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+@media (min-width: 768px) {
+  .rs-playground-page {
+    padding: 32px 32px 96px;
+  }
+}
+
+.rs-playground-page > .vp-doc h1 {
+  margin-bottom: 12px;
+}
+
+/* On phones, VitePress widens code blocks into its 24px doc gutter; this page's is 16px. */
+@media (max-width: 639px) {
+  .rs-playground-page .vp-doc div[class*='language-'],
+  .rs-playground-page .vp-code-group .tabs {
+    margin-left: -16px;
+    margin-right: -16px;
+  }
+}
