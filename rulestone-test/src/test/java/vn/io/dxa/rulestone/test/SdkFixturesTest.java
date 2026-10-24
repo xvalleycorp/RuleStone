@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
+import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionResult;
@@ -198,6 +200,29 @@ class SdkFixturesTest {
             }
         }
         check("java-invalid-tables.json", out);
+    }
+
+    @Test
+    void versionSelection() throws IOException {
+        ArrayNode out = NODES.arrayNode();
+        for (JsonNode testCase : MAPPER.readTree(FIXTURES.resolve("version-selection.json").toFile())) {
+            ObjectNode entry = out.addObject().put("name", testCase.get("name").textValue());
+            List<DecisionTable> tables = new ArrayList<>();
+            testCase.get("tables").forEach(text -> tables.add(DecisionTableJson.read(text.textValue())));
+            RuleStoneEngine engine = RuleStone.builder().clock(CLOCK).decisions(tables).build();
+            ArrayNode results = entry.putArray("results");
+            for (JsonNode date : testCase.get("dates")) {
+                ObjectNode result = results.addObject().put("date", date.textValue());
+                try {
+                    DecisionResult decided = engine.evaluate(
+                            DecisionRef.of(tables.get(0).id()).asOf(LocalDate.parse(date.textValue())), Facts.empty());
+                    result.put("ruleVersion", decided.ruleVersion());
+                } catch (DecisionNotFoundException e) {
+                    result.put("error", e.getMessage());
+                }
+            }
+        }
+        check("java-version-selection.json", out);
     }
 
     /** Result types tried in order for a probe without a type, as ExpressionsDocTest does. */

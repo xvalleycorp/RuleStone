@@ -48,7 +48,7 @@ export const api = {
   load: (name: string) => call<LoadedTable>('GET', file(name)),
   save: (name: string, table: TableJson, etag: string | undefined, force: boolean) =>
     call<SaveResult>('PUT', file(name) + (force ? '?force=true' : ''), table, etag ? { 'If-Match': `"${etag}"` } : {}),
-  create: (body: { file?: string; table: TableJson; closePrevious?: { file: string; etag?: string } }, force = false) =>
+  create: (body: { file?: string; table: TableJson }, force = false) =>
     call<SaveResult>('POST', 'api/tables' + (force ? '?force=true' : ''), body),
   validate: (table: TableJson, name?: string) =>
     call<ValidationResult>('POST', 'api/validate' + (name ? '?file=' + encodeURIComponent(name) : ''), table),

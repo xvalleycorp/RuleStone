@@ -1,6 +1,6 @@
 ---
 source: editor.md
-sourceHash: 820f98b9b387caaf5575e003761008c77aae3e2eba2ef9b8f9df20253cad20b3
+sourceHash: 49cb1db6fa6e14f9a67a67c8dffa18b87a4966a4e9673bf524270ea90a633d84
 ---
 
 # Trình soạn thảo web
@@ -55,13 +55,13 @@ Tệp jar chứa sẵn giao diện người dùng; không có gì được tải
 
 **Đầu vào và đầu ra.** Khai báo đầu vào và đầu ra của bảng với bộ chọn kiểu, cấu trúc lồng nhau và danh sách. Danh sách kiểu lấy từ máy chủ, nên các kiểu mới thêm vào RuleStone sẽ xuất hiện mà không cần sửa trình soạn thảo.
 
-**Kiểm tra hợp lệ.** Mọi thay đổi đều được máy chủ kiểm tra trong vòng nửa giây, đúng như `RuleStone.builder().build()` sẽ làm, cộng thêm việc đối chiếu với các phiên bản khác của cùng quyết định trong thư mục (phiên bản trùng lặp và thời gian hiệu lực chồng lấn). Lỗi xuất hiện ngay tại ô liên quan, với phần sai của biểu thức được gạch chân, và trong bảng lỗi. **Save** bị vô hiệu khi còn lỗi; **Save anyway** lưu một bảng không hợp lệ sau khi xác nhận, ví dụ để chia sẻ công việc đang làm dở trong một nhánh.
+**Kiểm tra hợp lệ.** Mọi thay đổi đều được máy chủ kiểm tra trong vòng nửa giây, đúng như `RuleStone.builder().build()` sẽ làm, cộng thêm việc đối chiếu với các phiên bản khác của cùng quyết định trong thư mục: phiên bản trùng lặp, hai phiên bản có hiệu lực cùng một ngày, và một `effectiveTo` nằm sau ngày bắt đầu của phiên bản kế tiếp (xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực)). Lỗi xuất hiện ngay tại ô liên quan, với phần sai của biểu thức được gạch chân, và trong bảng lỗi. **Save** bị vô hiệu khi còn lỗi; **Save anyway** lưu một bảng không hợp lệ sau khi xác nhận, ví dụ để chia sẻ công việc đang làm dở trong một nhánh.
 
 **Kiểm thử.** Đánh giá bảng đúng như trong trình soạn thảo, kể cả các thay đổi chưa lưu, với các fact nhập trong một biểu mẫu sinh ra từ các đầu vào hoặc dưới dạng JSON, và một ngày nghiệp vụ (`asOf`). Kết quả hiển thị các đầu ra, mã lý do, các luật khớp và phiên bản luật, còn thẻ Rules tô sáng các dòng khớp, không khớp và không được đánh giá.
 
 **JSON và thay đổi.** Tệp đúng như sẽ được lưu, có nút sao chép, và một bản diff theo dòng so với tệp lúc được nạp.
 
-**Save as new version** chép các luật, kể cả thay đổi chưa lưu, vào một tệp mới với số phiên bản tiếp theo và một `effectiveFrom` mới. Nó cũng có thể đặt `effectiveTo` của phiên bản hiện tại bằng ngày đó, để hai phiên bản nối tiếp nhau, không có khoảng trống và không chồng lấn.
+**Save as new version** chép các luật, kể cả thay đổi chưa lưu, vào một tệp mới với số phiên bản tiếp theo và một `effectiveFrom` mới. Tệp của phiên bản hiện tại không bị sửa: phiên bản mới thay thế nó từ ngày đó, nên phiên bản luật (mã băm) của phiên bản hiện tại giữ nguyên.
 
 Giao diện người dùng có tiếng Anh và tiếng Việt.
 
@@ -287,14 +287,14 @@ HTTP/1.1 200 OK
 }
 ```
 
-Một phiên bản mới bắt đầu trong khi phiên bản 3 vẫn chưa có ngày kết thúc sẽ chồng lấn với nó:
+Một phiên bản có hiệu lực muộn hơn phiên bản 3, ví dụ từ 2026-12-01, là hợp lệ: nó thay thế phiên bản 3 từ ngày đó. Một phiên bản có hiệu lực cùng ngày với phiên bản 3 thì mơ hồ:
 
 ```http
 POST /api/validate
 Content-Type: application/json
 
 {
-  "id": "loan_eligibility", "version": "4", "effectiveFrom": "2026-12-01", "hitPolicy": "FIRST",
+  "id": "loan_eligibility", "version": "4", "effectiveFrom": "2026-11-01", "hitPolicy": "FIRST",
   "inputs": {}, "outputs": {}, "rules": [{ "id": "R1", "when": "true" }]
 }
 ```
@@ -306,7 +306,7 @@ HTTP/1.1 200 OK
   "valid": false,
   "problems": [
     {
-      "message": "effective period overlaps version 3 in loan_eligibility.v3.stone.json (2026-11-01 to no end); set effectiveTo of version 3 or move effectiveFrom",
+      "message": "loan_eligibility@4 and loan_eligibility@3: both take effect on 2026-11-01, so neither supersedes the other; give the later version a later effectiveFrom (version 3 is in loan_eligibility.v3.stone.json)",
       "location": { "path": "$.effectiveFrom", "field": "effectiveFrom", "file": "loan_eligibility.v3.stone.json" }
     }
   ],
@@ -425,7 +425,7 @@ HTTP/1.1 200 OK
 
 ### `POST /api/tables`
 
-Tạo một tệp: `{"table": {...}, "file": "optional/name.stone.json"}`. Nếu không có `file`, tên tệp là `<id>.v<version>.stone.json`. Một tệp đã tồn tại không bao giờ bị ghi đè (409). `closePrevious` đặt `effectiveTo` của một phiên bản khác bằng `effectiveFrom` của bảng mới trong cùng yêu cầu, sau khi kiểm tra cả hai; đây chính là việc mà **Save as new version** làm. Lỗi và `?force=true` hoạt động như với `PUT`.
+Tạo một tệp: `{"table": {...}, "file": "optional/name.stone.json"}`. Nếu không có `file`, tên tệp là `<id>.v<version>.stone.json`. Một tệp đã tồn tại không bao giờ bị ghi đè (409), và không tệp nào khác bị sửa: phiên bản mới thay thế phiên bản trước từ `effectiveFrom` của nó. Lỗi và `?force=true` hoạt động như với `PUT`.
 
 ```http
 POST /api/tables
@@ -437,8 +437,7 @@ Content-Type: application/json
     "inputs": { "applicant": { "age": "int" } },
     "outputs": { "decision": "string" },
     "rules": [{ "id": "R1", "when": "applicant.age < 21", "then": { "decision": "'REJECT'" }, "reasonCode": "UNDERAGE" }]
-  },
-  "closePrevious": { "file": "loan_eligibility.v3.stone.json" }
+  }
 }
 ```
 
@@ -451,8 +450,7 @@ HTTP/1.1 201 Created
   "etag": "…",
   "valid": true,
   "problems": [],
-  "ruleVersion": "4@sha256:…",
-  "previous": { "file": "loan_eligibility.v3.stone.json", "etag": "…", "effectiveTo": "2027-01-01" }
+  "ruleVersion": "4@sha256:…"
 }
 ```
 

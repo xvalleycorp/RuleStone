@@ -1,6 +1,6 @@
 ---
 source: architecture.md
-sourceHash: 8334914f59106d84af242b915bf13c07aa4ce89c6006049699ee2aa9fb543c9e
+sourceHash: b77be308b844246b615150d73e63983f3b12eb00dc37488333703ac33d6c41f5
 ---
 
 # Kiến trúc RuleStone
@@ -122,7 +122,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 |---|---|---|
 | Tất định, tái lập được | Phiên bản bất biến kèm mã băm nội dung. Không có I/O trong biểu thức. `asOf` cố định ngày nghiệp vụ; luật không bao giờ đọc đồng hồ hệ thống. | đã có |
 | Tiền chính xác | `BigDecimal` xuyên suốt; số dấu phẩy động bị từ chối trong luật và trong đầu vào. | đã có |
-| Hiệu lực theo ngày | Mỗi phiên bản có `effectiveFrom`/`effectiveTo`; các phiên bản chồng lấn bị từ chối; một quyết định cho ngày X có thể chạy lại với bộ luật có hiệu lực vào ngày X. | đã có |
+| Hiệu lực theo ngày | Mỗi phiên bản có `effectiveFrom` và `effectiveTo` tuỳ chọn; phiên bản mới thay thế phiên bản trước từ `effectiveFrom` của nó, nên các phiên bản đã công bố không bao giờ bị sửa; ngày tháng mâu thuẫn bị từ chối; một quyết định cho ngày X có thể chạy lại với bộ luật có hiệu lực vào ngày X. | đã có |
 | Phân tách nhiệm vụ (maker-checker) | Vòng đời luật `DRAFT → SUBMITTED → APPROVED → ACTIVE → RETIRED`; người lập và người duyệt phải khác nhau, được kiểm soát ở tầng quản trị (governance). | dự kiến |
 | Kiểm toán chống giả mạo | Bản ghi kiểm toán liên kết bằng chuỗi băm, có thể ký số, chứa đầu vào đã che, phiên bản luật, vết thực thi và kết quả. | dự kiến |
 | Khả năng giải thích | Mã lý do tường minh cùng vết thực thi có cấu trúc; AI chỉ diễn đạt lại vết thực thi. Một bản ghi quyết định cho mọi quyết định, gồm cả phiên bản, đầu ra và attribution của mô hình, được đặc tả trong [Ra quyết định AI lai](hybrid-ai.md#4-bản-ghi-quyết-định). | đã có (mã lý do, vết thực thi, bản ghi quyết định cho bảng) |

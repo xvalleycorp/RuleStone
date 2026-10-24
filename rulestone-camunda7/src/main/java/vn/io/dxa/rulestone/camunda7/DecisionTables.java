@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 import vn.io.dxa.rulestone.core.DecisionTable;
+import vn.io.dxa.rulestone.core.DecisionVersions;
 
 /**
  * The decision tables registered with the engine, by id. Selects the table whose input types
@@ -42,17 +43,6 @@ final class DecisionTables {
         if (versions == null) {
             throw new DecisionNotFoundException("unknown decision '" + id + "'");
         }
-        if (version.isPresent()) {
-            return versions.stream()
-                    .filter(t -> t.version().equals(version.get()))
-                    .findFirst()
-                    .orElseThrow(() -> new DecisionNotFoundException(
-                            "decision '" + id + "' has no version '" + version.get() + "'"));
-        }
-        return versions.stream()
-                .filter(t -> t.isEffectiveOn(date))
-                .findFirst()
-                .orElseThrow(() -> new DecisionNotFoundException(
-                        "no version of decision '" + id + "' is effective on " + date));
+        return DecisionVersions.select(id, versions, version, date);
     }
 }

@@ -50,13 +50,13 @@ The jar contains the user interface; nothing is downloaded at run time and no in
 
 **Inputs & outputs.** Declares the table's inputs and outputs with type pickers, nested structures and lists. The list of types comes from the server, so types added to RuleStone appear without changing the editor.
 
-**Validation.** Every change is checked by the server within half a second, exactly as `RuleStone.builder().build()` would, plus a check against the other versions of the same decision in the directory (duplicate versions and overlapping effective periods). Problems appear on the cell they concern, with the wrong part of an expression underlined, and in the problems panel. **Save** is disabled while there are problems; **Save anyway** saves an invalid table after a confirmation, for example to share work in progress in a branch.
+**Validation.** Every change is checked by the server within half a second, exactly as `RuleStone.builder().build()` would, plus a check against the other versions of the same decision in the directory: duplicate versions, two versions that take effect on the same day, and an `effectiveTo` after the next version's start (see [Versions and effective dates](decision-tables.md#versions-and-effective-dates)). Problems appear on the cell they concern, with the wrong part of an expression underlined, and in the problems panel. **Save** is disabled while there are problems; **Save anyway** saves an invalid table after a confirmation, for example to share work in progress in a branch.
 
 **Test.** Evaluates the table as it is in the editor, unsaved changes included, with facts entered in a form generated from the inputs or as JSON, and a business date (`asOf`). The result shows the outputs, reason codes, matched rules and rule version, and the Rules tab highlights matched, unmatched and unevaluated rows.
 
 **JSON & changes.** The file exactly as it will be saved, with a copy button, and a line diff against the file as it was loaded.
 
-**Save as new version** copies the rules, including unsaved changes, into a new file with the next version number and a new `effectiveFrom`. It can also set `effectiveTo` of the current version to that date, so that the two versions follow each other with no gap and no overlap.
+**Save as new version** copies the rules, including unsaved changes, into a new file with the next version number and a new `effectiveFrom`. The current version's file is not changed: the new version supersedes it from that date, so the current version's rule version (hash) stays the same.
 
 The user interface is available in English and Vietnamese.
 
@@ -282,14 +282,14 @@ HTTP/1.1 200 OK
 }
 ```
 
-A new version that starts while version 3 is still open-ended overlaps it:
+A version that takes effect later than version 3, say on 2026-12-01, is valid: it supersedes version 3 from that date. One that takes effect on the same day as version 3 is ambiguous:
 
 ```http
 POST /api/validate
 Content-Type: application/json
 
 {
-  "id": "loan_eligibility", "version": "4", "effectiveFrom": "2026-12-01", "hitPolicy": "FIRST",
+  "id": "loan_eligibility", "version": "4", "effectiveFrom": "2026-11-01", "hitPolicy": "FIRST",
   "inputs": {}, "outputs": {}, "rules": [{ "id": "R1", "when": "true" }]
 }
 ```
@@ -301,7 +301,7 @@ HTTP/1.1 200 OK
   "valid": false,
   "problems": [
     {
-      "message": "effective period overlaps version 3 in loan_eligibility.v3.stone.json (2026-11-01 to no end); set effectiveTo of version 3 or move effectiveFrom",
+      "message": "loan_eligibility@4 and loan_eligibility@3: both take effect on 2026-11-01, so neither supersedes the other; give the later version a later effectiveFrom (version 3 is in loan_eligibility.v3.stone.json)",
       "location": { "path": "$.effectiveFrom", "field": "effectiveFrom", "file": "loan_eligibility.v3.stone.json" }
     }
   ],
@@ -420,7 +420,7 @@ HTTP/1.1 200 OK
 
 ### `POST /api/tables`
 
-Creates a file: `{"table": {...}, "file": "optional/name.stone.json"}`. Without `file`, the name is `<id>.v<version>.stone.json`. An existing file is never overwritten (409). `closePrevious` sets `effectiveTo` of another version to the new table's `effectiveFrom` in the same request, after checking both; this is what **Save as new version** does. Problems and `?force=true` work as for `PUT`.
+Creates a file: `{"table": {...}, "file": "optional/name.stone.json"}`. Without `file`, the name is `<id>.v<version>.stone.json`. An existing file is never overwritten (409), and no other file is changed: a new version supersedes the previous one from its `effectiveFrom`. Problems and `?force=true` work as for `PUT`.
 
 ```http
 POST /api/tables
@@ -432,8 +432,7 @@ Content-Type: application/json
     "inputs": { "applicant": { "age": "int" } },
     "outputs": { "decision": "string" },
     "rules": [{ "id": "R1", "when": "applicant.age < 21", "then": { "decision": "'REJECT'" }, "reasonCode": "UNDERAGE" }]
-  },
-  "closePrevious": { "file": "loan_eligibility.v3.stone.json" }
+  }
 }
 ```
 
@@ -446,8 +445,7 @@ HTTP/1.1 201 Created
   "etag": "…",
   "valid": true,
   "problems": [],
-  "ruleVersion": "4@sha256:…",
-  "previous": { "file": "loan_eligibility.v3.stone.json", "etag": "…", "effectiveTo": "2027-01-01" }
+  "ruleVersion": "4@sha256:…"
 }
 ```
 

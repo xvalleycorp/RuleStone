@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: f731478cb56240798734e40ba22d3839869c8b4daa7c14f3f6fe37bc249dce8a
+sourceHash: d393b089ae5be1d9ef0390fe1d1768971e4c1e6267585aa3ff25548dfc043104
 ---
 
 # Java API
@@ -63,7 +63,7 @@ RuleStoneEngine engine = RuleStone.builder()
 | `auditSink(AuditSink)` | Nhận `DecisionRecord` của mọi lần đánh giá, dù thành công hay thất bại. Có thể gọi nhiều lần; các sink chạy theo thứ tự. Xem [Bản ghi quyết định và kiểm toán](#bản-ghi-quyết-định-và-kiểm-toán). |
 | `factsHashKey(byte[])` | Biến `DecisionRecord.factsHash()` thành HMAC-SHA256 với khoá này (tối thiểu 16 byte; nên dùng 32 byte ngẫu nhiên từ kho khoá của bạn). Nếu không có khoá, hash là SHA-256 thông thường. |
 | `recordIds(Supplier<String>)` | Nguồn sinh id cho bản ghi. Mặc định là UUID ngẫu nhiên. |
-| `build()` | Biên dịch và kiểm tra kiểu mọi luật, kiểm tra các phiên bản trùng lặp và chồng lấn, rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
+| `build()` | Biên dịch và kiểm tra kiểu mọi luật, kiểm tra các phiên bản trùng lặp và ngày tháng mâu thuẫn (xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực)), rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
 
 `DecisionTableJson.read(...)` nhận một `String`, một `InputStream` (đọc theo UTF-8) hoặc một `Path`, và ném `InvalidDecisionException` khi tệp có bất kỳ lỗi nào. Hãy nạp tệp từ bất cứ nơi nào bạn lưu chúng: classpath, một thư mục, một cột trong cơ sở dữ liệu hay một dịch vụ cấu hình.
 

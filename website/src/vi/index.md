@@ -3,7 +3,7 @@ layout: home
 title: RuleStone
 titleTemplate: Bộ máy luật nghiệp vụ cho ngân hàng và tài chính
 source: index.md
-sourceHash: 0c70866531801734d81d0683b890d5c8eed9a65d9fbcf6d90a51a0cfb4f54969
+sourceHash: 79a3cb9bbf95cec8f987a0e8b4866a5b65961e5382683d93783dc804aa3d32a7
 
 hero:
   name: RuleStone
@@ -33,7 +33,7 @@ features:
     details: Mọi luật đều được kiểm tra kiểu khi nạp. Một tên trường gõ sai hay một số decimal đem so với 1.5 sẽ làm việc nạp dừng lại với thông báo lỗi chỉ rõ vị trí, thay vì làm hỏng giao dịch của khách hàng.
   - icon: 📅
     title: Phiên bản và ngày hiệu lực
-    details: Đăng ký mọi phiên bản của một chính sách. Engine áp dụng phiên bản có hiệu lực vào ngày nghiệp vụ và từ chối các phiên bản có thời gian hiệu lực chồng lấn.
+    details: Thêm phiên bản mới của một chính sách mà không đụng tới phiên bản cũ. Mỗi phiên bản áp dụng từ ngày bắt đầu cho đến khi phiên bản kế tiếp có hiệu lực, và mã băm của nó không bao giờ đổi.
   - icon: 🔏
     title: Tái lập và kiểm toán được
     details: Mỗi kết quả ghi rõ phiên bản luật đã dùng kèm mã băm nội dung SHA-256, các mã lý do và vết các luật đã xét, không chứa giá trị đầu vào nào.

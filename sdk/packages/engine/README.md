@@ -41,7 +41,7 @@ writeDecisionRecord(result.record)   // one line of JSON, as DecisionRecordJson.
 |---|---|
 | `parseDecisionTable(text)` | Strict `.stone.json` reader, as `DecisionTableJson.read`. Unknown and duplicate keys are errors, and every problem is reported with its JSON path. |
 | `writeDecisionTable(table)`, `ruleVersionOf(table)` | The canonical form, and the rule version `<version>@sha256:<hex>` computed over it, as in Java. |
-| `createEngine(options)` | Compiles every table and checks versions for duplicates and overlaps. Options: `tables`, `maxIterations`, `currencyScales`, `clock`, `timeZone`, `recordIds`, `auditSinks`. |
+| `createEngine(options)` | Compiles every table and checks versions for duplicates and contradictory dates (a version without `effectiveTo` is superseded by the next one). Options: `tables`, `maxIterations`, `currencyScales`, `clock`, `timeZone`, `recordIds`, `auditSinks`. |
 | `engine.evaluate(ref, facts)` | Evaluates a decision with JavaScript values (see below). `ref` is a decision id or `{ id, version?, asOf?, correlationId? }`. |
 | `engine.evaluateJson(ref, json)` | The same, with facts in their JSON forms, read with the inputs of the selected version (`FactsJson`). |
 | `DecisionResult` | `output` (a `Map` in declaration order), `reasonCodes`, `trace`, `matched`, `matchedRules`, `ruleVersion`, `decisionId`, `record`. |

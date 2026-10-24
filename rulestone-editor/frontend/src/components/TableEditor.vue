@@ -292,7 +292,7 @@ function hitPolicyLabel(name: string) {
 
       <NewVersionDialog
         v-if="showNewVersion"
-        :table="draft" :file="file" :etag="loaded.etag"
+        :table="draft" :file="file"
         @close="showNewVersion = false"
       />
     </template>

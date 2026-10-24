@@ -71,5 +71,25 @@
       "{ \"id\": \"t\", \"version\": \"2\", \"effectiveFrom\": \"2026-11-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }",
       "{ \"id\": \"t\", \"version\": \"1\", \"effectiveTo\": \"2026-11-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [ { \"id\": \"R\", \"when\": \"true\" } ] }"
     ]
+  },
+  {
+    "name": "versions: a later version supersedes an open-ended one",
+    "tables": ["{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }", "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2027-03-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"]
+  },
+  {
+    "name": "versions: same effectiveFrom",
+    "tables": ["{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }", "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2026-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"]
+  },
+  {
+    "name": "versions: both without effectiveFrom",
+    "tables": ["{ \"id\": \"consent_request\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }", "{ \"id\": \"consent_request\", \"version\": \"2\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"]
+  },
+  {
+    "name": "versions: effectiveTo after the next start",
+    "tables": ["{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"effectiveTo\": \"2027-06-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }", "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2027-03-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"]
+  },
+  {
+    "name": "versions: an earlier effectiveTo leaves a gap",
+    "tables": ["{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"effectiveTo\": \"2026-07-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }", "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2026-09-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"]
   }
 ]

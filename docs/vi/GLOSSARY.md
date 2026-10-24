@@ -10,6 +10,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 
 | English | Tiếng Việt | Ghi chú |
 |---|---|---|
+| business date | ngày nghiệp vụ | Ngày mà quyết định được xét theo, khác với ngày hệ thống. |
 | business rule | luật nghiệp vụ | |
 | business rules engine, rules engine | bộ máy luật nghiệp vụ, bộ máy luật | Tên loại sản phẩm. Đối tượng `RuleStoneEngine` trong mã gọi là "engine". |
 | business rules management | quản lý luật nghiệp vụ | |
@@ -19,17 +20,17 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | definition (of a decision) | định nghĩa (quyết định, luật) | |
 | effective date; effective from / to | ngày hiệu lực; hiệu lực từ / đến | |
 | effective dating | hiệu lực theo ngày | |
-| business date | ngày nghiệp vụ | Ngày mà quyết định được xét theo, khác với ngày hệ thống. |
 | evaluate | đánh giá | "Đánh giá một quyết định", "luật không được đánh giá". |
 | hit policy | hit policy | Giữ nguyên; giải thích là "chính sách khớp luật": cách chọn kết quả khi nhiều luật cùng khớp. |
 | match (a rule matches) | khớp (luật khớp) | |
 | overlap (versions, rows) | chồng lấn | |
 | reason code | mã lý do | Bản thân mã (`DTI_HIGH`) giữ nguyên. |
+| row (of a decision table) | dòng | |
 | rule | luật | Không dùng "quy tắc" cho rule của bảng quyết định. |
 | rule set | tập luật | |
 | rule version | phiên bản luật | |
-| row (of a decision table) | dòng | |
 | sub-decision | quyết định con | |
+| supersede (a version) | thay thế (phiên bản) | Phiên bản mới thay thế phiên bản trước từ `effectiveFrom` của nó. |
 | trace | vết thực thi | Có thể ghi "(trace)" ở lần đầu. |
 
 ## Expressions and types

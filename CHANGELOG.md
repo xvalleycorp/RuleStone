@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Decision tables with `FIRST`, `UNIQUE` and `COLLECT` hit policies.
 - The `.stone.json` file format, read strictly: unknown and duplicate keys are errors.
 - Rule versions identified by version and SHA-256 content hash, e.g. `3@sha256:…`.
-- Effective dating with `effectiveFrom` / `effectiveTo`; overlapping versions are rejected.
+- Effective dating with `effectiveFrom` and an optional `effectiveTo`. A version without `effectiveTo` stays in force until the next version takes effect, so adding a version never changes the previous version's file or hash ([#6](https://github.com/xvalleycorp/RuleStone/issues/6)). Versions that take effect on the same day, and an `effectiveTo` after the next version's start, are rejected. `DecisionVersions` applies these rules for the engine and every integration.
 - Expression language based on CEL with typed inputs (structs and lists) and an exact `decimal` type. Floating-point numbers are rejected.
 - `decimal` arithmetic, comparison, `round` with any rounding mode, `abs`, `min`, `max`, `string`.
 - Bounded comprehensions (`maxIterations`).

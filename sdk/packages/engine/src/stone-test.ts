@@ -11,7 +11,8 @@ import { InvalidFactsError, RuleStoneError } from './errors.js'
 import { readValues, resultTypes } from './facts.js'
 import { JsonSyntaxError, parseJson, type JsonNode } from './json.js'
 import { Money } from './money.js'
-import { allowedList, isEffectiveOn, type DecisionTable } from './table.js'
+import { allowedList, type DecisionTable } from './table.js'
+import { versionInForce } from './versions.js'
 import { typesEqual, type ValueType } from './types.js'
 import type { Value } from './values.js'
 
@@ -189,9 +190,10 @@ class Reader {
 
   private schema(decision: string, version: string | undefined, asOf: LocalDate | undefined, path: string): Schema | undefined {
     if (!this.tables) return undefined
-    const candidates = this.tables.filter(
-      (t) => t.id === decision && (version !== undefined ? t.version === version : asOf ? isEffectiveOn(t, asOf) : true),
-    )
+    const versions = this.tables.filter((t) => t.id === decision)
+    const inForce = asOf ? versionInForce(versions, asOf) : undefined
+    const candidates =
+      version !== undefined ? versions.filter((t) => t.version === version) : asOf ? (inForce ? [inForce] : []) : versions
     if (candidates.length === 0) return undefined
     const first = candidates[0]!
     const schema: Schema = { inputs: first.inputs, results: resultTypes(first) }

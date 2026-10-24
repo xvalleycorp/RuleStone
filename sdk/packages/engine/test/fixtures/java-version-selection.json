@@ -1,0 +1,76 @@
+[ {
+  "name" : "superseded",
+  "results" : [ {
+    "date" : "2025-12-31",
+    "error" : "no version of decision 'consent_request' is effective on 2025-12-31"
+  }, {
+    "date" : "2026-01-01",
+    "ruleVersion" : "1@sha256:c930dc10eb1a6879c3c5d7ce8e8c2d7ac781a9234c633ea389bccfe70dfcc040"
+  }, {
+    "date" : "2027-02-28",
+    "ruleVersion" : "1@sha256:c930dc10eb1a6879c3c5d7ce8e8c2d7ac781a9234c633ea389bccfe70dfcc040"
+  }, {
+    "date" : "2027-03-01",
+    "ruleVersion" : "2@sha256:ba720c986b5170a0d6c079ca5e77f0343e870acdaee9ca42f709da8cdab3f787"
+  }, {
+    "date" : "2099-01-01",
+    "ruleVersion" : "2@sha256:ba720c986b5170a0d6c079ca5e77f0343e870acdaee9ca42f709da8cdab3f787"
+  } ]
+}, {
+  "name" : "no effectiveFrom starts at the beginning",
+  "results" : [ {
+    "date" : "0001-01-01",
+    "ruleVersion" : "1@sha256:e2e27d7f5ccc00190e44dbae5a83114cdd90ce29a649db98f13361e166590726"
+  }, {
+    "date" : "2027-02-28",
+    "ruleVersion" : "1@sha256:e2e27d7f5ccc00190e44dbae5a83114cdd90ce29a649db98f13361e166590726"
+  }, {
+    "date" : "2027-03-01",
+    "ruleVersion" : "2@sha256:ba720c986b5170a0d6c079ca5e77f0343e870acdaee9ca42f709da8cdab3f787"
+  } ]
+}, {
+  "name" : "gap and fixed end",
+  "results" : [ {
+    "date" : "2026-06-30",
+    "ruleVersion" : "1@sha256:c3ab68389acb549e5a3733b8402b35d8d96f098a3c844b049b7ba90801b27874"
+  }, {
+    "date" : "2026-07-01",
+    "error" : "no version of decision 'consent_request' is effective on 2026-07-01"
+  }, {
+    "date" : "2026-08-31",
+    "error" : "no version of decision 'consent_request' is effective on 2026-08-31"
+  }, {
+    "date" : "2026-09-01",
+    "ruleVersion" : "2@sha256:571d7df41fb0007fb982fc4e5e0e812347fc9aa548c3827a704c49a57a29f5bb"
+  }, {
+    "date" : "2026-12-31",
+    "ruleVersion" : "2@sha256:571d7df41fb0007fb982fc4e5e0e812347fc9aa548c3827a704c49a57a29f5bb"
+  }, {
+    "date" : "2027-01-01",
+    "error" : "no version of decision 'consent_request' is effective on 2027-01-01"
+  } ]
+}, {
+  "name" : "effectiveTo equal to the next start",
+  "results" : [ {
+    "date" : "2027-02-28",
+    "ruleVersion" : "1@sha256:0b06cb197160717bf9c9d206b468dbe3bef535b83e15b32d4a3cc8ae3b6f60cf"
+  }, {
+    "date" : "2027-03-01",
+    "ruleVersion" : "2@sha256:ba720c986b5170a0d6c079ca5e77f0343e870acdaee9ca42f709da8cdab3f787"
+  } ]
+}, {
+  "name" : "three versions registered out of order",
+  "results" : [ {
+    "date" : "2026-12-31",
+    "ruleVersion" : "1@sha256:c930dc10eb1a6879c3c5d7ce8e8c2d7ac781a9234c633ea389bccfe70dfcc040"
+  }, {
+    "date" : "2027-01-01",
+    "ruleVersion" : "2@sha256:99bb6f91c42c45b3da047f5a6c2d6aa94fb88e9880a1db85bf58b9a79f00fc03"
+  }, {
+    "date" : "2027-12-31",
+    "ruleVersion" : "2@sha256:99bb6f91c42c45b3da047f5a6c2d6aa94fb88e9880a1db85bf58b9a79f00fc03"
+  }, {
+    "date" : "2028-01-01",
+    "ruleVersion" : "3@sha256:4c630ad123afccc28b6b8d1bb86e39ee5f0fdd397c85df04c3e931f526e44f25"
+  } ]
+} ]

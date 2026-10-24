@@ -76,8 +76,7 @@ export const vi: Messages = {
     intro: 'Tạo tệp mới chứa bản sao các luật này với số phiên bản mới. Tệp hiện tại giữ nguyên, trừ khi bạn chọn kết thúc thời gian hiệu lực của nó.',
     version: 'Phiên bản mới',
     effectiveFrom: 'Ngày hiệu lực',
-    closePrevious: 'Đặt ngày hết hiệu lực của phiên bản {version} là {date}',
-    closePreviousHelp: 'Phiên bản {version} sẽ kết thúc đúng ngày phiên bản mới bắt đầu: không chồng lấn, không bị hở.',
+    supersedes: 'Phiên bản {version} vẫn có hiệu lực đến ngày {date}, khi phiên bản này thay thế nó. Tệp của phiên bản {version} không bị sửa, nên phiên bản luật (hash) của nó giữ nguyên.',
     unsaved: 'Các thay đổi hiện tại được đưa vào phiên bản mới; tệp hiện tại giữ nội dung đã lưu lần cuối.',
   },
   editor: {

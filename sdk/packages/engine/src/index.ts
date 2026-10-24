@@ -12,6 +12,7 @@ export { createEngine, outputJson, RuleStoneEngine, BUSINESS_DATE, ENGINE_NAME }
 export type { AuditSink, CompiledDecision, DecisionRef, DecisionResult, EngineOptions, TraceStep } from './engine.js'
 
 export { parseDecisionTable, writeDecisionTable, ruleVersionOf, isEffectiveOn, tableRef } from './table.js'
+export { versionProblems, versionInForce, selectVersion } from './versions.js'
 export type { DecisionTable, HitPolicy, Rule } from './table.js'
 
 export { readFacts, readValues, readValue, resultTypes, valueToJson, valuesToJson, writeValues, valueToPlain } from './facts.js'

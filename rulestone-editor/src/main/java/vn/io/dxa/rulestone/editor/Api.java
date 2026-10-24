@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -189,8 +188,8 @@ final class Api {
             throw new ApiException(400, "bad_request", "expected {\"table\": {...}, \"file\": \"optional name\"}");
         }
         for (String field : (Iterable<String>) body::fieldNames) {
-            if (!List.of("file", "table", "closePrevious").contains(field)) {
-                throw new ApiException(400, "bad_request", "unknown field '" + field + "' (allowed: closePrevious, file, table)");
+            if (!List.of("file", "table").contains(field)) {
+                throw new ApiException(400, "bad_request", "unknown field '" + field + "' (allowed: file, table)");
             }
         }
         JsonNode tree = tableObject(body.get("table"));
@@ -201,63 +200,14 @@ final class Api {
         }
         String text = Json.write(tree);
 
-        Map<String, DecisionTable> overrides = new HashMap<>();
-        String previousFile = null;
-        String previousEtag = null;
-        ObjectNode previousTree = null;
-        JsonNode close = body.get("closePrevious");
-        if (close != null && !close.isNull()) {
-            if (!close.isObject() || !close.hasNonNull("file")) {
-                throw new ApiException(400, "bad_request", "closePrevious must be {\"file\": \"...\", \"etag\": \"optional\"}");
-            }
-            JsonNode from = tree.get("effectiveFrom");
-            if (from == null || !from.isTextual()) {
-                throw new ApiException(400, "bad_request", "closePrevious needs the new table's effectiveFrom");
-            }
-            previousFile = close.get("file").asText();
-            previousEtag = close.hasNonNull("etag") ? close.get("etag").asText() : null;
-            String previousText = directory.read(previousFile);
-            if (previousEtag != null && !previousEtag.equals(RulesDirectory.etag(previousText))) {
-                throw new ApiException(412, "modified", "file was changed since it was loaded: " + previousFile);
-            }
-            JsonNode parsedPrevious = Json.parse(previousText);
-            if (!parsedPrevious.isObject()) {
-                throw new ApiException(422, "invalid_table", "previous version is not a JSON object: " + previousFile);
-            }
-            previousTree = (ObjectNode) parsedPrevious;
-            previousTree.put("effectiveTo", from.asText());
-            try {
-                overrides.put(previousFile, DecisionTableJson.read(Json.write(previousTree)));
-            } catch (InvalidDecisionException e) {
-                throw new ApiException(422, "invalid_table", "previous version is not valid: " + previousFile);
-            }
-        }
-
-        TableValidator.Result result = validator.validate(text, file, overrides);
+        // A new version never edits another file: it supersedes the previous version from its effectiveFrom.
+        TableValidator.Result result = validator.validate(text, file, Map.of());
         List<Problem> problems = new ArrayList<>(result.problems());
-        TableValidator.Result previousResult = null;
-        if (previousTree != null) {
-            Map<String, DecisionTable> newFile = result.table() == null ? Map.of() : Map.of(file, result.table());
-            previousResult = validator.validate(Json.write(previousTree), previousFile, newFile);
-            String other = previousFile;
-            previousResult.problems().forEach(p -> problems.add(new Problem(other + ": " + p.message(), p.detail(),
-                    p.location().file() == null ? p.location().withFile(other) : p.location())));
-        }
         if (!problems.isEmpty() && !request.flag("force")) {
             return refused(problems);
         }
-        String previousNewEtag = null;
-        if (previousTree != null) {
-            previousNewEtag = directory.write(previousFile, TableFormatter.format(previousTree), previousEtag, false);
-        }
         String etag = directory.write(file, TableFormatter.format(tree), null, true);
         ObjectNode response = saved(file, etag, result);
-        if (previousTree != null) {
-            ObjectNode previous = response.putObject("previous");
-            previous.put("file", previousFile);
-            previous.put("etag", previousNewEtag);
-            previous.put("effectiveTo", previousTree.get("effectiveTo").asText());
-        }
         return new Response(201, response, Map.of("ETag", "\"" + etag + "\""));
     }
 

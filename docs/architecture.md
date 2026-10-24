@@ -115,7 +115,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 |---|---|---|
 | Deterministic, reproducible | Immutable versions with a content hash. No I/O in expressions. `asOf` fixes the business date; rules never read the system clock. | available |
 | Exact money | `BigDecimal` throughout; floating point rejected in rules and inputs. | available |
-| Effective dating | Each version has `effectiveFrom`/`effectiveTo`; overlaps are rejected; a decision for day X can be re-run with the rules in force on day X. | available |
+| Effective dating | Each version has `effectiveFrom` and an optional `effectiveTo`; a new version supersedes the previous one from its `effectiveFrom`, so published versions are never edited; contradictory dates are rejected; a decision for day X can be re-run with the rules in force on day X. | available |
 | Segregation of duties (maker-checker) | Rule lifecycle `DRAFT → SUBMITTED → APPROVED → ACTIVE → RETIRED`; author and approver must differ, enforced in the governance layer. | planned |
 | Tamper-evident audit | Hash-chained, optionally signed audit records holding masked inputs, rule version, trace and result. | planned |
 | Explainability | Explicit reason codes plus a structured trace; AI only rephrases the trace. A decision record for every decision, including model versions, outputs and attributions, is specified in [Hybrid AI decisioning](hybrid-ai.md#4-the-decision-record). | available (codes, trace, decision record for tables) |

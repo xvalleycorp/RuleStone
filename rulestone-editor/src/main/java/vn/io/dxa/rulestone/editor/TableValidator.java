@@ -19,12 +19,13 @@ import java.util.Map;
 import java.util.Optional;
 import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
+import vn.io.dxa.rulestone.core.DecisionVersions;
 import vn.io.dxa.rulestone.core.InvalidDecisionException;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 /**
  * Checks a table exactly as the engine would, then against the other versions of the same decision
- * in the rules directory (duplicate versions, overlapping effective periods).
+ * in the rules directory (duplicate versions, inconsistent effective dates).
  */
 final class TableValidator {
 
@@ -91,12 +92,16 @@ final class TableValidator {
         }
     }
 
-    /** Duplicate versions and overlapping effective periods between {@code table} and the files on disk. */
+    /** Duplicate versions and inconsistent effective dates between {@code table} and the files on disk. */
     List<Problem> versionProblems(DecisionTable table, String selfFile, Map<String, DecisionTable> overrides) {
         return versionProblems(table, others(selfFile, overrides));
     }
 
-    /** Duplicate versions and overlapping effective periods between {@code table} and {@code others}, by file. */
+    /**
+     * Duplicate versions and inconsistent effective dates between {@code table} and {@code others}, by file,
+     * as {@link DecisionVersions#problems} defines them: a version without effectiveTo is superseded by the
+     * next one, so only equal starts and an effectiveTo after the next version's start are problems.
+     */
     static List<Problem> versionProblems(DecisionTable table, Map<String, DecisionTable> others) {
         List<Problem> problems = new ArrayList<>();
         others.forEach((file, other) -> {
@@ -105,14 +110,14 @@ final class TableValidator {
             }
             if (other.version().equals(table.version())) {
                 problems.add(versionProblem("version", "version " + table.version() + " already exists in " + file, file));
-            } else if (overlap(table, other)) {
-                boolean otherIsEarlier = start(other).compareTo(start(table)) <= 0;
-                problems.add(versionProblem(otherIsEarlier ? "effectiveFrom" : "effectiveTo",
-                        "effective period overlaps version " + other.version() + " in " + file
-                                + " (" + period(other) + "); " + (otherIsEarlier
-                                ? "set effectiveTo of version " + other.version() + " or move effectiveFrom"
-                                : "set effectiveTo of this version"),
-                        file));
+                return;
+            }
+            // The field to fix in this table: with equal starts, effectiveFrom; otherwise this table's
+            // effectiveTo if it is the earlier version, or its effectiveFrom if it is the later one.
+            boolean tableIsEarlier = start(table).isBefore(start(other));
+            String field = start(table).equals(start(other)) || !tableIsEarlier ? "effectiveFrom" : "effectiveTo";
+            for (String message : DecisionVersions.problems(List.of(table, other))) {
+                problems.add(versionProblem(field, message + " (version " + other.version() + " is in " + file + ")", file));
             }
         });
         return problems;
@@ -143,10 +148,6 @@ final class TableValidator {
         }
     }
 
-    static boolean overlap(DecisionTable a, DecisionTable b) {
-        return start(a).isBefore(end(b)) && start(b).isBefore(end(a));
-    }
-
     static String ruleVersion(DecisionTable table) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
@@ -164,14 +165,5 @@ final class TableValidator {
 
     private static LocalDate start(DecisionTable t) {
         return t.effectiveFrom().orElse(LocalDate.MIN);
-    }
-
-    private static LocalDate end(DecisionTable t) {
-        return t.effectiveTo().orElse(LocalDate.MAX);
-    }
-
-    private static String period(DecisionTable t) {
-        return t.effectiveFrom().map(LocalDate::toString).orElse("no start")
-                + " to " + t.effectiveTo().map(LocalDate::toString).orElse("no end");
     }
 }

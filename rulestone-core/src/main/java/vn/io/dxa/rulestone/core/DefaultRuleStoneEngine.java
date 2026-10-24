@@ -90,19 +90,9 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
         if (versions == null) {
             throw new DecisionNotFoundException("unknown decision '" + ref.id() + "'");
         }
-        if (ref.version().isPresent()) {
-            String version = ref.version().get();
-            return versions.stream()
-                    .filter(d -> d.table().version().equals(version))
-                    .findFirst()
-                    .orElseThrow(() -> new DecisionNotFoundException(
-                            "decision '" + ref.id() + "' has no version '" + version + "'"));
-        }
-        return versions.stream()
-                .filter(d -> d.table().isEffectiveOn(date))
-                .findFirst()
-                .orElseThrow(() -> new DecisionNotFoundException(
-                        "no version of decision '" + ref.id() + "' is effective on " + date));
+        DecisionTable table = DecisionVersions.select(ref.id(),
+                versions.stream().map(CompiledDecision::table).toList(), ref.version(), date);
+        return versions.stream().filter(d -> d.table() == table).findFirst().orElseThrow();
     }
 
     /** One evaluation, keeping what is known so far so that a failure can still be recorded. */

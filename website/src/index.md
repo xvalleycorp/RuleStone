@@ -31,7 +31,7 @@ features:
     details: Every rule is type-checked when it is loaded. A misspelt field or a decimal compared with 1.5 stops the load with a precise message, not a customer transaction.
   - icon: 📅
     title: Versions and effective dates
-    details: Register every version of a policy. The engine applies the one in force on the business date, and rejects overlapping versions.
+    details: Add a new version of a policy without touching the old one. Each version applies from its start date until the next one takes effect, and its hash never changes.
   - icon: 🔏
     title: Reproducible and auditable
     details: Each result carries the exact rule version with a SHA-256 content hash, reason codes and a trace of the rules examined, with no input values.

@@ -40,7 +40,11 @@ export interface DecisionTable {
   readonly rules: readonly Rule[]
 }
 
-/** Whether the table is in force on date: effectiveFrom <= date < effectiveTo. */
+/**
+ * Whether date falls within the table's own declared period, effectiveFrom <= date < effectiveTo.
+ * This ignores other versions: a later version supersedes this one from its effectiveFrom. To
+ * find the version in force, use versionInForce.
+ */
 export function isEffectiveOn(table: DecisionTable, date: LocalDate): boolean {
   return (
     (table.effectiveFrom === undefined || date.compareTo(table.effectiveFrom) >= 0) &&

@@ -1,6 +1,6 @@
 ---
 source: decision-tables.md
-sourceHash: 37fa184ea65701ab8b5e5f3cc6377b39bc77a4cb31a3025ca623318f2cf41189
+sourceHash: c4f957d3deb6af1f913d00e49591e589cbdf74105fe87efbb06e43dc642b0898
 ---
 
 # Bảng quyết định
@@ -40,7 +40,7 @@ Một bảng là một đối tượng JSON. Theo quy ước, tên tệp kết t
 | `version` | có | Nhãn phiên bản, ví dụ `"3"` hoặc `"2026.11"`. Gồm chữ cái, chữ số, `_`, `.` và `-`. Duy nhất trong cùng một `id`. |
 | `description` | không | Mô tả tự do cho người đọc. Là một phần của mã băm nội dung. |
 | `effectiveFrom` | không | Ngày đầu tiên phiên bản này có hiệu lực, dạng `yyyy-MM-dd`, tính cả ngày đó. Bỏ trống nghĩa là "có hiệu lực từ trước tới nay". |
-| `effectiveTo` | không | Ngày đầu tiên phiên bản này **không còn** hiệu lực, dạng `yyyy-MM-dd`, không tính ngày đó. Bỏ trống nghĩa là "cho đến khi có thông báo mới". Phải sau `effectiveFrom`. |
+| `effectiveTo` | không | Ngày đầu tiên phiên bản này **không còn** hiệu lực, dạng `yyyy-MM-dd`, không tính ngày đó. Bỏ trống nghĩa là "cho đến khi phiên bản kế tiếp có hiệu lực". Phải sau `effectiveFrom`. |
 | `hitPolicy` | có | `FIRST`, `UNIQUE` hoặc `COLLECT`. Xem [Hit policy](#hit-policy). |
 | `inputs` | có | Đối tượng ánh xạ tên mỗi đầu vào tới [kiểu](#kiểu-dữ-liệu) của nó. Có thể rỗng. |
 | `outputs` | có | Đối tượng ánh xạ tên mỗi đầu ra tới [kiểu](#kiểu-dữ-liệu) của nó. Có thể rỗng, ví dụ với một bảng chỉ trả về mã lý do. |
@@ -166,16 +166,32 @@ Một quyết định thường có nhiều phiên bản trong vòng đời củ
 
 Các luật nhận cùng ngày đó qua đầu vào ngầm định `businessDate`: `asOf(date)` nếu được truyền, nếu không thì là ngày hôm nay theo đồng hồ, kể cả khi đã chỉ định phiên bản.
 
-Một phiên bản có hiệu lực vào ngày `d` khi `effectiveFrom <= d < effectiveTo`. Vì ngày kết thúc không được tính, các phiên bản liên tiếp dùng chung một ngày ranh giới:
+**Phiên bản mới thay thế phiên bản trước.** Các phiên bản của một quyết định được sắp theo `effectiveFrom`; phiên bản không có `effectiveFrom` được coi là bắt đầu từ trước tới nay. Mỗi phiên bản có hiệu lực cho đến mốc sớm hơn trong hai mốc:
+
+- `effectiveTo` của chính nó, nếu có;
+- `effectiveFrom` của phiên bản kế tiếp.
+
+Để thay đổi một chính sách từ một ngày, hãy thêm một tệp chứa phiên bản mới với `effectiveFrom` là ngày đó. **Không bao giờ sửa phiên bản trước.** Tệp của nó, và do đó mã băm nội dung của nó, giữ nguyên như khi công bố, nên mọi quyết định đã ghi nhận theo phiên bản đó vẫn đối chiếu được với nó:
 
 ```
-v2  effectiveFrom 2026-01-01  effectiveTo 2026-11-01
 v3  effectiveFrom 2026-11-01
+v4  effectiveFrom 2027-03-01
 ```
 
-Ngày 31 tháng 10 năm 2026 áp dụng v2; ngày 1 tháng 11 năm 2026 áp dụng v3. Không có khoảng trống, cũng không có chồng lấn.
+Ngày 28 tháng 2 năm 2027 áp dụng v3; ngày 1 tháng 3 năm 2027 áp dụng v4. Cả hai đầu mút đều không tính ngày kết thúc, nên không có khoảng trống, cũng không có chồng lấn.
 
-**Các phiên bản chồng lấn bị từ chối.** Nếu hai phiên bản của cùng một quyết định có thể cùng có hiệu lực vào một ngày nào đó, engine từ chối khởi tạo. Do đó việc chọn phiên bản không bao giờ mơ hồ.
+**`effectiveTo` dùng cho một ngày kết thúc cố định.** Hãy đặt nó khi một phiên bản phải dừng vào một ngày, dù có phiên bản kế tiếp hay không, ví dụ một chương trình khuyến mãi kết thúc ngày 31 tháng 12. Nếu phiên bản kế tiếp bắt đầu muộn hơn, sẽ không có phiên bản nào có hiệu lực ở giữa, và việc đánh giá vào những ngày đó thất bại với `DecisionNotFoundException`. Một `effectiveTo` bằng đúng `effectiveFrom` của phiên bản kế tiếp cũng hợp lệ: bảng mẫu `loan_eligibility.v2` kết thúc đúng ngày v3 bắt đầu.
+
+**Mâu thuẫn bị từ chối.** Engine từ chối khởi tạo khi:
+
+- hai phiên bản của cùng một quyết định có hiệu lực cùng một ngày, hoặc cả hai đều không có `effectiveFrom`, vì không phiên bản nào thay thế phiên bản kia;
+- `effectiveTo` của một phiên bản nằm sau `effectiveFrom` của phiên bản kế tiếp, vì hai tệp mâu thuẫn nhau về phiên bản nào được áp dụng.
+
+Do đó việc chọn phiên bản không bao giờ mơ hồ.
+
+**Triển khai mọi phiên bản cùng nhau.** Vì một phiên bản có hiệu lực cho đến khi phiên bản kế tiếp bắt đầu, một lần triển khai thiếu phiên bản mới hơn sẽ tiếp tục áp dụng phiên bản cũ mà không báo lỗi. Hãy nạp mọi phiên bản của một quyết định từ cùng một nguồn, ví dụ một thư mục hay một kho lưu trữ.
+
+**Khi chạy lại, hãy chỉ định phiên bản.** Một phiên bản được thêm sau với `effectiveFrom` nằm trong quá khứ sẽ làm thay đổi phiên bản mà một lần chạy lại theo ngày (`asOf`) chọn ra. Để tái lập chính xác một quyết định đã ghi nhận, hãy chỉ định phiên bản lấy từ bản ghi của nó: `DecisionRef.of(id).version(...)`. [Bản ghi quyết định](java-api.md#bản-ghi-quyết-định-và-kiểm-toán) lưu phiên bản chính xác của mọi lần đánh giá.
 
 ### Mã băm nội dung
 
@@ -204,6 +220,6 @@ Các bước kiểm tra gồm:
 | Bảng | `id` hoặc `version` không hợp lệ; `effectiveTo` không sau `effectiveFrom`; không có luật nào; đầu ra có kiểu struct; tên đầu vào hoặc tên trường không hợp lệ; một đầu vào tên là `businessDate`. |
 | Luật | Trùng id luật; mã lý do không theo dạng `UPPER_SNAKE_CASE`; `then` đặt một đầu ra chưa khai báo. |
 | Biểu thức | Lỗi cú pháp; biến hoặc trường không xác định; lỗi kiểu, kể cả mọi sự trộn lẫn giữa `decimal` và số dấu phẩy động, hoặc giữa `money` và số thông thường; `when` không trả về `bool`; `then` không trả về đúng kiểu của đầu ra. |
-| Phiên bản | Cùng một `id@version` được đăng ký hai lần; các khoảng thời gian hiệu lực chồng lấn. |
+| Phiên bản | Cùng một `id@version` được đăng ký hai lần; hai phiên bản có hiệu lực cùng một ngày, hoặc cả hai đều không có `effectiveFrom`; một `effectiveTo` nằm sau `effectiveFrom` của phiên bản kế tiếp. |
 
 Điều mà việc kiểm tra hợp lệ không phát hiện được là một luật đúng cú pháp nhưng sai về nghiệp vụ: ví dụ các dòng `UNIQUE` chỉ chồng lấn với một số đầu vào nhất định. Những lỗi đó được phát hiện bằng kiểm thử. Hãy viết kiểm thử đơn vị cho bảng quyết định giống như cho mã nguồn.
