@@ -3,7 +3,7 @@ layout: page
 title: Sân thử
 description: Sửa và chạy bảng quyết định RuleStone ngay trong trình duyệt bằng các thành phần soạn thảo nhúng được, dựng điều kiện và thiết kế luồng quyết định.
 source: playground.md
-sourceHash: pending
+sourceHash: 9a0006111a7eba2410abc2920592ebb3873d75f2b3bc22971e481d477d41cc3a
 ---
 
 <script setup>
@@ -31,7 +31,7 @@ Sửa các bảng quyết định mẫu, chạy thử với dữ liệu mẫu, d
 
 ## Nhúng vào ứng dụng
 
-Các thành phần này dùng được trong mọi ứng dụng web, với bất kỳ framework nào hoặc không cần framework. Các gói chưa có trên npm: hãy [build từ repository](/vi/docs/editor-sdk#install-and-build) cho tới khi chúng được phát hành. Mỗi đoạn mã dưới đây nạp trình soạn thảo bảng, đưa cho nó một bảng và lưu mọi thay đổi.
+Các thành phần này dùng được trong mọi ứng dụng web, với bất kỳ framework nào hoặc không cần framework. Các gói chưa có trên npm: hãy [build từ repository](/vi/docs/editor-sdk#cai-đat-va-build) cho tới khi chúng được phát hành. Mỗi đoạn mã dưới đây nạp trình soạn thảo bảng, đưa cho nó một bảng và lưu mọi thay đổi.
 
 ::: code-group
 

@@ -1,9 +1,11 @@
 ---
 source: editor.md
-sourceHash: ab9b6a1a8782bd280d49466a3d14b210f7e4b14ed8b53d5fa85afa7421ab4aa1
+sourceHash: 820f98b9b387caaf5575e003761008c77aae3e2eba2ef9b8f9df20253cad20b3
 ---
 
 # Trình soạn thảo web
+
+> **Cần đưa chức năng soạn luật vào một hệ thống sẵn có?** Hãy dùng [SDK trình soạn thảo](editor-sdk.md): cùng loại trình soạn thảo, dưới dạng Web Component cho ứng dụng React, Angular, Vue hoặc HTML thuần của bạn, vốn giữ cách lưu trữ, đăng nhập và quy trình phê duyệt riêng. Trang này mô tả ứng dụng trình soạn thảo độc lập.
 
 Trình soạn thảo RuleStone là một ứng dụng web nhỏ để tạo và sửa bảng quyết định mà không phải gõ JSON. Chuyên viên phân tích nghiệp vụ sửa luật trên một lưới, dựng điều kiện từ các danh sách thả xuống, kiểm thử bảng với dữ liệu mẫu và thấy lỗi ngay tại ô liên quan trong lúc gõ. Lập trình viên vẫn nhận được các tệp `.stone.json` như trước, được lưu theo một định dạng ổn định để diff gọn gàng trong Git.
 

@@ -7,8 +7,9 @@ The source of [rulestone.dxa.io.vn](https://rulestone.dxa.io.vn): a [VitePress](
 | Path | Content |
 |---|---|
 | `src/index.md` | Home page. |
+| `src/playground.md` | The playground: the browser SDK's editor components on the examples (`src/.vitepress/playground/`). |
 | `src/docs/` | **Generated.** Copied from the repository's [`docs/`](../docs/) by `scripts/sync-docs.mjs` on every build. Edit the files in `docs/`, not here. |
-| `src/vi/index.md` | Vietnamese home page (translation of `src/index.md`). |
+| `src/vi/index.md`, `src/vi/playground.md` | Vietnamese home page and playground (translations of `src/index.md` and `src/playground.md`). |
 | `src/vi/docs/` | **Generated.** Vietnamese guides copied from [`docs/vi/`](../docs/vi/), plus placeholder pages for guides not translated yet. |
 | `src/.vitepress/config.mts` | Locales, navigation, sidebar, search, footer. |
 | `src/.vitepress/theme/` | Colours, home page styles, and the notice shown on outdated translations. |
@@ -20,9 +21,10 @@ The sync script rewrites links that leave `docs/` (to `examples/`, `CONTRIBUTING
 
 ## Develop
 
-Requires Node.js 20 or newer.
+Requires Node.js 22 or newer. The playground builds the browser SDK (`../sdk`) from its sources, so install the SDK's dependencies first.
 
 ```sh
+(cd ../sdk && npm ci)
 npm ci
 npm run dev       # http://localhost:5173, reloads on change
 npm run build     # output in src/.vitepress/dist
@@ -33,6 +35,14 @@ The build fails on links to pages or anchors that do not exist (`npm run check:l
 
 The VitePress development server has known advisories that only affect the local dev server (`npm audit`). It listens on `localhost` only; do not expose it to a network. The published site is static files and is not affected.
 
+## Playground
+
+`/playground` (and `/vi/playground`) embeds the components of [`@rulestone/editor`](../sdk/packages/editor/) on the tables of [`examples/`](../examples/) and the example flow of [`docs/hybrid-ai.md`](../docs/hybrid-ai.md):
+
+- `src/.vitepress/playground/examples.data.ts` reads those files when the site is built (a VitePress data loader), with one case of each `.stone-test.json` as sample facts. The examples are never copied by hand; the build fails if a featured example or its test case is missing.
+- `Playground.vue` loads the SDK only on that page, after mounting (pages are also rendered at build time, where custom elements cannot run). `config.mts` resolves `@rulestone/engine` and `@rulestone/editor` to the SDK's sources and tells Vue that `rulestone-*` and `rs-*` tags are custom elements.
+- Everything runs in the visitor's browser. Share links carry the table compressed (`CompressionStream`, deflate) and base64url-encoded after `#table=`; a link is size-limited, and its content is read with the engine's strict `.stone.json` reader, never executed. The last edit of each example is kept in `localStorage`, for that browser only.
+
 ## Translations
 
 The site is in English at `/` and in Vietnamese at `/vi/`. English is the source of truth; English URLs never change.
@@ -42,6 +52,7 @@ The site is in English at `/` and in Vietnamese at `/vi/`. English is the source
 | `/` | `/vi/` | `website/src/vi/index.md` |
 | `/docs/` | `/vi/docs/` | `docs/vi/index.md` (translation of `docs/README.md`) |
 | `/docs/<page>` | `/vi/docs/<page>` | `docs/vi/<page>.md` |
+| `/playground` | `/vi/playground` | `website/src/vi/playground.md` |
 
 The language switcher in the navigation bar maps each page to the same path in the other language. A guide that is not translated yet appears in the Vietnamese sidebar and navigation with the mark "(English)" and links to the English page; its `/vi/docs/<page>` address serves a short placeholder (not indexed by search engines or the site search, not in the sitemap) that points to the English page, so the switcher never leads to a 404. Translated pages declare `<link rel="alternate" hreflang>` to each other.
 
@@ -69,6 +80,7 @@ npm run i18n:status                        # up-to-date / outdated / invalid / m
 npm run i18n:status -- --strict            # same, exit status 1 unless all translations are up to date
 npm run i18n:stamp -- getting-started.md   # after re-checking a translation: record the current source hash
 npm run i18n:stamp -- index.md home        # the docs index and the home page
+npm run i18n:stamp -- src/vi/playground.md # the playground
 ```
 
 ### Add or update a translation
