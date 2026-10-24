@@ -70,10 +70,10 @@
   "devDependencies": {
     "@types/node": "24.19.2",
     "esbuild": "0.28.2",
-    "happy-dom": "20.14.6",
+    "happy-dom": "21.0.4",
     "typescript": "5.9.3",
     "vite": "7.3.7",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "engines": {
     "node": ">=22"
