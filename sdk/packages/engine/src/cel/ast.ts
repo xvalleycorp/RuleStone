@@ -7,6 +7,10 @@ import type { CelType } from './types.js'
  * A parsed CEL expression. `pos` is the offset, in code points, of the token that identifies
  * the node (the operator, the '.' of a selection, the '(' of a call, the '[' of an index or a
  * list), as cel-java reports it in error messages.
+ *
+ * `start` and `end` delimit the node's source text, in code points, end exclusive. They include
+ * the parentheses around the node, if any, so that `source.slice` of the span (after converting
+ * to UTF-16 indices) is the node exactly as written.
  */
 export type Expr =
   | Literal
@@ -18,6 +22,10 @@ export type Expr =
 
 interface Node {
   readonly pos: number
+  /** First code point of the node's source text, including enclosing parentheses. */
+  start: number
+  /** Code point after the node's source text, including enclosing parentheses. */
+  end: number
   /** Set by the type checker. */
   type?: CelType
 }
@@ -39,6 +47,8 @@ export interface Select extends Node {
   readonly kind: 'select'
   readonly operand: Expr
   readonly field: string
+  /** Offset of the field name, in code points. */
+  readonly fieldPos: number
   /** The selection inside has(): tests presence instead of reading the field. */
   readonly test: boolean
 }
@@ -64,6 +74,8 @@ export interface Comprehension extends Node {
   readonly macro: 'all' | 'exists' | 'exists_one' | 'map' | 'filter'
   readonly range: Expr
   readonly variable: string
+  /** Offset of the iteration variable's name, in code points. */
+  readonly variablePos: number
   /** The predicate of all/exists/exists_one/filter, or the filter of a three-argument map. */
   readonly predicate: Expr | undefined
   /** The transform of map. */

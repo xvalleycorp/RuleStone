@@ -9,7 +9,7 @@ The Java engine remains the engine of record. Use this package for instant feedb
 - No runtime dependencies. Numbers use the native `BigInt`.
 - ESM, TypeScript types included, and safe to tree-shake (`sideEffects: false`).
 - Runs in current browsers and in Node.js 22 or later. Hashing uses WebCrypto (`crypto.subtle`), which browsers provide only on secure (HTTPS or localhost) pages.
-- **Size:** 83.4 KiB minified, 27.2 KiB minified and gzipped, for the whole package (`npm run size`).
+- **Size:** 85.3 KiB minified, 27.9 KiB minified and gzipped, for the whole package (`npm run size`).
 
 ## Usage
 
@@ -50,6 +50,8 @@ writeDecisionRecord(result.record)   // one line of JSON, as DecisionRecordJson.
 | `valueToJson`, `valuesToJson`, `writeValues`, `outputJson` | Values to their JSON forms, with decimals as plain-notation strings. |
 | `parseStoneTests`, `checkStoneTestCase` | Reads `.stone-test.json` files and checks their cases, as `StoneTestJson` and `StoneTestCase.check` do. |
 | `ExpressionEnvironment` | Compiles and evaluates single expressions, as the Java class of that name. |
+| `analyzeExpression(source, { variables, expected? })` | For editors: parses and type-checks an expression without throwing, and returns the typed syntax tree, every problem with its position (in code points and as a UTF-16 index, line and column) and the engine's message. Every node has its source span (`start`, `end`, including enclosing parentheses); selections also give `fieldPos`. `compile` uses the same analysis. |
+| `functionCatalog()`, `inputStructName(path)`, `codePointIndex(source, pos)` | The functions and methods rules can call, for autocomplete; the type name the checker gives a struct among the inputs (to tell which declared field a selection reads); converting code-point offsets to string indexes. |
 | `Decimal`, `Money`, `LocalDate` | Exact values: `Decimal` keeps its scale like `BigDecimal`, `Money` is an amount and an ISO 4217 code, and `LocalDate` is a calendar date with no time zone. |
 | `RuleStoneError` and its subclasses | `InvalidDecisionError`, `InvalidFactsError`, `DecisionNotFoundError`, `DecisionEvaluationError`, `AuditError`. `ExpressionError` and `InvalidValueError` come from `ExpressionEnvironment`. |
 

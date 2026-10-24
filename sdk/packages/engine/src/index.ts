@@ -26,6 +26,14 @@ export type { StoneTestCase, StoneTestOutcome } from './stone-test.js'
 export { ExpressionEnvironment, CompiledExpression, Bindings, DEFAULT_MAX_ITERATIONS } from './cel/environment.js'
 export type { EnvironmentOptions } from './cel/environment.js'
 
+export {
+  analyzeExpression, functionCatalog, codePointIndex, inputStructName, variableCelType,
+} from './cel/analysis.js'
+export type { AnalysisOptions, ExpressionAnalysis, ExpressionIssue, FunctionSignature } from './cel/analysis.js'
+export type { Expr, Literal, Ident, Select, Call, ListExpr, Comprehension } from './cel/ast.js'
+export type { CelType } from './cel/types.js'
+export { formatType as formatCelType } from './cel/types.js'
+
 export { Decimal, ROUNDING_MODES } from './decimal.js'
 export type { RoundingMode } from './decimal.js'
 export { Money, isCurrencyCode, minorUnits, currencyTable, ISO4217_AMENDMENT } from './money.js'

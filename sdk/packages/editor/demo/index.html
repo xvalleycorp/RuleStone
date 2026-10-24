@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- Copyright 2026 The RuleStone Authors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- A strict policy: no inline scripts or styles. The components style themselves with
+         constructable stylesheets (adoptedStyleSheets), which CSP does not block. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws:; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>RuleStone editor components</title>
+    <link rel="stylesheet" href="./demo.css" />
+  </head>
+  <body>
+    <header class="top">
+      <h1>RuleStone editor components</h1>
+      <div class="controls">
+        <label>View
+          <select id="view">
+            <option value="table">Decision table editor</option>
+            <option value="flow">Decision flow canvas</option>
+            <option value="builder">Condition builder alone</option>
+          </select>
+        </label>
+        <label>Example
+          <select id="example"></select>
+        </label>
+        <label>Language
+          <select id="locale">
+            <option value="en">English</option>
+            <option value="vi">Tiếng Việt</option>
+          </select>
+        </label>
+        <label>Theme
+          <select id="theme">
+            <option value="">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="readonly" /> Read only</label>
+      </div>
+      <p class="status" id="status" role="status"></p>
+    </header>
+    <main id="main"></main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -1,5 +1,6 @@
-# Checks the browser SDK (sdk/): npm license allowlist, type check, build and tests,
-# including the conformance suite against fixtures written by the Java engine.
+# Checks the browser SDK (sdk/): npm license allowlist, type check, build and tests of every
+# package (the engine, with its conformance suite against fixtures written by the Java engine,
+# and the editor components), and a build of the editor's demo.
 name: SDK
 
 on:
@@ -36,8 +37,13 @@ jobs:
       - run: npm ci
       - name: License allowlist
         run: npm run licenses
-      - run: npm run typecheck
-      - run: npm run build
-      - run: npm test
+      - name: Type check (engine and editor)
+        run: npm run typecheck
+      - name: Build (engine, then editor)
+        run: npm run build
+      - name: Tests (engine conformance suite and editor components)
+        run: npm test
+      - name: Editor demo build
+        run: npm run demo:build --workspace @rulestone/editor
       - name: Bundle size
         run: npm run size

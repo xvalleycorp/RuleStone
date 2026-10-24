@@ -1,0 +1,163 @@
+{
+  "id": "card_origination",
+  "version": "1",
+  "inputs": {
+    "applicant": {
+      "id": "string",
+      "age": "int",
+      "income": "money",
+      "existingCustomer": "bool"
+    },
+    "bureau": {
+      "dpd30Count12m": "int",
+      "utilisation": "decimal"
+    }
+  },
+  "outputs": {
+    "decision": "string",
+    "limit": "money",
+    "riskGrade": "string"
+  },
+  "start": "policy",
+  "nodes": {
+    "policy": {
+      "type": "table",
+      "decision": "card_policy",
+      "next": [
+        {
+          "when": "policy.decision == 'REJECT'",
+          "to": "rejected"
+        },
+        {
+          "to": "segment"
+        }
+      ]
+    },
+    "segment": {
+      "type": "switch",
+      "cases": [
+        {
+          "when": "applicant.existingCustomer",
+          "to": "pd_behaviour"
+        },
+        {
+          "to": "pd_application"
+        }
+      ]
+    },
+    "pd_behaviour": {
+      "type": "model",
+      "mode": "invoke",
+      "as": "score",
+      "model": {
+        "id": "retail_pd_behaviour",
+        "version": "2.4.0"
+      },
+      "features": {
+        "utilisation": "bureau.utilisation",
+        "dpd30Count12m": "bureau.dpd30Count12m"
+      },
+      "outputs": {
+        "pd": "decimal"
+      },
+      "valid": "pd >= decimal(0) && pd <= decimal(1)",
+      "timeoutMs": 80,
+      "reasonCodes": {
+        "utilisation": "HIGH_UTILISATION",
+        "dpd30Count12m": "RECENT_DELINQUENCY"
+      },
+      "onFailure": {
+        "to": "referred",
+        "reasonCode": "MODEL_UNAVAILABLE"
+      },
+      "next": "grade"
+    },
+    "pd_application": {
+      "type": "model",
+      "mode": "invoke",
+      "as": "score",
+      "model": {
+        "id": "retail_pd_application",
+        "version": "3.1.0"
+      },
+      "features": {
+        "age": "applicant.age",
+        "utilisation": "bureau.utilisation"
+      },
+      "outputs": {
+        "pd": "decimal"
+      },
+      "valid": "pd >= decimal(0) && pd <= decimal(1)",
+      "timeoutMs": 80,
+      "reasonCodes": {
+        "utilisation": "HIGH_UTILISATION"
+      },
+      "onFailure": {
+        "to": "referred",
+        "reasonCode": "MODEL_UNAVAILABLE"
+      },
+      "next": "grade"
+    },
+    "grade": {
+      "type": "table",
+      "decision": "pd_to_grade",
+      "facts": {
+        "pd": "score.pd"
+      },
+      "next": "limit_strategy"
+    },
+    "limit_strategy": {
+      "type": "split",
+      "key": "applicant.id",
+      "salt": "card-limit-2026Q4",
+      "buckets": [
+        {
+          "name": "champion",
+          "percent": 90,
+          "to": "limit_champion"
+        },
+        {
+          "name": "challenger",
+          "percent": 10,
+          "to": "limit_challenger"
+        }
+      ]
+    },
+    "limit_champion": {
+      "type": "table",
+      "decision": "card_limit_matrix",
+      "as": "offer",
+      "next": "approved"
+    },
+    "limit_challenger": {
+      "type": "table",
+      "decision": "card_limit_matrix_b",
+      "as": "offer",
+      "next": "approved"
+    },
+    "approved": {
+      "type": "end",
+      "set": {
+        "decision": "'APPROVE'",
+        "riskGrade": "grade.riskGrade",
+        "limit": "offer.limit"
+      }
+    },
+    "rejected": {
+      "type": "end",
+      "set": {
+        "decision": "'REJECT'",
+        "riskGrade": "'N/A'",
+        "limit": "money(0, applicant.income.currency())"
+      }
+    },
+    "referred": {
+      "type": "end",
+      "set": {
+        "decision": "'REFER'",
+        "riskGrade": "'N/A'",
+        "limit": "money(0, applicant.income.currency())"
+      }
+    }
+  }
+}
