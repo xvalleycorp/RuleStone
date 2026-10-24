@@ -397,12 +397,28 @@ function nodesOnCycles(ids: readonly string[], successors: ReadonlyMap<string, r
 
 // --- Layout ------------------------------------------------------------------------------------
 
-export const NODE_WIDTH = 180
-export const NODE_HEIGHT = 64
+export const NODE_WIDTH = 200
+export const NODE_HEIGHT = 68
 
-/** Positions in columns by distance from the start, for flows without a saved layout. */
-export function autoLayout(flow: FlowJson, existing: FlowLayout = {}): FlowLayout {
-  const layout: FlowLayout = {}
+/** Spacing of the automatic layout: around the graph, between columns, rows and bands. */
+export const LAYOUT_SPACING = { margin: 40, column: 56, row: 36, band: 72 } as const
+
+/** Zoom limits for fitting a flow: below the minimum, node text is too small to read. */
+export const FIT_ZOOM = { min: 0.8, max: 1.25 } as const
+
+export interface LayoutOptions {
+  /**
+   * Columns per band. Columns are the distance from the start node; a flow longer than this
+   * wraps into bands below each other, like lines of text. Default: no wrapping.
+   */
+  readonly maxColumns?: number
+}
+
+/**
+ * Positions in columns by distance from the start, for flows without a saved layout. Each
+ * column is centred in its band; positions in `existing` are kept.
+ */
+export function autoLayout(flow: FlowJson, existing: FlowLayout = {}, options: LayoutOptions = {}): FlowLayout {
   const depth = new Map<string, number>()
   const start = flow.start in flow.nodes ? flow.start : Object.keys(flow.nodes)[0]
   if (start !== undefined) {
@@ -418,19 +434,76 @@ export function autoLayout(flow: FlowJson, existing: FlowLayout = {}): FlowLayou
       }
     }
   }
+  // Nodes the start cannot reach go in one more column; the BFS order keeps siblings together.
   const maxDepth = Math.max(0, ...depth.values())
-  const rows = new Map<number, number>()
-  for (const id of Object.keys(flow.nodes)) {
-    if (existing[id]) {
-      layout[id] = existing[id]
-      continue
-    }
+  const columns: string[][] = []
+  const order = [...[...depth.keys()], ...Object.keys(flow.nodes).filter((id) => !depth.has(id))]
+  for (const id of order) {
+    if (existing[id]) continue
     const column = depth.get(id) ?? maxDepth + 1
-    const row = rows.get(column) ?? 0
-    rows.set(column, row + 1)
-    layout[id] = { x: 40 + column * (NODE_WIDTH + 70), y: 40 + row * (NODE_HEIGHT + 40) }
+    ;(columns[column] ??= []).push(id)
   }
+  const perBand = Math.max(1, Math.floor(options.maxColumns ?? Number.POSITIVE_INFINITY))
+  const { margin, column: columnGap, row: rowGap, band: bandGap } = LAYOUT_SPACING
+  const rowHeight = NODE_HEIGHT + rowGap
+  const layout: FlowLayout = {}
+  let bandTop = margin
+  for (let first = 0; first < columns.length; first += perBand) {
+    const band = columns.slice(first, first + perBand)
+    const rows = Math.max(1, ...band.map((c) => c?.length ?? 0))
+    band.forEach((ids, i) => {
+      const offset = ((rows - (ids?.length ?? 0)) * rowHeight) / 2
+      ids?.forEach((id, row) => {
+        layout[id] = { x: margin + i * (NODE_WIDTH + columnGap), y: Math.round(bandTop + offset + row * rowHeight) }
+      })
+    })
+    bandTop += rows * rowHeight - rowGap + bandGap
+  }
+  for (const id of Object.keys(flow.nodes)) if (existing[id]) layout[id] = existing[id]
   return layout
+}
+
+/** The rectangle around every node of a layout. */
+export function layoutBounds(layout: FlowLayout): { x: number; y: number; width: number; height: number } | undefined {
+  const points = Object.values(layout)
+  if (points.length === 0) return undefined
+  const x = Math.min(...points.map((p) => p.x))
+  const y = Math.min(...points.map((p) => p.y))
+  return {
+    x,
+    y,
+    width: Math.max(...points.map((p) => p.x)) + NODE_WIDTH - x,
+    height: Math.max(...points.map((p) => p.y)) + NODE_HEIGHT - y,
+  }
+}
+
+/** The zoom at which a layout fits a viewport of the given size, with a margin. */
+export function fitZoom(layout: FlowLayout, width: number, height: number): number {
+  const b = layoutBounds(layout)
+  if (!b) return 1
+  const m = LAYOUT_SPACING.margin
+  return Math.min(width / (b.width + 2 * m), height / (b.height + 2 * m))
+}
+
+/**
+ * The automatic layout that best suits a viewport: the number of columns per band that shows
+ * the whole flow at the largest zoom. When no layout fits at a readable zoom (FIT_ZOOM.min),
+ * it takes the widest one that fits the viewport's width at that zoom, so the rest of the
+ * flow is reached by panning in one direction only.
+ */
+export function layoutFor(flow: FlowJson, width: number, height: number): FlowLayout {
+  const columns = Math.max(1, new Set(Object.values(autoLayout(flow)).map((p) => p.x)).size)
+  let best: { layout: FlowLayout; zoom: number } | undefined
+  let widest: FlowLayout | undefined
+  for (let c = columns; c >= 1; c--) {
+    const layout = autoLayout(flow, {}, { maxColumns: c })
+    const zoom = Math.min(FIT_ZOOM.max, fitZoom(layout, width, height))
+    if (!best || zoom > best.zoom + 1e-9) best = { layout, zoom }
+    const b = layoutBounds(layout)
+    if (!widest && b && (b.width + 2 * LAYOUT_SPACING.margin) * FIT_ZOOM.min <= width) widest = layout
+  }
+  if (!best) return {}
+  return best.zoom >= FIT_ZOOM.min ? best.layout : widest ?? autoLayout(flow, {}, { maxColumns: 1 })
 }
 
 /** The flow as the pretty-printed JSON text of a .flow.json file. */

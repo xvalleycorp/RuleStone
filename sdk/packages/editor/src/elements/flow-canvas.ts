@@ -3,8 +3,8 @@
 
 import { css, html, nothing, svg, type PropertyDeclarations, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit'
 import {
-  NODE_HEIGHT, NODE_TYPES, NODE_WIDTH, addNode, allEdges, autoLayout, checkFlow, connect, disconnect, edgesOf, emptyFlow,
-  flowText, parseFlow, removeNode, renameNode, updateNode, type Branch, type Edge, type FlowJson, type FlowLayout,
+  FIT_ZOOM, LAYOUT_SPACING, NODE_HEIGHT, NODE_TYPES, NODE_WIDTH, addNode, allEdges, autoLayout, checkFlow, connect, disconnect,
+  edgesOf, emptyFlow, flowText, layoutBounds, layoutFor, parseFlow, removeNode, renameNode, updateNode, type Branch, type Edge, type FlowJson, type FlowLayout,
   type FlowNodeJson, type FlowProblem, type NodeType,
 } from '../model/flow.js'
 import { PRIMITIVES, cloneJson, type TypeSpec } from '../model/table.js'
@@ -79,10 +79,18 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   private drag: Drag | undefined
   private observer: ResizeObserver | undefined
   private focusNode: string | undefined
+  /**
+   * The layout the canvas arranged itself for its size. While `layout` is this very object
+   * (nobody moved a node or set a layout), the canvas arranges it again when its size changes.
+   */
+  private arrangedFor: FlowLayout | undefined
 
   static override styles = [
     ...RulestoneElement.styles,
     css`
+      :host {
+        container-type: inline-size;
+      }
       .banner {
         margin-bottom: 8px;
       }
@@ -98,10 +106,13 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       }
       .layout {
         display: grid;
-        grid-template-columns: 150px minmax(0, 1fr) minmax(260px, 340px);
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
         gap: 8px;
       }
-      @media (max-width: 900px) {
+      .layout > .palette {
+        grid-column: 1 / -1;
+      }
+      @container (max-width: 760px) {
         .layout {
           grid-template-columns: minmax(0, 1fr);
         }
@@ -114,10 +125,20 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         padding: 8px;
         min-width: 0;
       }
-      .palette h3,
       .panel h3,
       .problems h3 {
         margin: 0 0 6px;
+        font-size: 1em;
+      }
+      .palette {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 10px;
+        padding: 6px 8px;
+      }
+      .palette h3 {
+        margin: 0;
         font-size: 1em;
       }
       .palette ul {
@@ -125,17 +146,15 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         margin: 0;
         padding: 0;
         display: flex;
-        flex-direction: column;
+        flex-wrap: wrap;
         gap: 4px;
       }
-      @media (max-width: 900px) {
-        .palette ul {
-          flex-direction: row;
-          flex-wrap: wrap;
-        }
+      .palette p {
+        order: 1;
+        margin: 0;
+        font-size: 0.88em;
       }
       .palette button {
-        width: 100%;
         text-align: left;
         border-left-width: 4px;
       }
@@ -149,13 +168,13 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       svg {
         display: block;
         width: 100%;
-        height: 540px;
+        height: var(--rs-flow-canvas-height, clamp(400px, 66vh, 780px));
         touch-action: none;
         user-select: none;
       }
-      @media (max-width: 900px) {
+      @container (max-width: 760px) {
         svg {
-          height: 420px;
+          height: var(--rs-flow-canvas-height, clamp(340px, 60vh, 560px));
         }
       }
       .grid-dot {
@@ -184,17 +203,17 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       }
       .node .type {
         fill: var(--_color-text-muted);
-        font-size: 11px;
+        font-size: 12px;
       }
       .node .id {
         fill: var(--_color-text);
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 600;
         font-family: var(--_font-family-mono);
       }
       .node .detail {
         fill: var(--_color-text-muted);
-        font-size: 11px;
+        font-size: 12px;
         font-family: var(--_font-family-mono);
       }
       .node {
@@ -254,7 +273,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       }
       .start-mark {
         fill: var(--_color-success);
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
       }
       .edge {
@@ -271,12 +290,16 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         stroke-dasharray: 4 3;
       }
       .edge-label {
+        pointer-events: none;
         fill: var(--_color-text-muted);
-        font-size: 11px;
+        font-size: 12px;
         font-family: var(--_font-family-mono);
         paint-order: stroke;
         stroke: var(--_color-bg);
         stroke-width: 4px;
+      }
+      .edge-label.failure {
+        fill: var(--_color-error);
       }
       .arrow {
         fill: var(--_color-border-strong);
@@ -395,6 +418,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         const rect = entries[0]?.contentRect
         if (rect && rect.width > 0 && (Math.abs(rect.width - this._size.w) > 1 || Math.abs(rect.height - this._size.h) > 1)) {
           this._size = { w: rect.width, h: rect.height }
+          if (this.autoArranged) this.fit()
         }
       })
     }
@@ -414,7 +438,9 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('flow') || changed.has('layout')) {
       const missing = Object.keys(this.flow.nodes).some((id) => !this.layout[id])
-      if (missing) this.layout = autoLayout(this.flow, this.layout)
+      if (missing && (Object.keys(this.layout).length === 0 || this.autoArranged)) {
+        this.layout = this.arrangedFor = layoutFor(this.flow, this._size.w, this._size.h)
+      } else if (missing) this.layout = autoLayout(this.flow, this.layout)
       if (this._selected && !(this._selected in this.flow.nodes)) this._selected = undefined
     }
   }
@@ -457,7 +483,8 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         <span class="spacer"></span>
         <button type="button" class="icon" aria-label=${this.t('flow.zoomOut')} title=${this.t('flow.zoomOut')} @click=${() => this.zoomBy(1 / 1.2)}>−</button>
         <button type="button" class="icon" aria-label=${this.t('flow.zoomIn')} title=${this.t('flow.zoomIn')} @click=${() => this.zoomBy(1.2)}>+</button>
-        <button type="button" @click=${() => this.fit()}>${this.t('flow.zoomReset')}</button>
+        <button type="button" title=${this.t('flow.zoomResetHelp')} @click=${() => this.fit()}>${this.t('flow.zoomReset')}</button>
+        ${this.readonly ? nothing : html`<button type="button" title=${this.t('flow.arrangeHelp')} @click=${() => this.arrange()}>${this.t('flow.arrange')}</button>`}
       </div>
       ${this.readonly ? nothing : this.renderImport()}
       <div class="layout">
@@ -540,6 +567,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         ? svg`<path class="edge temp" d=${curve(temp.x + NODE_WIDTH, temp.y + NODE_HEIGHT / 2, this._pointer.x, this._pointer.y)}></path>`
         : nothing}
       <g class="nodes">${Object.entries(this.flow.nodes).map(([id, node]) => this.renderNode(id, node, problems.filter((p) => p.node === id)))}</g>
+      <g class="edge-labels" aria-hidden="true">${edges.map((e) => this.renderEdgeLabel(e))}</g>
     </svg>`
   }
 
@@ -551,13 +579,22 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     const y1 = failure ? a.y + NODE_HEIGHT : a.y + NODE_HEIGHT / 2
     const x2 = b.x
     const y2 = b.y + NODE_HEIGHT / 2
-    const label = edge.kind === 'next' ? '' : edge.label.length > 28 ? edge.label.slice(0, 27) + '…' : edge.label
-    return svg`<g>
-      <path class="edge ${failure ? 'failure' : ''}" d=${curve(x1, y1, x2, y2, failure)} marker-end=${failure ? 'url(#arrow-failure)' : 'url(#arrow)'}>
-        <title>${edge.from} → ${edge.to}${edge.label ? ` (${edge.label})` : ''}</title>
-      </path>
-      ${label ? svg`<text class="edge-label" x=${(x1 + x2) / 2} y=${(y1 + y2) / 2 - 4} text-anchor="middle">${label}</text>` : nothing}
-    </g>`
+    // An edge to a node on the left (a flow wrapped into rows, or moved nodes) goes around.
+    const d = x2 < x1 + 16 ? backRoute(edge, this.layout) : curve(x1, y1, x2, y2, failure)
+    return svg`<path class="edge ${failure ? 'failure' : ''}" d=${d} marker-end=${failure ? 'url(#arrow-failure)' : 'url(#arrow)'}>
+      <title>${edge.from} → ${edge.to}${edge.label ? ` (${edge.label})` : ''}</title>
+    </path>`
+  }
+
+  /**
+   * An edge's label, where the edge arrives: just above the target node's top left corner,
+   * drawn over nodes and edges so that it stays readable wherever the nodes are.
+   */
+  private renderEdgeLabel(edge: Edge): SVGTemplateResult | typeof nothing {
+    if (edge.kind === 'next' || edge.label === '') return nothing
+    const b = this.layout[edge.to]!
+    const label = edge.label.length > 26 ? edge.label.slice(0, 25) + '…' : edge.label
+    return svg`<text class="edge-label ${edge.kind === 'failure' ? 'failure' : ''}" x=${b.x + 6} y=${b.y - 6}>${label}</text>`
   }
 
   private renderNode(id: string, node: FlowNodeJson, problems: readonly FlowProblem[]): SVGTemplateResult {
@@ -589,10 +626,11 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     >
       <rect class="box" width=${NODE_WIDTH} height=${NODE_HEIGHT} rx="8"></rect>
       <rect class="stripe ${type}" width="6" height=${NODE_HEIGHT} rx="3"></rect>
-      <text class="type" x="16" y="18">${typeLabel}${start ? '' : ''}</text>
-      ${start ? svg`<text class="start-mark" x=${NODE_WIDTH - 10} y="18" text-anchor="end">▶ ${this.t('flow.start')}</text>` : nothing}
-      <text class="id" x="16" y="38">${id.length > 20 ? id.slice(0, 19) + '…' : id}</text>
-      ${detail ? svg`<text class="detail" x="16" y="55">${detail.length > 24 ? detail.slice(0, 23) + '…' : detail}</text>` : nothing}
+      <title>${[id, detail].filter(Boolean).join(' · ')}</title>
+      <text class="type" x="16" y="20">${typeLabel}</text>
+      ${start ? svg`<text class="start-mark" x=${NODE_WIDTH - 12} y="20" text-anchor="end">▶ ${this.t('flow.start')}</text>` : nothing}
+      <text class="id" x="16" y="42">${id.length > 20 ? id.slice(0, 19) + '…' : id}</text>
+      ${detail ? svg`<text class="detail" x="16" y="60">${detail.length > 24 ? detail.slice(0, 23) + '…' : detail}</text>` : nothing}
       ${problems.length > 0
         ? svg`<g class="badge" transform="translate(${NODE_WIDTH - 2} 2)"><circle r="9"></circle><text text-anchor="middle" y="4">${problems.length}</text></g>`
         : nothing}
@@ -950,21 +988,50 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     this._view = { zoom, x: c.x - (c.x - v.x) * (v.zoom / zoom), y: c.y - (c.y - v.y) * (v.zoom / zoom) }
   }
 
-  /** Zooms and pans so that every node is visible. */
-  fit(): void {
+  /** Whether the nodes are where the canvas arranged them itself. */
+  private get autoArranged(): boolean {
+    return this.arrangedFor !== undefined && this.layout === this.arrangedFor
+  }
+
+  private measure(): void {
     const rect = this.renderRoot.querySelector('svg')?.getBoundingClientRect()
     if (rect && rect.width > 0 && rect.height > 0) this._size = { w: rect.width, h: rect.height }
-    const points = Object.values(this.layout)
-    if (points.length === 0) {
+  }
+
+  /**
+   * Zooms and pans to show the flow at a readable size. The whole flow is shown when it fits
+   * at a zoom where node text can be read (FIT_ZOOM.min); otherwise the view starts at the
+   * top left, where the start node is, and the rest is reached by panning. A layout the canvas
+   * arranged itself is first arranged again for the canvas's size.
+   */
+  fit(): void {
+    this.measure()
+    if (this.autoArranged) this.layout = this.arrangedFor = layoutFor(this.flow, this._size.w, this._size.h)
+    const b = layoutBounds(this.layout)
+    if (!b) {
       this._view = { x: 0, y: 0, zoom: 1 }
       return
     }
-    const minX = Math.min(...points.map((p) => p.x)) - 30
-    const minY = Math.min(...points.map((p) => p.y)) - 30
-    const maxX = Math.max(...points.map((p) => p.x)) + NODE_WIDTH + 30
-    const maxY = Math.max(...points.map((p) => p.y)) + NODE_HEIGHT + 30
-    const zoom = Math.max(0.15, Math.min(1.5, this._size.w / (maxX - minX), this._size.h / (maxY - minY)))
-    this._view = { zoom, x: minX - (this._size.w / zoom - (maxX - minX)) / 2, y: minY - (this._size.h / zoom - (maxY - minY)) / 2 }
+    const m = LAYOUT_SPACING.margin
+    const width = b.width + 2 * m
+    const height = b.height + 2 * m
+    const fits = Math.min(this._size.w / width, this._size.h / height)
+    const zoom = Math.max(FIT_ZOOM.min, Math.min(FIT_ZOOM.max, fits))
+    const viewW = this._size.w / zoom
+    const viewH = this._size.h / zoom
+    // Centred along each axis that fits; otherwise aligned to the top or left edge.
+    const x = viewW >= width ? b.x - m - (viewW - width) / 2 : b.x - m
+    const y = viewH >= height ? b.y - m - (viewH - height) / 2 : b.y - m
+    this._view = { zoom, x, y }
+  }
+
+  /** Lays out every node again for the canvas's size, and fits the view. */
+  arrange(): void {
+    this.measure()
+    const layout = layoutFor(this.flow, this._size.w, this._size.h)
+    this.change(this.flow, layout, this.t('flow.arranged'))
+    this.arrangedFor = layout
+    this.fit()
   }
 
   private exportJson(): void {
@@ -995,7 +1062,10 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       this._importError = undefined
       this._importText = ''
       this._selected = undefined
-      this.change(flow, autoLayout(flow))
+      this.measure()
+      const layout = layoutFor(flow, this._size.w, this._size.h)
+      this.change(flow, layout)
+      this.arrangedFor = layout
       void this.updateComplete.then(() => this.fit())
       return true
     } catch (e) {
@@ -1089,7 +1159,9 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     }
   }
 
+  /** Ctrl or Cmd with the wheel (and a trackpad pinch) zooms; the wheel alone scrolls the page. */
   private onWheel(e: WheelEvent): void {
+    if (!e.ctrlKey && !e.metaKey) return
     e.preventDefault()
     this.zoomBy(e.deltaY < 0 ? 1.1 : 1 / 1.1, this.toCanvas(e))
   }
@@ -1200,6 +1272,61 @@ function curve(x1: number, y1: number, x2: number, y2: number, downward = false)
   }
   const dx = Math.max(40, Math.abs(x2 - x1) / 2)
   return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`
+}
+
+/**
+ * The path of an edge whose target is left of its source: out of the source (right, or down for
+ * a failure edge), along a horizontal line clear of other nodes, and into the target from the
+ * left, with rounded corners.
+ */
+export function backRoute(edge: Pick<Edge, 'from' | 'to' | 'kind'>, layout: FlowLayout): string {
+  const a = layout[edge.from]!
+  const b = layout[edge.to]!
+  const failure = edge.kind === 'failure'
+  const start: [number, number] = failure ? [a.x + NODE_WIDTH / 2, a.y + NODE_HEIGHT] : [a.x + NODE_WIDTH, a.y + NODE_HEIGHT / 2]
+  const end: [number, number] = [b.x, b.y + NODE_HEIGHT / 2]
+  // A failure edge leaves downwards, then runs in the gap left of its source's column.
+  const out = failure ? a.x - 20 : start[0] + 20
+  const into = end[0] - 20
+  const left = Math.min(into, out)
+  const right = Math.max(into, out)
+  const others = Object.entries(layout).filter(([id]) => id !== edge.from && id !== edge.to).map(([, p]) => p)
+  const clear = (y: number) => others.every((p) => p.x > right || p.x + NODE_WIDTH < left || y < p.y - 6 || y > p.y + NODE_HEIGHT + 6)
+  let mid: number
+  if (b.y > a.y + NODE_HEIGHT / 2) {
+    // Downwards: the first clear line below the source, at most just above the target.
+    const below = a.y + NODE_HEIGHT + (failure ? 14 : 0)
+    const limit = b.y - 14
+    const candidates = [below + 18, ...others.map((p) => p.y + NODE_HEIGHT + 18), ...others.map((p) => p.y - 18), limit]
+      .filter((y) => y > below && y <= limit)
+      .sort((x, y) => x - y)
+    mid = candidates.find(clear) ?? limit
+  } else {
+    mid = Math.min(a.y, b.y) - 22
+  }
+  const drop = a.y + NODE_HEIGHT + 14
+  const points: [number, number][] = failure
+    ? [start, [start[0], drop], [out, drop], [out, mid], [into, mid], [into, end[1]], end]
+    : [start, [out, start[1]], [out, mid], [into, mid], [into, end[1]], end]
+  return rounded(points, 10)
+}
+
+/** A polyline with rounded corners. */
+function rounded(points: readonly [number, number][], radius: number): string {
+  let d = `M ${points[0]![0]} ${points[0]![1]}`
+  for (let i = 1; i < points.length - 1; i++) {
+    const [px, py] = points[i - 1]!
+    const [x, y] = points[i]!
+    const [nx, ny] = points[i + 1]!
+    const r = Math.min(radius, Math.hypot(x - px, y - py) / 2, Math.hypot(nx - x, ny - y) / 2)
+    const ax = x - Math.sign(x - px) * r
+    const ay = y - Math.sign(y - py) * r
+    const bx = x + Math.sign(nx - x) * r
+    const by = y + Math.sign(ny - y) * r
+    d += ` L ${ax} ${ay} Q ${x} ${y} ${bx} ${by}`
+  }
+  const last = points[points.length - 1]!
+  return `${d} L ${last[0]} ${last[1]}`
 }
 
 /** One line about the node for the canvas: its table, model, key or outputs. */

@@ -7,7 +7,7 @@ import {
   addRule, deleteRule, duplicateRule, moveRule, normalizeTable, setOutput, updateRule, type TableJson,
 } from '../model/table.js'
 import { expressionProblems, type Problem } from '../model/validate.js'
-import { RulestoneElement, define, highlight } from './base.js'
+import { RulestoneElement, breakAtUnderscores, define, highlight } from './base.js'
 import './cel-input.js'
 import './condition-builder.js'
 import type { RsCelInput } from './cel-input.js'
@@ -81,6 +81,8 @@ export class RulestoneRulesGrid extends RulestoneElement {
         margin-bottom: 8px;
       }
       .scroll {
+        /* Positioned, so that screen-reader-only text in cells scrolled out of view is clipped too. */
+        position: relative;
         overflow-x: auto;
         border: 1px solid var(--_color-border);
         border-radius: var(--_radius);
@@ -115,17 +117,22 @@ export class RulestoneRulesGrid extends RulestoneElement {
         font-size: 0.92em;
         min-width: 140px;
       }
+      /* Lines break at spaces and between tokens (see highlight); inside a name only when a
+         single name is wider than the column. */
       .cel {
         white-space: pre-wrap;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
       }
       td.description {
         min-width: 180px;
       }
       td.id {
-        min-width: 8em;
-        max-width: 12em;
-        overflow-wrap: anywhere;
+        min-width: 7em;
+        overflow-wrap: break-word;
+      }
+      td.reasonCode {
+        min-width: 9em;
+        overflow-wrap: break-word;
       }
       td.when {
         min-width: 240px;
@@ -449,16 +456,16 @@ export class RulestoneRulesGrid extends RulestoneElement {
             >⋮⋮</span>`}<span class="muted">${r + 1}</span> ${badge}`
       }
       case 'id':
-        return html`${rule.id}`
+        return breakAtUnderscores(rule.id)
       case 'when':
-        return html`<span class="cel">${highlight(rule.when, problems.flatMap((p) => (p.issue ? [p.issue.index] : [])))}</span>`
+        return html`<span class="cel">${highlight(rule.when, problems.flatMap((p) => (p.issue ? [p.issue.index] : [])), true)}</span>`
       case 'then': {
         const expression = rule.then?.[column.output!]
         if (expression === undefined) return html`<span class="unset">—<span class="sr-only">${this.t('common.notSet')}</span></span>`
-        return html`<span class="cel">${highlight(expression, problems.flatMap((p) => (p.issue ? [p.issue.index] : [])))}</span>`
+        return html`<span class="cel">${highlight(expression, problems.flatMap((p) => (p.issue ? [p.issue.index] : [])), true)}</span>`
       }
       case 'reasonCode':
-        return html`<span class="mono">${rule.reasonCode ?? ''}</span>`
+        return html`<span class="mono">${breakAtUnderscores(rule.reasonCode ?? '')}</span>`
       case 'description':
         return html`${rule.description ?? ''}`
       case 'actions':
