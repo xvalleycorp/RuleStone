@@ -113,9 +113,14 @@ export class RulestoneRulesGrid extends RulestoneElement {
       td.expr {
         font-family: var(--_font-family-mono);
         font-size: 0.92em;
+        min-width: 140px;
+      }
+      .cel {
         white-space: pre-wrap;
         overflow-wrap: anywhere;
-        min-width: 140px;
+      }
+      td.description {
+        min-width: 180px;
       }
       td.when {
         min-width: 240px;
@@ -441,11 +446,11 @@ export class RulestoneRulesGrid extends RulestoneElement {
       case 'id':
         return html`${rule.id}`
       case 'when':
-        return highlight(rule.when, problems.flatMap((p) => (p.issue ? [p.issue.index] : [])))
+        return html`<span class="cel">${highlight(rule.when, problems.flatMap((p) => (p.issue ? [p.issue.index] : [])))}</span>`
       case 'then': {
         const expression = rule.then?.[column.output!]
         if (expression === undefined) return html`<span class="unset">—<span class="sr-only">${this.t('common.notSet')}</span></span>`
-        return highlight(expression, problems.flatMap((p) => (p.issue ? [p.issue.index] : [])))
+        return html`<span class="cel">${highlight(expression, problems.flatMap((p) => (p.issue ? [p.issue.index] : [])))}</span>`
       }
       case 'reasonCode':
         return html`<span class="mono">${rule.reasonCode ?? ''}</span>`

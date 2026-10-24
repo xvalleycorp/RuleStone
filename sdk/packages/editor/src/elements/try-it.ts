@@ -103,27 +103,36 @@ export class RulestoneTryIt extends RulestoneElement {
         padding: 0 4px;
       }
       .field {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
+        display: grid;
+        grid-template-columns: minmax(6em, 11em) minmax(0, 1fr);
+        column-gap: 8px;
         align-items: center;
         margin: 4px 0;
       }
       .field > .name {
         font-family: var(--_font-family-mono);
         font-size: 0.92em;
-        min-width: 9em;
         color: var(--_color-text);
+        overflow-wrap: anywhere;
       }
-      .field .type {
-        font-size: 0.85em;
+      .field .control {
+        display: flex;
+        gap: 4px;
+        min-width: 0;
       }
-      .field input {
-        width: 13em;
+      .field .control input,
+      .field .control select {
+        width: 100%;
+        min-width: 0;
       }
-      .field input.currency {
+      .field .control input.currency {
         width: 5.5em;
+        flex: none;
         text-transform: uppercase;
+      }
+      .field .hint {
+        grid-column: 2;
+        font-size: 0.82em;
       }
       textarea.json {
         width: 100%;
@@ -176,6 +185,10 @@ export class RulestoneTryIt extends RulestoneElement {
       }
       .note {
         font-size: 0.88em;
+      }
+      .result p.mono {
+        overflow-wrap: anywhere;
+        margin: 0;
       }
       ol.items {
         margin: 0;
@@ -383,12 +396,14 @@ export class RulestoneTryIt extends RulestoneElement {
       const money = value?.kind === 'money' ? value : { kind: 'money' as const, amount: '', currency: 'VND' }
       return html`<div class="field">
         <label class="name" for=${id}>${label}</label>
-        <input id=${id} inputmode="decimal" aria-describedby=${`${id}-t`} placeholder="1500000" .value=${money.amount}
-          @input=${(e: Event) => this.update_(path, { ...money, amount: (e.target as HTMLInputElement).value })} />
-        <input class="currency" list="currencies" aria-label=${`${label}: ${this.t('builder.currency')}`} .value=${money.currency}
-          @input=${(e: Event) => this.update_(path, { ...money, currency: (e.target as HTMLInputElement).value.toUpperCase() })} />
-        <datalist id="currencies">${CURRENCIES.map((c) => html`<option value=${c}></option>`)}</datalist>
-        <span id=${`${id}-t`}>${typeHint}</span>
+        <span class="control">
+          <input id=${id} inputmode="decimal" aria-describedby=${`${id}-t`} placeholder="1500000" .value=${money.amount}
+            @input=${(e: Event) => this.update_(path, { ...money, amount: (e.target as HTMLInputElement).value })} />
+          <input class="currency" list="currencies" aria-label=${`${label}: ${this.t('builder.currency')}`} .value=${money.currency}
+            @input=${(e: Event) => this.update_(path, { ...money, currency: (e.target as HTMLInputElement).value.toUpperCase() })} />
+          <datalist id="currencies">${CURRENCIES.map((c) => html`<option value=${c}></option>`)}</datalist>
+        </span>
+        <span class="hint" id=${`${id}-t`}>${typeHint}</span>
       </div>`
     }
     const text = value?.kind === 'scalar' ? value.text : ''
@@ -413,7 +428,7 @@ export class RulestoneTryIt extends RulestoneElement {
         @input=${(e: Event) => set((e.target as HTMLInputElement).value)}
       />`
     }
-    return html`<div class="field"><label class="name" for=${id}>${label}</label>${control}<span id=${`${id}-t`}>${typeHint}</span></div>`
+    return html`<div class="field"><label class="name" for=${id}>${label}</label><span class="control">${control}</span><span class="hint" id=${`${id}-t`}>${typeHint}</span></div>`
   }
 
   private renderResult(): TemplateResult {

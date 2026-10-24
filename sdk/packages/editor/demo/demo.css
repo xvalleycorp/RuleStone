@@ -1,0 +1,90 @@
+/* Copyright 2026 The RuleStone Authors */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+:root {
+  color-scheme: light dark;
+  --page-bg: #ffffff;
+  --page-text: #1f2328;
+  --page-muted: #59636e;
+  --page-border: #d1d9e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --page-bg: #0f1217;
+    --page-text: #e6edf3;
+    --page-muted: #9da7b3;
+    --page-border: #3d444d;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page-bg: #0f1217;
+  --page-text: #e6edf3;
+  --page-muted: #9da7b3;
+  --page-border: #3d444d;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  padding: 0 16px 32px;
+  background: var(--page-bg);
+  color: var(--page-text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+}
+
+.top {
+  border-bottom: 1px solid var(--page-border);
+  margin-bottom: 12px;
+  padding: 8px 0;
+}
+
+h1 {
+  font-size: 1.25rem;
+  margin: 4px 0 8px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--page-muted);
+  font-size: 0.9em;
+}
+
+.controls label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.controls select {
+  font: inherit;
+  min-height: 30px;
+}
+
+.status {
+  margin: 6px 0 0;
+  color: var(--page-muted);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+
+.status .violation {
+  color: #b42318;
+  font-weight: 700;
+}

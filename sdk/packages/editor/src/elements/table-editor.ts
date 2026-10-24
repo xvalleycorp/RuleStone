@@ -100,7 +100,7 @@ export class RulestoneTableEditor extends RulestoneElement {
         padding: 0 4px;
       }
       .meta input.id {
-        width: 14em;
+        width: min(14em, 100%);
       }
       .meta input.version {
         width: 6em;
@@ -110,6 +110,10 @@ export class RulestoneTableEditor extends RulestoneElement {
       }
       .meta label.description input {
         width: 100%;
+      }
+      .meta label {
+        min-width: 0;
+        max-width: 100%;
       }
       .meta .status {
         margin-left: auto;

@@ -170,6 +170,9 @@ export const base = css`
     color: var(--_color-text);
     font-size: var(--_font-size);
   }
+  fieldset {
+    min-width: 0;
+  }
   .sr-only {
     position: absolute;
     width: 1px;
