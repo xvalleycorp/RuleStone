@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: d93914dcf0dea30d09850267104c7870fd02fb1be16c395f498afe5112736e94
+sourceHash: 906e0c5c1da2677f0f30d71465fd78b52b7efa7cec3e8b6b4bbe00f244e2ddde
 ---
 
 # SDK trình soạn thảo
@@ -464,16 +464,16 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@rulestone/editor` (mọi phần tử) | 280.4 KiB, 82.3 KiB khi nén gzip | 191.6 KiB, 53.3 KiB khi nén gzip |
-| `./table-editor` | 234.6 KiB, 69.5 KiB khi nén gzip | 145.8 KiB, 40.5 KiB khi nén gzip |
-| `./rules-grid` | 154.4 KiB, 47.6 KiB khi nén gzip | 98.7 KiB, 28.3 KiB khi nén gzip |
-| `./condition-builder` | 134.9 KiB, 42.6 KiB khi nén gzip | 78.9 KiB, 23.1 KiB khi nén gzip |
+| `@rulestone/editor` (mọi phần tử) | 281.7 KiB, 82.7 KiB khi nén gzip | 192.1 KiB, 53.5 KiB khi nén gzip |
+| `./table-editor` | 235.5 KiB, 69.9 KiB khi nén gzip | 145.9 KiB, 40.6 KiB khi nén gzip |
+| `./rules-grid` | 154.5 KiB, 47.7 KiB khi nén gzip | 98.8 KiB, 28.3 KiB khi nén gzip |
+| `./condition-builder` | 134.9 KiB, 42.6 KiB khi nén gzip | 78.9 KiB, 23.2 KiB khi nén gzip |
 | `./schema-designer` | 111.7 KiB, 36.8 KiB khi nén gzip | 55.7 KiB, 17.5 KiB khi nén gzip |
-| `./flow-canvas` | 95.8 KiB, 29.5 KiB khi nén gzip | 80.7 KiB, 24.0 KiB khi nén gzip |
-| `./try-it` | 141.7 KiB, 45.5 KiB khi nén gzip | 53.3 KiB, 16.3 KiB khi nén gzip |
+| `./flow-canvas` | 96.1 KiB, 29.6 KiB khi nén gzip | 81.1 KiB, 24.0 KiB khi nén gzip |
+| `./try-it` | 142.5 KiB, 45.8 KiB khi nén gzip | 53.3 KiB, 16.3 KiB khi nén gzip |
 | `./cel-input` | 103.2 KiB, 34.3 KiB khi nén gzip | 47.7 KiB, 15.0 KiB khi nén gzip |
 
-Riêng `@rulestone/engine` là 85.3 KiB, 27.9 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
+Riêng `@rulestone/engine` là 86.2 KiB, 28.1 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
 
 ## Bộ máy luật trên trình duyệt và bộ máy luật Java
 

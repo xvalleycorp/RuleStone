@@ -294,13 +294,13 @@ Minified and minified + gzipped with esbuild (`npm run size`), with Lit and the 
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 280.4 KiB min, 82.3 KiB gzip | 191.6 KiB min, 53.3 KiB gzip |
-| `./table-editor` | 234.6 KiB min, 69.5 KiB gzip | 145.8 KiB min, 40.5 KiB gzip |
-| `./rules-grid` | 154.4 KiB min, 47.6 KiB gzip | 98.7 KiB min, 28.3 KiB gzip |
-| `./condition-builder` | 134.9 KiB min, 42.6 KiB gzip | 78.9 KiB min, 23.1 KiB gzip |
+| `@rulestone/editor` (all elements) | 281.7 KiB min, 82.7 KiB gzip | 192.1 KiB min, 53.5 KiB gzip |
+| `./table-editor` | 235.5 KiB min, 69.9 KiB gzip | 145.9 KiB min, 40.6 KiB gzip |
+| `./rules-grid` | 154.5 KiB min, 47.7 KiB gzip | 98.8 KiB min, 28.3 KiB gzip |
+| `./condition-builder` | 134.9 KiB min, 42.6 KiB gzip | 78.9 KiB min, 23.2 KiB gzip |
 | `./schema-designer` | 111.7 KiB min, 36.8 KiB gzip | 55.7 KiB min, 17.5 KiB gzip |
-| `./flow-canvas` | 95.8 KiB min, 29.5 KiB gzip | 80.7 KiB min, 24.0 KiB gzip |
-| `./try-it` | 141.7 KiB min, 45.5 KiB gzip | 53.3 KiB min, 16.3 KiB gzip |
+| `./flow-canvas` | 96.1 KiB min, 29.6 KiB gzip | 81.1 KiB min, 24.0 KiB gzip |
+| `./try-it` | 142.5 KiB min, 45.8 KiB gzip | 53.3 KiB min, 16.3 KiB gzip |
 | `./cel-input` | 103.2 KiB min, 34.3 KiB gzip | 47.7 KiB min, 15.0 KiB gzip |
 
 The flow canvas does not load the engine.
