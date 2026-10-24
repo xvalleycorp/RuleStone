@@ -1,0 +1,52 @@
+{
+  "name": "@rulestone/editor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Embeddable visual editors for RuleStone decision tables and decision flows, as Web Components: rules grid, condition builder, schema designer, flow canvas and a Try it panel that runs rules in the browser.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./table-editor": { "types": "./dist/elements/table-editor.d.ts", "import": "./dist/elements/table-editor.js" },
+    "./rules-grid": { "types": "./dist/elements/rules-grid.d.ts", "import": "./dist/elements/rules-grid.js" },
+    "./condition-builder": { "types": "./dist/elements/condition-builder.d.ts", "import": "./dist/elements/condition-builder.js" },
+    "./schema-designer": { "types": "./dist/elements/schema-designer.d.ts", "import": "./dist/elements/schema-designer.js" },
+    "./flow-canvas": { "types": "./dist/elements/flow-canvas.d.ts", "import": "./dist/elements/flow-canvas.js" },
+    "./try-it": { "types": "./dist/elements/try-it.d.ts", "import": "./dist/elements/try-it.js" },
+    "./cel-input": { "types": "./dist/elements/cel-input.d.ts", "import": "./dist/elements/cel-input.js" },
+    "./model": { "types": "./dist/model/index.d.ts", "import": "./dist/model/index.js" }
+  },
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/elements/*.js"
+  ],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "size": "node scripts/size.mjs",
+    "demo": "vite --config demo/vite.config.ts",
+    "demo:build": "vite build --config demo/vite.config.ts"
+  },
+  "dependencies": {
+    "@rulestone/engine": "0.1.0",
+    "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "happy-dom": "20.14.6",
+    "typescript": "5.9.3",
+    "vite": "7.3.7",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
