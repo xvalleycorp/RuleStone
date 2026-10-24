@@ -64,21 +64,19 @@ function deep(root: Element): Element[] {
   return out
 }
 
-/** querySelector that looks through shadow roots. */
-export function $(root: Element | ShadowRoot | Document, selector: string): HTMLElement | null {
-  const direct = root.querySelector(selector)
-  if (direct) return direct as HTMLElement
-  for (const el of Array.from(root.querySelectorAll('*'))) {
-    if (el.shadowRoot) {
-      const found = $(el.shadowRoot, selector)
-      if (found) return found
-    }
+/** querySelectorAll that looks through shadow roots, the root's own included. */
+export function $$(root: Element | ShadowRoot | Document, selector: string): HTMLElement[] {
+  const out: HTMLElement[] = []
+  const visit = (node: Element | ShadowRoot | Document) => {
+    out.push(...(Array.from(node.querySelectorAll(selector)) as HTMLElement[]))
+    for (const el of Array.from(node.querySelectorAll('*'))) if (el.shadowRoot) visit(el.shadowRoot)
   }
-  return null
+  if (root instanceof Element && root.shadowRoot) visit(root.shadowRoot)
+  visit(root)
+  return out
 }
 
-export function $$(root: Element | ShadowRoot | Document, selector: string): HTMLElement[] {
-  const out = Array.from(root.querySelectorAll(selector)) as HTMLElement[]
-  for (const el of Array.from(root.querySelectorAll('*'))) if (el.shadowRoot) out.push(...$$(el.shadowRoot, selector))
-  return out
+/** querySelector that looks through shadow roots. */
+export function $(root: Element | ShadowRoot | Document, selector: string): HTMLElement | null {
+  return $$(root, selector)[0] ?? null
 }
