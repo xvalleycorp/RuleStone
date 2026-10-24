@@ -3,7 +3,7 @@
 
 import { LitElement, html, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
 import { format, resolveMessages, type MessageKey, type MessageOverrides, type Messages } from '../i18n/index.js'
-import { tokenize } from '../model/cel-text.js'
+import { tokenize } from '../model/cel-tokens.js'
 import { base, tokens } from './styles.js'
 
 /**
