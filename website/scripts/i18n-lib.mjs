@@ -34,7 +34,7 @@ export const LOCALES = {
   vi: {
     lang: 'vi-VN',
     docs: { dir: 'docs/vi', english: 'docs', unpublished: ['README.md', 'GLOSSARY.md'] },
-    site: { dir: 'website/src/vi', english: 'website/src', files: ['index.md'] },
+    site: { dir: 'website/src/vi', english: 'website/src', files: ['index.md', 'playground.md'] },
     // Page titles in the sidebar and on placeholder pages; English guides not listed here
     // use their English title.
     titles: {
@@ -47,6 +47,7 @@ export const LOCALES = {
       'testing.md': 'Kiểm thử',
       'temporal.md': 'Tích hợp Temporal',
       'editor.md': 'Trình soạn thảo web',
+      'editor-sdk.md': 'SDK trình soạn thảo',
       'camunda.md': 'Tích hợp Camunda',
       'hybrid-ai.md': 'Ra quyết định AI lai',
       'examples.md': 'Ví dụ',
@@ -158,7 +159,9 @@ export function translations(code) {
 
 /** Site URL of an English page, given its path in the repository. */
 export function englishUrl(englishPath) {
-  if (englishPath === 'website/src/index.md') return '/';
+  if (englishPath.startsWith('website/src/')) {
+    return '/' + englishPath.slice('website/src/'.length).replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '');
+  }
   const name = englishPath.replace(/^docs\//, '').replace(/\.md$/, '');
   return name === 'README' ? '/docs/' : `/docs/${name}`;
 }

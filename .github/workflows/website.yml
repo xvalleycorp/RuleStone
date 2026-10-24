@@ -9,9 +9,9 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ['docs/**', 'website/**', '.github/workflows/website.yml']
+    paths: ['docs/**', 'website/**', 'examples/**', 'sdk/**', '.github/workflows/website.yml']
   pull_request:
-    paths: ['docs/**', 'website/**', '.github/workflows/website.yml']
+    paths: ['docs/**', 'website/**', 'examples/**', 'sdk/**', '.github/workflows/website.yml']
 
 permissions:
   contents: read
@@ -37,7 +37,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: website/package-lock.json
+          cache-dependency-path: |
+            website/package-lock.json
+            sdk/package-lock.json
+      # The playground page builds the browser SDK from its sources, with the SDK's dependencies.
+      - name: Install the SDK's dependencies
+        run: npm ci
+        working-directory: sdk
       - run: npm ci
       - run: npm run build
       - name: Deploy to Cloudflare

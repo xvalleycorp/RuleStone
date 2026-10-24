@@ -179,7 +179,7 @@ export class RulestoneConditionBuilder extends RulestoneElement {
         font-size: 0.88em;
       }
       select.field {
-        max-width: 16em;
+        max-width: min(22em, 100%);
       }
     `,
   ]

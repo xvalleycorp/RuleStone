@@ -90,16 +90,34 @@ export class RulestoneElement extends LitElement {
   }
 }
 
-/** CEL text as highlighted spans; marks the characters at the given UTF-16 indexes as errors. */
-export function highlight(text: string, errorAt: readonly number[] = []): TemplateResult {
+/** Tokens after which a line may break where there is no space: calls and lists. A field path such as applicant.age stays whole. */
+const BREAK_AFTER = new Set(['(', '[', ','])
+
+/**
+ * CEL text as highlighted spans; marks the characters at the given UTF-16 indexes as errors.
+ * With `wrap`, it also allows line breaks between tokens that have no space between them (before
+ * and after operators, after `(`, `[` and `,`), so that wrapped text breaks at spaces and
+ * operators rather than inside a name or a field path.
+ */
+export function highlight(text: string, errorAt: readonly number[] = [], wrap = false): TemplateResult {
   const tokens = tokenize(text)
   const marks = new Set(errorAt)
   const atEnd = errorAt.some((i) => i >= text.length)
-  return html`${tokens.map((t) => {
+  return html`${tokens.map((t, i) => {
     const end = t.start + t.text.length
-    const err = [...marks].some((i) => i >= t.start && i < end)
-    return t.kind === 'space' && !err ? t.text : html`<span class="tok-${t.kind}${err ? ' tok-err' : ''}">${t.text}</span>`
+    const err = [...marks].some((m) => m >= t.start && m < end)
+    const token = t.kind === 'space' && !err ? t.text : html`<span class="tok-${t.kind}${err ? ' tok-err' : ''}">${t.text}</span>`
+    const prev = tokens[i - 1]
+    const soft = wrap && prev !== undefined && prev.kind !== 'space' && t.kind !== 'space' &&
+      (t.kind === 'operator' || prev.kind === 'operator' || BREAK_AFTER.has(prev.text))
+    return soft ? html`<wbr>${token}` : token
   })}${atEnd ? html`<span class="tok-err" aria-hidden="true">&nbsp;</span>` : ''}`
+}
+
+/** An identifier or code that may break after each underscore, e.g. SANCTIONS_<wbr>MATCH. */
+export function breakAtUnderscores(text: string): TemplateResult {
+  const parts = text.split('_')
+  return html`${parts.map((part, i) => (i < parts.length - 1 ? html`${part}_<wbr>` : part))}`
 }
 
 /** Registers an element unless a tag of that name is already defined (for example twice bundled). */

@@ -1,5 +1,7 @@
 # Web editor
 
+> **Embedding editing into an existing system?** Use the [editor SDK](editor-sdk.md) instead: the same kind of editors as Web Components for your own React, Angular, Vue or plain HTML application, which keeps its own storage, sign-in and approval workflow. This page describes the standalone editor application.
+
 The RuleStone editor is a small web application for creating and changing decision tables without typing JSON. Business analysts edit rules in a grid, build conditions from drop-down lists, test the table with sample data and see problems on the exact cell while they type. Developers get the same `.stone.json` files as before, saved in a stable format that diffs cleanly in Git.
 
 - [Running the editor](#running-the-editor)

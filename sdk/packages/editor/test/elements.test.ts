@@ -8,7 +8,8 @@ import '../src/index.js'
 import type {
   RulestoneFlowCanvas, RulestoneRulesGrid, RulestoneSchemaDesigner, RulestoneTableEditor, RulestoneTryIt, RunDetail, TableChangeDetail,
 } from '../src/index.js'
-import { parseFlow, type TableJson } from '../src/model/index.js'
+import { FIT_ZOOM, LAYOUT_SPACING, NODE_HEIGHT, NODE_WIDTH, autoLayout, parseFlow, type TableJson } from '../src/model/index.js'
+import { backRoute } from '../src/elements/flow-canvas.js'
 import { $, $$, exampleTable, settle } from './helpers.js'
 
 afterEach(() => document.body.replaceChildren())
@@ -299,5 +300,113 @@ describe('<rulestone-flow-canvas>', () => {
     $$(el, '.toolbar button')[0]!.click()
     expect(JSON.parse(exported[0]!.json).id).toBe('card_origination')
     expect(el.importText('{ "nodes": 3 }')).toBe(false)
+  })
+
+  it('fits at a readable zoom, and arranges itself for its size until a node is moved', async () => {
+    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: flow() })
+    el.fit()
+    await settle(el)
+    const view = (el as unknown as { _view: { zoom: number } })._view
+    expect(view.zoom).toBeGreaterThanOrEqual(FIT_ZOOM.min)
+    expect(view.zoom).toBeLessThanOrEqual(FIT_ZOOM.max)
+    // The default size (900 x 540) wraps the seven columns into rows.
+    expect(new Set(Object.values(el.layout).map((p) => p.x)).size).toBeLessThan(7)
+    const layout = { ...el.layout, policy: { x: 500, y: 500 } }
+    el.layout = layout
+    await settle(el)
+    el.fit()
+    expect(el.layout).toBe(layout)
+  })
+
+  it('arranges the nodes again on request and reports the new layout', async () => {
+    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: flow(), layout: autoLayout(flow()) })
+    const changes = events<{ layout: Record<string, { x: number; y: number }> }>(el, 'rulestone-change')
+    $$(el, '.toolbar button').find((b) => b.textContent!.trim() === 'Arrange')!.click()
+    await settle(el)
+    expect(changes).toHaveLength(1)
+    expect(new Set(Object.values(changes[0]!.layout).map((p) => p.x)).size).toBeLessThan(7)
+    expect($(el, '[role="status"]')!.textContent).toContain('Nodes arranged.')
+  })
+
+  it('leaves the mouse wheel to the page unless Ctrl or Cmd is held', async () => {
+    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: flow() })
+    const svg = $(el, 'svg')!
+    const plain = new WheelEvent('wheel', { deltaY: 100, cancelable: true, bubbles: true })
+    svg.dispatchEvent(plain)
+    expect(plain.defaultPrevented).toBe(false)
+    const zoom = new WheelEvent('wheel', { deltaY: -100, ctrlKey: true, cancelable: true, bubbles: true })
+    Object.defineProperty(zoom, 'ctrlKey', { value: true }) // happy-dom drops modifier keys of wheel events
+    svg.dispatchEvent(zoom)
+    expect(zoom.defaultPrevented).toBe(true)
+  })
+
+  it('routes an edge to a node on the left around the nodes in between', () => {
+    const layout = autoLayout(flow(), {}, { maxColumns: 3 })
+    for (const [from, to, kind] of [['pd_application', 'grade', 'next'], ['pd_behaviour', 'referred', 'failure']] as const) {
+      const d = backRoute({ from, to, kind }, layout)
+      // The corners are the control points of the rounded path; the longest horizontal run must not cross a node.
+      const corners = [...d.matchAll(/Q (-?[\d.]+) (-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])] as const)
+      const runs = corners.slice(1).map((c, i) => ({ y: c[1], length: c[1] === corners[i]![1] ? Math.abs(c[0] - corners[i]![0]) : 0 }))
+      const run = runs.reduce((x, y) => (y.length > x.length ? y : x)).y
+      const a = layout[from]!
+      const b = layout[to]!
+      const left = b.x - 20
+      const right = kind === 'failure' ? a.x - 20 : a.x + NODE_WIDTH + 20
+      for (const [id, p] of Object.entries(layout)) {
+        if (id === from || id === to) continue
+        const crosses = p.x < Math.max(left, right) && p.x + NODE_WIDTH > Math.min(left, right) && run > p.y && run < p.y + NODE_HEIGHT
+        expect(crosses, `${from} -> ${to} crosses ${id} at y ${run}`).toBe(false)
+      }
+      expect(run).toBeGreaterThan(a.y)
+      expect(run).toBeLessThan(b.y + LAYOUT_SPACING.margin)
+    }
+  })
+})
+
+describe('wrapping in the rules grid', () => {
+  /** The pieces of a cell's text between the line-break opportunities the grid adds. */
+  function pieces(cell: HTMLElement): string[] {
+    const out = ['']
+    const walk = (node: Node) => {
+      for (const child of Array.from(node.childNodes)) {
+        if (child.nodeName === 'WBR') out.push('')
+        else if (child.nodeType === 3) out[out.length - 1] += child.textContent
+        else walk(child)
+      }
+    }
+    walk(cell)
+    return out
+  }
+
+  it('breaks conditions between tokens, never inside a name or a field path', async () => {
+    const table = exampleTable('loan_eligibility.v3.stone.json')
+    table.rules[0]!.when = "applicant.age<18&&applicant.segment in ['RETAIL','SME']"
+    const el = await mount<RulestoneRulesGrid>('rulestone-rules-grid', { table })
+    const cel = $(el, 'td.when .cel')!
+    expect(cel.textContent).toBe(table.rules[0]!.when)
+    expect(pieces(cel)).toEqual(['applicant.age', '<', '18', '&&', 'applicant.segment in [', "'RETAIL',", "'SME']"])
+  })
+
+  it('lets reason codes and rule ids wrap after underscores', async () => {
+    const table = exampleTable('aml_name_screening.stone.json')
+    const el = await mount<RulestoneRulesGrid>('rulestone-rules-grid', { table })
+    const row = table.rules.findIndex((r) => r.reasonCode === 'SANCTIONS_POSSIBLE_MATCH')
+    expect(row).toBeGreaterThanOrEqual(0)
+    expect(pieces($(el, `td.reasonCode[data-row="${row}"] .mono`)!)).toEqual(['SANCTIONS_', 'POSSIBLE_', 'MATCH'])
+  })
+})
+
+describe('<rulestone-table-editor> Try it', () => {
+  it('takes sample facts and runs them', async () => {
+    const table = exampleTable('deposit_rate.stone.json')
+    const el = await mount<RulestoneTableEditor>('rulestone-table-editor', { table, facts: '{ "termMonths": 12, "balance": 6000000000 }' })
+    const tryIt = $(el, 'rulestone-try-it') as RulestoneTryIt
+    const facts = JSON.parse(tryIt.factsText) as { termMonths: unknown; balance: unknown }
+    expect([String(facts.termMonths), String(facts.balance)]).toEqual(['12', '6000000000'])
+    const runs = events<RunDetail>(el, 'rulestone-run')
+    const detail = await el.run()
+    expect(detail.ok).toBe(true)
+    expect(detail.matchedRules).toEqual(['VIP_LONG'])
+    expect(runs).toHaveLength(1)
   })
 })

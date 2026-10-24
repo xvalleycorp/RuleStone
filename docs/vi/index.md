@@ -1,6 +1,6 @@
 ---
 source: README.md
-sourceHash: 60c69bb2a8d1d8e916629fce75aee5836fce1cc5220ac2248f3ab215d41fd56a
+sourceHash: 53abe9fdbf680036da0ef814ca198c44abed7f56d318146f4c801e73f7908c27
 ---
 
 # Tài liệu RuleStone
@@ -18,6 +18,7 @@ sourceHash: 60c69bb2a8d1d8e916629fce75aee5836fce1cc5220ac2248f3ab215d41fd56a
 | [Java API](java-api.md) | Nhúng engine vào ứng dụng: đầu vào, kết quả, lỗi, nạp lại luật, đa luồng. |
 | [Kiểm thử](testing.md) | Kiểm thử bảng quyết định: ca kiểm thử bằng JSON, tích hợp JUnit 5, độ bao phủ luật và assertion dạng fluent. |
 | [Trình soạn thảo web](editor.md) | Tạo và sửa bảng quyết định trên trình duyệt, thử với các fact mẫu và lưu tệp `.stone.json`. |
+| [SDK trình soạn thảo](editor-sdk.md) | Nhúng các trình soạn thảo trực quan vào ứng dụng web của bạn, với React, Angular, Vue hoặc HTML thuần, và chạy luật ngay trong trình duyệt. |
 | [Tích hợp Temporal](temporal.md) | Đánh giá quyết định từ workflow Temporal, dưới dạng activity hoặc ngay trong mã workflow với phiên bản luật được ghim. |
 | [Tích hợp Camunda](camunda.md) | Gọi quyết định từ quy trình BPMN bằng job worker của Camunda 8 hoặc delegate của Camunda 7. |
 | [Ví dụ](examples.md) | Tìm hiểu các bảng quyết định hoàn chỉnh cho khoản vay, lãi suất tiền gửi, phí chuyển tiền, gian lận thẻ, thẩm định tín dụng và AML. |

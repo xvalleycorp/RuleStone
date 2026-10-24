@@ -5,8 +5,10 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  addNode, allEdges, autoLayout, checkFlow, connect, disconnect, parseFlow, removeFlowNode, renameNode, type FlowJson,
+  FIT_ZOOM, LAYOUT_SPACING, NODE_HEIGHT, NODE_WIDTH, addNode, allEdges, autoLayout, checkFlow, connect, disconnect, fitZoom,
+  layoutBounds, layoutFor, parseFlow, removeFlowNode, renameNode, type FlowJson, type FlowLayout,
 } from '../src/model/index.js'
+import { REPO } from './helpers.js'
 
 const DEMO_FLOW = join(process.cwd(), 'demo', 'card_origination.flow.json')
 
@@ -101,4 +103,42 @@ describe('flow editing', () => {
     expect(layout['segment']!.x).toBeLessThan(layout['grade']!.x)
     expect(Object.keys(layout)).toHaveLength(Object.keys(origination().nodes).length)
   })
+
+  it('wraps long chains into rows below each other, like lines of text', () => {
+    const layout = autoLayout(origination(), {}, { maxColumns: 3 })
+    const columns = new Set(Object.values(layout).map((p) => p.x))
+    expect(columns.size).toBe(3)
+    // policy, segment and the models fill the first row; grade starts the second, at the left.
+    expect(layout['grade']!.x).toBe(layout['policy']!.x)
+    expect(layout['grade']!.y).toBeGreaterThan(layout['pd_application']!.y + NODE_HEIGHT)
+    expect(layout['approved']!.y).toBeGreaterThan(layout['limit_challenger']!.y + NODE_HEIGHT)
+    expect(noOverlaps(layout)).toBe(true)
+  })
+
+  it('chooses a layout that shows the whole flow at a readable zoom when it can', () => {
+    const flow = origination()
+    const wide = layoutFor(flow, 900, 560)
+    expect(fitZoom(wide, 900, 560)).toBeGreaterThanOrEqual(FIT_ZOOM.min)
+    expect(noOverlaps(wide)).toBe(true)
+    // A single row of seven columns would need a zoom of about 0.5 here.
+    expect(fitZoom(autoLayout(flow), 900, 560)).toBeLessThan(FIT_ZOOM.min)
+  })
+
+  it('on a phone, keeps the readable zoom and fits the width, so panning is vertical only', () => {
+    const layout = layoutFor(origination(), 358, 420)
+    const b = layoutBounds(layout)!
+    expect((b.width + 2 * LAYOUT_SPACING.margin) * FIT_ZOOM.min).toBeLessThanOrEqual(358)
+    expect(Object.keys(layout)).toHaveLength(11)
+  })
+
+  it('is the same flow as the example in docs/hybrid-ai.md', () => {
+    const doc = readFileSync(join(REPO, 'docs', 'hybrid-ai.md'), 'utf8')
+    const block = [...doc.matchAll(/```json\n([\s\S]*?)\n```/g)].map((m) => m[1]!).find((b) => b.includes('"id": "card_origination"') && b.includes('"nodes"'))
+    expect(JSON.parse(block!)).toEqual(origination())
+  })
 })
+
+function noOverlaps(layout: FlowLayout): boolean {
+  const boxes = Object.values(layout)
+  return boxes.every((a, i) => boxes.every((b, j) => i === j || a.x + NODE_WIDTH <= b.x || b.x + NODE_WIDTH <= a.x || a.y + NODE_HEIGHT <= b.y || b.y + NODE_HEIGHT <= a.y))
+}

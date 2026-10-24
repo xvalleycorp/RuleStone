@@ -166,6 +166,42 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | workflow replay | replay workflow | |
 | workflow task | workflow task | Giữ nguyên. |
 
+## Browser SDK and playground
+
+| English | Tiếng Việt | Ghi chú |
+|---|---|---|
+| accessibility | trợ năng | |
+| arrange (nodes) | sắp xếp lại (các nút) | Nút "Arrange" của vùng vẽ luồng. |
+| attribute (HTML) | attribute | Giữ nguyên, để phân biệt với property ("thuộc tính"). |
+| bundle size | kích thước gói | |
+| bundler | bundler | Giữ nguyên (Vite, webpack, esbuild). |
+| canvas (flow canvas) | vùng vẽ (vùng vẽ luồng) | `<rulestone-flow-canvas>`. |
+| condition builder | trình tạo điều kiện | `<rulestone-condition-builder>`, đúng như chuỗi trong các thành phần. |
+| conformance suite | bộ kiểm thử tương thích | Bộ kiểm thử so sánh bộ máy luật trên trình duyệt với bộ máy luật Java. |
+| element (Web Component) | phần tử | "Phần tử `<rulestone-table-editor>`". |
+| engine of record | bộ máy luật chính thức (engine of record) | Bộ máy luật Java, dùng cho quyết định trong môi trường production. |
+| event | sự kiện | Tên sự kiện (`rulestone-change`) giữ nguyên. |
+| export, import (a file) | xuất, nhập (tệp) | |
+| fit (zoom to fit) | vừa khung | Nút "Fit" của vùng vẽ luồng. |
+| hook (validator hook) | hook | Giữ nguyên. |
+| host (page, application) | ứng dụng chủ, trang chủ quản (host) | Ứng dụng nhúng các phần tử. |
+| method | phương thức | |
+| palette (flow canvas) | bảng các nút | Chuỗi trong các thành phần: "Các nút". |
+| pan, zoom | cuộn, thu phóng (phóng to, thu nhỏ) | |
+| part (`::part`) | part | Giữ nguyên. |
+| persistence | lưu trữ | |
+| playground | sân thử | Trang thử các thành phần trên trang web. |
+| property (of an element) | thuộc tính | |
+| rules grid | lưới luật | `<rulestone-rules-grid>`. |
+| sample facts | dữ liệu mẫu | |
+| schema designer | trình thiết kế đầu vào và đầu ra | `<rulestone-schema-designer>`; chuỗi trong các thành phần: "Đầu vào và đầu ra". |
+| share link | liên kết chia sẻ | |
+| strict reader | trình đọc chặt chẽ | Trình đọc `.stone.json` báo lỗi với trường lạ và khoá trùng. |
+| theme, theming | giao diện (theme) | Giao diện sáng, giao diện tối. |
+| token (design token) | token | Giữ nguyên (`--rs-color-bg`). |
+| Try it | Chạy thử | Tên bảng `<rulestone-try-it>`. |
+| Web Component | Web Component | Giữ nguyên. |
+
 ## Software supply chain and project
 
 | English | Tiếng Việt | Ghi chú |

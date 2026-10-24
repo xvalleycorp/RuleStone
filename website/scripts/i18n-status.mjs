@@ -15,7 +15,7 @@ let clean = true;
 for (const code of Object.keys(LOCALES)) {
   const all = translations(code);
   const bySource = new Map(all.map((t) => [t.englishPath, t]));
-  const english = [...englishDocs().map((f) => `docs/${f}`), 'website/src/index.md'];
+  const english = [...englishDocs().map((f) => `docs/${f}`), ...LOCALES[code].site.files.map((f) => `${LOCALES[code].site.english}/${f}`)];
   const rows = english.map((path) => {
     const t = bySource.get(path);
     return { status: t ? t.status : 'missing', path, t };

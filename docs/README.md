@@ -11,6 +11,7 @@
 | [Java API](java-api.md) | Embed the engine: inputs, results, errors, reloading rules, threading. |
 | [Testing](testing.md) | Test decision tables: JSON test cases, JUnit 5 integration, rule coverage and fluent assertions. |
 | [Web editor](editor.md) | Create and edit decision tables in the browser, try them on sample facts and save `.stone.json` files. |
+| [Editor SDK](editor-sdk.md) | Embed the visual editors in your own web application, with React, Angular, Vue or plain HTML, and run rules in the browser. |
 | [Temporal integration](temporal.md) | Evaluate decisions from Temporal workflows, as activities or inside workflow code with pinned rule versions. |
 | [Camunda integration](camunda.md) | Call decisions from BPMN processes with a Camunda 8 job worker or a Camunda 7 delegate. |
 | [Examples](examples.md) | Study complete tables for loans, deposit rates, transfer fees, card fraud, underwriting and AML. |

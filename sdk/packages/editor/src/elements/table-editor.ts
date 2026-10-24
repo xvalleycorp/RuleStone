@@ -9,7 +9,7 @@ import './rules-grid.js'
 import './schema-designer.js'
 import './try-it.js'
 import type { RulestoneRulesGrid } from './rules-grid.js'
-import type { RunDetail } from './try-it.js'
+import type { RulestoneTryIt, RunDetail } from './try-it.js'
 
 /** A problem reported by the host's validator; it is shown with the editor's own. */
 export interface HostProblem {
@@ -56,6 +56,7 @@ export class RulestoneTableEditor extends RulestoneElement {
     table: { attribute: false },
     validator: { attribute: false },
     asOf: { type: String, attribute: 'as-of' },
+    facts: { type: String },
     _tab: { state: true },
     _result: { state: true },
     _validating: { state: true },
@@ -68,6 +69,8 @@ export class RulestoneTableEditor extends RulestoneElement {
   declare validator: TableValidator | undefined
   /** The business date the Try it panel starts with. */
   declare asOf: string | undefined
+  /** Facts for the Try it panel as JSON text, for example from a .stone-test.json case. */
+  declare facts: string | undefined
   declare _tab: Tab
   declare _result: (ValidationResult & { problems: readonly Problem[] }) | undefined
   declare _validating: boolean
@@ -130,7 +133,7 @@ export class RulestoneTableEditor extends RulestoneElement {
         grid-template-columns: minmax(0, 1fr);
         gap: 12px;
       }
-      @container (min-width: 1100px) {
+      @container (min-width: 1280px) {
         .layout {
           grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
         }
@@ -223,6 +226,7 @@ export class RulestoneTableEditor extends RulestoneElement {
     this.table = normalizeTable({ id: 'new_decision', version: '1', hitPolicy: 'FIRST', inputs: {}, outputs: {}, rules: [{ id: 'R1', when: 'true' }] })
     this.validator = undefined
     this.asOf = undefined
+    this.facts = undefined
     this._tab = 'rules'
     this._result = undefined
     this._validating = false
@@ -244,6 +248,15 @@ export class RulestoneTableEditor extends RulestoneElement {
     clearTimeout(this.timer)
     this.timer = undefined
     return this.runValidation(false)
+  }
+
+  /** Runs the table in the Try it panel with its current facts; resolves with the rulestone-run detail. */
+  async run(): Promise<RunDetail> {
+    await this.updateComplete
+    const tryIt = this.renderRoot.querySelector<RulestoneTryIt>('rulestone-try-it')
+    if (!tryIt) throw new Error('the Try it panel is not rendered')
+    await tryIt.updateComplete
+    return tryIt.run()
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -323,6 +336,7 @@ export class RulestoneTableEditor extends RulestoneElement {
           <rulestone-try-it
             .table=${this.table}
             .asOf=${this.asOf ?? ''}
+            .facts=${this.facts}
             .locale=${this.effectiveLocale}
             .messages=${this.messages}
             .theme=${this.theme}
