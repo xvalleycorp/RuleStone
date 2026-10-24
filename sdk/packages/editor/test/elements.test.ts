@@ -378,13 +378,13 @@ describe('wrapping in the rules grid', () => {
     return out
   }
 
-  it('breaks conditions between tokens, never inside a name', async () => {
+  it('breaks conditions between tokens, never inside a name or a field path', async () => {
     const table = exampleTable('loan_eligibility.v3.stone.json')
     table.rules[0]!.when = "applicant.age<18&&applicant.segment in ['RETAIL','SME']"
     const el = await mount<RulestoneRulesGrid>('rulestone-rules-grid', { table })
     const cel = $(el, 'td.when .cel')!
     expect(cel.textContent).toBe(table.rules[0]!.when)
-    expect(pieces(cel)).toEqual(['applicant.', 'age', '<', '18', '&&', 'applicant.', 'segment in [', "'RETAIL',", "'SME']"])
+    expect(pieces(cel)).toEqual(['applicant.age', '<', '18', '&&', 'applicant.segment in [', "'RETAIL',", "'SME']"])
   })
 
   it('lets reason codes and rule ids wrap after underscores', async () => {

@@ -67,7 +67,7 @@ Problems are the engine's: the strict file reader's (unknown fields, bad types, 
 | `focusCell(rule, field, output?, index?)` | method | Moves focus to a cell; for an expression with a position, starts editing with the caret there. |
 | `rulestone-change` | event | `detail`: `{ table }` after every edit. |
 
-Columns: result, rule id, condition, one per output, reason code, description, actions. Rules can be added, duplicated, deleted and reordered by drag and drop or with the keyboard. The ⊞ action opens the condition builder below a rule. Expressions wrap at spaces and between tokens (around operators, after `.`, `(` and `,`), and break inside a name only when the name is wider than its column; reason codes and rule ids wrap after underscores.
+Columns: result, rule id, condition, one per output, reason code, description, actions. Rules can be added, duplicated, deleted and reordered by drag and drop or with the keyboard. The ⊞ action opens the condition builder below a rule. Expressions wrap at spaces and between tokens (around operators, after `(`, `[` and `,`), and break inside a name or field path only when it is wider than its column; reason codes and rule ids wrap after underscores.
 
 ### `<rulestone-condition-builder>`
 

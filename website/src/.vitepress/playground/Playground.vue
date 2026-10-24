@@ -425,7 +425,7 @@ onBeforeUnmount(() => {
     <!-- Condition builder -->
     <section id="rs-pg-panel-builder" v-show="tab === 'builder'" role="tabpanel" aria-labelledby="rs-pg-tab-builder" class="rs-pg-panel">
       <template v-if="opened.has('builder')">
-        <div class="rs-pg-toolbar">
+        <div class="rs-pg-toolbar start">
           <label class="rs-pg-field">
             <span>{{ m.builderInputs }}</span>
             <select v-model="builderExample">
@@ -534,6 +534,10 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 8px 16px;
   margin-bottom: 8px;
+}
+
+.rs-pg-toolbar.start {
+  justify-content: flex-start;
 }
 
 .rs-pg-field {

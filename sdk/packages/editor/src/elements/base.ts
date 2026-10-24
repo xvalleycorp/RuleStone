@@ -90,14 +90,14 @@ export class RulestoneElement extends LitElement {
   }
 }
 
-/** Tokens after which a line may break where there is no space: member access, calls, lists. */
-const BREAK_AFTER = new Set(['.', '(', '[', ','])
+/** Tokens after which a line may break where there is no space: calls and lists. A field path such as applicant.age stays whole. */
+const BREAK_AFTER = new Set(['(', '[', ','])
 
 /**
  * CEL text as highlighted spans; marks the characters at the given UTF-16 indexes as errors.
  * With `wrap`, it also allows line breaks between tokens that have no space between them (before
- * and after operators, after `.`, `(`, `[` and `,`), so that wrapped text breaks at spaces and
- * operators rather than inside a name.
+ * and after operators, after `(`, `[` and `,`), so that wrapped text breaks at spaces and
+ * operators rather than inside a name or a field path.
  */
 export function highlight(text: string, errorAt: readonly number[] = [], wrap = false): TemplateResult {
   const tokens = tokenize(text)
