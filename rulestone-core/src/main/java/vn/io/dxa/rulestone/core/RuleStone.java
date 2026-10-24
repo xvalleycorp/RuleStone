@@ -6,10 +6,8 @@
 package vn.io.dxa.rulestone.core;
 
 import java.time.Clock;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -130,7 +128,7 @@ public final class RuleStone {
 
         /**
          * @throws InvalidDecisionException listing every problem in every registered table,
-         *         including duplicate versions and overlapping effective periods
+         *         including inconsistent versions (see {@link DecisionVersions#problems})
          */
         public RuleStoneEngine build() {
             List<String> problems = new ArrayList<>();
@@ -139,7 +137,8 @@ public final class RuleStone {
                 CompiledDecision.compile(table, maxIterations, currencyScales, problems)
                         .ifPresent(d -> byId.computeIfAbsent(table.id(), id -> new ArrayList<>()).add(d));
             }
-            byId.values().forEach(versions -> checkVersions(versions, problems));
+            byId.values().forEach(versions -> problems.addAll(
+                    DecisionVersions.problems(versions.stream().map(CompiledDecision::table).toList())));
             if (!problems.isEmpty()) {
                 throw new InvalidDecisionException(problems);
             }
@@ -153,29 +152,6 @@ public final class RuleStone {
                 return id;
             };
             return new DefaultRuleStoneEngine(byId, clock, auditSinks, new FactsHasher(factsHashKey), checkedIds);
-        }
-
-        /** At most one version of a decision may be in force on any date, so selection is never ambiguous. */
-        private static void checkVersions(List<CompiledDecision> versions, List<String> problems) {
-            versions.sort(Comparator.comparing(d -> d.table().effectiveFrom().orElse(LocalDate.MIN)));
-            for (int i = 0; i < versions.size(); i++) {
-                DecisionTable current = versions.get(i).table();
-                for (int j = i + 1; j < versions.size(); j++) {
-                    DecisionTable other = versions.get(j).table();
-                    if (current.version().equals(other.version())) {
-                        problems.add(current.ref() + ": version registered more than once");
-                    }
-                }
-                if (i + 1 < versions.size()) {
-                    DecisionTable next = versions.get(i + 1).table();
-                    LocalDate currentEnd = current.effectiveTo().orElse(LocalDate.MAX);
-                    LocalDate nextStart = next.effectiveFrom().orElse(LocalDate.MIN);
-                    if (nextStart.isBefore(currentEnd)) {
-                        problems.add(current.ref() + " and " + next.ref()
-                                + ": effective periods overlap; set effectiveTo of the earlier version");
-                    }
-                }
-            }
         }
     }
 }

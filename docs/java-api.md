@@ -58,7 +58,7 @@ RuleStoneEngine engine = RuleStone.builder()
 | `auditSink(AuditSink)` | Receives the `DecisionRecord` of every evaluation, successful or not. May be called several times; sinks run in order. See [Decision records and auditing](#decision-records-and-auditing). |
 | `factsHashKey(byte[])` | Makes `DecisionRecord.factsHash()` an HMAC-SHA256 with this key (at least 16 bytes; use 32 random bytes from your key store). Without it, the hash is plain SHA-256. |
 | `recordIds(Supplier<String>)` | Source of record ids. Defaults to random UUIDs. |
-| `build()` | Compiles and type-checks every rule, checks versions for duplicates and overlaps, and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
+| `build()` | Compiles and type-checks every rule, checks versions for duplicates and contradictory dates (see [Versions and effective dates](decision-tables.md#versions-and-effective-dates)), and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
 
 `DecisionTableJson.read(...)` accepts a `String`, an `InputStream` (read as UTF-8) or a `Path`, and throws `InvalidDecisionException` for any problem in the file. Load files from wherever you keep them: the classpath, a directory, a database column or a configuration service.
 

@@ -1,0 +1,68 @@
+[
+  {
+    "name": "superseded",
+    "tables": [
+      "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2027-03-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }",
+      "{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }"
+    ],
+    "dates": [
+      "2025-12-31",
+      "2026-01-01",
+      "2027-02-28",
+      "2027-03-01",
+      "2099-01-01"
+    ]
+  },
+  {
+    "name": "no effectiveFrom starts at the beginning",
+    "tables": [
+      "{ \"id\": \"consent_request\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }",
+      "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2027-03-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"
+    ],
+    "dates": [
+      "0001-01-01",
+      "2027-02-28",
+      "2027-03-01"
+    ]
+  },
+  {
+    "name": "gap and fixed end",
+    "tables": [
+      "{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"effectiveTo\": \"2026-07-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }",
+      "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2026-09-01\", \"effectiveTo\": \"2027-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"
+    ],
+    "dates": [
+      "2026-06-30",
+      "2026-07-01",
+      "2026-08-31",
+      "2026-09-01",
+      "2026-12-31",
+      "2027-01-01"
+    ]
+  },
+  {
+    "name": "effectiveTo equal to the next start",
+    "tables": [
+      "{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"effectiveTo\": \"2027-03-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }",
+      "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2027-03-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"
+    ],
+    "dates": [
+      "2027-02-28",
+      "2027-03-01"
+    ]
+  },
+  {
+    "name": "three versions registered out of order",
+    "tables": [
+      "{ \"id\": \"consent_request\", \"version\": \"3\", \"effectiveFrom\": \"2028-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V3'\" } } ] }",
+      "{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }",
+      "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2027-01-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"
+    ],
+    "dates": [
+      "2026-12-31",
+      "2027-01-01",
+      "2027-12-31",
+      "2028-01-01"
+    ]
+  }
+]

@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  AuditError, Decimal, DecisionEvaluationError, InvalidDecisionError, InvalidFactsError, LocalDate,
+  AuditError, Decimal, DecisionEvaluationError, DecisionNotFoundError, InvalidDecisionError, InvalidFactsError, LocalDate,
   Money, createEngine, decisionRecordToJson, outputJson, parseDecisionTable, readFacts, writeDecisionRecord, writeJson,
   type DecisionRecord, type DecisionTable,
 } from '../src/index.js'
@@ -198,5 +198,29 @@ describe('engine', () => {
     expect(error).toBeInstanceOf(AuditError)
     expect((error as AuditError).message).toMatch(/^audit sink rejected decision record [0-9a-f-]{36} \(TypeError\); the decision was not returned$/)
     expect(JSON.parse(writeJson(decisionRecordToJson((error as AuditError).record!))).status).toBe('OK')
+  })
+})
+
+describe('version selection matches Java', () => {
+  interface SelectionCase { name: string; tables: string[]; dates: string[] }
+  interface JavaSelection { name: string; results: { date: string; ruleVersion?: string; error?: string }[] }
+  const cases = fixture<SelectionCase[]>('version-selection.json')
+  const java = fixture<JavaSelection[]>('java-version-selection.json')
+  cases.forEach((testCase, index) => {
+    it(testCase.name, async () => {
+      const tables = testCase.tables.map((text) => parseDecisionTable(text))
+      const engine = await createEngine({ tables })
+      const results: JavaSelection['results'] = []
+      for (const date of testCase.dates) {
+        try {
+          const result = await engine.evaluate({ id: tables[0]!.id, asOf: date }, {})
+          results.push({ date, ruleVersion: result.ruleVersion })
+        } catch (e) {
+          if (!(e instanceof DecisionNotFoundError)) throw e
+          results.push({ date, error: e.message })
+        }
+      }
+      expect(results).toEqual(java[index]!.results)
+    })
   })
 })

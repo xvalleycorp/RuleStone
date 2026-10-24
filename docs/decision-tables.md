@@ -35,7 +35,7 @@ A table is a JSON object. Files conventionally end in `.stone.json`.
 | `version` | yes | Version label, e.g. `"3"` or `"2026.11"`. Letters, digits, `_`, `.` and `-`. Unique per `id`. |
 | `description` | no | Free text for readers. Part of the content hash. |
 | `effectiveFrom` | no | First day this version is in force, `yyyy-MM-dd`, inclusive. Omitted means "since forever". |
-| `effectiveTo` | no | First day this version is **no longer** in force, `yyyy-MM-dd`, exclusive. Omitted means "until further notice". Must be after `effectiveFrom`. |
+| `effectiveTo` | no | First day this version is **no longer** in force, `yyyy-MM-dd`, exclusive. Omitted means "until the next version takes effect". Must be after `effectiveFrom`. |
 | `hitPolicy` | yes | `FIRST`, `UNIQUE` or `COLLECT`. See [Hit policies](#hit-policies). |
 | `inputs` | yes | Object mapping each input name to its [type](#types). May be empty. |
 | `outputs` | yes | Object mapping each output name to its [type](#types). May be empty, e.g. for a table that only produces reason codes. |
@@ -161,16 +161,32 @@ A decision usually has several versions over its life. Register all of them with
 
 Rules see the same date as their implicit `businessDate` input: `asOf(date)` if given, else today according to the clock, also when a version is named.
 
-A version is effective on date `d` when `effectiveFrom <= d < effectiveTo`. Because the end is exclusive, consecutive versions share a boundary date:
+**A new version supersedes the previous one.** Versions of a decision are ordered by `effectiveFrom`; a version without `effectiveFrom` starts at the beginning of time. Each version stays in force until the earlier of:
+
+- its own `effectiveTo`, if it has one;
+- the `effectiveFrom` of the next version.
+
+To change a policy from a date, add a file with the new version and that `effectiveFrom`. **Never edit the previous version.** Its file, and therefore its content hash, stays exactly as published, so every decision recorded under it can still be matched to it:
 
 ```
-v2  effectiveFrom 2026-01-01  effectiveTo 2026-11-01
 v3  effectiveFrom 2026-11-01
+v4  effectiveFrom 2027-03-01
 ```
 
-On 31 October 2026 v2 applies; on 1 November 2026 v3 applies. There is no gap and no overlap.
+On 28 February 2027 v3 applies; on 1 March 2027 v4 applies. Both ends are exclusive, so there is no gap and no overlap.
 
-**Overlaps are rejected.** If two versions of the same decision could both be in force on some date, the engine refuses to build. Selection is therefore never ambiguous.
+**`effectiveTo` is for a fixed end.** Set it when a version must stop on a date whether or not a successor exists, for example a promotion that ends on 31 December. If the next version starts later, no version is in force in between, and evaluation on those dates fails with `DecisionNotFoundException`. An `effectiveTo` equal to the next version's `effectiveFrom` is also valid: the example `loan_eligibility.v2` ends on the day v3 starts.
+
+**Contradictions are rejected.** The engine refuses to build when:
+
+- two versions of the same decision take effect on the same day, or neither has `effectiveFrom`, because neither supersedes the other;
+- a version's `effectiveTo` is after the next version's `effectiveFrom`, because the two files disagree about which one applies.
+
+Selection is therefore never ambiguous.
+
+**Deploy every version together.** Because a version stays in force until its successor takes effect, a deployment that leaves out a newer version keeps applying the older one, without an error. Load all versions of a decision from the same source, such as one directory or one repository.
+
+**Replays should name the version.** A version added later with an `effectiveFrom` in the past changes which version a replay by date (`asOf`) selects. To reproduce a recorded decision exactly, name the version from its record: `DecisionRef.of(id).version(...)`. The [decision record](java-api.md#decision-records-and-auditing) holds the exact version of every evaluation.
 
 ### Content hash
 
@@ -199,6 +215,6 @@ The checks are:
 | Table | Invalid `id` or `version`; `effectiveTo` not after `effectiveFrom`; no rules; struct-typed outputs; invalid input or field names; an input named `businessDate`. |
 | Rules | Duplicate rule ids; reason codes that are not `UPPER_SNAKE_CASE`; `then` setting an undeclared output. |
 | Expressions | Syntax errors; unknown variables or fields; type errors, including any mix of `decimal` and floating point, or of `money` and plain numbers; `when` not producing `bool`; `then` not producing the output's type. |
-| Versions | The same `id@version` registered twice; overlapping effective periods. |
+| Versions | The same `id@version` registered twice; two versions taking effect on the same day, or both without `effectiveFrom`; an `effectiveTo` after the next version's `effectiveFrom`. |
 
 What validation cannot catch is a rule that is well-formed but wrong for the business: for example, `UNIQUE` rows that overlap only for some inputs. Those are found by tests. Write unit tests for your decision tables just as you would for code.

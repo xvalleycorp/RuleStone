@@ -1,7 +1,8 @@
 <!-- Copyright 2026 The RuleStone Authors. SPDX-License-Identifier: Apache-2.0 -->
 <script setup lang="ts">
 // "Save as new version": copies the rules (with unsaved changes) into a new file with the next version
-// and a new effective date, optionally ending the current version's period on that date.
+// and a new effective date. The current version's file is never edited: the new version supersedes it
+// from its effective date.
 import { computed, ref } from 'vue'
 import { ApiError, api } from '../api'
 import { t } from '../i18n'
@@ -10,14 +11,13 @@ import { dirty, openTable } from '../store'
 import type { Problem, TableJson } from '../types'
 import ModalDialog from './ModalDialog.vue'
 
-const props = defineProps<{ table: TableJson; file: string; etag: string }>()
+const props = defineProps<{ table: TableJson; file: string }>()
 const emit = defineEmits<{ close: [] }>()
 
 const version = ref(nextVersion(props.table.version))
 const effectiveFrom = ref(
   props.table.effectiveFrom && props.table.effectiveFrom >= today() ? addDays(props.table.effectiveFrom, 1) : addDays(today(), 1),
 )
-const closePrevious = ref(!props.table.effectiveTo || props.table.effectiveTo > effectiveFrom.value)
 const fileName = computed(() => {
   const dir = props.file.includes('/') ? props.file.slice(0, props.file.lastIndexOf('/') + 1) : ''
   return dir + fileNameFor(props.table.id, version.value)
@@ -35,11 +35,7 @@ async function create() {
   table.effectiveFrom = effectiveFrom.value
   if (table.effectiveTo && table.effectiveTo <= effectiveFrom.value) delete table.effectiveTo
   try {
-    const result = await api.create({
-      file: fileName.value,
-      table: cleanTable(table),
-      ...(closePrevious.value ? { closePrevious: { file: props.file, etag: props.etag } } : {}),
-    })
+    const result = await api.create({ file: fileName.value, table: cleanTable(table) })
     dirty.value = false
     emit('close')
     openTable(result.file ?? fileName.value)
@@ -73,11 +69,7 @@ async function create() {
       <label>{{ t('wizard.file') }}</label>
       <code>{{ fileName }}</code>
     </div>
-    <label class="check row">
-      <input v-model="closePrevious" type="checkbox">
-      {{ t('newVersion.closePrevious', { version: table.version, date: effectiveFrom }) }}
-    </label>
-    <p class="help">{{ t('newVersion.closePreviousHelp', { version: table.version }) }}</p>
+    <p class="help">{{ t('newVersion.supersedes', { version: table.version, date: effectiveFrom }) }}</p>
     <p class="help">{{ t('newVersion.unsaved') }}</p>
     <div v-if="error" class="notice error">
       {{ error }}
@@ -89,7 +81,3 @@ async function create() {
     </template>
   </ModalDialog>
 </template>
-
-<style scoped>
-.check { font-weight: 500; gap: 8px; }
-</style>

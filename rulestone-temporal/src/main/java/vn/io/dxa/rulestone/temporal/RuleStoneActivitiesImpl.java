@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
 import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 import vn.io.dxa.rulestone.api.DecisionRef;
@@ -20,6 +21,7 @@ import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.core.DecisionTable;
+import vn.io.dxa.rulestone.core.DecisionVersions;
 import vn.io.dxa.rulestone.core.FactsJson;
 import vn.io.dxa.rulestone.core.InvalidFactsException;
 
@@ -108,18 +110,10 @@ public final class RuleStoneActivitiesImpl implements RuleStoneActivities {
         if (versions == null) {
             throw RuleStoneFailures.decisionNotFound("unknown decision '" + id + "'");
         }
-        String version = request.version();
-        if (version != null) {
-            return versions.stream()
-                    .filter(t -> t.version().equals(version))
-                    .findFirst()
-                    .orElseThrow(() -> RuleStoneFailures.decisionNotFound(
-                            "decision '" + id + "' has no version '" + version + "'"));
+        try {
+            return DecisionVersions.select(id, versions, Optional.ofNullable(request.version()), businessDate);
+        } catch (DecisionNotFoundException e) {
+            throw RuleStoneFailures.decisionNotFound(e.getMessage());
         }
-        return versions.stream()
-                .filter(t -> t.isEffectiveOn(businessDate))
-                .findFirst()
-                .orElseThrow(() -> RuleStoneFailures.decisionNotFound(
-                        "no version of decision '" + id + "' is effective on " + businessDate));
     }
 }

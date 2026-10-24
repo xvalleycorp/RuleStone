@@ -12,7 +12,8 @@ import {
 } from './errors.js'
 import { readFacts, writeValues, type JsonInput } from './facts.js'
 import type { DecisionRecord, PathStep, ReasonCode } from './record.js'
-import { isEffectiveOn, ruleVersionOf, sha256Hex, tableRef, type DecisionTable } from './table.js'
+import { ruleVersionOf, sha256Hex, tableRef, type DecisionTable } from './table.js'
+import { selectVersion, versionProblems } from './versions.js'
 import { containsStruct, type ValueType } from './types.js'
 import type { Value } from './values.js'
 
@@ -98,7 +99,7 @@ interface Compiled extends CompiledDecision {
 }
 
 /**
- * Compiles and type-checks every table, checks versions for duplicates and overlaps, and
+ * Compiles and type-checks every table, checks versions for duplicates and contradictory dates, and
  * returns an immutable engine.
  * @throws InvalidDecisionError listing every problem in every table
  * @throws RangeError for an invalid currency scale
@@ -205,30 +206,9 @@ function compileExpression(
   }
 }
 
-/** At most one version of a decision may be in force on any date. */
+/** Versions of one decision must be consistent; see versionProblems. */
 function checkVersions(versions: Compiled[], problems: string[]): void {
-  const start = (c: Compiled) => c.table.effectiveFrom
-  versions.sort((a, b) => {
-    const x = start(a)
-    const y = start(b)
-    if (x === undefined) return y === undefined ? 0 : -1
-    if (y === undefined) return 1
-    return x.compareTo(y)
-  })
-  for (let i = 0; i < versions.length; i++) {
-    const current = versions[i]!.table
-    for (let j = i + 1; j < versions.length; j++) {
-      if (current.version === versions[j]!.table.version) problems.push(`${tableRef(current)}: version registered more than once`)
-    }
-    if (i + 1 < versions.length) {
-      const next = versions[i + 1]!.table
-      const overlap =
-        current.effectiveTo === undefined ? true : next.effectiveFrom === undefined || next.effectiveFrom.compareTo(current.effectiveTo) < 0
-      if (overlap) {
-        problems.push(`${tableRef(current)} and ${tableRef(next)}: effective periods overlap; set effectiveTo of the earlier version`)
-      }
-    }
-  }
+  problems.push(...versionProblems(versions.map((c) => c.table)))
 }
 
 function randomId(): string {
@@ -361,14 +341,8 @@ export class RuleStoneEngine {
   private select(ref: NormalizedRef, date: LocalDate): Compiled {
     const versions = this.byId.get(ref.id)
     if (!versions) throw new DecisionNotFoundError(`unknown decision '${ref.id}'`)
-    if (ref.version !== undefined) {
-      const found = versions.find((d) => d.table.version === ref.version)
-      if (!found) throw new DecisionNotFoundError(`decision '${ref.id}' has no version '${ref.version}'`)
-      return found
-    }
-    const found = versions.find((d) => isEffectiveOn(d.table, date))
-    if (!found) throw new DecisionNotFoundError(`no version of decision '${ref.id}' is effective on ${date.toString()}`)
-    return found
+    const table = selectVersion(ref.id, versions.map((d) => d.table), ref.version, date)
+    return versions.find((d) => d.table === table)!
   }
 }
 

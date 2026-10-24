@@ -83,24 +83,35 @@ class EditorApiTest {
     }
 
     @Test
-    void listReportsLoadProblemsAndVersionOverlaps() throws Exception {
+    void listReportsLoadProblemsAndAmbiguousVersions() throws Exception {
         Files.writeString(editor.dir.resolve("broken.stone.json"), "{ \"id\": \"broken\", ");
-        String overlapping = EditorHarness.read(editor.dir.resolve(V3))
-                .replace("\"version\": \"3\"", "\"version\": \"3b\"")
-                .replace("\"effectiveFrom\": \"2026-11-01\"", "\"effectiveFrom\": \"2026-12-01\"");
-        Files.writeString(editor.dir.resolve("loan_eligibility.v3b.stone.json"), overlapping);
+        String sameStart = EditorHarness.read(editor.dir.resolve(V3)).replace("\"version\": \"3\"", "\"version\": \"3b\"");
+        Files.writeString(editor.dir.resolve("loan_eligibility.v3b.stone.json"), sameStart);
 
         JsonNode tables = editor.get("/api/tables").json().get("tables");
 
         assertThat(find(tables, "broken.stone.json").get("problems").get(0).get("message").asText()).startsWith("invalid JSON");
         JsonNode problem = find(tables, "loan_eligibility.v3b.stone.json").get("problems").get(0);
-        assertThat(problem.get("message").asText()).contains("overlaps version 3 in " + V3);
+        assertThat(problem.get("message").asText())
+                .contains("both take effect on 2026-11-01")
+                .endsWith("(version 3 is in " + V3 + ")");
         assertThat(problem.get("location").get("field").asText()).isEqualTo("effectiveFrom");
         assertThat(problem.get("location").get("file").asText()).isEqualTo(V3);
-        assertThat(find(tables, V3).get("problems").get(0).get("location").get("field").asText()).isEqualTo("effectiveTo");
+        assertThat(find(tables, V3).get("problems").get(0).get("location").get("field").asText()).isEqualTo("effectiveFrom");
     }
 
-    // ---- get ----
+    @Test
+    void aLaterVersionSupersedesAnOpenEndedOneWithoutAProblem() throws Exception {
+        String later = EditorHarness.read(editor.dir.resolve(V3))
+                .replace("\"version\": \"3\"", "\"version\": \"4\"")
+                .replace("\"effectiveFrom\": \"2026-11-01\"", "\"effectiveFrom\": \"2027-01-01\"");
+        Files.writeString(editor.dir.resolve("loan_eligibility.v4.stone.json"), later);
+
+        JsonNode tables = editor.get("/api/tables").json().get("tables");
+
+        assertThat(find(tables, V3).get("problems")).isEmpty();
+        assertThat(find(tables, "loan_eligibility.v4.stone.json").get("problems")).isEmpty();
+    }
 
     @Test
     void getsTheFileContentTableEtagAndRuleVersion() {
@@ -209,21 +220,23 @@ class EditorApiTest {
     }
 
     @Test
-    void createsANewVersionAndClosesThePreviousOne() {
+    void createsANewVersionWithoutEditingThePreviousOne() {
+        String before = EditorHarness.read(editor.dir.resolve(V3));
         JsonNode loaded = editor.get("/api/tables/" + V3).json();
+        String ruleVersion = loaded.get("ruleVersion").asText();
         ObjectNode table = (ObjectNode) loaded.get("table");
         table.put("version", "4");
         table.put("effectiveFrom", "2027-01-01");
 
-        EditorHarness.Response created = editor.post("/api/tables", "{\"table\": " + table
-                + ", \"closePrevious\": {\"file\": \"" + V3 + "\", \"etag\": \"" + loaded.get("etag").asText() + "\"}}");
+        EditorHarness.Response created = editor.post("/api/tables", "{\"table\": " + table + "}");
 
         assertThat(created.status()).isEqualTo(201);
         assertThat(created.json().get("file").asText()).isEqualTo("loan_eligibility.v4.stone.json");
-        assertThat(created.json().get("previous").get("effectiveTo").asText()).isEqualTo("2027-01-01");
-        assertThat(EditorHarness.read(editor.dir.resolve(V3)))
-                .contains("\"effectiveFrom\": \"2026-11-01\",\n  \"effectiveTo\": \"2027-01-01\",");
+        assertThat(EditorHarness.read(editor.dir.resolve(V3))).isEqualTo(before);
+        assertThat(editor.get("/api/tables/" + V3).json().get("ruleVersion").asText()).isEqualTo(ruleVersion);
         assertThat(editor.get("/api/tables").json().get("tables").findValues("problems")).allMatch(JsonNode::isEmpty);
+        assertThat(editor.post("/api/tables", "{\"table\": " + table + ", \"closePrevious\": {\"file\": \"" + V3 + "\"}}")
+                .status()).isEqualTo(400);
     }
 
     // ---- validate ----

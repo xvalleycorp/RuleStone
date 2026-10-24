@@ -57,9 +57,29 @@
 }, {
   "name" : "versions: duplicate and overlapping",
   "read" : [ null, null, null, null, null ],
-  "build" : [ "u@1 rules[R].when: expression must produce bool but produces int: 1", "t@1 and t@2: effective periods overlap; set effectiveTo of the earlier version", "t@2: version registered more than once", "t@2 and t@2: effective periods overlap; set effectiveTo of the earlier version" ]
+  "build" : [ "u@1 rules[R].when: expression must produce bool but produces int: 1", "t@2: version registered more than once", "t@1 and t@2: t@1 is in force until 2026-06-01 (effectiveTo), after t@2 takes effect on 2026-05-01; remove effectiveTo from t@1 or set it to 2026-05-01" ]
 }, {
   "name" : "valid versions sharing a boundary",
+  "read" : [ null, null ],
+  "build" : [ ]
+}, {
+  "name" : "versions: a later version supersedes an open-ended one",
+  "read" : [ null, null ],
+  "build" : [ ]
+}, {
+  "name" : "versions: same effectiveFrom",
+  "read" : [ null, null ],
+  "build" : [ "consent_request@1 and consent_request@2: both take effect on 2026-01-01, so neither supersedes the other; give the later version a later effectiveFrom" ]
+}, {
+  "name" : "versions: both without effectiveFrom",
+  "read" : [ null, null ],
+  "build" : [ "consent_request@1 and consent_request@2: both take effect from the beginning (no effectiveFrom), so neither supersedes the other; give the later version a later effectiveFrom" ]
+}, {
+  "name" : "versions: effectiveTo after the next start",
+  "read" : [ null, null ],
+  "build" : [ "consent_request@1 and consent_request@2: consent_request@1 is in force until 2027-06-01 (effectiveTo), after consent_request@2 takes effect on 2027-03-01; remove effectiveTo from consent_request@1 or set it to 2027-03-01" ]
+}, {
+  "name" : "versions: an earlier effectiveTo leaves a gap",
   "read" : [ null, null ],
   "build" : [ ]
 } ]

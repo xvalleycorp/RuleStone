@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.cel.ValueType;
 import vn.io.dxa.rulestone.core.DecisionTable;
+import vn.io.dxa.rulestone.core.DecisionVersions;
 import vn.io.dxa.rulestone.core.FactsJson;
 import vn.io.dxa.rulestone.core.InvalidFactsException;
 
@@ -298,11 +299,10 @@ public final class StoneTestJson {
             if (tables == null) {
                 return null;
             }
-            List<DecisionTable> candidates = tables.stream()
-                    .filter(t -> t.id().equals(decision))
-                    .filter(t -> version.map(v -> t.version().equals(v))
-                            .orElseGet(() -> asOf.map(t::isEffectiveOn).orElse(true)))
-                    .toList();
+            List<DecisionTable> versions = tables.stream().filter(t -> t.id().equals(decision)).toList();
+            List<DecisionTable> candidates = version.isPresent()
+                    ? versions.stream().filter(t -> t.version().equals(version.get())).toList()
+                    : asOf.map(date -> DecisionVersions.inForce(versions, date).stream().toList()).orElse(versions);
             if (candidates.isEmpty()) {
                 return null;   // the engine reports the unknown decision or version
             }

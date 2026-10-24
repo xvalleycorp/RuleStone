@@ -204,21 +204,6 @@ class RuleStoneEngineTest {
                 .hasMessageContaining("effective on 2025-06-01");
     }
 
-    @Test
-    void rejectsOverlappingEffectivePeriods() {
-        DecisionTable v3 = load("loan_eligibility.v3.stone.json");
-        DecisionTable overlapping = new DecisionTable(v3.id(), "4", v3.description(),
-                java.util.Optional.of(LocalDate.of(2027, 1, 1)), java.util.Optional.empty(),
-                v3.hitPolicy(), v3.inputs(), v3.outputs(), v3.rules());
-
-        assertThatThrownBy(() -> RuleStone.builder().decision(v3).decision(overlapping).build())
-                .isInstanceOf(InvalidDecisionException.class)
-                .hasMessageContaining("effective periods overlap");
-        assertThatThrownBy(() -> RuleStone.builder().decision(v3).decision(v3).build())
-                .isInstanceOf(InvalidDecisionException.class)
-                .hasMessageContaining("version registered more than once");
-    }
-
     // --- Inputs and runtime errors -----------------------------------------------------------
 
     @Test

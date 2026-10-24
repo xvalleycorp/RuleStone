@@ -17,8 +17,10 @@ import vn.io.dxa.rulestone.cel.ValueType;
 /**
  * A versioned decision table: typed inputs and outputs plus an ordered list of rules.
  *
- * <p>A table is effective from {@code effectiveFrom} (inclusive) until {@code effectiveTo}
- * (exclusive); an empty bound is open-ended. This is only the definition: structural and
+ * <p>{@code effectiveFrom} (inclusive) is the first day the version is in force, and the
+ * optional {@code effectiveTo} (exclusive) the first day it no longer is. Without
+ * {@code effectiveTo}, a version stays in force until the next version of the same decision
+ * takes effect; see {@link DecisionVersions}. This is only the definition: structural and
  * type errors are reported when the table is registered with an engine.
  */
 public record DecisionTable(
@@ -44,7 +46,11 @@ public record DecisionTable(
         rules = List.copyOf(rules);
     }
 
-    /** Whether this table is in force on {@code date}. */
+    /**
+     * Whether {@code date} falls within this table's own declared period. This ignores other
+     * versions: a later version supersedes this one from its {@code effectiveFrom}. To find the
+     * version in force, use {@link DecisionVersions#inForce}.
+     */
     public boolean isEffectiveOn(LocalDate date) {
         return effectiveFrom.map(from -> !date.isBefore(from)).orElse(true)
                 && effectiveTo.map(date::isBefore).orElse(true);

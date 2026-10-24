@@ -74,8 +74,7 @@ export const en = {
     intro: 'Creates a new file with a copy of these rules under a new version number. The current file is not changed unless you choose to close its effective period.',
     version: 'New version',
     effectiveFrom: 'Effective from',
-    closePrevious: 'Set "effective until" of version {version} to {date}',
-    closePreviousHelp: 'Version {version} then ends the day the new version starts, so there is no overlap and no gap.',
+    supersedes: 'Version {version} stays in force until {date}, when this version supersedes it. Its file is not changed, so its rule version (hash) stays the same.',
     unsaved: 'The current changes are included in the new version; the current file keeps its last saved content.',
   },
   editor: {
