@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: b1950e29da68739220d33ff79f00890ed999463aadadde9f121966791d94005e
+sourceHash: 072160c8fae14a6e813b7964eff19a1b9245bc81c91b1adc0e7df135cfd6ee0b
 ---
 
 # Java API
@@ -496,8 +496,6 @@ Các con số cho thấy:
 - **Hàm trên danh sách chiếm phần lớn thời gian.** `exists` trên 20 struct tốn khoảng 30 µs cho mỗi luật, tức khoảng 1,5 µs cho mỗi phần tử. Hãy tránh đưa các comprehension trên danh sách dài vào bảng lớn, hoặc tính sẵn giá trị tổng hợp trước khi ra quyết định, và đặt [thời gian chờ tối đa](#thời-gian-chờ-tối-đa) cho bên gọi trực tiếp.
 - **Một engine mở rộng tốt theo số luồng.** Trung vị với 4 luồng trên một engine chênh không đáng kể so với một luồng: việc đánh giá không dùng chung trạng thái thay đổi được. Phần đuôi tăng khi chạy 4 luồng trên 4 vCPU, vì các luồng benchmark khi đó tranh lõi với JIT và bộ thu gom rác.
 - **Cấp phát bộ nhớ là nguyên nhân chính của phần đuôi.** Một lần đánh giá cấp phát khoảng 44 KB, cộng 2 đến 3 KB cho mỗi luật được xét, và khoảng 50 KB cho mỗi luật duyệt danh sách 20 phần tử. Hãy định cỡ young generation theo lưu lượng yêu cầu, và ưu tiên bộ thu gom có thời gian dừng thấp (Generational ZGC) khi p99,9 quan trọng.
-
-Theo [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML), nơi đánh giá trực tiếp một bảng `COLLECT` 12 luật cho mỗi khoản thanh toán: trên Apple M2 với JDK 22 và G1, 4 luồng, toàn bộ một quyết định của cổng thanh toán mất 16,8 µs ở p50, 50,6 µs ở p99 và 129 µs ở p99,9.
 
 ## Dùng biểu thức trực tiếp
 
