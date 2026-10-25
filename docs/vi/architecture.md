@@ -1,13 +1,13 @@
 ---
 source: architecture.md
-sourceHash: 5c29e7f33e6cd7510baae20faa2b05fb01ee67eb071bbb0a3a176041b7588a22
+sourceHash: d07aeb4c2f01a2dbc3ea863e1bbee91b85474dad3e0b2b7ad0aa44c0889c2be3
 ---
 
 # Kiến trúc RuleStone
 
 > **Mỗi phiên bản khắc vào đá. Mỗi thay đổi chỉ mất vài giây.**
 >
-> Trạng thái: bản thảo · Cập nhật lần cuối: 2026-10-22
+> Trạng thái: bản thảo · Cập nhật lần cuối: 2026-10-25
 
 Tài liệu này mô tả hướng đi của RuleStone, chứ không chỉ những gì đã có hôm nay. Mỗi mô-đun và năng lực được đánh dấu **đã có** hoặc **dự kiến**; phần [lộ trình](#9-lộ-trình) cho biết thứ tự thực hiện. Để biết cách dùng những gì đã có, xem [các hướng dẫn](index.md).
 
@@ -21,7 +21,7 @@ RuleStone là một thư viện **quản lý luật nghiệp vụ** (business ru
 - **Dễ tích hợp.** Có thể nhúng như một thư viện thông thường, chạy như một dịch vụ, hoặc gắn vào Spring, Kafka hay các AI agent, mà không bắt bạn phải đổi công nghệ.
 - **Sẵn sàng cho AI lai (hybrid).** AI có thể giúp viết luật, giải thích quyết định và đóng vai trò một nút có rào chắn trong một quyết định, nhưng quyết định cuối cùng luôn đi qua bộ máy tất định.
 
-Tạm thời nằm ngoài phạm vi: suy diễn có trạng thái (Rete, suy diễn tiến), xử lý sự kiện phức hợp (CEP), và BPM hay workflow tổng quát.
+Tạm thời nằm ngoài phạm vi: suy diễn có trạng thái (Rete, suy diễn tiến), xử lý sự kiện phức hợp (CEP), và BPM hay workflow tổng quát. Quản lý case, gán nhãn cho các case đã review và huấn luyện mô hình cũng thuộc về các ứng dụng xây trên RuleStone, như [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML); RuleStone cung cấp nền tảng cho chúng: bản ghi quyết định để gắn nhãn, phiên bản bóng và canary, cùng các tính năng dự kiến là chạy lại (replay), chấm điểm lại (re-score) và nút mô hình.
 
 ## 2. Nguyên tắc thiết kế
 
@@ -38,8 +38,8 @@ Tạm thời nằm ngoài phạm vi: suy diễn có trạng thái (Rete, suy di�
 |---|---|---|---|
 | `rulestone-bom` | Đồng bộ phiên bản cho người dùng | — | đã có |
 | `rulestone-api` | API công khai: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult`; sau này thêm các SPI | JDK | đã có |
-| `rulestone-core` | Mô hình quyết định, bộ đánh giá, vết thực thi. Đã có bảng quyết định; đồ thị quyết định, switch và quyết định con đang dự kiến | `rulestone-api`, `rulestone-cel`, Jackson | đã có (một phần) |
-| `rulestone-cel` | Tích hợp cel-java và các phần mở rộng. Đã có `decimal`; `money`, kiểu ngày và lịch làm việc đang dự kiến | cel-java | đã có (một phần) |
+| `rulestone-core` | Mô hình quyết định, bộ đánh giá, vết thực thi. Đã có bảng quyết định, bản ghi quyết định, thời gian chờ tối đa, phiên bản canary và phiên bản bóng; luồng quyết định, switch và quyết định con đang dự kiến | `rulestone-api`, `rulestone-cel`, Jackson | đã có (một phần) |
+| `rulestone-cel` | Tích hợp cel-java và các phần mở rộng. Đã có `decimal`, `money`, `date` và so khớp tên gần đúng; lịch làm việc đang dự kiến | cel-java | đã có (một phần) |
 | `rulestone-dsl` | Cú pháp văn bản `.stone` ⇄ JSON, bộ định dạng | ANTLR runtime | dự kiến |
 | `rulestone-analysis` | Phân tích tĩnh: các dòng chồng lấn, khoảng trống và các dòng không bao giờ tới được, dùng SMT solver khi có | Z3 (tuỳ chọn) | dự kiến |
 | `rulestone-governance` | Quy trình maker-checker, nhật ký kiểm toán liên kết bằng chuỗi băm | `rulestone-api` | dự kiến |
@@ -52,7 +52,11 @@ Tạm thời nằm ngoài phạm vi: suy diễn có trạng thái (Rete, suy di�
 | `rulestone-spring-boot-starter` | Tự động cấu hình, thuộc tính cấu hình, endpoint actuator | Spring Boot | dự kiến |
 | `rulestone-server` | Dịch vụ REST và gRPC kèm OpenAPI, chạy độc lập hoặc dạng sidecar | — | dự kiến |
 | `rulestone-mcp` | Máy chủ MCP để AI agent dùng engine làm rào chắn | MCP Java SDK | dự kiến |
-| `rulestone-test` | Tiện ích JUnit 5 để kiểm thử đơn vị cho luật | JUnit | dự kiến |
+| `rulestone-test` | Ca kiểm thử luật dạng JSON (`.stone-test.json`), kiểm thử động JUnit 5, độ bao phủ luật, assertion dạng fluent | JUnit | đã có |
+| `rulestone-temporal` | Quyết định dưới dạng activity của Temporal, hoặc trong mã workflow với phiên bản luật được ghim qua các lần replay | Temporal SDK (provided) | đã có |
+| `rulestone-camunda8` / `-camunda7` | Job worker cho Camunda 8 kèm element template; delegate và expression bean cho Camunda 7 | client Camunda (provided) | đã có |
+| `rulestone-editor` | Trình soạn thảo web chạy cục bộ cho bảng quyết định, có thể thử luật trên fact mẫu | máy chủ HTTP của JDK | đã có |
+| SDK trình duyệt (`sdk/`) | Một engine TypeScript cho cùng kết quả với engine Java, được kiểm chứng bằng bộ kiểm thử tuân thủ, cùng các Web Component để soạn bảng và thiết kế luồng | không có lúc chạy | đã có |
 | `rulestone-benchmark` | Benchmark JMH cho việc đánh giá: độ trễ và lượng bộ nhớ cấp phát. Không phát hành | JMH | đã có |
 
 Quy tắc phụ thuộc: `core` **không bao giờ** phụ thuộc vào `ai`, `spring` hay `server`. Quy tắc này sẽ được kiểm tra bằng ArchUnit trong CI.
@@ -68,6 +72,8 @@ Quy tắc phụ thuộc: `core` **không bao giờ** phụ thuộc vào `ai`, `s
 | **Dịch vụ REST/gRPC** | Hệ thống không dùng Java (.NET, Node, core banking cũ), hoặc một dịch vụ quyết định dùng chung | ms | dự kiến |
 | **Bộ xử lý Kafka** | Chấm điểm và sàng lọc trên luồng sự kiện (phòng, chống rửa tiền (AML), gian lận) | ms | dự kiến |
 | **Máy chủ MCP** | AI agent phải kiểm tra chính sách trước khi gọi một công cụ | ms | dự kiến |
+| **Workflow engine** | Workflow Temporal và quy trình Camunda 7 hoặc 8 | µs–ms | đã có |
+| **Trình duyệt hoặc Node.js** | Trình soạn thảo, công cụ mô phỏng và kiểm tra trước khi gửi yêu cầu, với engine TypeScript | µs–ms | đã có |
 
 ### 4.2 Giao diện nhà cung cấp dịch vụ (SPI, dự kiến)
 
@@ -75,9 +81,9 @@ Quy tắc phụ thuộc: `core` **không bao giờ** phụ thuộc vào `ai`, `s
 |---|---|---|
 | `RuleRepository` | Nạp luật theo tên, phiên bản và ngày hiệu lực | File, JDBC, Git, S3 |
 | `FactResolver` | Lấy thêm dữ liệu khi cần (ví dụ dư nợ hiện tại từ core banking), có bộ nhớ đệm và thời gian chờ tối đa | — (người dùng tự cung cấp) |
-| `TypeAdapter` | Chuyển đầu vào thành giá trị CEL: `Map`, POJO/record, Jackson `JsonNode`, Protobuf | Đã có Map và record; Jackson và Protobuf dự kiến |
-| `FunctionLibrary` | Hàm nghiệp vụ tuỳ biến, thuần và có kiểu | Decimal (đã có), Money, BusinessCalendar |
-| `AuditSink` | Ghi bản ghi quyết định | Log, JDBC, Kafka |
+| `TypeAdapter` | Chuyển đầu vào thành giá trị CEL: `Map`, POJO/record, Jackson `JsonNode`, Protobuf | Đã có Map, record và JSON (`FactsJson`); Protobuf dự kiến |
+| `FunctionLibrary` | Hàm nghiệp vụ tuỳ biến, thuần và có kiểu | Decimal, Money, ngày và so khớp gần đúng (đã có), BusinessCalendar |
+| `AuditSink` | Ghi bản ghi quyết định | Kafka (đã có), JDBC; bản thân interface đã có |
 | `DataMasker` | Che dữ liệu nhạy cảm (số thẻ, số định danh cá nhân, số tài khoản) trong vết thực thi và log | Theo annotation và theo đường dẫn |
 | `ModelProvider` | Cung cấp mô hình ML hoặc LLM cho một nút AI | — (adapter riêng) |
 | `ApprovalWorkflow` | Maker-checker, có thể kết nối với hệ thống phê duyệt sẵn có | Trong bộ nhớ, JDBC |
@@ -132,7 +138,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 | Bảo vệ dữ liệu cá nhân | Không có giá trị đầu vào trong vết thực thi hay thông báo ngoại lệ (đã có). `DataMasker` bật mặc định cho bản ghi kiểm toán (dự kiến). | một phần |
 | An toàn khi thực thi | CEL không có reflection hay eval; các thao tác trên danh sách có giới hạn; thời gian chờ tối đa cho mỗi lần đánh giá, đặt cho cả engine hoặc cho từng yêu cầu. | đã có |
 | Tính sẵn sàng cao | Chế độ nhúng không phụ thuộc mạng trên luồng xử lý chính; nếu kho luật gặp sự cố, phiên bản đã nạp vẫn tiếp tục chạy. | đã có (chế độ nhúng) |
-| Kiểm thử thay đổi | Kiểm thử đơn vị cho luật (`rulestone-test`), phân tích tĩnh, và bắt buộc kiểm thử ngược trước khi một phiên bản chuyển sang `ACTIVE`. | dự kiến |
+| Kiểm thử thay đổi | Kiểm thử đơn vị cho luật kèm độ bao phủ luật (`rulestone-test`, đã có); phiên bản bóng và canary trên lưu lượng thật (đã có); phân tích tĩnh và bắt buộc kiểm thử ngược trước khi một phiên bản chuyển sang `ACTIVE` (dự kiến). | một phần |
 
 ### 6.2 Chuỗi cung ứng phần mềm
 
@@ -188,6 +194,7 @@ Mọi lỗi trong một định nghĩa luật đã được báo cáo cùng lúc
 | Công cụ build | Maven |
 | groupId / package | `vn.io.dxa.rulestone`, theo tên miền `dxa.io.vn` |
 | Số học tiền tệ | `decimal` dựa trên `BigDecimal`; phép chia lấy 34 chữ số có nghĩa, HALF_EVEN; làm tròn phải tường minh; so sánh bằng giữa `decimal` và `int` là lỗi kiểu |
+| Kiểu `money` | Số chữ số thập phân lấy từ một bảng ISO 4217 cố định dùng chung cho cả hai engine, có thể ghi đè theo từng loại tiền (`currencyScale`); mặc định làm tròn `HALF_EVEN` |
 
 ### 8.2 Còn để ngỏ
 
@@ -195,16 +202,15 @@ Mọi lỗi trong một định nghĩa luật đã được báo cáo cùng lúc
 |---|---|
 | Phát hành lên Maven Central | Đăng ký namespace `vn.io.dxa` trên Central Portal và xác minh bằng bản ghi DNS TXT trên `dxa.io.vn`. Cần khai báo URL dự án, SCM và thông tin nhà phát triển trong POM. |
 | Mô hình thương mại | Open core: engine và các adapter cơ bản giữ giấy phép Apache-2.0; tính năng quản trị nâng cao, trình soạn luật và hỗ trợ doanh nghiệp có thể được cung cấp thương mại dưới dạng sản phẩm riêng. |
-| Kiểu `money` | Cần chọn bảng số chữ số thập phân theo từng loại tiền (ISO 4217 hoặc theo quy định riêng của ngân hàng) và chính sách làm tròn mặc định. |
 | Tương thích GoRules JDM | Một công cụ nhập từ JDM sang RuleStone để thuận tiện chuyển đổi. |
 
 ## 9. Lộ trình
 
-1. **M0 — Đặc tả:** mô hình quyết định, các phần mở rộng CEL (`decimal`, `money`, `date`), định dạng vết thực thi, bộ kiểm thử tuân thủ.
+1. **M0 — Đặc tả** *(đã xong cho bảng quyết định)*: mô hình quyết định, các phần mở rộng CEL (`decimal`, `money`, `date`), định dạng bản ghi quyết định, và bộ kiểm thử tuân thủ đối chiếu engine TypeScript với engine Java. Luồng quyết định sẽ theo cùng M1.
 2. **M1 — Lõi** *(đang thực hiện)*
-   - Đã xong: bảng quyết định với `FIRST`, `UNIQUE` và `COLLECT`; định dạng `.stone.json` chặt chẽ; mã băm nội dung; hiệu lực theo ngày có phát hiện chồng lấn; `decimal` trong CEL; đầu vào kiểu struct và danh sách có kiểu; vết thực thi; báo cáo cùng lúc mọi lỗi trong định nghĩa; cấp phép, SBOM và tài liệu.
-   - Còn lại: kiểu `money`, kiểu `date`, mô-đun `rulestone-test`.
-3. **M2 — Quản trị:** maker-checker, kiểm toán liên kết bằng chuỗi băm, kho luật JDBC.
-4. **M3 — Tích hợp:** Spring Boot starter, máy chủ REST/gRPC, khả năng quan sát (observability), Kafka (đã có audit sink).
-5. **M4 — Phân tích và AI:** phân tích tĩnh, cú pháp văn bản `.stone`, trợ lý soạn luật, máy chủ MCP.
-6. **M5 — Mô phỏng:** kiểm thử ngược, champion/challenger trên dữ liệu lịch sử (trên lưu lượng thật, đã có phiên bản bóng và canary), trình soạn luật trên web.
+   - Đã xong: bảng quyết định với `FIRST`, `UNIQUE` và `COLLECT`; định dạng `.stone.json` chặt chẽ; mã băm nội dung; hiệu lực theo ngày, trong đó phiên bản mới thay thế phiên bản trước; các kiểu `decimal`, `money` và `date`; so khớp tên gần đúng; đầu vào kiểu struct và danh sách có kiểu; vết thực thi; bản ghi quyết định với `AuditSink`; thời gian chờ tối đa; phiên bản canary và phiên bản bóng; `rulestone-test`; báo cáo cùng lúc mọi lỗi trong định nghĩa; cấp phép, SBOM và tài liệu.
+   - Còn lại: luồng quyết định chưa có mô hình (các nút `table`, `switch`, `derive`, `split` và `end`; bước 2 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)); lịch làm việc.
+3. **M2 — Quản trị:** maker-checker, kiểm toán liên kết bằng chuỗi băm, kho luật JDBC và audit sink JDBC.
+4. **M3 — Tích hợp** *(đã bắt đầu)*: đã xong Temporal, Camunda 7 và 8, và audit sink Kafka. Còn lại: Spring Boot starter, máy chủ REST/gRPC, khả năng quan sát (Micrometer, OpenTelemetry), bộ xử lý Kafka.
+5. **M4 — Phân tích và AI:** phân tích tĩnh, cú pháp văn bản `.stone`, nút mô hình, giải thích quyết định, chạy lại và chấm điểm lại, các adapter mô hình (bước 3 đến 7 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)), trợ lý soạn luật, máy chủ MCP.
+6. **M5 — Mô phỏng** *(đã bắt đầu)*: đã xong phiên bản bóng và canary trên lưu lượng thật, và trình soạn thảo web cho bảng. Còn lại: kiểm thử ngược và champion/challenger trên dữ liệu lịch sử, soạn luồng vượt ra ngoài phần thiết kế.

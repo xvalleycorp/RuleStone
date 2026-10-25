@@ -2,7 +2,7 @@
 
 > **Every version set in stone. Every change in seconds.**
 >
-> Status: draft · Last updated: 2026-10-22
+> Status: draft · Last updated: 2026-10-25
 
 This document describes where RuleStone is going, not only what exists today. Each module and capability is marked **available** or **planned**; the [roadmap](#9-roadmap) shows the order of work. For how to use what is available now, see the [guides](README.md).
 
@@ -16,7 +16,7 @@ RuleStone is a **business rules management** library for banking and finance, wr
 - **Easy to integrate.** It can be embedded as a plain library, run as a service, or plugged into Spring, Kafka or AI agents, without forcing a change of stack.
 - **Ready for hybrid AI.** AI can help write rules, explain decisions and act as a guarded node in a decision, but the final decision always goes through the deterministic engine.
 
-Out of scope for now: stateful inference (Rete, forward chaining), complex event processing, and general BPM or workflow.
+Out of scope for now: stateful inference (Rete, forward chaining), complex event processing, and general BPM or workflow. Case management, labelling of reviewed cases and model training also belong to applications built on RuleStone, such as [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML); RuleStone gives them what they build on: decision records to attach labels to, shadow and canary versions, and the planned replay, re-scoring and model nodes.
 
 ## 2. Design principles
 
@@ -33,8 +33,8 @@ Out of scope for now: stateful inference (Rete, forward chaining), complex event
 |---|---|---|---|
 | `rulestone-bom` | Version alignment for users | — | available |
 | `rulestone-api` | Public API: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult`; later the SPIs | JDK | available |
-| `rulestone-core` | Decision model, evaluator, trace. Decision tables are available; decision graphs, switches and sub-decisions are planned | `rulestone-api`, `rulestone-cel`, Jackson | available (partial) |
-| `rulestone-cel` | cel-java integration and extensions. `decimal` is available; `money`, dates and business calendars are planned | cel-java | available (partial) |
+| `rulestone-core` | Decision model, evaluator, trace. Decision tables, decision records, timeouts, and canary and shadow versions are available; decision flows, switches and sub-decisions are planned | `rulestone-api`, `rulestone-cel`, Jackson | available (partial) |
+| `rulestone-cel` | cel-java integration and extensions. `decimal`, `money`, `date` and fuzzy name matching are available; business calendars are planned | cel-java | available (partial) |
 | `rulestone-dsl` | `.stone` text syntax ⇄ JSON, formatter | ANTLR runtime | planned |
 | `rulestone-analysis` | Static analysis: overlapping rows, gaps and unreachable rows, using an SMT solver where available | Z3 (optional) | planned |
 | `rulestone-governance` | Maker-checker workflow, hash-chained audit log | `rulestone-api` | planned |
@@ -47,7 +47,11 @@ Out of scope for now: stateful inference (Rete, forward chaining), complex event
 | `rulestone-spring-boot-starter` | Auto-configuration, properties, actuator endpoint | Spring Boot | planned |
 | `rulestone-server` | REST and gRPC service with OpenAPI, standalone or as a sidecar | — | planned |
 | `rulestone-mcp` | MCP server so that AI agents can use the engine as a guardrail | MCP Java SDK | planned |
-| `rulestone-test` | JUnit 5 helpers for unit-testing rules | JUnit | planned |
+| `rulestone-test` | JSON test cases for rules (`.stone-test.json`), JUnit 5 dynamic tests, rule coverage, fluent assertions | JUnit | available |
+| `rulestone-temporal` | Decisions as Temporal activities, or in workflow code with rule versions pinned across replays | Temporal SDK (provided) | available |
+| `rulestone-camunda8` / `-camunda7` | A Camunda 8 job worker with an element template; a Camunda 7 delegate and expression bean | Camunda clients (provided) | available |
+| `rulestone-editor` | Local web editor for decision tables, with try-it on sample facts | JDK HTTP server | available |
+| Browser SDK (`sdk/`) | A TypeScript engine with the same results as the Java engine, checked by a conformance suite, and Web Components for editing tables and designing flows | none at run time | available |
 | `rulestone-benchmark` | JMH benchmarks of evaluation: latency and allocation. Not published | JMH | available |
 
 Dependency rule: `core` **never** depends on `ai`, `spring` or `server`. This will be enforced with ArchUnit in CI.
@@ -63,6 +67,8 @@ Dependency rule: `core` **never** depends on `ai`, `spring` or `server`. This wi
 | **REST/gRPC service** | Non-Java stacks (.NET, Node, legacy core banking), or one shared decision service | ms | planned |
 | **Kafka processor** | Event-stream scoring and screening (AML, fraud) | ms | planned |
 | **MCP server** | AI agents that must check policy before calling a tool | ms | planned |
+| **Workflow engines** | Temporal workflows and Camunda 7 or 8 processes | µs–ms | available |
+| **Browser or Node.js** | Editors, simulators and checks before a request is sent, with the TypeScript engine | µs–ms | available |
 
 ### 4.2 Service provider interfaces (planned)
 
@@ -70,9 +76,9 @@ Dependency rule: `core` **never** depends on `ai`, `spring` or `server`. This wi
 |---|---|---|
 | `RuleRepository` | Load rules by name, version and effective date | File, JDBC, Git, S3 |
 | `FactResolver` | Fetch extra data lazily (e.g. outstanding balance from core banking), with caching and timeouts | — (user-provided) |
-| `TypeAdapter` | Convert inputs to CEL values: `Map`, POJO/record, Jackson `JsonNode`, Protobuf | Map and record are available; Jackson and Protobuf planned |
-| `FunctionLibrary` | Custom business functions, pure and typed | Decimal (available), Money, BusinessCalendar |
-| `AuditSink` | Write decision records | Log, JDBC, Kafka |
+| `TypeAdapter` | Convert inputs to CEL values: `Map`, POJO/record, Jackson `JsonNode`, Protobuf | Map, record and JSON (`FactsJson`) are available; Protobuf planned |
+| `FunctionLibrary` | Custom business functions, pure and typed | Decimal, Money, dates and fuzzy matching (available), BusinessCalendar |
+| `AuditSink` | Write decision records | Kafka (available), JDBC; the interface itself is available |
 | `DataMasker` | Mask sensitive data (card numbers, national ID numbers, account numbers) in traces and logs | By annotation and by path |
 | `ModelProvider` | Provide an ML model or LLM for an AI node | — (separate adapters) |
 | `ApprovalWorkflow` | Maker-checker, connectable to an existing approval system | In-memory, JDBC |
@@ -125,7 +131,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 | Personal data protection | No input values in traces or exception messages (available). `DataMasker` on by default for audit records (planned). | partial |
 | Execution safety | CEL without reflection or eval; bounded list operations; a timeout per evaluation, per engine or per request. | available |
 | High availability | Embedded mode has no network dependency on the hot path; if the rule repository fails, the loaded version keeps running. | available (embedded) |
-| Change testing | Rule unit tests (`rulestone-test`), static analysis, and mandatory backtesting before a version becomes `ACTIVE`. | planned |
+| Change testing | Rule unit tests with rule coverage (`rulestone-test`, available); shadow and canary versions on live traffic (available); static analysis and mandatory backtesting before a version becomes `ACTIVE` (planned). | partial |
 
 ### 6.2 Software supply chain
 
@@ -181,6 +187,7 @@ All problems in a rule definition are already reported together, each with its l
 | Build tool | Maven |
 | groupId / package | `vn.io.dxa.rulestone`, from the domain `dxa.io.vn` |
 | Money arithmetic | `decimal` backed by `BigDecimal`; division at 34 significant digits, HALF_EVEN; rounding is explicit; equality between `decimal` and `int` is a type error |
+| `money` type | Minor units from a fixed ISO 4217 table shared by both engines, overridable per currency (`currencyScale`); `HALF_EVEN` rounding by default |
 
 ### 8.2 Open
 
@@ -188,16 +195,15 @@ All problems in a rule definition are already reported together, each with its l
 |---|---|
 | Publishing to Maven Central | Register the `vn.io.dxa` namespace on the Central Portal and verify it with a DNS TXT record on `dxa.io.vn`. Requires project URL, SCM and developer entries in the POM. |
 | Commercial offering | Open core: the engine and basic adapters stay Apache-2.0; advanced governance, a rule editor and enterprise support could be offered commercially as separate products. |
-| `money` type | Requires choosing the per-currency scale table (ISO 4217 or bank-specific) and default rounding policy. |
 | GoRules JDM compatibility | An importer from JDM to RuleStone to ease migration. |
 
 ## 9. Roadmap
 
-1. **M0 — Specification:** decision model, CEL extensions (`decimal`, `money`, `date`), trace format, conformance tests.
+1. **M0 — Specification** *(done for decision tables)*: decision model, CEL extensions (`decimal`, `money`, `date`), decision record format, and a conformance suite that checks the TypeScript engine against the Java engine. Flows follow with M1.
 2. **M1 — Core** *(in progress)*
-   - Done: decision tables with `FIRST`, `UNIQUE` and `COLLECT`; strict `.stone.json` format; content hashes; effective dating with overlap detection; `decimal` in CEL; typed struct and list inputs; traces; all definition problems reported together; licensing, SBOM and documentation.
-   - Remaining: `money` type, `date` type, `rulestone-test` module.
-3. **M2 — Governance:** maker-checker, hash-chained audit, JDBC repository.
-4. **M3 — Integration:** Spring Boot starter, REST/gRPC server, observability, Kafka (the audit sink is available).
-5. **M4 — Analysis and AI:** static analysis, `.stone` text syntax, authoring assistant, MCP server.
-6. **M5 — Simulation:** backtesting, champion/challenger on historical data (on live traffic, shadow and canary versions are available), web editor.
+   - Done: decision tables with `FIRST`, `UNIQUE` and `COLLECT`; strict `.stone.json` format; content hashes; effective dating in which a new version supersedes the previous one; `decimal`, `money` and `date` types; fuzzy name matching; typed struct and list inputs; traces; decision records with `AuditSink`; timeouts; canary and shadow versions; `rulestone-test`; all definition problems reported together; licensing, SBOM and documentation.
+   - Remaining: decision flows without models (`table`, `switch`, `derive`, `split` and `end` nodes; step 2 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)); business calendars.
+3. **M2 — Governance:** maker-checker, hash-chained audit, JDBC repository and JDBC audit sink.
+4. **M3 — Integration** *(started)*: Temporal, Camunda 7 and 8, and the Kafka audit sink are done. Remaining: Spring Boot starter, REST/gRPC server, observability (Micrometer, OpenTelemetry), Kafka processor.
+5. **M4 — Analysis and AI:** static analysis, `.stone` text syntax, model nodes, explanations, replay and re-scoring, and model adapters (steps 3 to 7 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)), authoring assistant, MCP server.
+6. **M5 — Simulation** *(started)*: shadow and canary versions on live traffic, and the web editor for tables, are done. Remaining: backtesting and champion/challenger on historical data, flow editing beyond design.
