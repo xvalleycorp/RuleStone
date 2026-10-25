@@ -458,6 +458,47 @@ Phiên bản bóng bị bỏ qua khi yêu cầu chỉ định phiên bản, khi 
 - Đầu vào được chuyển đổi một lần cho mỗi lần đánh giá, rồi dùng chung cho mọi luật của bảng.
 - Việc đánh giá không thực hiện I/O và không giữ khoá (lock) nào.
 
+### Benchmark
+
+`rulestone-benchmark` đo một lần gọi `evaluate` bằng [JMH](https://github.com/openjdk/jmh), tính trọn mọi bước: chọn phiên bản, chuyển đổi đầu vào, hash của đầu vào, các luật và bản ghi quyết định, không có audit sink. Các bảng của nó có 10, 100 hoặc 1.000 luật cộng một luật bắt mọi trường hợp; mỗi luật so một trường `money` hoặc `decimal` của một struct với một ngưỡng, hoặc duyệt một danh sách 20 struct bằng `exists`. Với `FIRST`, một nửa số luật được xét; với `COLLECT`, tất cả. Xem chi tiết trong [README của mô-đun](../../rulestone-benchmark/README.md). Hãy chạy trên phần cứng của chính bạn:
+
+```sh
+mvn -pl rulestone-benchmark -am package -DskipTests
+java -jar rulestone-benchmark/target/benchmarks.jar -prof gc -t 4
+```
+
+Kết quả trên một máy ảo đám mây dùng chung: 4 vCPU (Intel Xeon, 2,8 GHz), OpenJDK 21.0.12, G1 với heap 2 GB, một fork, khởi động 15 giây và đo 10 giây cho mỗi bảng. Độ trễ tính bằng µs; lượng cấp phát tính bằng KB cho mỗi lần đánh giá.
+
+| Hit policy | Đầu vào | Số luật | p50, 1 luồng | p99, 1 luồng | p50, 4 luồng | p99, 4 luồng | p99,9, 4 luồng | Cấp phát |
+|---|---|--:|--:|--:|--:|--:|--:|--:|
+| `FIRST` | `MONEY` | 10 | 27,3 | 86,7 | 21,2 | 93,7 | 489 | 44 |
+| `FIRST` | `MONEY` | 100 | 65,0 | 210 | 64,8 | 198 | 612 | 138 |
+| `FIRST` | `MONEY` | 1.000 | 559 | 1.252 | 541 | 1.556 | 5.391 | 1.047 |
+| `FIRST` | `DECIMAL` | 10 | 18,6 | 75,4 | 20,4 | 88,2 | 370 | 44 |
+| `FIRST` | `DECIMAL` | 100 | 61,6 | 162 | 64,4 | 190 | 733 | 133 |
+| `FIRST` | `DECIMAL` | 1.000 | 589 | 1.319 | 566 | 1.452 | 4.974 | 997 |
+| `FIRST` | `LIST` | 10 | 182 | 480 | 189 | 517 | 3.148 | 313 |
+| `FIRST` | `LIST` | 100 | 1.628 | 3.530 | 1.624 | 5.816 | 9.706 | 2.405 |
+| `FIRST` | `LIST` | 1.000 | 15.876 | 31.642 | 19.235 | 43.062 | 67.809 | 27.543 |
+| `COLLECT` | `MONEY` | 10 | 25,5 | 106 | 27,5 | 123 | 509 | 62 |
+| `COLLECT` | `MONEY` | 100 | 146 | 389 | 152 | 412 | 3.261 | 343 |
+| `COLLECT` | `MONEY` | 1.000 | 1.473 | 3.257 | 1.595 | 5.063 | 9.749 | 3.054 |
+| `COLLECT` | `DECIMAL` | 10 | 25,1 | 102 | 32,7 | 145 | 663 | 63 |
+| `COLLECT` | `DECIMAL` | 100 | 153 | 347 | 147 | 404 | 3.273 | 346 |
+| `COLLECT` | `DECIMAL` | 1.000 | 1.585 | 3.664 | 1.647 | 5.751 | 9.870 | 3.007 |
+| `COLLECT` | `LIST` | 10 | 334 | 741 | 371 | 897 | 4.361 | 512 |
+| `COLLECT` | `LIST` | 100 | 3.342 | 7.872 | 3.043 | 6.802 | 10.845 | 4.799 |
+| `COLLECT` | `LIST` | 1.000 | 36.635 | 79.299 | 34.341 | 69.615 | 84.482 | 52.833 |
+
+Các con số cho thấy:
+
+- **Một bảng nhỏ mất khoảng 20 µs**, phần lớn là chi phí cố định: chuyển đổi đầu vào, hash của đầu vào và bản ghi. Mỗi luật so tiền hoặc số thập phân thêm vào khoảng 1 µs, và khoảng 1,5 µs với `COLLECT`, vì nó còn tính đầu ra của nửa số luật khớp.
+- **Hàm trên danh sách chiếm phần lớn thời gian.** `exists` trên 20 struct tốn khoảng 30 µs cho mỗi luật, tức khoảng 1,5 µs cho mỗi phần tử. Hãy tránh đưa các comprehension trên danh sách dài vào bảng lớn, hoặc tính sẵn giá trị tổng hợp trước khi ra quyết định, và đặt [thời gian chờ tối đa](#thời-gian-chờ-tối-đa) cho bên gọi trực tiếp.
+- **Một engine mở rộng tốt theo số luồng.** Trung vị với 4 luồng trên một engine chênh không đáng kể so với một luồng: việc đánh giá không dùng chung trạng thái thay đổi được. Phần đuôi tăng khi chạy 4 luồng trên 4 vCPU, vì các luồng benchmark khi đó tranh lõi với JIT và bộ thu gom rác.
+- **Cấp phát bộ nhớ là nguyên nhân chính của phần đuôi.** Một lần đánh giá cấp phát khoảng 44 KB, cộng 2 đến 3 KB cho mỗi luật được xét, và khoảng 50 KB cho mỗi luật duyệt danh sách 20 phần tử. Hãy định cỡ young generation theo lưu lượng yêu cầu, và ưu tiên bộ thu gom có thời gian dừng thấp (Generational ZGC) khi p99,9 quan trọng.
+
+Theo [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML), nơi đánh giá trực tiếp một bảng `COLLECT` 12 luật cho mỗi khoản thanh toán: trên Apple M2 với JDK 22 và G1, 4 luồng, toàn bộ một quyết định của cổng thanh toán mất 16,8 µs ở p50, 50,6 µs ở p99 và 129 µs ở p99,9.
+
 ## Dùng biểu thức trực tiếp
 
 `rulestone-cel` đánh giá từng biểu thức riêng lẻ mà không cần bảng quyết định, chẳng hạn để kiểm tra một công thức nhập trên màn hình quản trị:

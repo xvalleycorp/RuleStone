@@ -453,6 +453,47 @@ A shadow is skipped when the request names a version, when no version was found 
 - Inputs are converted once per evaluation, then shared by all rules of the table.
 - Evaluation does no I/O and holds no locks.
 
+### Benchmark
+
+`rulestone-benchmark` measures one call to `evaluate` with [JMH](https://github.com/openjdk/jmh), everything included: version selection, input conversion, the facts hash, the rules and the decision record, without an audit sink. Its tables have 10, 100 or 1,000 rules plus a catch-all, each comparing a `money` or a `decimal` field of a struct with a threshold, or scanning a list of 20 structs with `exists`; under `FIRST` half the rules are examined, under `COLLECT` all of them. See [its README](../rulestone-benchmark/README.md) for the details. Run it on your own hardware:
+
+```sh
+mvn -pl rulestone-benchmark -am package -DskipTests
+java -jar rulestone-benchmark/target/benchmarks.jar -prof gc -t 4
+```
+
+Results on a shared cloud VM: 4 vCPUs (Intel Xeon, 2.8 GHz), OpenJDK 21.0.12, G1 with a 2 GB heap, one fork, 15 s warm-up and 10 s measurement per table. Latencies in µs; allocation in KB per evaluation.
+
+| Hit policy | Input | Rules | p50, 1 thread | p99, 1 thread | p50, 4 threads | p99, 4 threads | p99.9, 4 threads | Allocated |
+|---|---|--:|--:|--:|--:|--:|--:|--:|
+| `FIRST` | `MONEY` | 10 | 27.3 | 86.7 | 21.2 | 93.7 | 489 | 44 |
+| `FIRST` | `MONEY` | 100 | 65.0 | 210 | 64.8 | 198 | 612 | 138 |
+| `FIRST` | `MONEY` | 1,000 | 559 | 1,252 | 541 | 1,556 | 5,391 | 1,047 |
+| `FIRST` | `DECIMAL` | 10 | 18.6 | 75.4 | 20.4 | 88.2 | 370 | 44 |
+| `FIRST` | `DECIMAL` | 100 | 61.6 | 162 | 64.4 | 190 | 733 | 133 |
+| `FIRST` | `DECIMAL` | 1,000 | 589 | 1,319 | 566 | 1,452 | 4,974 | 997 |
+| `FIRST` | `LIST` | 10 | 182 | 480 | 189 | 517 | 3,148 | 313 |
+| `FIRST` | `LIST` | 100 | 1,628 | 3,530 | 1,624 | 5,816 | 9,706 | 2,405 |
+| `FIRST` | `LIST` | 1,000 | 15,876 | 31,642 | 19,235 | 43,062 | 67,809 | 27,543 |
+| `COLLECT` | `MONEY` | 10 | 25.5 | 106 | 27.5 | 123 | 509 | 62 |
+| `COLLECT` | `MONEY` | 100 | 146 | 389 | 152 | 412 | 3,261 | 343 |
+| `COLLECT` | `MONEY` | 1,000 | 1,473 | 3,257 | 1,595 | 5,063 | 9,749 | 3,054 |
+| `COLLECT` | `DECIMAL` | 10 | 25.1 | 102 | 32.7 | 145 | 663 | 63 |
+| `COLLECT` | `DECIMAL` | 100 | 153 | 347 | 147 | 404 | 3,273 | 346 |
+| `COLLECT` | `DECIMAL` | 1,000 | 1,585 | 3,664 | 1,647 | 5,751 | 9,870 | 3,007 |
+| `COLLECT` | `LIST` | 10 | 334 | 741 | 371 | 897 | 4,361 | 512 |
+| `COLLECT` | `LIST` | 100 | 3,342 | 7,872 | 3,043 | 6,802 | 10,845 | 4,799 |
+| `COLLECT` | `LIST` | 1,000 | 36,635 | 79,299 | 34,341 | 69,615 | 84,482 | 52,833 |
+
+What the figures say:
+
+- **A small table takes about 20 µs**, most of it fixed cost: input conversion, the facts hash and the record. Each further rule comparing money or decimals adds about 1 µs, and about 1.5 µs under `COLLECT`, which also evaluates the outputs of the half that match.
+- **List functions dominate.** `exists` over 20 structs costs about 30 µs per rule, roughly 1.5 µs per element. Keep comprehensions over long lists out of large tables, or compute the aggregate before the decision, and give inline callers a [timeout](#timeouts).
+- **One engine scales across threads.** The median with 4 threads on one engine is within noise of the median with one thread: evaluation shares nothing mutable. The tails grow with 4 threads on 4 vCPUs, because the benchmark threads then compete with the JIT and the garbage collector for the same cores.
+- **Allocation is the main cost of the tail.** An evaluation allocates about 44 KB, plus 2 to 3 KB per rule examined, and about 50 KB per rule that scans a list of 20. Size the young generation for the request rate, and prefer a low-pause collector (Generational ZGC) where p99.9 matters.
+
+From [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML), which evaluates a 12-rule `COLLECT` table inline for every payment: on an Apple M2 with JDK 22 and G1, 4 threads, a whole gate decision takes 16.8 µs at p50, 50.6 µs at p99 and 129 µs at p99.9.
+
 ## Using expressions directly
 
 `rulestone-cel` evaluates single expressions without a decision table, for example to validate a formula entered in an admin screen:
