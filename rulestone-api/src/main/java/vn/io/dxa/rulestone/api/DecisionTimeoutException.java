@@ -23,7 +23,8 @@ public final class DecisionTimeoutException extends DecisionEvaluationException 
     private static final long serialVersionUID = 1L;
 
     private final Duration timeout;
-    private final List<TraceStep> trace;
+    /** Not serialized: a deserialized exception has an empty trace. */
+    private final transient List<TraceStep> trace;
 
     /**
      * @param trace the rules examined before the time ran out, in evaluation order
@@ -42,7 +43,7 @@ public final class DecisionTimeoutException extends DecisionEvaluationException 
 
     /** The rules examined before the time ran out, in evaluation order. */
     public List<TraceStep> trace() {
-        return trace;
+        return trace == null ? List.of() : trace;
     }
 
     private static String format(Duration timeout) {

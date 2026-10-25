@@ -1,6 +1,6 @@
 ---
 source: architecture.md
-sourceHash: b77be308b844246b615150d73e63983f3b12eb00dc37488333703ac33d6c41f5
+sourceHash: 5c29e7f33e6cd7510baae20faa2b05fb01ee67eb071bbb0a3a176041b7588a22
 ---
 
 # Kiến trúc RuleStone
