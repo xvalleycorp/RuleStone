@@ -55,6 +55,13 @@ public final class DecisionRecordJson {
             step.matchedRules().forEach(matched::add);
         });
         record.error().ifPresent(error -> json.put("error", error));
+        record.routing().ifPresent(routing -> {
+            ObjectNode node = json.putObject("routing")
+                    .put("kind", routing.kind().name())
+                    .put("champion", routing.champion());
+            routing.share().ifPresent(share -> node.put("share", share));
+            routing.shadowOf().ifPresent(id -> node.put("shadowOf", id));
+        });
         return json;
     }
 

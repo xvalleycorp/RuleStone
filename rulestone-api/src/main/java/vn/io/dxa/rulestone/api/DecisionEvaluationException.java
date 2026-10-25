@@ -9,8 +9,10 @@ package vn.io.dxa.rulestone.api;
  * A decision could not be evaluated: invalid input, a failing rule expression, or a
  * hit-policy violation. The decision produced no result; callers must not fall back
  * to a guessed outcome.
+ *
+ * @see DecisionTimeoutException
  */
-public final class DecisionEvaluationException extends RuleStoneException {
+public class DecisionEvaluationException extends RuleStoneException {
 
     private static final long serialVersionUID = 1L;
 

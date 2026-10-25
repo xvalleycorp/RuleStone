@@ -5,6 +5,7 @@
 
 package vn.io.dxa.rulestone.api;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,42 +23,72 @@ import java.util.Optional;
  *
  * <p>{@code correlationId} is the caller's id for the business transaction, such as a loan
  * application number. It is copied into the {@link DecisionRecord}, so that the record can
- * be joined with the bank's own data. It must not itself contain personal data.
+ * be joined with the bank's own data. It must not itself contain personal data. When the
+ * engine routes a share of the traffic to a canary version, the correlation id decides which
+ * share a request falls into.
+ *
+ * <p>{@code timeout} bounds how long the evaluation may take, overriding the engine's default.
+ * Pass the time left of the caller's own deadline, so that a slow evaluation fails with a
+ * {@link DecisionTimeoutException} instead of overrunning it.
  */
 public record DecisionRef(String id, Optional<String> version, Optional<LocalDate> asOf,
-                          Optional<String> correlationId) {
+                          Optional<String> correlationId, Optional<Duration> timeout) {
 
     public DecisionRef {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(version, "version");
         Objects.requireNonNull(asOf, "asOf");
         Objects.requireNonNull(correlationId, "correlationId");
+        Objects.requireNonNull(timeout, "timeout");
         if (id.isBlank()) {
             throw new IllegalArgumentException("id must not be blank");
         }
         if (correlationId.isPresent() && correlationId.get().isBlank()) {
             throw new IllegalArgumentException("correlationId must not be blank");
         }
+        if (timeout.isPresent() && (timeout.get().isNegative() || timeout.get().isZero())) {
+            throw new IllegalArgumentException("timeout must be positive");
+        }
     }
 
-    /** A reference without a correlation id. */
+    /** A reference without a correlation id or timeout. */
     public DecisionRef(String id, Optional<String> version, Optional<LocalDate> asOf) {
-        this(id, version, asOf, Optional.empty());
+        this(id, version, asOf, Optional.empty(), Optional.empty());
+    }
+
+    /** A reference without a timeout. */
+    public DecisionRef(String id, Optional<String> version, Optional<LocalDate> asOf,
+                       Optional<String> correlationId) {
+        this(id, version, asOf, correlationId, Optional.empty());
     }
 
     public static DecisionRef of(String id) {
-        return new DecisionRef(id, Optional.empty(), Optional.empty(), Optional.empty());
+        return new DecisionRef(id, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
+    /**
+     * Exactly this version, whatever its effective dates: also one that takes effect only
+     * later, or is no longer in force.
+     */
     public DecisionRef version(String version) {
-        return new DecisionRef(id, Optional.of(version), asOf, correlationId);
+        return new DecisionRef(id, Optional.of(version), asOf, correlationId, timeout);
     }
 
     public DecisionRef asOf(LocalDate date) {
-        return new DecisionRef(id, version, Optional.of(date), correlationId);
+        return new DecisionRef(id, version, Optional.of(date), correlationId, timeout);
     }
 
     public DecisionRef correlationId(String correlationId) {
-        return new DecisionRef(id, version, asOf, Optional.of(correlationId));
+        return new DecisionRef(id, version, asOf, Optional.of(correlationId), timeout);
+    }
+
+    /**
+     * Fails the evaluation with a {@link DecisionTimeoutException} if it takes longer than
+     * {@code timeout}, measured from the call to {@link RuleStoneEngine#evaluate}.
+     *
+     * @param timeout a positive duration
+     */
+    public DecisionRef timeout(Duration timeout) {
+        return new DecisionRef(id, version, asOf, correlationId, Optional.of(timeout));
     }
 }

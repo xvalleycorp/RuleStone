@@ -15,16 +15,28 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
+import vn.io.dxa.rulestone.api.AuditSink;
+import vn.io.dxa.rulestone.api.DecisionRecord;
+import vn.io.dxa.rulestone.api.DecisionRecord.Routing;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionResult;
+import vn.io.dxa.rulestone.api.DecisionTimeoutException;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.Money;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
@@ -173,5 +185,85 @@ class JavaApiDocTest {
         BigDecimal value = (BigDecimal) fee.evaluate(inputs);
 
         assertThat(value).hasToString("10000");
+    }
+
+    private static String gateDecision(String version, String effectiveFrom, int threshold) {
+        return """
+                { "id": "gate_decision", "version": "%s", "effectiveFrom": "%s", "hitPolicy": "FIRST",
+                  "inputs": { "score": "int" }, "outputs": { "action": "string" },
+                  "rules": [ { "id": "BLOCK", "when": "score >= %d", "then": { "action": "'BLOCK'" } },
+                             { "id": "ALLOW", "when": "true", "then": { "action": "'ALLOW'" } } ] }
+                """.formatted(version, effectiveFrom, threshold);
+    }
+
+    /** The decision a payment gate falls back to when the table cannot answer in time. */
+    private static String gate(RuleStoneEngine engine, Clock clock, Instant deadline, String paymentId, Facts facts) {
+        LocalDate valueDate = LocalDate.of(2026, 11, 1);
+        Duration left = Duration.between(clock.instant(), deadline);
+        if (left.isNegative() || left.isZero()) {
+            return "FALLBACK";
+        }
+        try {
+            DecisionResult result = engine.evaluate(
+                    DecisionRef.of("gate_decision").asOf(valueDate).correlationId(paymentId).timeout(left),
+                    facts);
+            return (String) result.output().get("action");
+        } catch (DecisionTimeoutException e) {
+            return "FALLBACK";
+        }
+    }
+
+    @Test
+    void timeouts() {
+        RuleStoneEngine engine = RuleStone.builder()
+                .decision(DecisionTableJson.read(gateDecision("1", "2026-01-01", 70)))
+                .nanoTime(() -> 0)   // the time stands still: no evaluation runs out of time
+                .build();
+        Clock clock = Clock.fixed(Instant.parse("2026-11-01T03:00:00Z"), ZoneOffset.UTC);
+        Facts facts = Facts.of("score", 80);
+
+        assertThat(gate(engine, clock, clock.instant().plusMillis(2), "PAY-1", facts)).isEqualTo("BLOCK");
+        assertThat(gate(engine, clock, clock.instant(), "PAY-1", facts)).isEqualTo("FALLBACK");
+
+        long[] now = {0};
+        RuleStoneEngine slow = RuleStone.builder()
+                .decision(DecisionTableJson.read(gateDecision("1", "2026-01-01", 70)))
+                .nanoTime(() -> now[0] += 1_000_000)   // every rule takes 1 ms
+                .build();
+        assertThat(gate(slow, clock, clock.instant().plusNanos(500_000), "PAY-1", facts)).isEqualTo("FALLBACK");
+    }
+
+    @Test
+    void canaryAndShadowVersions() throws InterruptedException {
+        List<DecisionTable> tables = List.of(
+                DecisionTableJson.read(gateDecision("1", "2026-01-01", 70)),
+                DecisionTableJson.read(gateDecision("2", "2027-01-01", 60)),
+                DecisionTableJson.read(gateDecision("3", "2027-07-01", 50)));
+        List<DecisionRecord> records = Collections.synchronizedList(new ArrayList<>());
+        AuditSink auditSink = records::add;
+        ExecutorService shadowPool = Executors.newSingleThreadExecutor();
+
+        RuleStoneEngine engine = RuleStone.builder()
+                .decisions(tables)                     // versions 1, 2 and 3 of gate_decision
+                .canary("gate_decision", "2", 0.05)    // 5% of correlation ids get version 2
+                .shadow("gate_decision", "3")          // version 3 is evaluated on every request, only to be recorded
+                .shadowExecutor(shadowPool)            // off the caller's thread
+                .auditSink(auditSink)
+                .build();
+
+        int canaries = 0;
+        for (int i = 0; i < 1_000; i++) {
+            DecisionResult result = engine.evaluate(DecisionRef.of("gate_decision")
+                    .asOf(LocalDate.of(2026, 11, 1)).correlationId("PAY-" + i), Facts.of("score", 55));
+            canaries += result.ruleVersion().startsWith("2@") ? 1 : 0;
+        }
+        shadowPool.shutdown();
+        assertThat(shadowPool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(canaries).isBetween(30, 70);
+        assertThat(records).hasSize(2_000);
+        assertThat(records).filteredOn(r -> r.routing().map(Routing::kind).orElse(null) == Routing.Kind.SHADOW)
+                .hasSize(1_000)
+                .allSatisfy(r -> assertThat(r.output()).containsEntry("action", "BLOCK"));
     }
 }

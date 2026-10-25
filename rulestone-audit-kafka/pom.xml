@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright 2026 The RuleStone Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>vn.io.dxa.rulestone</groupId>
+        <artifactId>rulestone-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>rulestone-audit-kafka</artifactId>
+    <name>RuleStone Audit Kafka</name>
+    <description>An audit sink that publishes decision records to Kafka as JSON, keyed by correlation id, without waiting for the broker, and that fails fast when the producer's buffer is full.</description>
+
+    <properties>
+        <!--
+          Compiled and tested against this version. It is a provided dependency: applications bring
+          their own Kafka client, and RuleStone does not redistribute it.
+        -->
+        <kafka-clients.version>4.4.0</kafka-clients.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>vn.io.dxa.rulestone</groupId>
+            <artifactId>rulestone-api</artifactId>
+        </dependency>
+        <!-- DecisionRecordJson, so that every sink writes records in the same form. -->
+        <dependency>
+            <groupId>vn.io.dxa.rulestone</groupId>
+            <artifactId>rulestone-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${kafka-clients.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
