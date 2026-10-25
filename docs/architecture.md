@@ -38,15 +38,17 @@ Out of scope for now: stateful inference (Rete, forward chaining), complex event
 | `rulestone-dsl` | `.stone` text syntax ⇄ JSON, formatter | ANTLR runtime | planned |
 | `rulestone-analysis` | Static analysis: overlapping rows, gaps and unreachable rows, using an SMT solver where available | Z3 (optional) | planned |
 | `rulestone-governance` | Maker-checker workflow, hash-chained audit log | `rulestone-api` | planned |
-| `rulestone-simulation` | Backtesting and champion/challenger on historical data | `rulestone-core` | planned |
+| `rulestone-simulation` | Backtesting and champion/challenger on historical data. Champion/challenger on live traffic (shadow and canary versions) is in `rulestone-core` | `rulestone-core` | planned |
 | `rulestone-repository-jdbc` / `-git` / `-s3` | Rule repositories | respective clients | planned |
-| `rulestone-audit-jdbc` / `-kafka` | Audit sinks | respective clients | planned |
+| `rulestone-audit-kafka` | Audit sink that publishes decision records to Kafka, fast enough for inline paths | `kafka-clients` (provided) | available |
+| `rulestone-audit-jdbc` | Audit sink | JDBC | planned |
 | `rulestone-observability` | Metrics (Micrometer) and tracing (OpenTelemetry) | Micrometer, OTel API | planned |
 | `rulestone-ai` | SPI for AI nodes, authoring assistant, decision explanation | `rulestone-api` only (no LLM vendor dependency) | planned |
 | `rulestone-spring-boot-starter` | Auto-configuration, properties, actuator endpoint | Spring Boot | planned |
 | `rulestone-server` | REST and gRPC service with OpenAPI, standalone or as a sidecar | — | planned |
 | `rulestone-mcp` | MCP server so that AI agents can use the engine as a guardrail | MCP Java SDK | planned |
 | `rulestone-test` | JUnit 5 helpers for unit-testing rules | JUnit | planned |
+| `rulestone-benchmark` | JMH benchmarks of evaluation: latency and allocation. Not published | JMH | available |
 
 Dependency rule: `core` **never** depends on `ai`, `spring` or `server`. This will be enforced with ArchUnit in CI.
 
@@ -79,12 +81,13 @@ Dependency rule: `core` **never** depends on `ai`, `spring` or `server`. This wi
 
 - Rules are compiled (parsed, type-checked, turned into CEL programs) **once** at load time. *Available.*
 - Hot reload swaps the whole compiled rule set atomically. A half-loaded state never exists. *Available* through building a new engine and swapping it; see [Reloading rules](java-api.md#reloading-rules).
-- Canary releases: route a percentage of traffic to a new version, or run it in shadow mode for comparison without affecting real results. *Planned.*
+- Canary releases: route a percentage of traffic to a new version, chosen by correlation id, or run it in shadow mode for comparison without affecting real results. *Available*; see [Canary and shadow versions](java-api.md#canary-and-shadow-versions).
 
 ## 5. API sketch
 
 ```java
-// Target API. Available today: clock(), decision(), decisions(), maxIterations().
+// Target API. Available today: clock(), decision(), decisions(), maxIterations(), auditSink(),
+// KafkaAuditSink, and the timeout as RuleStone.builder().timeout(...) or DecisionRef.timeout(...).
 RuleStoneEngine engine = RuleStone.builder()
     .repository(JdbcRuleRepository.of(dataSource))
     .auditSink(KafkaAuditSink.of(producer, "rulestone.audit"))
@@ -120,7 +123,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 | Tamper-evident audit | Hash-chained, optionally signed audit records holding masked inputs, rule version, trace and result. | planned |
 | Explainability | Explicit reason codes plus a structured trace; AI only rephrases the trace. A decision record for every decision, including model versions, outputs and attributions, is specified in [Hybrid AI decisioning](hybrid-ai.md#4-the-decision-record). | available (codes, trace, decision record for tables) |
 | Personal data protection | No input values in traces or exception messages (available). `DataMasker` on by default for audit records (planned). | partial |
-| Execution safety | CEL without reflection or eval; bounded list operations (available). Per-decision timeout (planned). | partial |
+| Execution safety | CEL without reflection or eval; bounded list operations; a timeout per evaluation, per engine or per request. | available |
 | High availability | Embedded mode has no network dependency on the hot path; if the rule repository fails, the loaded version keeps running. | available (embedded) |
 | Change testing | Rule unit tests (`rulestone-test`), static analysis, and mandatory backtesting before a version becomes `ACTIVE`. | planned |
 
@@ -195,6 +198,6 @@ All problems in a rule definition are already reported together, each with its l
    - Done: decision tables with `FIRST`, `UNIQUE` and `COLLECT`; strict `.stone.json` format; content hashes; effective dating with overlap detection; `decimal` in CEL; typed struct and list inputs; traces; all definition problems reported together; licensing, SBOM and documentation.
    - Remaining: `money` type, `date` type, `rulestone-test` module.
 3. **M2 — Governance:** maker-checker, hash-chained audit, JDBC repository.
-4. **M3 — Integration:** Spring Boot starter, REST/gRPC server, observability, Kafka.
+4. **M3 — Integration:** Spring Boot starter, REST/gRPC server, observability, Kafka (the audit sink is available).
 5. **M4 — Analysis and AI:** static analysis, `.stone` text syntax, authoring assistant, MCP server.
-6. **M5 — Simulation:** backtesting, champion/challenger, web editor.
+6. **M5 — Simulation:** backtesting, champion/challenger on historical data (on live traffic, shadow and canary versions are available), web editor.

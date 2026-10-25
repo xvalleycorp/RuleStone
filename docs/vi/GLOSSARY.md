@@ -61,11 +61,16 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | AI agent | AI agent | Giữ nguyên "agent". |
 | assertion (fluent assertions) | assertion (khẳng định trong kiểm thử) | |
 | audit sink | audit sink (nơi nhận bản ghi kiểm toán) | Giữ nguyên; `AuditSink`. |
+| benchmark | benchmark (phép đo hiệu năng) | Giữ nguyên; JMH. |
+| buffer (producer buffer) | bộ đệm (buffer) | Bộ đệm của Kafka producer. |
 | builder | builder | Giữ nguyên (mẫu thiết kế). |
+| canary, canary release | canary, phát hành canary | Giữ nguyên; một phần lưu lượng được chuyển sang phiên bản mới. |
 | compile | biên dịch | |
 | correlation id | mã tương quan (correlation id) | Mã giao dịch nghiệp vụ của bên gọi, ví dụ số hồ sơ vay. |
 | dependency | thư viện phụ thuộc, phụ thuộc | |
 | embed, embedded | nhúng, chế độ nhúng | |
+| fallback | phương án dự phòng | Chính sách quyết định thay khi không có kết quả. |
+| inline path | luồng xử lý trực tiếp (inline) | Đường xử lý mà bên gọi chờ kết quả, ví dụ khi duyệt thanh toán. |
 | facts hash | hash của đầu vào | Giá trị `factsHash`. |
 | guardrail | rào chắn | |
 | HMAC key | khoá HMAC | |
@@ -79,6 +84,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | repository (rule repository) | kho luật | Kho mã nguồn Git: "repository" hoặc "kho mã". |
 | roadmap | lộ trình | |
 | shadow mode | chế độ bóng (shadow) | |
+| shadow version | phiên bản bóng (shadow) | Được đánh giá chỉ để ghi lại, không trả kết quả cho bên gọi. |
 | SPI (service provider interface) | SPI (giao diện nhà cung cấp dịch vụ) | |
 | test case | ca kiểm thử | |
 | test coverage, rule coverage | độ bao phủ kiểm thử, độ bao phủ luật | |

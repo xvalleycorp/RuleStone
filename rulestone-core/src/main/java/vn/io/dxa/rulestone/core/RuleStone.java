@@ -6,6 +6,7 @@
 package vn.io.dxa.rulestone.core;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -13,10 +14,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import vn.io.dxa.rulestone.api.AuditSink;
 import vn.io.dxa.rulestone.api.DecisionRecord;
+import vn.io.dxa.rulestone.api.DecisionRef;
+import vn.io.dxa.rulestone.api.DecisionTimeoutException;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.cel.ExpressionEnvironment;
 
@@ -50,6 +56,12 @@ public final class RuleStone {
         private final List<AuditSink> auditSinks = new ArrayList<>();
         private byte[] factsHashKey;
         private Supplier<String> recordIds = () -> UUID.randomUUID().toString();
+        private Optional<Duration> timeout = Optional.empty();
+        private LongSupplier nanoTime = System::nanoTime;
+        private final Map<String, String> canaryVersions = new LinkedHashMap<>();
+        private final Map<String, Double> canaryShares = new HashMap<>();
+        private final Map<String, String> shadowVersions = new LinkedHashMap<>();
+        private Executor shadowExecutor = Runnable::run;
 
         private Builder() {}
 
@@ -127,8 +139,90 @@ public final class RuleStone {
         }
 
         /**
+         * Default timeout of every evaluation, for requests without
+         * {@link DecisionRef#timeout(Duration)}. An evaluation that takes longer fails with a
+         * {@link DecisionTimeoutException}. The engine checks the time before each rule, so it
+         * never interrupts a rule and needs no thread of its own. By default there is no timeout.
+         *
+         * @param timeout a positive duration
+         */
+        public Builder timeout(Duration timeout) {
+            Objects.requireNonNull(timeout, "timeout");
+            if (timeout.isNegative() || timeout.isZero()) {
+                throw new IllegalArgumentException("timeout must be positive");
+            }
+            this.timeout = Optional.of(timeout);
+            return this;
+        }
+
+        /**
+         * Routes a share of the traffic of decision {@code decisionId} to {@code version} instead
+         * of the version in force (a canary release). Which requests are routed depends only on
+         * their {@link DecisionRef#correlationId correlation id}, so a retried transaction always
+         * gets the same version. Requests without a correlation id, and requests that name a
+         * version, are never routed. The record of a routed evaluation says so in
+         * {@link DecisionRecord#routing()}.
+         *
+         * <p>A request is routed when the first 64 bits of the SHA-256 of
+         * {@code decisionId + "
+" + correlationId}, read as a fraction of 2<sup>64</sup>, are
+         * below {@code share}.
+         *
+         * @param share the share of correlation ids to route, above 0 and at most 1, e.g. {@code 0.05}
+         * @throws IllegalArgumentException if {@code share} is out of range, or the decision already has a canary
+         */
+        public Builder canary(String decisionId, String version, double share) {
+            Objects.requireNonNull(decisionId, "decisionId");
+            Objects.requireNonNull(version, "version");
+            if (!(share > 0 && share <= 1)) {
+                throw new IllegalArgumentException("canary share must be above 0 and at most 1");
+            }
+            if (canaryVersions.putIfAbsent(decisionId, version) != null) {
+                throw new IllegalArgumentException("decision '" + decisionId + "' already has a canary");
+            }
+            canaryShares.put(decisionId, share);
+            return this;
+        }
+
+        /**
+         * Evaluates {@code version} of decision {@code decisionId} on the same facts as every
+         * request for that decision that does not name a version (shadow mode), after the
+         * request's own evaluation. The shadow's record goes to the audit sinks, with
+         * {@link DecisionRecord#routing()} linking it to the record of the request; its result
+         * is never returned. A shadow that fails, or whose record a sink rejects, never affects
+         * the request. By default shadows run on the caller's thread; see {@link #shadowExecutor}.
+         *
+         * @throws IllegalArgumentException if the decision already has a shadow
+         */
+        public Builder shadow(String decisionId, String version) {
+            Objects.requireNonNull(decisionId, "decisionId");
+            Objects.requireNonNull(version, "version");
+            if (shadowVersions.putIfAbsent(decisionId, version) != null) {
+                throw new IllegalArgumentException("decision '" + decisionId + "' already has a shadow");
+            }
+            return this;
+        }
+
+        /**
+         * Runs shadow evaluations on {@code executor} instead of the caller's thread, so that
+         * they add no latency to requests. A shadow the executor rejects is skipped. The facts
+         * of a request must then not change after {@code evaluate} returns.
+         */
+        public Builder shadowExecutor(Executor executor) {
+            this.shadowExecutor = Objects.requireNonNull(executor, "executor");
+            return this;
+        }
+
+        /** Source of the monotonic time that timeouts are measured with; for tests. */
+        Builder nanoTime(LongSupplier nanoTime) {
+            this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
+            return this;
+        }
+
+        /**
          * @throws InvalidDecisionException listing every problem in every registered table,
-         *         including inconsistent versions (see {@link DecisionVersions#problems})
+         *         including inconsistent versions (see {@link DecisionVersions#problems}) and
+         *         canaries or shadows of unknown versions
          */
         public RuleStoneEngine build() {
             List<String> problems = new ArrayList<>();
@@ -139,6 +233,12 @@ public final class RuleStone {
             }
             byId.values().forEach(versions -> problems.addAll(
                     DecisionVersions.problems(versions.stream().map(CompiledDecision::table).toList())));
+            Map<String, DefaultRuleStoneEngine.Canary> canaries = new HashMap<>();
+            canaryVersions.forEach((id, version) -> route("canary", id, version, byId, problems)
+                    .ifPresent(d -> canaries.put(id, new DefaultRuleStoneEngine.Canary(d, canaryShares.get(id)))));
+            Map<String, CompiledDecision> shadows = new HashMap<>();
+            shadowVersions.forEach((id, version) -> route("shadow", id, version, byId, problems)
+                    .ifPresent(d -> shadows.put(id, d)));
             if (!problems.isEmpty()) {
                 throw new InvalidDecisionException(problems);
             }
@@ -151,7 +251,24 @@ public final class RuleStone {
                 }
                 return id;
             };
-            return new DefaultRuleStoneEngine(byId, clock, auditSinks, new FactsHasher(factsHashKey), checkedIds);
+            return new DefaultRuleStoneEngine(byId, clock, auditSinks, new FactsHasher(factsHashKey), checkedIds,
+                    timeout, nanoTime, new DefaultRuleStoneEngine.Routes(canaries, shadows, shadowExecutor));
+        }
+
+        /** The compiled {@code version} of decision {@code id}, or a problem if it was never registered. */
+        private Optional<CompiledDecision> route(String kind, String id, String version,
+                                                 Map<String, List<CompiledDecision>> byId, List<String> problems) {
+            Optional<CompiledDecision> decision = byId.getOrDefault(id, List.of()).stream()
+                    .filter(d -> d.table().version().equals(version)).findFirst();
+            boolean registered = tables.stream().anyMatch(t -> t.id().equals(id) && t.version().equals(version));
+            if (!registered) {
+                problems.add(kind + " " + id + "@" + version + ": "
+                        + (tables.stream().anyMatch(t -> t.id().equals(id))
+                                ? "decision '" + id + "' has no version '" + version + "'"
+                                : "unknown decision '" + id + "'"));
+            }
+            // A registered version that did not compile is already reported.
+            return decision;
         }
     }
 }

@@ -67,6 +67,8 @@
         <module>rulestone-editor</module>
         <module>rulestone-camunda8</module>
         <module>rulestone-camunda7</module>
+        <module>rulestone-audit-kafka</module>
+        <module>rulestone-benchmark</module>
     </modules>
 
     <properties>
@@ -136,6 +138,11 @@
             <dependency>
                 <groupId>vn.io.dxa.rulestone</groupId>
                 <artifactId>rulestone-camunda7</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>vn.io.dxa.rulestone</groupId>
+                <artifactId>rulestone-audit-kafka</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

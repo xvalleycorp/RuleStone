@@ -96,6 +96,7 @@ Continue with **[Getting started](docs/getting-started.md)**.
 | `rulestone-api` | Public API: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult`, exceptions. JDK only. |
 | `rulestone-core` | Decision tables, the `.stone.json` format, effective dating, the embedded engine. |
 | `rulestone-cel` | The expression language: CEL with typed inputs and `decimal`. |
+| `rulestone-audit-kafka` | Audit sink that publishes decision records to Kafka. |
 | `rulestone-bom` | Bill of materials for aligning module versions. |
 
 ## Building

@@ -43,15 +43,17 @@ Tạm thời nằm ngoài phạm vi: suy diễn có trạng thái (Rete, suy di�
 | `rulestone-dsl` | Cú pháp văn bản `.stone` ⇄ JSON, bộ định dạng | ANTLR runtime | dự kiến |
 | `rulestone-analysis` | Phân tích tĩnh: các dòng chồng lấn, khoảng trống và các dòng không bao giờ tới được, dùng SMT solver khi có | Z3 (tuỳ chọn) | dự kiến |
 | `rulestone-governance` | Quy trình maker-checker, nhật ký kiểm toán liên kết bằng chuỗi băm | `rulestone-api` | dự kiến |
-| `rulestone-simulation` | Kiểm thử ngược (backtesting) và champion/challenger trên dữ liệu lịch sử | `rulestone-core` | dự kiến |
+| `rulestone-simulation` | Kiểm thử ngược (backtesting) và champion/challenger trên dữ liệu lịch sử. Champion/challenger trên lưu lượng thật (phiên bản bóng và canary) nằm trong `rulestone-core` | `rulestone-core` | dự kiến |
 | `rulestone-repository-jdbc` / `-git` / `-s3` | Kho lưu trữ luật | client tương ứng | dự kiến |
-| `rulestone-audit-jdbc` / `-kafka` | Nơi ghi bản ghi kiểm toán (audit sink) | client tương ứng | dự kiến |
+| `rulestone-audit-kafka` | Audit sink đẩy bản ghi quyết định lên Kafka, đủ nhanh cho luồng xử lý trực tiếp (inline) | `kafka-clients` (provided) | đã có |
+| `rulestone-audit-jdbc` | Nơi ghi bản ghi kiểm toán (audit sink) | JDBC | dự kiến |
 | `rulestone-observability` | Số liệu đo (Micrometer) và truy vết (OpenTelemetry) | Micrometer, OTel API | dự kiến |
 | `rulestone-ai` | SPI cho nút AI, trợ lý soạn luật, giải thích quyết định | chỉ `rulestone-api` (không phụ thuộc nhà cung cấp LLM nào) | dự kiến |
 | `rulestone-spring-boot-starter` | Tự động cấu hình, thuộc tính cấu hình, endpoint actuator | Spring Boot | dự kiến |
 | `rulestone-server` | Dịch vụ REST và gRPC kèm OpenAPI, chạy độc lập hoặc dạng sidecar | — | dự kiến |
 | `rulestone-mcp` | Máy chủ MCP để AI agent dùng engine làm rào chắn | MCP Java SDK | dự kiến |
 | `rulestone-test` | Tiện ích JUnit 5 để kiểm thử đơn vị cho luật | JUnit | dự kiến |
+| `rulestone-benchmark` | Benchmark JMH cho việc đánh giá: độ trễ và lượng bộ nhớ cấp phát. Không phát hành | JMH | đã có |
 
 Quy tắc phụ thuộc: `core` **không bao giờ** phụ thuộc vào `ai`, `spring` hay `server`. Quy tắc này sẽ được kiểm tra bằng ArchUnit trong CI.
 
@@ -84,12 +86,13 @@ Quy tắc phụ thuộc: `core` **không bao giờ** phụ thuộc vào `ai`, `s
 
 - Luật được biên dịch (phân tích cú pháp, kiểm tra kiểu, chuyển thành chương trình CEL) **một lần** khi nạp. *Đã có.*
 - Nạp lại nóng (hot reload) hoán đổi toàn bộ tập luật đã biên dịch một cách nguyên tử. Không bao giờ tồn tại trạng thái nạp dở dang. *Đã có*, bằng cách tạo engine mới rồi hoán đổi; xem [Nạp lại luật](java-api.md#nạp-lại-luật).
-- Phát hành canary: chuyển một tỷ lệ phần trăm lưu lượng sang phiên bản mới, hoặc chạy phiên bản mới ở chế độ bóng (shadow) để so sánh mà không ảnh hưởng đến kết quả thật. *Dự kiến.*
+- Phát hành canary: chuyển một tỷ lệ phần trăm lưu lượng sang phiên bản mới, chọn theo mã tương quan, hoặc chạy phiên bản mới ở chế độ bóng (shadow) để so sánh mà không ảnh hưởng đến kết quả thật. *Đã có*; xem [Phiên bản canary và phiên bản bóng](java-api.md#phiên-bản-canary-và-phiên-bản-bóng).
 
 ## 5. Phác thảo API
 
 ```java
-// Target API. Available today: clock(), decision(), decisions(), maxIterations().
+// Target API. Available today: clock(), decision(), decisions(), maxIterations(), auditSink(),
+// KafkaAuditSink, and the timeout as RuleStone.builder().timeout(...) or DecisionRef.timeout(...).
 RuleStoneEngine engine = RuleStone.builder()
     .repository(JdbcRuleRepository.of(dataSource))
     .auditSink(KafkaAuditSink.of(producer, "rulestone.audit"))
@@ -127,7 +130,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 | Kiểm toán chống giả mạo | Bản ghi kiểm toán liên kết bằng chuỗi băm, có thể ký số, chứa đầu vào đã che, phiên bản luật, vết thực thi và kết quả. | dự kiến |
 | Khả năng giải thích | Mã lý do tường minh cùng vết thực thi có cấu trúc; AI chỉ diễn đạt lại vết thực thi. Một bản ghi quyết định cho mọi quyết định, gồm cả phiên bản, đầu ra và attribution của mô hình, được đặc tả trong [Ra quyết định AI lai](hybrid-ai.md#4-bản-ghi-quyết-định). | đã có (mã lý do, vết thực thi, bản ghi quyết định cho bảng) |
 | Bảo vệ dữ liệu cá nhân | Không có giá trị đầu vào trong vết thực thi hay thông báo ngoại lệ (đã có). `DataMasker` bật mặc định cho bản ghi kiểm toán (dự kiến). | một phần |
-| An toàn khi thực thi | CEL không có reflection hay eval; các thao tác trên danh sách có giới hạn (đã có). Thời gian chờ tối đa cho mỗi quyết định (dự kiến). | một phần |
+| An toàn khi thực thi | CEL không có reflection hay eval; các thao tác trên danh sách có giới hạn; thời gian chờ tối đa cho mỗi lần đánh giá, đặt cho cả engine hoặc cho từng yêu cầu. | đã có |
 | Tính sẵn sàng cao | Chế độ nhúng không phụ thuộc mạng trên luồng xử lý chính; nếu kho luật gặp sự cố, phiên bản đã nạp vẫn tiếp tục chạy. | đã có (chế độ nhúng) |
 | Kiểm thử thay đổi | Kiểm thử đơn vị cho luật (`rulestone-test`), phân tích tĩnh, và bắt buộc kiểm thử ngược trước khi một phiên bản chuyển sang `ACTIVE`. | dự kiến |
 
@@ -202,6 +205,6 @@ Mọi lỗi trong một định nghĩa luật đã được báo cáo cùng lúc
    - Đã xong: bảng quyết định với `FIRST`, `UNIQUE` và `COLLECT`; định dạng `.stone.json` chặt chẽ; mã băm nội dung; hiệu lực theo ngày có phát hiện chồng lấn; `decimal` trong CEL; đầu vào kiểu struct và danh sách có kiểu; vết thực thi; báo cáo cùng lúc mọi lỗi trong định nghĩa; cấp phép, SBOM và tài liệu.
    - Còn lại: kiểu `money`, kiểu `date`, mô-đun `rulestone-test`.
 3. **M2 — Quản trị:** maker-checker, kiểm toán liên kết bằng chuỗi băm, kho luật JDBC.
-4. **M3 — Tích hợp:** Spring Boot starter, máy chủ REST/gRPC, khả năng quan sát (observability), Kafka.
+4. **M3 — Tích hợp:** Spring Boot starter, máy chủ REST/gRPC, khả năng quan sát (observability), Kafka (đã có audit sink).
 5. **M4 — Phân tích và AI:** phân tích tĩnh, cú pháp văn bản `.stone`, trợ lý soạn luật, máy chủ MCP.
-6. **M5 — Mô phỏng:** kiểm thử ngược, champion/challenger, trình soạn luật trên web.
+6. **M5 — Mô phỏng:** kiểm thử ngược, champion/challenger trên dữ liệu lịch sử (trên lưu lượng thật, đã có phiên bản bóng và canary), trình soạn luật trên web.

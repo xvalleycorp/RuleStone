@@ -10,6 +10,7 @@ Trang này giải thích cách nhúng RuleStone vào một ứng dụng Java: t�
 - [Các mô-đun](#các-mô-đun)
 - [Tạo engine](#tạo-engine)
 - [Đánh giá một quyết định](#đánh-giá-một-quyết-định)
+- [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa)
 - [Đầu vào: `Facts`](#đầu-vào-facts)
 - [Tiền, ngày và ngày nghiệp vụ](#tiền-ngày-và-ngày-nghiệp-vụ)
 - [Kết quả: `DecisionResult`](#kết-quả-decisionresult)
@@ -17,6 +18,7 @@ Trang này giải thích cách nhúng RuleStone vào một ứng dụng Java: t�
 - [Fact và kết quả dạng JSON: `FactsJson`](#fact-và-kết-quả-dạng-json-factsjson)
 - [Lỗi](#lỗi)
 - [Nạp lại luật](#nạp-lại-luật)
+- [Phiên bản canary và phiên bản bóng](#phiên-bản-canary-và-phiên-bản-bóng)
 - [Đa luồng và hiệu năng](#đa-luồng-và-hiệu-năng)
 - [Dùng biểu thức trực tiếp](#dùng-biểu-thức-trực-tiếp)
 
@@ -27,6 +29,7 @@ Trang này giải thích cách nhúng RuleStone vào một ứng dụng Java: t�
 | `rulestone-api` | `vn.io.dxa.rulestone.api` | Các kiểu mà mã ứng dụng của bạn gọi tới: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult` và các ngoại lệ. Chỉ phụ thuộc JDK. |
 | `rulestone-core` | `vn.io.dxa.rulestone.core` | Engine nhúng, bảng quyết định và định dạng `.stone.json`. |
 | `rulestone-cel` | `vn.io.dxa.rulestone.cel` | Ngôn ngữ biểu thức. Được `rulestone-core` sử dụng; chỉ dùng trực tiếp khi cần đánh giá các biểu thức độc lập. |
+| `rulestone-audit-kafka` | `vn.io.dxa.rulestone.audit.kafka` | Audit sink đẩy bản ghi quyết định lên Kafka; xem [Đẩy bản ghi lên Kafka](#đẩy-bản-ghi-lên-kafka). |
 | `rulestone-bom` | — | Import để đồng bộ phiên bản. |
 
 Hãy khai báo phụ thuộc vào `rulestone-core`; mô-đun này kéo theo hai mô-đun còn lại. Mã chỉ *đánh giá* quyết định thì không cần gì ngoài các kiểu trong `api`, nên phần lớn mã nguồn của bạn có thể không phụ thuộc vào `core`:
@@ -63,7 +66,10 @@ RuleStoneEngine engine = RuleStone.builder()
 | `auditSink(AuditSink)` | Nhận `DecisionRecord` của mọi lần đánh giá, dù thành công hay thất bại. Có thể gọi nhiều lần; các sink chạy theo thứ tự. Xem [Bản ghi quyết định và kiểm toán](#bản-ghi-quyết-định-và-kiểm-toán). |
 | `factsHashKey(byte[])` | Biến `DecisionRecord.factsHash()` thành HMAC-SHA256 với khoá này (tối thiểu 16 byte; nên dùng 32 byte ngẫu nhiên từ kho khoá của bạn). Nếu không có khoá, hash là SHA-256 thông thường. |
 | `recordIds(Supplier<String>)` | Nguồn sinh id cho bản ghi. Mặc định là UUID ngẫu nhiên. |
-| `build()` | Biên dịch và kiểm tra kiểu mọi luật, kiểm tra các phiên bản trùng lặp và ngày tháng mâu thuẫn (xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực)), rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
+| `timeout(Duration)` | Thời gian chờ tối đa mặc định của mọi lần đánh giá, cho các yêu cầu không tự đặt; xem [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa). Mặc định không có. |
+| `canary(String, String, double)` / `shadow(String, String)` | Chuyển một phần yêu cầu của một quyết định sang phiên bản mới, hoặc đánh giá phiên bản mới ở chế độ bóng trên mọi yêu cầu; xem [Phiên bản canary và phiên bản bóng](#phiên-bản-canary-và-phiên-bản-bóng). |
+| `shadowExecutor(Executor)` | Chạy các lần đánh giá bóng trên executor này thay vì trên luồng của bên gọi. |
+| `build()` | Biên dịch và kiểm tra kiểu mọi luật, kiểm tra các phiên bản trùng lặp và ngày tháng mâu thuẫn (xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực)) và việc mỗi canary và phiên bản bóng đều trỏ tới một phiên bản đã đăng ký, rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
 
 `DecisionTableJson.read(...)` nhận một `String`, một `InputStream` (đọc theo UTF-8) hoặc một `Path`, và ném `InvalidDecisionException` khi tệp có bất kỳ lỗi nào. Hãy nạp tệp từ bất cứ nơi nào bạn lưu chúng: classpath, một thư mục, một cột trong cơ sở dữ liệu hay một dịch vụ cấu hình.
 
@@ -94,10 +100,35 @@ DecisionResult result = engine.evaluate(
 |---|---|
 | `DecisionRef.of("loan_eligibility")` | Phiên bản có hiệu lực hôm nay, theo đồng hồ của engine. |
 | `DecisionRef.of("loan_eligibility").asOf(date)` | Phiên bản có hiệu lực vào ngày `date`. **Nên dùng**: kết quả không phụ thuộc vào thời điểm mã chạy. |
-| `DecisionRef.of("loan_eligibility").version("2")` | Đúng phiên bản `2`, bất kể ngày. Dùng để chạy lại và điều tra. |
+| `DecisionRef.of("loan_eligibility").version("2")` | Đúng phiên bản `2`, bất kể ngày: kể cả một phiên bản chỉ có hiệu lực về sau, hoặc đã hết hiệu lực. Dùng để chạy lại, điều tra, và thử một phiên bản trước ngày hiệu lực của nó. |
 | `….correlationId("LOAN-2026-000123")` | Ghi mã giao dịch nghiệp vụ của bạn (mã tương quan) vào bản ghi quyết định, để có thể đối chiếu với dữ liệu của bạn. Mã này không được chứa dữ liệu cá nhân. Dùng kết hợp được với mọi dòng ở trên. |
+| `….timeout(Duration.ofMillis(2))` | Làm việc đánh giá thất bại với `DecisionTimeoutException` nếu nó kéo dài hơn mức này; xem [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa). Dùng kết hợp được với mọi dòng ở trên. |
 
 Hãy dùng ngày nghiệp vụ của giao dịch cho `asOf`: ngày nộp hồ sơ với khoản vay, ngày giá trị với khoản thanh toán. Khi đó đánh giá lại cùng một hồ sơ về sau vẫn cho cùng câu trả lời. Ngày này cũng được chuyển tới các luật qua đầu vào ngầm định `businessDate`; nếu không có `asOf`, đó là ngày hôm nay theo đồng hồ của engine, kể cả khi bạn chỉ định phiên bản.
+
+## Thời gian chờ tối đa
+
+Một lần đánh giá thường chỉ mất vài micro giây, nhưng một bảng có thể chạy lâu bất ngờ: một danh sách lớn trong fact, một `filter` trên lịch sử dài, một bảng `COLLECT` có nhiều luật. Khi bên gọi có hạn chót riêng, chẳng hạn một khoản thanh toán phải được quyết định trong deadline gRPC của nó, hãy giao cho việc đánh giá phần thời gian còn lại:
+
+```java
+Duration left = Duration.between(clock.instant(), deadline);
+if (left.isNegative() || left.isZero()) {
+    return fallback.decide(payment);
+}
+try {
+    DecisionResult result = engine.evaluate(
+            DecisionRef.of("gate_decision").asOf(valueDate).correlationId(paymentId).timeout(left),
+            facts);
+    return Decision.from(result);
+} catch (DecisionTimeoutException e) {
+    return fallback.decide(payment);   // e.trace() lists the rules examined in time
+}
+```
+
+- Thời gian chờ được tính từ lúc gọi `evaluate`, theo đồng hồ đơn điệu (`System.nanoTime()`), không bao giờ theo đồng hồ của engine: nó giới hạn thời gian một lần đánh giá chạy, và không bao giờ làm thay đổi kết quả.
+- Engine kiểm tra thời gian trước mỗi luật. Nó không cần luồng riêng và không bao giờ ngắt một luật giữa chừng, nên một lần đánh giá có thể vượt thời gian chờ thêm đúng thời gian của một luật. `maxIterations` giới hạn khoảng đó.
+- Một lần đánh giá hết thời gian sẽ thất bại với `DecisionTimeoutException`, một `DecisionEvaluationException`, với `timeout()` và `trace()` cho biết giới hạn là bao nhiêu và những luật nào đã được xét. Bản ghi quyết định của nó có trạng thái `TIMEOUT` và cho thấy các luật đã khớp tới lúc đó. Bản ghi vẫn được gửi tới mọi audit sink, nên thời gian của các sink được cộng thêm.
+- `RuleStone.builder().timeout(...)` đặt giá trị mặc định cho các yêu cầu không tự đặt. `timeout` của một yêu cầu thay thế giá trị đó, kể cả khi dài hơn.
 
 ## Đầu vào: `Facts`
 
@@ -253,12 +284,13 @@ DecisionResult result = engine.evaluate(
 | `decision`, `version` | Quyết định được yêu cầu và phiên bản chính xác đã dùng. `version` bị bỏ qua nếu không tìm thấy phiên bản nào. |
 | `businessDate`, `evaluatedAt` | Ngày mà quyết định được đưa ra cho, và thời điểm bắt đầu đánh giá, đều lấy từ đồng hồ của engine, trừ khi `asOf` đã cho ngày. |
 | `engine` | Phiên bản RuleStone, lấy từ manifest của jar; là `rulestone dev` khi chạy từ các lớp chưa đóng gói. |
-| `status` | `OK`, hoặc `ERROR` nếu bên gọi nhận về một exception. Một quyết định không khớp luật nào vẫn là `OK`, không có reason code. |
+| `status` | `OK`; `ERROR` nếu bên gọi nhận về một exception; `TIMEOUT` nếu việc đánh giá hết thời gian (xem [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa)). Một quyết định không khớp luật nào vẫn là `OK`, không có reason code. |
 | `factsHash` | Hash của các đầu vào đã khai báo; xem bên dưới. Bị bỏ qua nếu đầu vào không hợp lệ. |
-| `output` | Các đầu ra, viết theo cách của `FactsJson`. Rỗng khi trạng thái là `ERROR`. |
+| `output` | Các đầu ra, viết theo cách của `FactsJson`. Rỗng khi trạng thái không phải `OK`. |
 | `reasonCodes` | Từng reason code kèm nút đã tạo ra nó. |
 | `path` | Từng nút đã được đánh giá: hiện tại là bảng quyết định, kèm phiên bản và các luật đã khớp. Khi việc đánh giá lỗi giữa chừng trong một bảng, trường này cho thấy các luật đã khớp trước khi lỗi. |
-| `error` | Chỉ có khi trạng thái là `ERROR`: thông điệp của exception, không bao giờ chứa giá trị đầu vào. Với exception không phải `RuleStoneException`, chỉ kiểu exception được ghi lại. |
+| `error` | Chỉ có khi trạng thái không phải `OK`: thông điệp của exception, không bao giờ chứa giá trị đầu vào. Với exception không phải `RuleStoneException`, chỉ kiểu exception được ghi lại. |
+| `routing` | Chỉ có khi một phiên bản khác với phiên bản đang có hiệu lực được đánh giá, dưới dạng canary hoặc phiên bản bóng; xem [Phiên bản canary và phiên bản bóng](#phiên-bản-canary-và-phiên-bản-bóng). |
 
 **Không có giá trị đầu vào.** Bản ghi không bao giờ chứa giá trị đầu vào. Thay vào đó, `factsHash` định danh các đầu vào: nó được tính trên các đầu vào đã khai báo ở dạng chuẩn hoá, nên các đầu vào tương đương luôn cho cùng một hash. Ở dạng chuẩn hoá này:
 
@@ -271,6 +303,42 @@ DecisionResult result = engine.evaluate(
 **Hãy dùng khoá.** Nếu không có `factsHashKey`, hash là SHA-256 thông thường. Khi đó, ai có được bản ghi có thể thử đoán các đầu vào ít biến thể, như ngày sinh, rồi so với hash. Khi có khoá, hash là HMAC-SHA256 (`hmac-sha256:…`), và chỉ người giữ khoá mới làm được việc đó. Hãy dùng cùng một khoá ở mọi nơi kiểm chứng bản ghi.
 
 **Sink phải thành công.** Các sink chạy đồng bộ trên luồng đang đánh giá. Nếu một sink ném lỗi, việc đánh giá thất bại với `AuditException` và bên gọi không nhận được kết quả: một quyết định không bao giờ được trả về khi bản ghi của nó chưa được chấp nhận. Sink nào không được làm chậm quyết định có thể chuyển bản ghi vào hàng đợi riêng của nó. Khi việc đánh giá đã thất bại và một sink cũng lỗi, bên gọi nhận exception ban đầu, kèm `AuditException` dưới dạng exception bị nén (suppressed).
+
+### Đẩy bản ghi lên Kafka
+
+`rulestone-audit-kafka` đẩy bản ghi lên một topic Kafka, viết bằng `DecisionRecordJson` và dùng mã tương quan làm khoá, để các bản ghi của một giao dịch luôn theo đúng thứ tự trên cùng một partition. Nó đủ nhanh cho luồng xử lý trực tiếp (inline): nó chuyển mỗi bản ghi vào bộ đệm của producer và không chờ broker. Bạn tự cung cấp Kafka client; mô-đun được biên dịch với `kafka-clients` 4.4 và không phân phối lại thư viện này.
+
+```xml
+<dependency>
+    <groupId>vn.io.dxa.rulestone</groupId>
+    <artifactId>rulestone-audit-kafka</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka-clients</artifactId>
+    <version>4.4.0</version>
+</dependency>
+```
+
+```java
+Producer<String, String> producer = new KafkaProducer<>(kafkaConfig, new StringSerializer(), new StringSerializer());
+
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)
+        .auditSink(KafkaAuditSink.builder(producer, "rulestone.decisions")
+                .failWhenBufferBelow(1 << 20)   // fail at once when less than 1 MiB of buffer is free
+                .onDeliveryFailure((recordId, e) -> undelivered.add(recordId))
+                .build())
+        .build();
+```
+
+Với một sink bất đồng bộ, "đã chấp nhận" nghĩa là producer đã nhận bản ghi:
+
+- **Việc đánh giá thất bại** với `AuditException` khi producer từ chối bản ghi ngay lập tức: bộ đệm đã đầy, không lấy được metadata của topic kịp thời, hoặc producer đã đóng. `KafkaProducer` báo bộ đệm đầy qua một `Future` đã thất bại chứ không ném exception; sink kiểm tra điều này, nên một bản ghi như vậy không bao giờ được tính là đã chấp nhận.
+- **Khi bộ đệm đầy dần**, vì broker không theo kịp hoặc không kết nối được, mặc định sink thất bại ngay: nó từ chối bản ghi khi còn trống ít hơn `failWhenBufferBelow` byte (mặc định 1 MiB; hãy dùng ít nhất bằng `batch.size` của producer). `blockWhenBufferFull()` thì để producer chờ có chỗ, tối đa `max.block.ms` của nó. Trên luồng xử lý trực tiếp, thất bại ngay an toàn hơn: phương án dự phòng của bạn quyết định, thay vì khoản thanh toán phải chờ nhật ký kiểm toán. Dù chọn cách nào, `max.block.ms` cũng là thời gian lâu nhất một lần ghi có thể bị chặn, kể cả khi producer lấy metadata của topic sau khi khởi động, nên hãy đặt nó theo mức bên gọi chịu được.
+- **Một bản ghi producer đã nhận nhưng không gửi được**, sau các lần thử lại và `delivery.timeout.ms`, được báo cho `onDeliveryFailure` kèm id bản ghi, và được đếm bởi `deliveryFailures()`. Lúc đó quyết định đã được trả về, nên hãy giám sát cả hai. Hãy giữ các giá trị mặc định `acks=all` và `enable.idempotence=true` của producer.
+
+Sink không đóng producer: hãy đóng nó khi ứng dụng dừng, sau khi engine không còn được dùng, để các bản ghi còn trong bộ đệm được gửi đi.
 
 ## Fact và kết quả dạng JSON: `FactsJson`
 
@@ -322,6 +390,7 @@ Mọi ngoại lệ đều kế thừa `RuleStoneException`, một unchecked exce
 | `InvalidFactsException` (core) | Khi đọc fact hoặc giá trị JSON bằng `FactsJson`. `problems()` liệt kê mọi lỗi kèm vị trí. | Từ chối yêu cầu vì đầu vào không hợp lệ, ví dụ trả về HTTP 400 kèm danh sách lỗi. |
 | `DecisionNotFoundException` (api) | Không có quyết định với id đó, không có phiên bản đó, hoặc không có phiên bản nào có hiệu lực vào ngày đó. | Lỗi cấu hình: kiểm tra các phiên bản đã đăng ký và ngày hiệu lực của chúng. |
 | `AuditException` (api) | Một audit sink ném lỗi khi nhận bản ghi quyết định; exception của sink là nguyên nhân, và `recordId()` cho biết bản ghi nào. | Coi như lỗi hệ thống: quyết định đã không được trả về và không được giả định. |
+| `DecisionTimeoutException` (api) | Việc đánh giá kéo dài hơn thời gian chờ tối đa. Là một `DecisionEvaluationException`, nên hãy bắt nó trước. `timeout()` và `trace()` cho biết giới hạn là bao nhiêu và những luật nào đã được xét. | Áp dụng phương án dự phòng cho một quyết định không đưa ra kịp. |
 | `DecisionEvaluationException` (api) | Đầu vào không hợp lệ (thiếu, sai kiểu, số dấu phẩy động cho một decimal, một fact tên `businessDate`), một biểu thức lỗi lúc chạy, hoặc một bảng `UNIQUE` có nhiều luật cùng khớp. `decisionId()` và `ruleVersion()` xác định quyết định. | Coi như lỗi hệ thống đối với hồ sơ này, ví dụ chuyển sang xem xét thủ công. **Không thay bằng một quyết định mặc định.** |
 
 Thông báo ngoại lệ nêu tên quyết định, luật, đầu vào hoặc trường liên quan, không bao giờ nêu giá trị đầu vào. Hãy ghi log chúng như mọi lỗi khác.
@@ -347,6 +416,40 @@ DecisionResult evaluate(DecisionRef ref, Facts facts) {
 ```
 
 Vì `build()` kiểm tra mọi thứ trước, một thay đổi không hợp lệ không bao giờ thay thế được bộ luật đang chạy tốt, và một yêu cầu không bao giờ thấy tập luật nạp dở dang. Yêu cầu nào đã bắt đầu trên engine cũ thì kết thúc trên engine cũ.
+
+## Phiên bản canary và phiên bản bóng
+
+Trước khi một phiên bản mới của quyết định thay thế phiên bản cũ, bạn có thể chạy nó trên lưu lượng thật mà không làm thay đổi bất kỳ câu trả lời nào (phiên bản bóng), rồi để nó trả lời cho một phần nhỏ yêu cầu (canary):
+
+```java
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)                     // versions 1, 2 and 3 of gate_decision
+        .canary("gate_decision", "2", 0.05)    // 5% of correlation ids get version 2
+        .shadow("gate_decision", "3")          // version 3 is evaluated on every request, only to be recorded
+        .shadowExecutor(shadowPool)            // off the caller's thread
+        .auditSink(auditSink)
+        .build();
+```
+
+Việc định tuyến áp dụng cho các yêu cầu không chỉ định phiên bản; yêu cầu có `DecisionRef.version` nhận đúng phiên bản đó. Cả canary lẫn phiên bản bóng đều không cần đang có hiệu lực: một phiên bản có `effectiveFrom` ở tương lai vẫn có thể được thử trên lưu lượng hôm nay, với `businessDate` của hôm nay.
+
+**Canary.** Một yêu cầu được chuyển sang canary khi mã tương quan của nó rơi vào phần lưu lượng của canary: 64 bit đầu của SHA-256 của `"<decision id>\n<correlation id>"`, đọc như một phân số, nhỏ hơn tỷ lệ của canary. Nhờ vậy một khoản thanh toán được thử lại luôn nhận cùng phiên bản, và hai quyết định có canary chia lưu lượng độc lập với nhau. Yêu cầu không có mã tương quan luôn nhận phiên bản đang có hiệu lực. Bên gọi nhận kết quả của canary, và bản ghi của nó cho biết lý do:
+
+```json
+"routing": { "kind": "CANARY", "champion": "1@sha256:9b1d…", "share": 0.05 }
+```
+
+`version` là phiên bản canary; `champion` là phiên bản đang có hiệu lực mà yêu cầu lẽ ra đã dùng. Khi tới `effectiveFrom` của canary, nó có hiệu lực cho mọi yêu cầu, và các bản ghi không còn `routing` nữa.
+
+**Phiên bản bóng.** Sau mỗi yêu cầu cho quyết định, engine đánh giá phiên bản bóng trên cùng các fact, với cùng `businessDate`, và gửi bản ghi của nó tới các audit sink. Bên gọi không bao giờ thấy kết quả của phiên bản bóng, và một phiên bản bóng thất bại, hoặc có bản ghi bị một sink từ chối, không bao giờ ảnh hưởng tới yêu cầu. Bản ghi của phiên bản bóng liên kết tới bản ghi của yêu cầu:
+
+```json
+"routing": { "kind": "SHADOW", "champion": "1@sha256:9b1d…", "shadowOf": "3f6c2a8e-5b1d-4e7a-9c0f-2d8b6e4a1c75" }
+```
+
+Để so sánh champion và challenger, hãy nối các bản ghi bóng qua `shadowOf` với các bản ghi có `recordId` mà nó trỏ tới, rồi so sánh `output` và `reasonCodes`. Hai bản ghi có cùng `factsHash` khi hai phiên bản khai báo cùng các đầu vào. Mặc định phiên bản bóng chạy trên luồng của bên gọi sau lần đánh giá của chính yêu cầu, nên thời gian của nó cộng vào mọi yêu cầu; với `shadowExecutor` nó chạy trên executor của bạn, và phiên bản bóng nào bị executor từ chối thì bị bỏ qua. Khi đó các fact không được thay đổi sau khi `evaluate` trả về.
+
+Phiên bản bóng bị bỏ qua khi yêu cầu chỉ định phiên bản, khi không tìm thấy phiên bản nào cho yêu cầu, và khi yêu cầu đã dùng chính phiên bản bóng, chẳng hạn làm canary. Để đổi tỷ lệ, hoặc nâng canary thành phiên bản chính, hãy tạo engine mới rồi hoán đổi, như trong [Nạp lại luật](#nạp-lại-luật).
 
 ## Đa luồng và hiệu năng
 

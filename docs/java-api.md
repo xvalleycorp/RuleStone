@@ -5,6 +5,7 @@ This page explains how to embed RuleStone in a Java application: building an eng
 - [Modules](#modules)
 - [Building an engine](#building-an-engine)
 - [Evaluating a decision](#evaluating-a-decision)
+- [Timeouts](#timeouts)
 - [Inputs: `Facts`](#inputs-facts)
 - [Money, dates and the business date](#money-dates-and-the-business-date)
 - [Results: `DecisionResult`](#results-decisionresult)
@@ -12,6 +13,7 @@ This page explains how to embed RuleStone in a Java application: building an eng
 - [JSON facts and results: `FactsJson`](#json-facts-and-results-factsjson)
 - [Errors](#errors)
 - [Reloading rules](#reloading-rules)
+- [Canary and shadow versions](#canary-and-shadow-versions)
 - [Threading and performance](#threading-and-performance)
 - [Using expressions directly](#using-expressions-directly)
 
@@ -22,6 +24,7 @@ This page explains how to embed RuleStone in a Java application: building an eng
 | `rulestone-api` | `vn.io.dxa.rulestone.api` | Types your application code calls: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult` and the exceptions. Depends on the JDK only. |
 | `rulestone-core` | `vn.io.dxa.rulestone.core` | The embedded engine, decision tables and the `.stone.json` format. |
 | `rulestone-cel` | `vn.io.dxa.rulestone.cel` | The expression language. Used by `rulestone-core`; use it directly only to evaluate stand-alone expressions. |
+| `rulestone-audit-kafka` | `vn.io.dxa.rulestone.audit.kafka` | An audit sink that publishes decision records to Kafka; see [Publishing records to Kafka](#publishing-records-to-kafka). |
 | `rulestone-bom` | — | Import to align versions. |
 
 Depend on `rulestone-core`; it brings in the other two. Code that only *evaluates* decisions needs nothing beyond the `api` types, so you can keep `core` out of most of your codebase:
@@ -58,7 +61,10 @@ RuleStoneEngine engine = RuleStone.builder()
 | `auditSink(AuditSink)` | Receives the `DecisionRecord` of every evaluation, successful or not. May be called several times; sinks run in order. See [Decision records and auditing](#decision-records-and-auditing). |
 | `factsHashKey(byte[])` | Makes `DecisionRecord.factsHash()` an HMAC-SHA256 with this key (at least 16 bytes; use 32 random bytes from your key store). Without it, the hash is plain SHA-256. |
 | `recordIds(Supplier<String>)` | Source of record ids. Defaults to random UUIDs. |
-| `build()` | Compiles and type-checks every rule, checks versions for duplicates and contradictory dates (see [Versions and effective dates](decision-tables.md#versions-and-effective-dates)), and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
+| `timeout(Duration)` | Default timeout of every evaluation, for requests without their own; see [Timeouts](#timeouts). By default there is none. |
+| `canary(String, String, double)` / `shadow(String, String)` | Routes a share of the requests for a decision to a new version, or evaluates a new version in shadow on every request; see [Canary and shadow versions](#canary-and-shadow-versions). |
+| `shadowExecutor(Executor)` | Runs shadow evaluations on this executor instead of the caller's thread. |
+| `build()` | Compiles and type-checks every rule, checks versions for duplicates and contradictory dates (see [Versions and effective dates](decision-tables.md#versions-and-effective-dates)) and that every canary and shadow names a registered version, and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
 
 `DecisionTableJson.read(...)` accepts a `String`, an `InputStream` (read as UTF-8) or a `Path`, and throws `InvalidDecisionException` for any problem in the file. Load files from wherever you keep them: the classpath, a directory, a database column or a configuration service.
 
@@ -89,10 +95,35 @@ DecisionResult result = engine.evaluate(
 |---|---|
 | `DecisionRef.of("loan_eligibility")` | Effective today, according to the engine clock. |
 | `DecisionRef.of("loan_eligibility").asOf(date)` | Effective on `date`. **Recommended**: the result does not depend on when the code runs. |
-| `DecisionRef.of("loan_eligibility").version("2")` | Exactly version `2`, regardless of dates. For replays and investigations. |
+| `DecisionRef.of("loan_eligibility").version("2")` | Exactly version `2`, regardless of dates: also a version that takes effect only later, or is no longer in force. For replays, investigations and trying a version before its effective date. |
 | `….correlationId("LOAN-2026-000123")` | Adds your id for the business transaction to the decision record, so that it can be joined with your own data. It must not contain personal data. Combines with any of the above. |
+| `….timeout(Duration.ofMillis(2))` | Fails the evaluation with a `DecisionTimeoutException` if it takes longer; see [Timeouts](#timeouts). Combines with any of the above. |
 
 Use the business date of the transaction for `asOf`: the application date for a loan, the value date for a payment. Then re-evaluating the same case later gives the same answer. The same date reaches the rules as their implicit `businessDate` input; without `asOf` it is today according to the engine clock, also when you name a version.
+
+## Timeouts
+
+An evaluation usually takes microseconds, but a table can take unexpectedly long: a large list in the facts, a `filter` over a long history, a `COLLECT` table with many rules. When the caller has a deadline of its own, such as a payment that must be decided within its gRPC deadline, give the evaluation the time that is left:
+
+```java
+Duration left = Duration.between(clock.instant(), deadline);
+if (left.isNegative() || left.isZero()) {
+    return fallback.decide(payment);
+}
+try {
+    DecisionResult result = engine.evaluate(
+            DecisionRef.of("gate_decision").asOf(valueDate).correlationId(paymentId).timeout(left),
+            facts);
+    return Decision.from(result);
+} catch (DecisionTimeoutException e) {
+    return fallback.decide(payment);   // e.trace() lists the rules examined in time
+}
+```
+
+- The timeout counts from the call to `evaluate`, on a monotonic clock (`System.nanoTime()`), never the engine clock: it bounds how long an evaluation takes and never changes its result.
+- The engine checks the time before each rule. It needs no thread of its own, and it never interrupts a rule half-way, so an evaluation can overrun its timeout by the time one rule takes. `maxIterations` bounds that.
+- An evaluation that runs out of time fails with a `DecisionTimeoutException`, a `DecisionEvaluationException`, whose `timeout()` and `trace()` say what the limit was and which rules were examined. Its decision record has the status `TIMEOUT` and shows the rules that matched until then. The record still goes to every audit sink, so the time the sinks take comes on top.
+- `RuleStone.builder().timeout(...)` sets a default for requests without their own. A request's `timeout` replaces it, also when it is longer.
 
 ## Inputs: `Facts`
 
@@ -248,12 +279,13 @@ DecisionResult result = engine.evaluate(
 | `decision`, `version` | The decision requested and the exact version used. `version` is left out if no version was found. |
 | `businessDate`, `evaluatedAt` | The date the decision was made for, and the instant evaluation started, both from the engine clock unless `asOf` gave the date. |
 | `engine` | The RuleStone version, from the jar's manifest; `rulestone dev` when run from unpackaged classes. |
-| `status` | `OK`, or `ERROR` if the caller received an exception. A decision that matched no rule is `OK` with no reason codes. |
+| `status` | `OK`; `ERROR` if the caller received an exception; `TIMEOUT` if the evaluation ran out of time (see [Timeouts](#timeouts)). A decision that matched no rule is `OK` with no reason codes. |
 | `factsHash` | A hash of the declared inputs; see below. Left out if the inputs were invalid. |
-| `output` | The outputs, written as by `FactsJson`. Empty when the status is `ERROR`. |
+| `output` | The outputs, written as by `FactsJson`. Empty unless the status is `OK`. |
 | `reasonCodes` | Each reason code with the node that produced it. |
 | `path` | Each node evaluated: today, the decision table with its version and the rules that matched. When evaluation fails inside a table, it shows the rules that matched before the failure. |
-| `error` | Present only when the status is `ERROR`: the exception's message, which never contains input values. For exceptions that are not `RuleStoneException`s, only the exception type is recorded. |
+| `error` | Present only when the status is not `OK`: the exception's message, which never contains input values. For exceptions that are not `RuleStoneException`s, only the exception type is recorded. |
+| `routing` | Present only when a version other than the one in force was evaluated, as a canary or a shadow; see [Canary and shadow versions](#canary-and-shadow-versions). |
 
 **No input values.** A record never contains input values. `factsHash` identifies the inputs instead: it is computed over the declared inputs in a canonical form, so equivalent inputs always give the same hash. In this canonical form:
 
@@ -266,6 +298,42 @@ To verify a decision later, recompute the hash from the inputs you stored and co
 **Use a key.** Without `factsHashKey`, the hash is plain SHA-256. Someone who has a record could then test guesses of low-variety inputs, such as a birth date, against it. With a key, the hash is HMAC-SHA256 (`hmac-sha256:…`), and only holders of the key can do that. Use the same key wherever records are verified.
 
 **Sinks must succeed.** Sinks run synchronously on the evaluating thread. If a sink throws, the evaluation fails with an `AuditException` and the caller gets no result: a decision is never returned without its record having been accepted. A sink that must not slow decisions down can hand records to its own queue. When an evaluation has already failed and a sink also fails, the caller receives the original exception, with the `AuditException` attached as suppressed.
+
+### Publishing records to Kafka
+
+`rulestone-audit-kafka` publishes records to a Kafka topic, written by `DecisionRecordJson` and keyed by correlation id, so that the records of one transaction stay in order on one partition. It is fast enough for an inline path: it hands each record to the producer's buffer and does not wait for the broker. Bring your own Kafka client; the module is compiled against `kafka-clients` 4.4 and does not redistribute it.
+
+```xml
+<dependency>
+    <groupId>vn.io.dxa.rulestone</groupId>
+    <artifactId>rulestone-audit-kafka</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka-clients</artifactId>
+    <version>4.4.0</version>
+</dependency>
+```
+
+```java
+Producer<String, String> producer = new KafkaProducer<>(kafkaConfig, new StringSerializer(), new StringSerializer());
+
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)
+        .auditSink(KafkaAuditSink.builder(producer, "rulestone.decisions")
+                .failWhenBufferBelow(1 << 20)   // fail at once when less than 1 MiB of buffer is free
+                .onDeliveryFailure((recordId, e) -> undelivered.add(recordId))
+                .build())
+        .build();
+```
+
+For an asynchronous sink, "accepted" means that the producer has taken the record:
+
+- **The evaluation fails** with an `AuditException` when the producer refuses the record at once: its buffer is full, the topic's metadata cannot be fetched in time, or the producer is closed. `KafkaProducer` reports a full buffer through a failed `Future` rather than an exception; the sink checks for it, so such a record is never counted as accepted.
+- **When the buffer fills up**, because the brokers cannot keep up or cannot be reached, the sink fails fast by default: it refuses records once less than `failWhenBufferBelow` bytes are free (1 MiB by default; use at least the producer's `batch.size`). `blockWhenBufferFull()` lets the producer wait for space instead, for up to its `max.block.ms`. On an inline path, failing fast is safer: your fallback decides instead of the payment waiting on the audit log. Either way, `max.block.ms` is the longest a write can block, also while the producer fetches the topic's metadata after it starts, so set it to what your callers can afford.
+- **A record the producer took but could not deliver**, after its retries and `delivery.timeout.ms`, is reported to `onDeliveryFailure` with the record id, and counted by `deliveryFailures()`. By then the decision has been returned, so monitor both. Keep the producer's defaults `acks=all` and `enable.idempotence=true`.
+
+The sink does not close the producer: close it when the application stops, after the engine is no longer used, so that buffered records are sent.
 
 ## JSON facts and results: `FactsJson`
 
@@ -317,6 +385,7 @@ All exceptions extend `RuleStoneException`, an unchecked exception.
 | `InvalidFactsException` (core) | Reading JSON facts or values with `FactsJson`. `problems()` lists every problem with its location. | Reject the request as invalid input, e.g. with HTTP 400 and the problems. |
 | `DecisionNotFoundException` (api) | No decision with that id, no such version, or no version effective on the date. | Configuration error: check registered versions and their dates. |
 | `AuditException` (api) | An audit sink threw while accepting a decision record; the sink's exception is the cause and `recordId()` names the record. | Treat as a system failure: the decision was not returned and must not be assumed. |
+| `DecisionTimeoutException` (api) | The evaluation took longer than its timeout. A `DecisionEvaluationException`, so catch it first. `timeout()` and `trace()` say what the limit was and which rules were examined. | Apply your fallback for a decision that could not be made in time. |
 | `DecisionEvaluationException` (api) | Invalid input (missing, wrong type, floating point for a decimal, a fact named `businessDate`), an expression failing at run time, or a `UNIQUE` table with several matches. `decisionId()` and `ruleVersion()` identify the decision. | Treat as a system failure for this case, e.g. route it to manual review. **Do not substitute a default decision.** |
 
 Exception messages name the decision, rule, input or field involved, never input values. Log them as you would any error.
@@ -342,6 +411,40 @@ DecisionResult evaluate(DecisionRef ref, Facts facts) {
 ```
 
 Because `build()` validates everything first, an invalid change never replaces working rules, and a request never sees a half-loaded rule set. A request that started on the old engine finishes on it.
+
+## Canary and shadow versions
+
+Before a new version of a decision takes over, you can run it on live traffic without changing a single answer (shadow), then let it answer for a small share of the requests (canary):
+
+```java
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)                     // versions 1, 2 and 3 of gate_decision
+        .canary("gate_decision", "2", 0.05)    // 5% of correlation ids get version 2
+        .shadow("gate_decision", "3")          // version 3 is evaluated on every request, only to be recorded
+        .shadowExecutor(shadowPool)            // off the caller's thread
+        .auditSink(auditSink)
+        .build();
+```
+
+Routing applies to requests that do not name a version; a request with `DecisionRef.version` gets exactly that version. Neither the canary nor the shadow needs to be in force: a version whose `effectiveFrom` is still to come can be tried on today's traffic, with today's `businessDate`.
+
+**Canary.** A request goes to the canary when its correlation id falls into the canary's share: the first 64 bits of the SHA-256 of `"<decision id>\n<correlation id>"`, as a fraction, are below the share. So a retried payment always gets the same version, and two decisions with canaries split their traffic independently. Requests without a correlation id always get the version in force. The caller receives the canary's result, and its record says why:
+
+```json
+"routing": { "kind": "CANARY", "champion": "1@sha256:9b1d…", "share": 0.05 }
+```
+
+`version` is the canary's version; `champion` is the version in force that the request would otherwise have used. Once the canary's `effectiveFrom` arrives it is in force for every request, and records no longer carry `routing`.
+
+**Shadow.** After each request for the decision, the engine evaluates the shadow version on the same facts, with the same `businessDate`, and hands its record to the audit sinks. The caller never sees the shadow's result, and a shadow that fails, or whose record a sink rejects, never affects the request. The shadow's record links to the request's:
+
+```json
+"routing": { "kind": "SHADOW", "champion": "1@sha256:9b1d…", "shadowOf": "3f6c2a8e-5b1d-4e7a-9c0f-2d8b6e4a1c75" }
+```
+
+To compare champion and challenger, join the records of shadows on `shadowOf` with the records whose `recordId` it names, and compare `output` and `reasonCodes`. Both have the same `factsHash` when the two versions declare the same inputs. By default the shadow runs on the caller's thread after the request's own evaluation, which adds its time to every request; with `shadowExecutor` it runs on your executor instead, and a shadow the executor rejects is skipped. The facts must then not change after `evaluate` returns.
+
+A shadow is skipped when the request names a version, when no version was found for it, and when the request already used the shadow version, for example as its canary. Change the share, or promote the canary, by building a new engine and swapping it in, as in [Reloading rules](#reloading-rules).
 
 ## Threading and performance
 

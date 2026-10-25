@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.HexFormat;
 import java.util.regex.Pattern;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
+import vn.io.dxa.rulestone.api.DecisionTimeoutException;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.TraceStep;
 import vn.io.dxa.rulestone.cel.Bindings;
@@ -168,23 +169,26 @@ final class CompiledDecision {
     /**
      * Applies the rules.
      *
-     * @param trace receives each rule examined as it is examined, so that it shows how far
-     *              evaluation got if it fails
+     * @param trace    receives each rule examined as it is examined, so that it shows how far
+     *                 evaluation got if it fails
+     * @param deadline checked before each rule
+     * @throws DecisionTimeoutException    if the deadline passes before every rule needed is examined
      * @throws DecisionEvaluationException if a rule fails or the hit policy is violated
      */
-    Outcome evaluate(Bindings bindings, List<TraceStep> trace) {
+    Outcome evaluate(Bindings bindings, List<TraceStep> trace, Deadline deadline) {
         return switch (table.hitPolicy()) {
-            case FIRST -> first(bindings, trace);
-            case UNIQUE -> unique(bindings, trace);
-            case COLLECT -> collect(bindings, trace);
+            case FIRST -> first(bindings, trace, deadline);
+            case UNIQUE -> unique(bindings, trace, deadline);
+            case COLLECT -> collect(bindings, trace, deadline);
         };
     }
 
     /** The outputs and reason codes of one evaluation. */
     record Outcome(Map<String, Object> output, List<String> reasonCodes) {}
 
-    private Outcome first(Bindings bindings, List<TraceStep> trace) {
+    private Outcome first(Bindings bindings, List<TraceStep> trace, Deadline deadline) {
         for (CompiledRule rule : rules) {
+            checkTime(trace, deadline);
             boolean matched = matches(rule, bindings);
             trace.add(new TraceStep(rule.id, matched));
             if (matched) {
@@ -194,8 +198,8 @@ final class CompiledDecision {
         return new Outcome(Map.of(), List.of());
     }
 
-    private Outcome unique(Bindings bindings, List<TraceStep> trace) {
-        List<CompiledRule> matched = matchAll(bindings, trace);
+    private Outcome unique(Bindings bindings, List<TraceStep> trace, Deadline deadline) {
+        List<CompiledRule> matched = matchAll(bindings, trace, deadline);
         if (matched.size() > 1) {
             throw failure("UNIQUE hit policy violated: rules "
                     + matched.stream().map(r -> r.id).toList() + " all matched", null);
@@ -206,8 +210,8 @@ final class CompiledDecision {
         return new Outcome(outputs(matched.get(0), bindings), reasons(matched));
     }
 
-    private Outcome collect(Bindings bindings, List<TraceStep> trace) {
-        List<CompiledRule> matched = matchAll(bindings, trace);
+    private Outcome collect(Bindings bindings, List<TraceStep> trace, Deadline deadline) {
+        List<CompiledRule> matched = matchAll(bindings, trace, deadline);
         Map<String, List<Object>> collected = new LinkedHashMap<>();
         table.outputs().keySet().forEach(name -> collected.put(name, new ArrayList<>()));
         for (CompiledRule rule : matched) {
@@ -218,9 +222,10 @@ final class CompiledDecision {
         return new Outcome(output, reasons(matched));
     }
 
-    private List<CompiledRule> matchAll(Bindings bindings, List<TraceStep> trace) {
+    private List<CompiledRule> matchAll(Bindings bindings, List<TraceStep> trace, Deadline deadline) {
         List<CompiledRule> matched = new ArrayList<>();
         for (CompiledRule rule : rules) {
+            checkTime(trace, deadline);
             boolean match = matches(rule, bindings);
             trace.add(new TraceStep(rule.id, match));
             if (match) {
@@ -228,6 +233,12 @@ final class CompiledDecision {
             }
         }
         return matched;
+    }
+
+    private void checkTime(List<TraceStep> trace, Deadline deadline) {
+        if (deadline.passed()) {
+            throw new DecisionTimeoutException(table.id(), ruleVersion, deadline.timeout(), trace);
+        }
     }
 
     private boolean matches(CompiledRule rule, Bindings bindings) {
