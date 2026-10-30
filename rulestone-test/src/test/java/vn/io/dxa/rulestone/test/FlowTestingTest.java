@@ -131,6 +131,17 @@ class FlowTestingTest {
     }
 
     @Test
+    void theModelCaseInThePagePassesAndIsInTheExampleFile() throws IOException {
+        String caseJson = docBlocks("json").stream().filter(b -> b.contains("\"models\"")).findFirst().orElseThrow();
+        List<StoneTestCase> cases = StoneTestJson.read("{ \"decision\": \"card_origination_scored\", \"cases\": ["
+                + caseJson + "] }", "testing.md", TABLES, FLOWS);
+
+        assertThat(cases).singleElement().satisfies(c -> assertThat(c.check(engine)).isPresent());
+        assertThat(Files.readString(ExamplesStoneTest.FLOWS.resolve("card_origination_scored.stone-test.json")))
+                .contains(caseJson.strip().indent(4).stripTrailing());
+    }
+
+    @Test
     void theCoverageReportInThePageIsForTheExampleWithoutItsChallengerCase() throws Throwable {
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         com.fasterxml.jackson.databind.node.ObjectNode file = (com.fasterxml.jackson.databind.node.ObjectNode)

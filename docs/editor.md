@@ -311,7 +311,7 @@ HTTP/1.1 200 OK
 
 ### `POST /api/evaluate`
 
-Evaluates a table, which need not be saved, with `facts` and an optional business date `asOf` (`yyyy-MM-dd`; default: today on the server). The table's own version is used whatever its effective dates; `effectiveOnAsOf` tells whether it is in force on `asOf`.
+Evaluates a table, which need not be saved, with `facts` and an optional business date `asOf` (`yyyy-MM-dd`; default: today on the server). An optional `models` object, in the form of [supplied results](flows.md#supplied-results), is read like the facts and passed on; it is meant for the model nodes of [decision flows](flows.md), which the editor cannot evaluate yet, so a table rejects it with `evaluation_failed`. The table's own version is used whatever its effective dates; `effectiveOnAsOf` tells whether it is in force on `asOf`.
 
 Facts and outputs use the JSON forms of [`FactsJson`](java-api.md): `decimal` as a number or a numeric string, `money` as `"<amount> <currency>"`, `date` as `"yyyy-MM-dd"`. JSON numbers are read exactly, never as floating point, and decimal outputs are returned as strings so that no JavaScript client rounds them.
 
@@ -520,3 +520,4 @@ The server uses only the JDK's built-in HTTP server and Jackson. `close()` stops
 - **The condition builder covers flat AND/OR lists** of comparisons on input paths. Calculations on the left side, nested groups and list functions stay in CEL.
 - **Renaming an input does not update the rules** that use it; validation points them out.
 - **Desktop only.** The interface is designed for screens 1280 pixels wide or more.
+- **Decision tables only.** The editor edits and evaluates decision tables. [Decision flows](flows.md) are designed with the flow canvas of the [Editor SDK](editor-sdk.md) and run in the Java engine.

@@ -16,7 +16,7 @@ RuleStone is a **business rules management** library for banking and finance, wr
 - **Easy to integrate.** It can be embedded as a plain library, run as a service, or plugged into Spring, Kafka or AI agents, without forcing a change of stack.
 - **Ready for hybrid AI.** AI can help write rules, explain decisions and act as a guarded node in a decision, but the final decision always goes through the deterministic engine.
 
-Out of scope for now: stateful inference (Rete, forward chaining), complex event processing, and general BPM or workflow. Case management, labelling of reviewed cases and model training also belong to applications built on RuleStone, such as [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML); RuleStone gives them what they build on: decision records to attach labels to, shadow and canary versions, and the planned replay, re-scoring and model nodes.
+Out of scope for now: stateful inference (Rete, forward chaining), complex event processing, and general BPM or workflow. Case management, labelling of reviewed cases and model training also belong to applications built on RuleStone, such as [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML); RuleStone gives them what they build on: decision records to attach labels to, shadow and canary versions, model nodes, and the planned replay and re-scoring.
 
 ## 2. Design principles
 
@@ -201,9 +201,9 @@ All problems in a rule definition are already reported together, each with its l
 
 1. **M0 — Specification** *(done for decision tables)*: decision model, CEL extensions (`decimal`, `money`, `date`), decision record format, and a conformance suite that checks the TypeScript engine against the Java engine. Flows follow with M1.
 2. **M1 — Core** *(in progress)*
-   - Done: decision tables with `FIRST`, `UNIQUE` and `COLLECT`; strict `.stone.json` format; content hashes; effective dating in which a new version supersedes the previous one; `decimal`, `money` and `date` types; fuzzy name matching; typed struct and list inputs; traces; decision records with `AuditSink`; timeouts; canary and shadow versions; `rulestone-test`; all definition problems reported together; licensing, SBOM and documentation.
-   - Remaining: decision flows without models (`table`, `switch`, `derive`, `split` and `end` nodes; step 2 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)); business calendars.
+   - Done: decision tables with `FIRST`, `UNIQUE` and `COLLECT`; strict `.stone.json` format; content hashes; effective dating in which a new version supersedes the previous one; `decimal`, `money` and `date` types; fuzzy name matching; typed struct and list inputs; traces; decision records with `AuditSink`; timeouts; canary and shadow versions; `rulestone-test`; all definition problems reported together; licensing, SBOM and documentation; decision flows with `table`, `switch`, `derive`, `split` and `end` nodes (step 2 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)).
+   - Remaining: business calendars.
 3. **M2 — Governance:** maker-checker, hash-chained audit, JDBC repository and JDBC audit sink.
 4. **M3 — Integration** *(started)*: Temporal, Camunda 7 and 8, and the Kafka audit sink are done. Remaining: Spring Boot starter, REST/gRPC server, observability (Micrometer, OpenTelemetry), Kafka processor.
-5. **M4 — Analysis and AI:** static analysis, `.stone` text syntax, model nodes, explanations, replay and re-scoring, and model adapters (steps 3 to 7 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)), authoring assistant, MCP server.
+5. **M4 — Analysis and AI** *(started)*: model nodes (step 3 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)) are done. Remaining: static analysis, `.stone` text syntax, explanations, replay and re-scoring, and model adapters (steps 4 to 7), authoring assistant, MCP server.
 6. **M5 — Simulation** *(started)*: shadow and canary versions on live traffic, and the web editor for tables, are done. Remaining: backtesting and champion/challenger on historical data, flow editing beyond design.

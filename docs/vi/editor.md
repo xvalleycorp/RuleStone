@@ -1,6 +1,6 @@
 ---
 source: editor.md
-sourceHash: 49cb1db6fa6e14f9a67a67c8dffa18b87a4966a4e9673bf524270ea90a633d84
+sourceHash: 68af41baf8ce9f65ad058ad42fd4bbc224bd886c4cde481553ef3059d69101cc
 ---
 
 # Trình soạn thảo web
@@ -316,7 +316,7 @@ HTTP/1.1 200 OK
 
 ### `POST /api/evaluate`
 
-Đánh giá một bảng, không cần đã lưu, với `facts` và một ngày nghiệp vụ `asOf` tuỳ chọn (`yyyy-MM-dd`; mặc định: ngày hôm nay trên máy chủ). Phiên bản của chính bảng được dùng bất kể ngày hiệu lực của nó; `effectiveOnAsOf` cho biết nó có hiệu lực vào ngày `asOf` hay không.
+Đánh giá một bảng, không cần đã lưu, với `facts` và một ngày nghiệp vụ `asOf` tuỳ chọn (`yyyy-MM-dd`; mặc định: ngày hôm nay trên máy chủ). Một đối tượng `models` tuỳ chọn, ở dạng [kết quả do bên gọi cung cấp](flows.md#kết-quả-do-bên-gọi-cung-cấp), được đọc như các fact và được chuyển tiếp; nó dành cho các nút mô hình của [luồng quyết định](flows.md), mà trình soạn thảo chưa đánh giá được, nên một bảng sẽ từ chối nó với `evaluation_failed`. Phiên bản của chính bảng được dùng bất kể ngày hiệu lực của nó; `effectiveOnAsOf` cho biết nó có hiệu lực vào ngày `asOf` hay không.
 
 Fact và đầu ra dùng các dạng JSON của [`FactsJson`](java-api.md): `decimal` là một số hoặc một chuỗi số, `money` là `"<amount> <currency>"`, `date` là `"yyyy-MM-dd"`. Số JSON được đọc chính xác, không bao giờ dưới dạng dấu phẩy động, và đầu ra thập phân được trả về dưới dạng chuỗi để không client JavaScript nào làm tròn chúng.
 
@@ -525,3 +525,4 @@ Máy chủ chỉ dùng HTTP server có sẵn của JDK và Jackson. `close()` d�
 - **Trình dựng điều kiện hỗ trợ danh sách AND/OR phẳng** gồm các phép so sánh trên đường dẫn đầu vào. Phép tính ở vế trái, nhóm lồng nhau và hàm trên danh sách vẫn viết bằng CEL.
 - **Đổi tên một đầu vào không cập nhật các luật** đang dùng nó; việc kiểm tra hợp lệ sẽ chỉ ra các luật đó.
 - **Chỉ dành cho máy tính để bàn.** Giao diện được thiết kế cho màn hình rộng từ 1280 điểm ảnh trở lên.
+- **Chỉ có bảng quyết định.** Trình soạn thảo chỉnh sửa và đánh giá bảng quyết định. [Luồng quyết định](flows.md) được thiết kế bằng vùng vẽ luồng của [SDK trình soạn thảo](editor-sdk.md) và chạy trong bộ máy luật Java.

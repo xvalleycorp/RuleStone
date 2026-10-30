@@ -82,11 +82,14 @@ Then select a task, choose **Change element → RuleStone decision**, and fill i
 | `decisionId` | yes | | The decision to evaluate. |
 | `version` | no | | An exact version label, for replays and investigations. Otherwise the version effective on the business date is used. |
 | `asOfVariable` | no | | A process variable holding the business date as `"yyyy-MM-dd"`, such as the application date. Otherwise today, according to the worker's clock. |
+| `modelsVariable` | no | | A process variable holding the results of models that the process ran itself, in the `models` form of [supplied results](flows.md#supplied-results). Not in the element template yet; see below. |
 | `resultVariable` | no | `decision` | The variable the result is written to. |
 | `failOnNoMatch` | no | `false` | `true` throws the BPMN error when no rule matches. |
 | `errorCode` | no | `RULESTONE_DECISION_FAILED` | The code of the BPMN error. |
 
 Use `asOfVariable` whenever the process has a business date: the decision then stays the same if the job is retried, or the process waits, past a version change.
+
+**Decision tables only, for now.** The worker evaluates decision tables; [decision flows](flows.md) cannot be evaluated through it yet. The `modelsVariable` header is there for the model nodes of flows. The worker reads the variable strictly and reports a missing or malformed one as a BPMN error; until the worker evaluates flows, a decision table rejects model results, also with a BPMN error.
 
 ### Variables
 
@@ -204,7 +207,7 @@ Configure the delegate with fields, each a string or an expression:
 </bpmn:boundaryEvent>
 ```
 
-The fields are those of the Camunda 8 headers: `decisionId` (required), `version`, `asOfVariable`, `resultVariable` (default `decision`), `failOnNoMatch` (default `false`) and `errorCode` (default `RULESTONE_DECISION_FAILED`). Gateways then read the result with JUEL:
+The fields are those of the Camunda 8 headers: `decisionId` (required), `version`, `asOfVariable`, `modelsVariable`, `resultVariable` (default `decision`), `failOnNoMatch` (default `false`) and `errorCode` (default `RULESTONE_DECISION_FAILED`). As in Camunda 8, the delegate evaluates decision tables only for now, and `modelsVariable` is for the model nodes of flows. Gateways then read the result with JUEL:
 
 ```xml
 <bpmn:sequenceFlow id="Flow_Approve" sourceRef="Outcome" targetRef="Disburse">

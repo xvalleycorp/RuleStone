@@ -1,6 +1,6 @@
 ---
 source: temporal.md
-sourceHash: a290424691c0c70d30bcc3f47709fc477a45c0fbeebc80096f1f8c3cb4a90f09
+sourceHash: 7ebe14c77a952ebffb4c3f351416d633b94970fbad316d60855a4ec9ea85267e
 ---
 
 # Tích hợp Temporal
@@ -162,6 +162,8 @@ public DecisionOutcome decide(LoanApplication application) {
 ```
 
 Hãy truyền `withAsOf` mỗi khi hồ sơ có ngày nghiệp vụ. Nếu không, activity dùng ngày hôm nay theo đồng hồ của chính nó, truyền ngày đó một cách tường minh cho engine và ghi lại trong `DecisionOutcome.businessDate()`. Vì kết quả được ghi trong history, một workflow được replay sẽ nhận kết quả ban đầu kể cả khi luật đã thay đổi.
+
+**Hiện chỉ có bảng quyết định.** Activity đánh giá bảng quyết định. [Luồng quyết định](flows.md) chưa thể được đánh giá qua activity. `DecisionRequest.withModels(models)` đã mang được kết quả của những mô hình mà bên gọi tự chạy, ở dạng `models` của [kết quả do bên gọi cung cấp](flows.md#kết-quả-do-bên-gọi-cung-cấp), cho các nút mô hình của luồng. Activity đọc chúng một cách chặt chẽ và báo một kết quả sai định dạng là `INVALID_REQUEST`; cho tới khi activity đánh giá được luồng, một bảng quyết định sẽ từ chối chúng với `DECISION_EVALUATION_FAILED`.
 
 ## Payload: số thập phân, tiền và ngày
 
