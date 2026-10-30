@@ -83,7 +83,7 @@ public final class RuleStoneActivitiesImpl implements RuleStoneActivities {
         DecisionTable table = table(request, businessDate);
         Facts facts;
         try {
-            facts = FactsJson.readFacts(request.facts(), table);
+            facts = FactsJson.readFacts(request.facts(), table.inputs(), request.models());
         } catch (InvalidFactsException e) {
             // Problems name locations and expected forms, never values.
             throw RuleStoneFailures.invalidRequest(table.ref() + ": " + String.join("; ", e.problems()));

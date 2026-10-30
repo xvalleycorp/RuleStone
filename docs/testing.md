@@ -89,6 +89,7 @@ Each case evaluates the decision once with its `facts` and compares the result w
 | `asOf` | no | ISO date (`yyyy-MM-dd`) that selects the version in force, as in `DecisionRef.asOf`. **Set it for every decision with effective dates**; without it, the engine's clock decides and the result depends on the day the test runs. |
 | `version` | no | Evaluates exactly this version, regardless of dates, as in `DecisionRef.version`. |
 | `facts` | yes | Object of input names to values, as for `Facts`. Objects become `Map`s and arrays `List`s. `null` is not allowed: leave a field out to test a missing value. |
+| `models` | no | For a flow with [model nodes](flows.md#model-nodes): the model results by node id, or a failure such as `{ "failure": "TIMEOUT" }`. See [Flows with model nodes](#flows-with-model-nodes). |
 | `expect` | yes | Object with the expectations below. `{}` only checks that the evaluation succeeds. |
 
 ### Expectations
@@ -275,6 +276,37 @@ node coverage: 10 of 10 nodes and 9 of 10 branches exercised by a passing test
 
 To test a `split` bucket, choose a key that falls into it: the bucket of a key never changes for the same salt. `RuleCoverage.uncoveredNodes()` and `uncoveredBranches()` return what is missing, as `uncoveredRules()` does for rules. Without JUnit, read the files with `StoneTestJson.read(path, tables, flows)`.
 
+### Flows with model nodes
+
+A case gives the result of each [model node](flows.md#model-nodes) it reaches in `models`, by node id, in the form of [supplied results](flows.md#supplied-results). A failure is written `{ "failure": "TIMEOUT" }` or `{ "failure": "ERROR" }`; a node without a result fails with `MISSING`. The other kinds of failure come from the result itself, such as a PD above 1 or a confidence below `minConfidence`. This case, from [`examples/flows/card_origination_scored.stone-test.json`](../examples/flows/card_origination_scored.stone-test.json), checks that a model timeout is referred:
+
+```json
+{
+  "name": "a behavioural model timeout is referred, never approved on a guess",
+  "facts": {
+    "applicant": { "id": "C-2009", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+    "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+  },
+  "models": {
+    "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+    "pd_behaviour": { "failure": "TIMEOUT" }
+  },
+  "expect": {
+    "output": { "decision": "REFER", "riskGrade": "N/A" },
+    "reasonCodes": ["MODEL_UNAVAILABLE"],
+    "path": ["policy", "fraud", "segment", "pd_behaviour", "referred"]
+  }
+}
+```
+
+Build the engine under test with `suppliedModelsOnly()`. Nodes in `invoke` mode then take their results from the case as well, so the tests are deterministic and need no model server:
+
+```java
+RuleStoneEngine engine = RuleStone.builder().decisions(tables).flows(flows).suppliedModelsOnly().build();
+```
+
+Coverage counts two kinds of branch for a model node, which always has both: each target of its `next`, and its `onFailure` path, written `pd_behaviour -> referred (onFailure)`. The `onFailure` branch counts only when the model failed, even if `next` leads to the same node, so every model node needs a case in which its model fails.
+
 ## Fluent assertions in Java
 
 `DecisionCheck` checks one evaluation with a fluent API. It throws `AssertionError`, so it works with JUnit, TestNG or any other framework:
@@ -289,7 +321,7 @@ DecisionCheck.of(engine)
         .expectMatchedRules("R4");
 ```
 
-The request methods `decision`, `version`, `asOf` and `given` set up the evaluation. The first expectation evaluates the decision; after that the request cannot be changed.
+The request methods `decision`, `version`, `asOf`, `given`, `givenModelResult` and `givenModelFailure` set up the evaluation; the last two give a model node's result or failure, as `Facts.withModelResult` and `withModelFailure` do. The first expectation evaluates the decision; after that the request cannot be changed.
 
 | Method | Checks |
 |---|---|

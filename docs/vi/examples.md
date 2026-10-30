@@ -1,11 +1,11 @@
 ---
 source: examples.md
-sourceHash: 7b0bb3a96126f0c31a7c413644bf8b9939acdfd45360c2ff81f0496460990bda
+sourceHash: fe2fe83c220f2a893a60d34028d233857b599b3d497e9bcd4bbc4c9cfe25bf21
 ---
 
 # Ví dụ
 
-Thư mục [`examples/`](../../examples/) chứa các bảng quyết định hoàn chỉnh cho những bài toán ngân hàng thường gặp, và một luồng quyết định nối các bảng với nhau. Mỗi bảng đều được bộ kiểm thử của dự án nạp và đánh giá, nên các kết quả nêu ở đây được kiểm tra trong mọi lần build. Các ngưỡng, điểm số và lãi suất là số liệu giả định để minh hoạ; số tiền tính bằng VND.
+Thư mục [`examples/`](../../examples/) chứa các bảng quyết định hoàn chỉnh cho những bài toán ngân hàng thường gặp, và hai luồng quyết định nối các bảng với nhau, một trong hai có dùng mô hình học máy. Mỗi bảng đều được bộ kiểm thử của dự án nạp và đánh giá, nên các kết quả nêu ở đây được kiểm tra trong mọi lần build. Các ngưỡng, điểm số và lãi suất là số liệu giả định để minh hoạ; số tiền tính bằng VND.
 
 | Tệp | Bài toán | Minh hoạ |
 |---|---|---|
@@ -16,6 +16,7 @@ Thư mục [`examples/`](../../examples/) chứa các bảng quyết định ho�
 | [`consumer_loan_underwriting.stone.json`](../../examples/consumer_loan_underwriting.stone.json), [`consumer_loan_conditions.stone.json`](../../examples/consumer_loan_conditions.stone.json) | Thẩm định tín dụng khoản vay tiêu dùng | `FIRST` với từ chối, chuyển xem xét và hạng rủi ro; trường tuỳ chọn với `has()`; `min`, các chế độ làm tròn; `COLLECT` cho điều kiện phê duyệt |
 | [`aml_name_screening.stone.json`](../../examples/aml_name_screening.stone.json), [`aml_transaction_monitoring.stone.json`](../../examples/aml_transaction_monitoring.stone.json), [`aml_alert_action.stone.json`](../../examples/aml_alert_action.stone.json) | Phòng, chống rửa tiền: sàng lọc danh sách theo dõi và giám sát giao dịch | So khớp tên gần đúng với bí danh và ngày sinh; số học và so sánh với `money`; các hàm ngày và `businessDate`; cảnh báo `COLLECT` nối tiếp tới hành động `FIRST` |
 | [`flows/card_origination.flow.json`](../../examples/flows/card_origination.flow.json) và các bảng trong [`flows/`](../../examples/flows/) | Phát hành thẻ tín dụng | Một [luồng quyết định](flows.md): luật loại trừ (knock-out) của chính sách, phân khúc bằng `switch`, một nút `derive`, hai bảng xếp hạng dùng chung một tên, và một phép chia champion/challenger bằng `split` |
+| [`flows/card_origination_scored.flow.json`](../../examples/flows/card_origination_scored.flow.json) | Phát hành thẻ tín dụng có dùng mô hình | Một luồng có [nút mô hình](flows.md#nút-mô-hình): một điểm gian lận do bên gọi cung cấp, hai mô hình PD được engine gọi và dùng chung một tên, và việc chuyển người xét duyệt hễ một mô hình lỗi |
 
 ## Xét điều kiện vay: thứ tự ưu tiên và phiên bản
 
@@ -500,3 +501,15 @@ Những điểm cần lưu ý:
 | Khách hàng mới, 19 tuổi | `policy`, `affordability`, `segment`, `grade_new`, `referred` | `REFER`, hạng D, lý do `THIN_CREDIT_FILE` |
 
 Nhóm chỉ phụ thuộc vào id người nộp hồ sơ và salt của phép chia, nên `C-1001` luôn thuộc nhóm challenger trong mọi lần đánh giá. [`card_origination.stone-test.json`](../../examples/flows/card_origination.stone-test.json) kiểm tra các đường đi này và nhiều đường khác, và bao phủ mọi luật, mọi nút và mọi nhánh.
+
+[`card_origination_scored.flow.json`](../../examples/flows/card_origination_scored.flow.json) đưa ra cùng quyết định đó với mô hình, như được giải thích trong [Nút mô hình](flows.md#nút-mô-hình). Một điểm gian lận đi kèm các fact; một xác suất vỡ nợ (PD) đến từ mô hình hành vi với khách hàng hiện hữu và từ mô hình hồ sơ với khách hàng mới, và bảng `card_pd_grade` chuyển nó thành một hạng. Với điểm gian lận 0,05 trừ khi ghi khác:
+
+| Người nộp hồ sơ | Mô hình | Đường đi | Kết quả |
+|---|---|---|---|
+| Khách hàng hiện hữu | PD 0,0150, `utilisation` là attribution đứng đầu | `policy`, `fraud`, `segment`, `pd_behaviour`, `grade`, `limit`, `approved` | `APPROVE`, hạng A, hạn mức 120.000.000, lý do `HIGH_UTILISATION` |
+| Bất kỳ | điểm gian lận 0,92 | `policy`, `fraud`, `referred` | `REFER`, lý do `NEW_DEVICE`, `ADDRESS_MISMATCH` |
+| Bất kỳ | không có điểm gian lận | `policy`, `fraud`, `referred` | `REFER`, lý do `FRAUD_SCORE_UNAVAILABLE` |
+| Khách hàng hiện hữu | mô hình hành vi hết thời gian | `policy`, `fraud`, `segment`, `pd_behaviour`, `referred` | `REFER`, lý do `MODEL_UNAVAILABLE` |
+| Khách hàng mới | PD 0,0100 với độ tin cậy 0,50, dưới mức 0,70 bắt buộc | `policy`, `fraud`, `segment`, `pd_application`, `referred` | `REFER`, lý do `MODEL_UNAVAILABLE` |
+
+[`card_origination_scored.stone-test.json`](../../examples/flows/card_origination_scored.stone-test.json) cung cấp kết quả mô hình của mỗi ca trong `models`, và bao phủ mọi luật, mọi nút và mọi nhánh, kể cả đường xử lý lỗi của mọi nút mô hình.

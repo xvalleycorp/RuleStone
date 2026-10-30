@@ -18,6 +18,9 @@ package vn.io.dxa.rulestone.camunda8;
  *       effective on the business date.</td></tr>
  *   <tr><td>{@value #AS_OF_VARIABLE}</td><td>no</td><td>Name of a process variable holding the
  *       business date as {@code "yyyy-MM-dd"}; otherwise today according to the worker's clock.</td></tr>
+ *   <tr><td>{@value #MODELS_VARIABLE}</td><td>no</td><td>Name of a process variable holding
+ *       supplied model results, as a JSON object of model node id to result (see
+ *       {@code FactsJson.readModels}); otherwise none.</td></tr>
  *   <tr><td>{@value #RESULT_VARIABLE}</td><td>no</td><td>Variable the result is written to; default
  *       {@value #DEFAULT_RESULT_VARIABLE}.</td></tr>
  *   <tr><td>{@value #FAIL_ON_NO_MATCH}</td><td>no</td><td>{@code true} to throw the BPMN error when
@@ -36,6 +39,12 @@ public final class RuleStoneHeaders {
 
     /** Header naming the process variable that holds the business date. */
     public static final String AS_OF_VARIABLE = "asOfVariable";
+
+    /**
+     * Header naming the process variable that holds supplied model results, for the {@code model}
+     * nodes of a decision flow in {@code supplied} mode.
+     */
+    public static final String MODELS_VARIABLE = "modelsVariable";
 
     /** Header naming the variable the result is written to. */
     public static final String RESULT_VARIABLE = "resultVariable";

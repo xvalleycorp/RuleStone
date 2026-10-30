@@ -1,6 +1,6 @@
 ---
 source: architecture.md
-sourceHash: d07aeb4c2f01a2dbc3ea863e1bbee91b85474dad3e0b2b7ad0aa44c0889c2be3
+sourceHash: 27d726e5d3735aad3467f7848628df37e69ae6fff568691a3cbaeb2ceadeb4a1
 ---
 
 # Kiến trúc RuleStone
@@ -21,7 +21,7 @@ RuleStone là một thư viện **quản lý luật nghiệp vụ** (business ru
 - **Dễ tích hợp.** Có thể nhúng như một thư viện thông thường, chạy như một dịch vụ, hoặc gắn vào Spring, Kafka hay các AI agent, mà không bắt bạn phải đổi công nghệ.
 - **Sẵn sàng cho AI lai (hybrid).** AI có thể giúp viết luật, giải thích quyết định và đóng vai trò một nút có rào chắn trong một quyết định, nhưng quyết định cuối cùng luôn đi qua bộ máy tất định.
 
-Tạm thời nằm ngoài phạm vi: suy diễn có trạng thái (Rete, suy diễn tiến), xử lý sự kiện phức hợp (CEP), và BPM hay workflow tổng quát. Quản lý case, gán nhãn cho các case đã review và huấn luyện mô hình cũng thuộc về các ứng dụng xây trên RuleStone, như [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML); RuleStone cung cấp nền tảng cho chúng: bản ghi quyết định để gắn nhãn, phiên bản bóng và canary, cùng các tính năng dự kiến là chạy lại (replay), chấm điểm lại (re-score) và nút mô hình.
+Tạm thời nằm ngoài phạm vi: suy diễn có trạng thái (Rete, suy diễn tiến), xử lý sự kiện phức hợp (CEP), và BPM hay workflow tổng quát. Quản lý case, gán nhãn cho các case đã review và huấn luyện mô hình cũng thuộc về các ứng dụng xây trên RuleStone, như [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML); RuleStone cung cấp nền tảng cho chúng: bản ghi quyết định để gắn nhãn, phiên bản bóng và canary, nút mô hình, cùng các tính năng dự kiến là chạy lại (replay) và chấm điểm lại (re-score).
 
 ## 2. Nguyên tắc thiết kế
 
@@ -208,9 +208,9 @@ Mọi lỗi trong một định nghĩa luật đã được báo cáo cùng lúc
 
 1. **M0 — Đặc tả** *(đã xong cho bảng quyết định)*: mô hình quyết định, các phần mở rộng CEL (`decimal`, `money`, `date`), định dạng bản ghi quyết định, và bộ kiểm thử tuân thủ đối chiếu engine TypeScript với engine Java. Luồng quyết định sẽ theo cùng M1.
 2. **M1 — Lõi** *(đang thực hiện)*
-   - Đã xong: bảng quyết định với `FIRST`, `UNIQUE` và `COLLECT`; định dạng `.stone.json` chặt chẽ; mã băm nội dung; hiệu lực theo ngày, trong đó phiên bản mới thay thế phiên bản trước; các kiểu `decimal`, `money` và `date`; so khớp tên gần đúng; đầu vào kiểu struct và danh sách có kiểu; vết thực thi; bản ghi quyết định với `AuditSink`; thời gian chờ tối đa; phiên bản canary và phiên bản bóng; `rulestone-test`; báo cáo cùng lúc mọi lỗi trong định nghĩa; cấp phép, SBOM và tài liệu.
-   - Còn lại: luồng quyết định chưa có mô hình (các nút `table`, `switch`, `derive`, `split` và `end`; bước 2 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)); lịch làm việc.
+   - Đã xong: bảng quyết định với `FIRST`, `UNIQUE` và `COLLECT`; định dạng `.stone.json` chặt chẽ; mã băm nội dung; hiệu lực theo ngày, trong đó phiên bản mới thay thế phiên bản trước; các kiểu `decimal`, `money` và `date`; so khớp tên gần đúng; đầu vào kiểu struct và danh sách có kiểu; vết thực thi; bản ghi quyết định với `AuditSink`; thời gian chờ tối đa; phiên bản canary và phiên bản bóng; `rulestone-test`; báo cáo cùng lúc mọi lỗi trong định nghĩa; cấp phép, SBOM và tài liệu; luồng quyết định với các nút `table`, `switch`, `derive`, `split` và `end` (bước 2 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)).
+   - Còn lại: lịch làm việc.
 3. **M2 — Quản trị:** maker-checker, kiểm toán liên kết bằng chuỗi băm, kho luật JDBC và audit sink JDBC.
 4. **M3 — Tích hợp** *(đã bắt đầu)*: đã xong Temporal, Camunda 7 và 8, và audit sink Kafka. Còn lại: Spring Boot starter, máy chủ REST/gRPC, khả năng quan sát (Micrometer, OpenTelemetry), bộ xử lý Kafka.
-5. **M4 — Phân tích và AI:** phân tích tĩnh, cú pháp văn bản `.stone`, nút mô hình, giải thích quyết định, chạy lại và chấm điểm lại, các adapter mô hình (bước 3 đến 7 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)), trợ lý soạn luật, máy chủ MCP.
+5. **M4 — Phân tích và AI** *(đã bắt đầu)*: nút mô hình (bước 3 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)) đã xong. Còn lại: phân tích tĩnh, cú pháp văn bản `.stone`, giải thích quyết định, chạy lại và chấm điểm lại, các adapter mô hình (bước 4 đến 7), trợ lý soạn luật, máy chủ MCP.
 6. **M5 — Mô phỏng** *(đã bắt đầu)*: đã xong phiên bản bóng và canary trên lưu lượng thật, và trình soạn thảo web cho bảng. Còn lại: kiểm thử ngược và champion/challenger trên dữ liệu lịch sử, soạn luồng vượt ra ngoài phần thiết kế.

@@ -2,13 +2,14 @@
 
 A decision flow chains decision tables and simple logic into one decision: policy knock-outs first, then segmentation, grading and a limit matrix, with a champion/challenger split where you want to test a new strategy. This page is the reference for the `.flow.json` format and for how flows are checked, evaluated and recorded.
 
-Flows are step 2 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan). They contain no model nodes yet: a model score enters a flow as an ordinary input (see [Limitations](#limitations)). The Java engine runs flows; the browser engine of the [Editor SDK](editor-sdk.md) does not.
+Flows are steps 2 and 3 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan). A flow can also use machine-learning models: a [model node](#model-nodes) either calls the model or takes the result the caller passes, and checks it against a typed contract. The Java engine runs flows; the browser engine of the [Editor SDK](editor-sdk.md) does not.
 
 - [A first flow](#a-first-flow)
 - [Running a flow](#running-a-flow)
 - [File format](#file-format)
 - [Nodes](#nodes)
 - [Values between nodes](#values-between-nodes)
+- [Model nodes](#model-nodes)
 - [Evaluation](#evaluation)
 - [Decision records](#decision-records)
 - [Versions and content hashes](#versions-and-content-hashes)
@@ -136,10 +137,11 @@ Every node has a `type` and an optional `description`.
 | `table` | Evaluates a decision table | The table's outputs | `next` |
 | `switch` | Chooses a branch | `taken`: the id of the node chosen | The first case whose `when` holds |
 | `derive` | Computes named values once | The values | `next` |
+| `model` | Obtains a model's result and checks it | The model's outputs | `next`, or `onFailure` when the model fails |
 | `split` | Assigns a bucket by percentage | `taken`: the name of the bucket chosen | The bucket's node |
 | `end` | Sets the flow's outputs | Nothing | Ends the flow |
 
-The type names `model` and `flow` are reserved for model nodes and calls to other flows. They are not supported yet, and a file that uses them is rejected.
+The type name `flow` is reserved for calls to other flows. It is not supported yet, and a file that uses it is rejected.
 
 ### Branches: `next` and `cases`
 
@@ -180,6 +182,10 @@ The table's outputs are published as one value with a field per output: `policy.
 
 The expressions of one `derive` node cannot read each other's values. To compute a value from another derived value, use a second `derive` node.
 
+### `model`
+
+Calls a machine-learning model, or takes the result the caller passes, and checks it. See [Model nodes](#model-nodes).
+
 ### `split`
 
 | Field | Required | Description |
@@ -211,15 +217,221 @@ Expressions in a node can read:
 
 **Outputs that no rule set.** When no rule of a table matches, or the rule that matched does not set an output, that output is absent. Reading it fails the evaluation; test for it with `has()`, as in a table rule: `has(policy.decision) && policy.decision == 'REJECT'`.
 
+## Model nodes
+
+A `model` node brings a machine-learning model into a flow: a fraud score, a probability of default, a scorecard. It checks the model's result against a typed contract before any later node reads it, and it always has a declared path for when the model fails. The rules around it stay in charge: a model only produces typed values that later nodes read.
+
+The example [`examples/flows/card_origination_scored.flow.json`](../examples/flows/card_origination_scored.flow.json) is the card origination flow with models. It uses the tables `card_policy`, `card_pd_grade` and `card_limit`, and has three model nodes:
+
+```json
+    "fraud": {
+      "type": "model", "mode": "supplied",
+      "model": { "id": "card_application_fraud", "version": "1.2.0" },
+      "outputs": { "score": "decimal" },
+      "valid": "score >= decimal(0) && score <= decimal(1)",
+      "reasonCodes": { "deviceAgeDays": "NEW_DEVICE", "addressMismatch": "ADDRESS_MISMATCH" },
+      "onFailure": { "to": "referred", "reasonCode": "FRAUD_SCORE_UNAVAILABLE" },
+      "next": [ { "when": "fraud.score >= decimal('0.80')", "to": "referred" }, { "to": "segment" } ]
+    },
+    "segment": {
+      "type": "switch",
+      "cases": [ { "when": "applicant.existingCustomer", "to": "pd_behaviour" }, { "to": "pd_application" } ]
+    },
+    "pd_behaviour": {
+      "type": "model", "mode": "invoke", "as": "score",
+      "model": { "id": "retail_pd_behaviour", "version": "2.4.0" },
+      "features": { "utilisation": "bureau.utilisation", "dpd30Count12m": "bureau.dpd30Count12m" },
+      "outputs": { "pd": "decimal" },
+      "valid": "pd >= decimal(0) && pd <= decimal(1)",
+      "timeoutMs": 80,
+      "reasonCodes": { "utilisation": "HIGH_UTILISATION", "dpd30Count12m": "RECENT_DELINQUENCY" },
+      "onFailure": { "to": "referred", "reasonCode": "MODEL_UNAVAILABLE" },
+      "next": "grade"
+    },
+    "pd_application": {
+      "type": "model", "mode": "invoke", "as": "score",
+      "model": { "id": "retail_pd_application", "version": "3.1.0" },
+      "features": { "age": "applicant.age", "utilisation": "bureau.utilisation" },
+      "outputs": { "pd": "decimal" },
+      "valid": "pd >= decimal(0) && pd <= decimal(1)",
+      "minConfidence": "0.70",
+      "timeoutMs": 80,
+      "reasonCodes": { "utilisation": "HIGH_UTILISATION", "age": "THIN_CREDIT_FILE" },
+      "maxReasonCodes": 1,
+      "onFailure": { "to": "referred", "reasonCode": "MODEL_UNAVAILABLE" },
+      "next": "grade"
+    },
+```
+
+In this flow:
+
+- The policy table still runs first, so a knock-out never depends on a model.
+- `fraud` is in `supplied` mode: the caller's fraud platform scores the application and passes the result with the facts. A score of 0.80 or more is referred to a person.
+- `pd_behaviour` and `pd_application` are in `invoke` mode: the engine calls the model itself, with only the declared features. Both publish their output as `score`, so the `grade` table reads `score.pd` whichever model ran.
+- Whenever a model fails, the application is referred, with a reason code that says why. It is never approved or declined on a guessed score.
+
+### Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `mode` | yes | `invoke`: the engine calls the model through the `ModelInvoker` registered for its id. `supplied`: the caller passes the model's result with the facts. |
+| `model` | yes | `{ "id", "version" }`: the model and the one exact version the flow uses, e.g. `"2.4.0"`. A range, a wildcard such as `2.x`, and `latest` are rejected. Both are part of the flow's content hash, so a new model version is a new flow version. |
+| `features` | in `invoke` mode | Object mapping each feature name to a CEL expression over the flow's values. The model receives these values and nothing else. Each expression must produce a `bool`, `int`, `string`, `decimal`, `money` or `date`, or a list of them. Not allowed in `supplied` mode. |
+| `outputs` | yes | Object mapping each output name to its type, as for table outputs. The model's result must have exactly these outputs. Output names are identifiers, because `valid` reads them by name. |
+| `valid` | no | A CEL condition over the outputs, by name, e.g. `pd >= decimal(0) && pd <= decimal(1)`. If it is false, the result is invalid. |
+| `minConfidence` | no | A decimal from 0 to 1, e.g. `"0.70"`. The model must then report a confidence, and a lower one is a failure. |
+| `timeoutMs` | in `invoke` mode | How long the model may take, in milliseconds. Not allowed in `supplied` mode. |
+| `reasonCodes` | no | Object mapping a feature name to the reason code to give when that feature is among the model's main reasons; see [Reason codes from attributions](#reason-codes-from-attributions). |
+| `maxReasonCodes` | no | How many reason codes the node gives at most, from 1 to 10. The default is 3. |
+| `onFailure` | yes | `{ "to", "reasonCode" }`: the node to go to when the model fails, and the reason code to give. |
+| `as` | no | A name to publish the outputs under instead of the node id, as for a `table` node. |
+| `next` | yes | Where to go when the result meets the contract. Conditions can read the outputs, e.g. `fraud.score`. |
+
+On success, the node publishes its outputs under its id or `as` name, as a `table` node does: `fraud.score`, `score.pd`. On failure it publishes nothing. A node after `onFailure` therefore cannot read the model's outputs, and the engine refuses to build if one tries; this is the rule that a node may read only values that [every path to it sets](#values-between-nodes).
+
+### Supplied results
+
+In `supplied` mode, the caller passes the model's result with the facts, under the id of the node:
+
+```java
+Facts facts = Facts.of("applicant", applicant, "bureau", bureau)
+        .withModelResult("fraud", ModelResult.of("card_application_fraud", "1.2.0",
+                Map.of("score", new BigDecimal("0.05"))));
+```
+
+If the caller's own call of the model failed, it says so instead: `withModelFailure("fraud", ModelStatus.TIMEOUT)` (or `ERROR`). JSON callers write the same as a `models` object next to the facts, which `FactsJson.readModels` reads, or `FactsJson.readFacts(facts, inputs, models)` together with the facts:
+
+```json
+{
+  "fraud": {
+    "modelId": "card_application_fraud",
+    "modelVersion": "1.2.0",
+    "outputs": { "score": "0.05" },
+    "attributionMethod": "SHAP",
+    "attributions": [
+      { "feature": "deviceAgeDays", "contribution": "0.30" },
+      { "feature": "addressMismatch", "contribution": "0.10" }
+    ]
+  },
+  "pd_behaviour": { "failure": "TIMEOUT" }
+}
+```
+
+`confidence`, `attributionMethod` and `attributions` are optional. Outputs are read with the types the node declares, through the [JSON forms](java-api.md#json-facts-and-results-factsjson): a decimal can be `"0.05"` or `0.05`, and money is `"1500000 VND"`. In Java, `BigDecimal`, `Long`, `Money` and `LocalDate` work, and so do their JSON text forms; `Double` and `Float` break the contract, since they cannot hold an exact decimal.
+
+The engine checks a supplied result exactly as if it had called the model. A supplied result for a node that is not a `model` node, or that is in `invoke` mode, fails the evaluation, so a misspelt node id cannot go unnoticed. A model node in `supplied` mode without a result fails with `MISSING` and takes its `onFailure` path.
+
+### Invoked models
+
+In `invoke` mode, the engine calls the `ModelInvoker` registered for the model's id:
+
+```java
+ModelInvoker behaviourModel = call -> {
+    // call.features(): {utilisation=0.40, dpd30Count12m=0}; call.timeout(): at most 80 ms
+    ScoringResponse response = scoringClient.score(call.modelId(), call.modelVersion(), call.features(), call.timeout());
+    return ModelResult.of(call.modelId(), call.modelVersion(), Map.of("pd", response.pd()))
+            .withAttributions("SHAP", response.contributions());
+};
+
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)
+        .flow(DecisionFlowJson.read(Path.of("rules/card_origination_scored.flow.json")))
+        .modelInvoker("retail_pd_behaviour", behaviourModel)
+        .modelInvoker("retail_pd_application", applicationModel)
+        .build();
+```
+
+- **The call.** `ModelCall` holds the model id and pinned version, the declared features as typed values (exact decimals, never `double`), the time available and the request's correlation id. Its `toString()` names the features but never shows their values.
+- **The time available** is the node's `timeoutMs`, or less if the evaluation's own [timeout](java-api.md#timeouts) leaves less. The invoker runs on the evaluating thread and must return in time: the engine does not interrupt it, and treats a later result as a `TIMEOUT`. If the evaluation's own timeout passes during the call, the whole evaluation times out instead.
+- **No retries.** A failed call is a model failure, handled by `onFailure`. Retrying belongs in the invoker, within its time.
+- **Exceptions.** A `ModelException` or any other exception from the invoker is a failure of kind `ERROR`. The record names the exception type only, never its message, which could contain feature values.
+- **Registration.** `build()` fails if a model node in `invoke` mode has no invoker for its model id. One invoker can serve every version of a model, since each call names the version.
+
+For tests and replays, `RuleStone.builder().suppliedModelsOnly()` runs every model node in `supplied` mode: the engine calls no model and needs no invoker, and `invoke` nodes take their results from the facts too. Their features are still computed, so that an expression error shows up in tests. Do not use it in production.
+
+### Failures
+
+Every failure takes the node's `onFailure` path and adds its reason code. A model failure never fails the evaluation; the record shows the kind of failure in the step's `status`.
+
+| `status` | When |
+|---|---|
+| `TIMEOUT` | The invoker did not answer within the time available, or the caller supplied `{ "failure": "TIMEOUT" }`. |
+| `ERROR` | The invoker threw an exception or returned nothing, or the caller supplied `{ "failure": "ERROR" }`. |
+| `CONTRACT_VIOLATION` | Another model id or version answered; an output is missing, undeclared or not of its type; or the node sets `minConfidence` and no confidence was reported. |
+| `INVALID_OUTPUT` | The `valid` condition is false, or cannot be evaluated. |
+| `LOW_CONFIDENCE` | The confidence is below `minConfidence`. |
+| `MISSING` | The node is in `supplied` mode and no result was supplied. |
+
+The checks run in this order, and the first that fails decides the status. The step's `detail` says what failed, such as `output 'pd' is missing` or `the invoker threw vn.io.dxa.rulestone.api.ModelException`, and never shows a value.
+
+### Reason codes from attributions
+
+A model can return attributions: how much each feature moved its result, computed for example with SHAP or from scorecard points. A positive contribution increases risk; for a score where higher means less risk, the invoker negates the contributions. The node turns them into reason codes:
+
+1. The attributions are ranked by the size of their contribution, in either direction.
+2. Going down the ranks, each feature that increases risk and has a code in `reasonCodes` gives that code, until the node has given `maxReasonCodes` codes (three by default). A code is given once, even if two features map to it. Features without a code are skipped.
+
+In the test case of the example where `pd_application` returns `age` with 0.0100 and `utilisation` with 0.0200, `utilisation` ranks first, and with `maxReasonCodes` 1 the node gives only `HIGH_UTILISATION`. A model that returns no attributions gives no reason codes, and its step in the record has an empty `attributions` list.
+
+The codes join the flow's reason codes in the order the nodes ran, with the node as their source. A failed model gives only its `onFailure` reason code.
+
+### Determinism and replay
+
+- **`supplied` mode is deterministic.** The same facts, model results and business date always give the same path, outputs, reason codes and record (apart from `recordId` and `evaluatedAt`).
+- **`invoke` mode** depends on what the model answers, and when. The record therefore keeps everything that later nodes used: the outputs, the confidence, and the ranks, directions and reason codes of the attributions. Replay, step 5 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan), will rebuild each model's result from its step and run the flow with `suppliedModelsOnly()`; the ranks and directions are enough to give the same reason codes. A failed step keeps its `status`, which replays as the same failure. Replay is not available yet.
+
+### Model steps in the record
+
+Each model node adds a step of type `model` to the record's `path`. For an existing customer whose fraud score is supplied and whose behavioural model answers in 23 ms, the two model steps are:
+
+```json
+[
+  { "node": "fraud", "type": "model", "mode": "supplied",
+    "model": { "id": "card_application_fraud", "version": "1.2.0" },
+    "status": "OK",
+    "outputs": { "score": "0.05" },
+    "attributionMethod": "SHAP",
+    "attributions": [
+      { "feature": "deviceAgeDays", "rank": 1, "direction": "INCREASES_RISK", "reasonCode": "NEW_DEVICE" },
+      { "feature": "addressMismatch", "rank": 2, "direction": "INCREASES_RISK", "reasonCode": "ADDRESS_MISMATCH" }
+    ] },
+  { "node": "pd_behaviour", "type": "model", "mode": "invoke",
+    "model": { "id": "retail_pd_behaviour", "version": "2.4.0" },
+    "status": "OK", "latencyMs": 23,
+    "outputs": { "pd": "0.0150" },
+    "confidence": "0.95",
+    "attributionMethod": "SHAP",
+    "attributions": [
+      { "feature": "utilisation", "rank": 1, "direction": "INCREASES_RISK", "reasonCode": "HIGH_UTILISATION" },
+      { "feature": "dpd30Count12m", "rank": 2, "direction": "DECREASES_RISK" }
+    ] }
+]
+```
+
+If the behavioural model had timed out, its step would be `{ "node": "pd_behaviour", "type": "model", "mode": "invoke", "model": { … }, "status": "TIMEOUT", "detail": "no result within 80 ms", "latencyMs": 81 }`, followed by the `referred` step.
+
+| Step field | Content |
+|---|---|
+| `mode` | How the result was obtained. An `invoke` node of an engine built with `suppliedModelsOnly()` shows `supplied`. |
+| `model` | The model's id and the version the node pins. |
+| `status` | `OK`, or the [kind of failure](#failures). |
+| `detail` | For a failure, what failed, without values. |
+| `latencyMs` | For a model the engine called, how long the call took. |
+| `outputs` | For `OK`, the outputs later nodes read, in the [JSON forms](java-api.md#json-facts-and-results-factsjson). |
+| `confidence`, `attributionMethod` | For `OK`, as the model reported them, if it did. |
+| `attributions` | For `OK`, every attribution by rank, with its direction and, if the node gave one for it, its reason code. Contribution values are left out. |
+
+The record never contains the features sent to the model, nor the raw contributions: only identifiers, the outputs the flow used, and ranks. This keeps records safe to write to ordinary logs, as for tables.
+
 ## Evaluation
 
 The engine evaluates one node at a time from `start` and follows exactly one path to an `end` node. The same facts and the same business date always give the same path.
 
 - **Business date.** The flow's business date (`DecisionRef.asOf`, else the engine clock) selects the flow version, the version of every table without a pinned `version`, and is the `businessDate` of every expression and table.
 - **Table versions.** A `table` node without `version` uses the version of its table in force on the business date. Because that can be any registered version, the flow is checked against all of them: the facts must suit every version, and the flow can read only the outputs that every version declares with the same type. Pin `version` when a table's versions differ.
-- **Reason codes.** The reason codes of every table node, in order. Each code appears once, with the node that first produced it.
+- **Reason codes.** The reason codes of every table and model node, in order. Each code appears once, with the node that first produced it.
 - **Matched rules.** `DecisionResult.matchedRules()` and `trace()` list the rules of every table node, in order. The decision record says which node each one came from.
-- **Timeouts.** The [timeout](java-api.md#timeouts) covers the whole flow. The engine checks the time before each node and before each rule.
+- **Timeouts.** The [timeout](java-api.md#timeouts) covers the whole flow, model calls included. The engine checks the time before each node and before each rule, and gives a model no more time than the evaluation has left.
 - **Errors.** When a node fails, for example a division by zero or a `UNIQUE` table whose rules all match, the evaluation fails with a `DecisionEvaluationException` for the flow, whose message names the node. As always, the message contains no input values.
 - **Canary and shadow versions** work for flows as for tables: name the flow id in `canary` or `shadow` (see [Canary and shadow versions](java-api.md#canary-and-shadow-versions)). Inside a flow, table nodes always use the version in force or their pinned version; canaries and shadows of those tables do not apply.
 
@@ -261,6 +473,7 @@ A flow's [decision record](java-api.md#decision-records-and-auditing) has one st
 | `decision`, `version` | `table` | The table evaluated and its exact version, so that the decision can be reproduced even after the table changes. |
 | `matchedRules` | `table` | The rules that matched, in order. |
 | `taken` | `switch`, `split` | The node the switch chose, or the bucket the split chose. |
+| `mode`, `model`, `status`, `detail`, `latencyMs`, `outputs`, `confidence`, `attributionMethod`, `attributions` | `model` | What the model was asked and answered; see [Model steps in the record](#model-steps-in-the-record). |
 
 The record's own `version` is the flow's version. When the evaluation fails inside a node, that node is the last step of the path, and a `table` step shows the rules matched before the failure.
 
@@ -280,6 +493,7 @@ The canonical form writes a single unconditional `next` as the node id, so `"nex
 - nodes sharing an `as` name publish different values, or can both run on one path;
 - a `table` node names an unregistered table or version, a flow, or a table input that it cannot satisfy;
 - an `end` node does not set every output, or sets one that is not declared;
+- a `model` node pins no exact model version; has no `features` or `timeoutMs` in `invoke` mode, or has them in `supplied` mode; has a feature or `valid` condition that does not type-check, an output with fields, a `minConfidence` outside 0 to 1, or a reason code that is not `UPPER_SNAKE_CASE`; or is in `invoke` mode and no invoker is registered for its model (unless the engine is built with `suppliedModelsOnly()`). `onFailure` is required when the file is read;
 - a `split` has duplicate bucket names, or percentages that do not add up to 100;
 - a node id or `as` name is not an identifier, or is the name of an input;
 - the flow's `id` is also the id of a table, or two versions are inconsistent, as for tables.
@@ -293,10 +507,11 @@ invalid decision definition (1 problem):
 
 ## Testing flows
 
-Test cases for flows are `.stone-test.json` files, like those for tables, and can also expect the path of nodes. Coverage then requires every node to be visited and every branch to be taken. See [Testing decision flows](testing.md#testing-decision-flows).
+Test cases for flows are `.stone-test.json` files, like those for tables, and can also expect the path of nodes and give model results in `models`. Coverage then requires every node to be visited and every branch to be taken, including the `onFailure` path of every model node. See [Testing decision flows](testing.md#testing-decision-flows).
 
 ## Limitations
 
-- **No model nodes yet.** Model nodes (`"type": "model"`), with their typed contract, failure paths and attributions, are step 3 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan). Until then, compute the score outside RuleStone and pass it as an input, as in [Pattern A](hybrid-ai.md#21-plain-input-works-today).
+- **No replay yet.** Re-running a recorded decision with its recorded model results is step 5 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan).
+- **No shadow models or LLM nodes yet.** A model node with `shadow`, `kind` or `prompt` is rejected as not supported yet; they are step 7.
 - **No sub-flows.** A node cannot call another flow yet.
-- **Java engine only.** The browser engine of the [Editor SDK](editor-sdk.md) does not run flows, and its flow canvas only designs them. The [web editor](editor.md) and the [Temporal](temporal.md) and [Camunda](camunda.md) integrations work with decision tables only for now.
+- **Java engine only.** The browser engine of the [Editor SDK](editor-sdk.md) does not run flows, and its flow canvas only designs them. The [web editor](editor.md) and the [Temporal](temporal.md) and [Camunda](camunda.md) integrations evaluate decision tables only for now. They already read supplied model results in JSON, in the same `models` form as above, for when they can evaluate flows; until then a decision table rejects them.

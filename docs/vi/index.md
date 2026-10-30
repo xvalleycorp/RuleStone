@@ -1,6 +1,6 @@
 ---
 source: README.md
-sourceHash: 3da78efd20f2337845dc5294d6057f377ede14980707cbd90ce8e1df5781d7b1
+sourceHash: b274b49612fb91626a7b18438aeaeccf8eebbf6a38c964ff61048d6cdc5cb5ea
 ---
 
 # Tài liệu RuleStone
@@ -16,13 +16,13 @@ sourceHash: 3da78efd20f2337845dc5294d6057f377ede14980707cbd90ce8e1df5781d7b1
 | [Ngôn ngữ biểu thức](expressions.md) | Viết điều kiện và đầu ra: toán tử, số thập phân, làm tròn, danh sách, trường bị thiếu, lỗi. |
 | [So khớp gần đúng](fuzzy-matching.md) | So sánh tên khi sàng lọc AML/KYC: chuẩn hoá, điểm tương đồng, ngưỡng và các giới hạn. |
 | [Java API](java-api.md) | Nhúng engine vào ứng dụng: đầu vào, kết quả, lỗi, nạp lại luật, đa luồng. |
-| [Luồng quyết định](flows.md) | Nối các bảng quyết định thành một quyết định với nút rẽ nhánh, giá trị dẫn xuất, phép chia champion/challenger và nút kết thúc, theo định dạng `.flow.json`. |
+| [Luồng quyết định](flows.md) | Nối các bảng quyết định và mô hình học máy thành một quyết định với nút rẽ nhánh, giá trị dẫn xuất, nút mô hình, phép chia champion/challenger và nút kết thúc, theo định dạng `.flow.json`. |
 | [Kiểm thử](testing.md) | Kiểm thử bảng quyết định và luồng quyết định: ca kiểm thử bằng JSON, tích hợp JUnit 5, độ bao phủ luật và nút, và assertion dạng fluent. |
 | [Trình soạn thảo web](editor.md) | Tạo và sửa bảng quyết định trên trình duyệt, thử với các fact mẫu và lưu tệp `.stone.json`. |
 | [SDK trình soạn thảo](editor-sdk.md) | Nhúng các trình soạn thảo trực quan vào ứng dụng web của bạn, với React, Angular, Vue hoặc HTML thuần, và chạy luật ngay trong trình duyệt. |
 | [Tích hợp Temporal](temporal.md) | Đánh giá quyết định từ workflow Temporal, dưới dạng activity hoặc ngay trong mã workflow với phiên bản luật được ghim. |
 | [Tích hợp Camunda](camunda.md) | Gọi quyết định từ quy trình BPMN bằng job worker của Camunda 8 hoặc delegate của Camunda 7. |
-| [Ví dụ](examples.md) | Tìm hiểu các bảng quyết định hoàn chỉnh cho khoản vay, lãi suất tiền gửi, phí chuyển tiền, gian lận thẻ, thẩm định tín dụng và AML, và một luồng phát hành thẻ tín dụng. |
+| [Ví dụ](examples.md) | Tìm hiểu các bảng quyết định hoàn chỉnh cho khoản vay, lãi suất tiền gửi, phí chuyển tiền, gian lận thẻ, thẩm định tín dụng và AML, và hai luồng phát hành thẻ tín dụng, một trong hai có dùng mô hình. |
 
 ## Thiết kế
 

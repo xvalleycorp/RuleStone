@@ -33,6 +33,8 @@ import org.camunda.bpm.engine.delegate.JavaDelegate;
  *       on the business date.</td></tr>
  *   <tr><td>{@code asOfVariable}</td><td>no</td><td>Variable holding the business date; otherwise today
  *       according to the service's clock.</td></tr>
+ *   <tr><td>{@code modelsVariable}</td><td>no</td><td>Variable holding supplied model results, a JSON
+ *       object of model node id to result (see {@code FactsJson.readModels}); otherwise none.</td></tr>
  *   <tr><td>{@code resultVariable}</td><td>no</td><td>Default {@code decision}.</td></tr>
  *   <tr><td>{@code failOnNoMatch}</td><td>no</td><td>{@code true} to throw the BPMN error when no rule
  *       matches; default {@code false}.</td></tr>
@@ -58,6 +60,7 @@ public class RuleStoneDelegate implements JavaDelegate {
     private Expression decisionId;
     private Expression version;
     private Expression asOfVariable;
+    private Expression modelsVariable;
     private Expression resultVariable;
     private Expression failOnNoMatch;
     private Expression errorCode;
@@ -101,6 +104,15 @@ public class RuleStoneDelegate implements JavaDelegate {
      */
     public void setAsOfVariable(Expression asOfVariable) {
         this.asOfVariable = asOfVariable;
+    }
+
+    /**
+     * Sets the name of the variable holding supplied model results.
+     *
+     * @param modelsVariable the variable name
+     */
+    public void setModelsVariable(Expression modelsVariable) {
+        this.modelsVariable = modelsVariable;
     }
 
     /**
@@ -149,6 +161,7 @@ public class RuleStoneDelegate implements JavaDelegate {
                         .orElseThrow(() -> invalid("the field 'decisionId' is required", execution)),
                 field(version, "version", execution),
                 field(asOfVariable, "asOfVariable", execution),
+                field(modelsVariable, "modelsVariable", execution),
                 field(resultVariable, "resultVariable", execution)
                         .orElse(RuleStoneDecisionService.DEFAULT_RESULT_VARIABLE),
                 bool(field(failOnNoMatch, "failOnNoMatch", execution), execution),

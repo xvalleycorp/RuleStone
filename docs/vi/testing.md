@@ -1,6 +1,6 @@
 ---
 source: testing.md
-sourceHash: 58178ed0b20453a42dde676fb0cdc94a394d0ca00b72602a41f8dba7dca57824
+sourceHash: 1004ee8edf4b4dd27faa035af7f0c0a1c445220c7b25b44205f17790325f3aca
 ---
 
 # Kiểm thử bảng quyết định
@@ -94,6 +94,7 @@ Mỗi ca kiểm thử đánh giá quyết định một lần với các `facts`
 | `asOf` | không | Ngày theo ISO (`yyyy-MM-dd`) dùng để chọn phiên bản có hiệu lực, như `DecisionRef.asOf`. **Hãy đặt giá trị này cho mọi quyết định có ngày hiệu lực**; nếu không, đồng hồ của engine sẽ quyết định và kết quả phụ thuộc vào ngày chạy kiểm thử. |
 | `version` | không | Đánh giá đúng phiên bản này, bất kể ngày, như `DecisionRef.version`. |
 | `facts` | có | Đối tượng ánh xạ tên đầu vào tới giá trị, như với `Facts`. Đối tượng trở thành `Map` và mảng trở thành `List`. Không được dùng `null`: hãy bỏ trường đó đi để kiểm thử trường hợp thiếu giá trị. |
+| `models` | không | Với một luồng có [nút mô hình](flows.md#nút-mô-hình): kết quả mô hình theo id nút, hoặc một lỗi như `{ "failure": "TIMEOUT" }`. Xem [Luồng có nút mô hình](#luồng-có-nút-mô-hình). |
 | `expect` | có | Đối tượng chứa các kỳ vọng dưới đây. `{}` chỉ kiểm tra rằng việc đánh giá thành công. |
 
 ### Kỳ vọng
@@ -280,6 +281,37 @@ node coverage: 10 of 10 nodes and 9 of 10 branches exercised by a passing test
 
 Để kiểm thử một nhóm của `split`, hãy chọn một khoá rơi vào nhóm đó: với cùng một salt, nhóm của một khoá không bao giờ thay đổi. `RuleCoverage.uncoveredNodes()` và `uncoveredBranches()` trả về những gì còn thiếu, như `uncoveredRules()` làm với luật. Khi không dùng JUnit, hãy đọc các tệp bằng `StoneTestJson.read(path, tables, flows)`.
 
+### Luồng có nút mô hình
+
+Một ca kiểm thử cung cấp kết quả của mỗi [nút mô hình](flows.md#nút-mô-hình) mà nó đi tới trong `models`, theo id nút, ở dạng [kết quả do bên gọi cung cấp](flows.md#kết-quả-do-bên-gọi-cung-cấp). Một lỗi được viết là `{ "failure": "TIMEOUT" }` hoặc `{ "failure": "ERROR" }`; một nút không có kết quả sẽ lỗi với `MISSING`. Các loại lỗi khác đến từ chính kết quả, như một PD lớn hơn 1 hoặc một độ tin cậy thấp hơn `minConfidence`. Ca kiểm thử này, từ [`examples/flows/card_origination_scored.stone-test.json`](../../examples/flows/card_origination_scored.stone-test.json), kiểm tra rằng khi mô hình hết thời gian, hồ sơ được chuyển người xét duyệt:
+
+```json
+{
+  "name": "a behavioural model timeout is referred, never approved on a guess",
+  "facts": {
+    "applicant": { "id": "C-2009", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+    "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+  },
+  "models": {
+    "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+    "pd_behaviour": { "failure": "TIMEOUT" }
+  },
+  "expect": {
+    "output": { "decision": "REFER", "riskGrade": "N/A" },
+    "reasonCodes": ["MODEL_UNAVAILABLE"],
+    "path": ["policy", "fraud", "segment", "pd_behaviour", "referred"]
+  }
+}
+```
+
+Hãy tạo engine dùng để kiểm thử với `suppliedModelsOnly()`. Khi đó các nút ở chế độ `invoke` cũng lấy kết quả từ ca kiểm thử, nên kiểm thử là tất định và không cần máy chủ mô hình:
+
+```java
+RuleStoneEngine engine = RuleStone.builder().decisions(tables).flows(flows).suppliedModelsOnly().build();
+```
+
+Độ bao phủ tính hai loại nhánh cho một nút mô hình, và nút mô hình luôn có cả hai: mỗi đích của `next`, và đường `onFailure`, được viết `pd_behaviour -> referred (onFailure)`. Nhánh `onFailure` chỉ được tính khi mô hình lỗi, kể cả khi `next` dẫn tới cùng một nút, nên mỗi nút mô hình cần một ca kiểm thử trong đó mô hình của nó lỗi.
+
 ## Assertion dạng fluent trong Java
 
 `DecisionCheck` kiểm tra một lần đánh giá bằng API dạng fluent. Nó ném `AssertionError`, nên dùng được với JUnit, TestNG hay bất kỳ framework nào khác:
@@ -294,7 +326,7 @@ DecisionCheck.of(engine)
         .expectMatchedRules("R4");
 ```
 
-Các phương thức thiết lập yêu cầu `decision`, `version`, `asOf` và `given` chuẩn bị việc đánh giá. Kỳ vọng đầu tiên sẽ đánh giá quyết định; sau đó không thể thay đổi yêu cầu nữa.
+Các phương thức thiết lập yêu cầu `decision`, `version`, `asOf`, `given`, `givenModelResult` và `givenModelFailure` chuẩn bị việc đánh giá; hai phương thức cuối cung cấp kết quả hoặc lỗi của một nút mô hình, như `Facts.withModelResult` và `withModelFailure`. Kỳ vọng đầu tiên sẽ đánh giá quyết định; sau đó không thể thay đổi yêu cầu nữa.
 
 | Phương thức | Kiểm tra |
 |---|---|

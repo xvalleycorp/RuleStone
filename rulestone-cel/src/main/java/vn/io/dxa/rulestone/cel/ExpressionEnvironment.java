@@ -137,6 +137,60 @@ public final class ExpressionEnvironment {
     }
 
     /**
+     * Parses and type-checks {@code source}, whose result type is whatever it produces: one of the
+     * primitive types or a list of them, as {@link CelExpression#resultType()} then says.
+     *
+     * @throws ExpressionException if the expression is malformed or ill-typed, or produces a value
+     *                             with fields, or one whose type cannot be determined
+     */
+    public CelExpression compile(String source) {
+        Objects.requireNonNull(source, "source");
+        CelAbstractSyntaxTree ast;
+        try {
+            ast = compiler.compile(source).getAst();
+        } catch (CelValidationException e) {
+            throw new ExpressionException(e.getMessage(), e);
+        }
+        ValueType type = valueType(ast.getResultType());
+        if (type == null) {
+            throw new ExpressionException("expression must produce bool, int, string, decimal, money, date or a "
+                    + "list of them, but produces " + ast.getResultType().name() + ": " + source, null);
+        }
+        try {
+            return new CelExpression(this, source, type, runtime.createProgram(ast));
+        } catch (CelEvaluationException e) {
+            throw new ExpressionException("cannot prepare expression: " + source, e);
+        }
+    }
+
+    /** The value type of a primitive CEL type or a list of them; null for any other type. */
+    private static ValueType valueType(CelType type) {
+        if (type.equals(SimpleType.BOOL)) {
+            return ValueType.BOOL;
+        }
+        if (type.equals(SimpleType.INT)) {
+            return ValueType.INT;
+        }
+        if (type.equals(SimpleType.STRING)) {
+            return ValueType.STRING;
+        }
+        if (type.equals(DecimalLibrary.TYPE)) {
+            return ValueType.DECIMAL;
+        }
+        if (type.equals(MoneyLibrary.TYPE)) {
+            return ValueType.MONEY;
+        }
+        if (type.equals(DateLibrary.TYPE)) {
+            return ValueType.DATE;
+        }
+        if (type instanceof ListType list) {
+            ValueType element = valueType(list.elemType());
+            return element == null ? null : ValueType.listOf(element);
+        }
+        return null;
+    }
+
+    /**
      * Converts Java values for every declared variable into their runtime form.
      * Undeclared entries are ignored.
      *

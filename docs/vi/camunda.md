@@ -1,6 +1,6 @@
 ---
 source: camunda.md
-sourceHash: 9ed2972fe90a9d7d1fc75e12babec1ee3ff3df15ffc97e7da35ca6288902008b
+sourceHash: 9a1bf67221a81879d6fb8ef2e610f87f350e2ccf810079222c83e4f596ddb170
 ---
 
 # Tích hợp Camunda
@@ -87,11 +87,14 @@ Sau đó chọn một task, chọn **Change element → RuleStone decision**, v�
 | `decisionId` | có | | Quyết định cần đánh giá. |
 | `version` | không | | Một nhãn phiên bản cụ thể, để chạy lại và điều tra. Nếu không có, dùng phiên bản có hiệu lực vào ngày nghiệp vụ. |
 | `asOfVariable` | không | | Một biến quy trình chứa ngày nghiệp vụ dạng `"yyyy-MM-dd"`, như ngày nộp hồ sơ. Nếu không có, dùng ngày hôm nay theo đồng hồ của worker. |
+| `modelsVariable` | không | | Một biến quy trình chứa kết quả của những mô hình mà quy trình tự chạy, ở dạng `models` của [kết quả do bên gọi cung cấp](flows.md#kết-quả-do-bên-gọi-cung-cấp). Chưa có trong element template; xem bên dưới. |
 | `resultVariable` | không | `decision` | Biến nhận kết quả. |
 | `failOnNoMatch` | không | `false` | `true` sẽ ném BPMN error khi không có luật nào khớp. |
 | `errorCode` | không | `RULESTONE_DECISION_FAILED` | Mã của BPMN error. |
 
 Hãy dùng `asOfVariable` mỗi khi quy trình có ngày nghiệp vụ: khi đó quyết định không đổi nếu job được thử lại, hoặc quy trình phải chờ, qua thời điểm chuyển phiên bản.
+
+**Hiện chỉ có bảng quyết định.** Worker đánh giá bảng quyết định; [luồng quyết định](flows.md) chưa thể được đánh giá qua worker. Header `modelsVariable` dành cho các nút mô hình của luồng. Worker đọc biến này một cách chặt chẽ và báo biến bị thiếu hoặc sai định dạng bằng một BPMN error; cho tới khi worker đánh giá được luồng, một bảng quyết định sẽ từ chối kết quả mô hình, cũng bằng một BPMN error.
 
 ### Biến
 
@@ -209,7 +212,7 @@ Cấu hình delegate bằng các field, mỗi field là một chuỗi hoặc m�
 </bpmn:boundaryEvent>
 ```
 
-Các field giống các header của Camunda 8: `decisionId` (bắt buộc), `version`, `asOfVariable`, `resultVariable` (mặc định `decision`), `failOnNoMatch` (mặc định `false`) và `errorCode` (mặc định `RULESTONE_DECISION_FAILED`). Sau đó các gateway đọc kết quả bằng JUEL:
+Các field giống các header của Camunda 8: `decisionId` (bắt buộc), `version`, `asOfVariable`, `modelsVariable`, `resultVariable` (mặc định `decision`), `failOnNoMatch` (mặc định `false`) và `errorCode` (mặc định `RULESTONE_DECISION_FAILED`). Như ở Camunda 8, delegate hiện chỉ đánh giá bảng quyết định, và `modelsVariable` dành cho các nút mô hình của luồng. Sau đó các gateway đọc kết quả bằng JUEL:
 
 ```xml
 <bpmn:sequenceFlow id="Flow_Approve" sourceRef="Outcome" targetRef="Disburse">

@@ -7,6 +7,7 @@ package vn.io.dxa.rulestone.core;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -14,12 +15,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import vn.io.dxa.rulestone.api.ModelMode;
 import vn.io.dxa.rulestone.cel.ValueType;
 import vn.io.dxa.rulestone.core.FlowNode.Branch;
 import vn.io.dxa.rulestone.core.FlowNode.Bucket;
@@ -46,9 +49,9 @@ import vn.io.dxa.rulestone.core.FlowNode.Bucket;
  *
  * <p>The header ({@code id}, {@code version}, {@code description}, {@code effectiveFrom},
  * {@code effectiveTo}, {@code inputs}, {@code outputs}) is the same as for a decision table.
- * Node types are {@code table}, {@code switch}, {@code derive}, {@code split} and {@code end}.
- * The types {@code model} and {@code flow} are reserved for model nodes and sub-flows, which are
- * not supported yet: a file that uses them is rejected.
+ * Node types are {@code table}, {@code switch}, {@code derive}, {@code model}, {@code split} and
+ * {@code end}. The type {@code flow} is reserved for sub-flows, which are not supported yet: a file
+ * that uses it is rejected.
  *
  * <p>Reading is strict, as for decision tables: unknown or duplicate keys are errors, and every
  * problem is reported at once with its JSON path.
@@ -63,11 +66,17 @@ public final class DecisionFlowJson {
     private static final Set<String> TABLE_FIELDS = Set.of("type", "description", "decision", "version", "facts", "as", "next");
     private static final Set<String> SWITCH_FIELDS = Set.of("type", "description", "cases");
     private static final Set<String> DERIVE_FIELDS = Set.of("type", "description", "outputs", "set", "as", "next");
+    private static final Set<String> MODEL_FIELDS = Set.of("type", "description", "mode", "model", "features",
+            "outputs", "valid", "minConfidence", "timeoutMs", "reasonCodes", "maxReasonCodes", "onFailure", "as", "next");
+    /** Model node fields of the design that later steps add; reported as not supported yet. */
+    private static final Set<String> MODEL_FIELDS_PLANNED = Set.of("kind", "shadow", "prompt");
+    private static final Set<String> MODEL_REF_FIELDS = Set.of("id", "version");
+    private static final Set<String> ON_FAILURE_FIELDS = Set.of("to", "reasonCode");
     private static final Set<String> SPLIT_FIELDS = Set.of("type", "description", "key", "salt", "buckets");
     private static final Set<String> END_FIELDS = Set.of("type", "description", "set");
     private static final Set<String> BRANCH_FIELDS = Set.of("when", "to");
     private static final Set<String> BUCKET_FIELDS = Set.of("name", "percent", "to");
-    private static final String NODE_TYPES = "table, switch, derive, split or end";
+    private static final String NODE_TYPES = "table, switch, derive, model, split or end";
 
     private DecisionFlowJson() {}
 
@@ -132,6 +141,29 @@ public final class DecisionFlowJson {
             json.put("set", new TreeMap<>(derive.set()));
             derive.as().ifPresent(as -> json.put("as", as));
             json.put("next", nextJson(derive.next()));
+        } else if (node instanceof FlowNode.Model model) {
+            json.put("mode", model.mode().jsonName());
+            Map<String, Object> ref = new TreeMap<>();
+            ref.put("id", model.modelId());
+            ref.put("version", model.modelVersion());
+            json.put("model", ref);
+            if (!model.features().isEmpty()) {
+                json.put("features", new TreeMap<>(model.features()));
+            }
+            json.put("outputs", DecisionTableJson.typesJson(model.outputs()));
+            model.valid().ifPresent(valid -> json.put("valid", valid));
+            model.minConfidence().ifPresent(min -> json.put("minConfidence", min.toPlainString()));
+            model.timeoutMs().ifPresent(timeout -> json.put("timeoutMs", timeout));
+            if (!model.reasonCodes().isEmpty()) {
+                json.put("reasonCodes", new TreeMap<>(model.reasonCodes()));
+            }
+            model.maxReasonCodes().ifPresent(max -> json.put("maxReasonCodes", max));
+            Map<String, Object> onFailure = new TreeMap<>();
+            onFailure.put("to", model.onFailure().to());
+            onFailure.put("reasonCode", model.onFailure().reasonCode());
+            json.put("onFailure", onFailure);
+            model.as().ifPresent(as -> json.put("as", as));
+            json.put("next", nextJson(model.next()));
         } else if (node instanceof FlowNode.Split split) {
             json.put("key", split.key());
             json.put("salt", split.salt());
@@ -248,10 +280,7 @@ public final class DecisionFlowJson {
                     return new FlowNode.End(description, expressions(node, "set", path, true));
                 }
                 case "model" -> {
-                    reader.problem(path + ".type", "model nodes are not supported yet; they are planned for a "
-                            + "later release (see Hybrid AI decisioning). Until then, pass the model's score as an "
-                            + "ordinary flow input");
-                    return null;
+                    return model(node, description, path);
                 }
                 case "flow" -> {
                     reader.problem(path + ".type", "flow nodes (calling another flow) are not supported yet");
@@ -262,6 +291,103 @@ public final class DecisionFlowJson {
                     return null;
                 }
             }
+        }
+
+        private FlowNode.Model model(JsonNode node, Optional<String> description, String path) {
+            Set<String> allowed = new HashSet<>(MODEL_FIELDS);
+            allowed.addAll(MODEL_FIELDS_PLANNED);
+            reader.unknownFields(node, allowed, path);
+            MODEL_FIELDS_PLANNED.stream().sorted().forEach(field -> {
+                if (node.has(field)) {
+                    reader.problem(path + "." + field, "not supported yet: shadow models and LLM nodes are "
+                            + "planned for a later release (see Hybrid AI decisioning)");
+                }
+            });
+            String modeText = reader.requiredText(node, "mode", path);
+            ModelMode mode = switch (modeText) {
+                case "invoke" -> ModelMode.INVOKE;
+                case "supplied" -> ModelMode.SUPPLIED;
+                default -> {
+                    if (!modeText.isEmpty()) {
+                        reader.problem(path + ".mode", "expected \"invoke\" or \"supplied\"");
+                    }
+                    yield ModelMode.INVOKE;
+                }
+            };
+            String modelId = "";
+            String modelVersion = "";
+            JsonNode model = node.get("model");
+            if (model == null || !model.isObject()) {
+                reader.problem(path + ".model", "required object { \"id\", \"version\" }");
+            } else {
+                reader.unknownFields(model, MODEL_REF_FIELDS, path + ".model");
+                modelId = reader.requiredText(model, "id", path + ".model");
+                modelVersion = reader.requiredText(model, "version", path + ".model");
+            }
+            Map<String, String> features = expressions(node, "features", path, false);
+            Map<String, ValueType> outputs = reader.typeMap(node, "outputs", path);
+            Optional<String> valid = reader.optionalText(node, "valid", path);
+            Optional<BigDecimal> minConfidence = Optional.empty();
+            JsonNode min = node.get("minConfidence");
+            if (min != null) {
+                if (min.isIntegralNumber() || min.isBigDecimal()) {
+                    minConfidence = Optional.of(min.decimalValue());
+                } else if (min.isTextual() && min.asText().matches("-?[0-9]+(\\.[0-9]+)?")) {
+                    minConfidence = Optional.of(new BigDecimal(min.asText()));
+                } else {
+                    reader.problem(path + ".minConfidence", "expected a decimal from 0 to 1, e.g. \"0.80\"");
+                }
+            }
+            Optional<Integer> timeoutMs = optionalInt(node, "timeoutMs", path);
+            Map<String, String> reasonCodes = strings(node, "reasonCodes", path);
+            Optional<Integer> maxReasonCodes = optionalInt(node, "maxReasonCodes", path);
+            FlowNode.OnFailure onFailure = new FlowNode.OnFailure("", "");
+            JsonNode failure = node.get("onFailure");
+            if (failure == null || !failure.isObject()) {
+                reader.problem(path + ".onFailure", "required object { \"to\", \"reasonCode\" }: where to go "
+                        + "when the model fails, and the reason code to give");
+            } else {
+                reader.unknownFields(failure, ON_FAILURE_FIELDS, path + ".onFailure");
+                onFailure = new FlowNode.OnFailure(reader.requiredText(failure, "to", path + ".onFailure"),
+                        reader.requiredText(failure, "reasonCode", path + ".onFailure"));
+            }
+            Optional<String> as = reader.optionalText(node, "as", path);
+            List<Branch> next = next(node, path);
+            return new FlowNode.Model(description, mode, modelId, modelVersion, features, outputs, valid,
+                    minConfidence, timeoutMs, reasonCodes, maxReasonCodes, onFailure, as, next);
+        }
+
+        private Optional<Integer> optionalInt(JsonNode node, String field, String path) {
+            JsonNode value = node.get(field);
+            if (value == null) {
+                return Optional.empty();
+            }
+            if (!value.isIntegralNumber() || !value.canConvertToInt()) {
+                reader.problem(path + "." + field, "expected a whole number");
+                return Optional.empty();
+            }
+            return Optional.of(value.intValue());
+        }
+
+        /** An optional object of feature name to reason code. */
+        private Map<String, String> strings(JsonNode node, String field, String path) {
+            JsonNode object = node.get(field);
+            if (object == null) {
+                return Map.of();
+            }
+            if (!object.isObject()) {
+                reader.problem(path + "." + field, "expected an object of feature name to reason code");
+                return Map.of();
+            }
+            Map<String, String> strings = new LinkedHashMap<>();
+            object.properties().forEach(e -> {
+                if (e.getValue().isTextual()) {
+                    strings.put(e.getKey(), e.getValue().asText());
+                } else {
+                    reader.problem(path + "." + field + "." + e.getKey(), "expected a reason code string");
+                }
+            });
+            return strings;
         }
 
         /** {@code "next": "node"} or {@code "next": [ { "when": …, "to": … }, …, { "to": … } ]}. */

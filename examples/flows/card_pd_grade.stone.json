@@ -1,0 +1,18 @@
+{
+  "id": "card_pd_grade",
+  "version": "1",
+  "description": "Risk grade from a model's probability of default (PD)",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "pd": "decimal"
+  },
+  "outputs": {
+    "riskGrade": "string"
+  },
+  "rules": [
+    { "id": "A", "when": "pd < decimal('0.02')", "then": { "riskGrade": "'A'" } },
+    { "id": "B", "when": "pd < decimal('0.05')", "then": { "riskGrade": "'B'" } },
+    { "id": "C", "when": "pd < decimal('0.10')", "then": { "riskGrade": "'C'" } },
+    { "id": "D", "when": "true", "then": { "riskGrade": "'D'" }, "reasonCode": "PD_HIGH" }
+  ]
+}

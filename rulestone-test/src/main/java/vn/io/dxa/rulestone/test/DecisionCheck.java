@@ -13,6 +13,8 @@ import java.util.Optional;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.Facts;
+import vn.io.dxa.rulestone.api.ModelResult;
+import vn.io.dxa.rulestone.api.ModelStatus;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.api.RuleStoneException;
 
@@ -117,15 +119,47 @@ public final class DecisionCheck {
     }
 
     /**
-     * Adds every fact of {@code more}.
+     * Adds every fact of {@code more}, and the model results it carries.
      *
      * @param more facts to add
      * @return this check
-     * @throws IllegalArgumentException if a fact with one of those names was already given
+     * @throws IllegalArgumentException if a fact with one of those names, or a result for one of
+     *                                  those model nodes, was already given
      */
     public DecisionCheck given(Facts more) {
         requireNotEvaluated();
         more.asMap().forEach((name, value) -> facts = facts.with(name, value));
+        facts = facts.withModels(more.models());
+        return this;
+    }
+
+    /**
+     * Gives the result of the model of a {@code model} node, as {@link Facts#withModelResult} does.
+     * Build the engine with {@code suppliedModelsOnly()} to give results for nodes in
+     * {@code invoke} mode too.
+     *
+     * @param node   the id of the model node
+     * @param result what the model returned
+     * @return this check
+     * @throws IllegalArgumentException if a result for {@code node} was already given
+     */
+    public DecisionCheck givenModelResult(String node, ModelResult result) {
+        requireNotEvaluated();
+        facts = facts.withModelResult(node, result);
+        return this;
+    }
+
+    /**
+     * Reports that the model of a {@code model} node failed, as {@link Facts#withModelFailure} does.
+     *
+     * @param node    the id of the model node
+     * @param failure {@link ModelStatus#TIMEOUT} or {@link ModelStatus#ERROR}
+     * @return this check
+     * @throws IllegalArgumentException if a result for {@code node} was already given
+     */
+    public DecisionCheck givenModelFailure(String node, ModelStatus failure) {
+        requireNotEvaluated();
+        facts = facts.withModelFailure(node, failure);
         return this;
     }
 

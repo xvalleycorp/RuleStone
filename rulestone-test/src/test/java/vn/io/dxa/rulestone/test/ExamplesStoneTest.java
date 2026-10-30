@@ -59,12 +59,16 @@ class ExamplesStoneTest {
         }
     }
 
-    /** The example tables and flows, with the clock fixed so that cases without {@code asOf} are reproducible. */
+    /**
+     * The example tables and flows, with the clock fixed so that cases without {@code asOf} are
+     * reproducible, and every model node reading its result from the case.
+     */
     static RuleStoneEngine exampleEngine() {
         return RuleStone.builder()
                 .clock(Clock.fixed(Instant.parse("2026-12-01T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh")))
                 .decisions(allExampleTables())
                 .flows(exampleFlows())
+                .suppliedModelsOnly()   // the model results come from the test cases
                 .build();
     }
 

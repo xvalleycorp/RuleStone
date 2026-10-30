@@ -21,7 +21,7 @@ This page explains how to embed RuleStone in a Java application: building an eng
 
 | Artifact | Package | Use |
 |---|---|---|
-| `rulestone-api` | `vn.io.dxa.rulestone.api` | Types your application code calls: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult` and the exceptions. Depends on the JDK only. |
+| `rulestone-api` | `vn.io.dxa.rulestone.api` | Types your application code calls: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult` and the exceptions, and the model SPI, `ModelInvoker` and `ModelResult`. Depends on the JDK only. |
 | `rulestone-core` | `vn.io.dxa.rulestone.core` | The embedded engine, decision tables and the `.stone.json` format. |
 | `rulestone-cel` | `vn.io.dxa.rulestone.cel` | The expression language. Used by `rulestone-core`; use it directly only to evaluate stand-alone expressions. |
 | `rulestone-audit-kafka` | `vn.io.dxa.rulestone.audit.kafka` | An audit sink that publishes decision records to Kafka; see [Publishing records to Kafka](#publishing-records-to-kafka). |
@@ -65,6 +65,8 @@ RuleStoneEngine engine = RuleStone.builder()
 | `timeout(Duration)` | Default timeout of every evaluation, for requests without their own; see [Timeouts](#timeouts). By default there is none. |
 | `canary(String, String, double)` / `shadow(String, String)` | Routes a share of the requests for a decision to a new version, or evaluates a new version in shadow on every request; see [Canary and shadow versions](#canary-and-shadow-versions). |
 | `shadowExecutor(Executor)` | Runs shadow evaluations on this executor instead of the caller's thread. |
+| `modelInvoker(String, ModelInvoker)` | Registers the invoker that calls a model for the [model nodes](flows.md#model-nodes) of flows in `invoke` mode; see [Models in decision flows](#models-in-decision-flows). |
+| `suppliedModelsOnly()` | Runs every model node in `supplied` mode, calling no model: for tests and replays, never for production. |
 | `build()` | Compiles and type-checks every rule and flow, checks versions for duplicates and contradictory dates (see [Versions and effective dates](decision-tables.md#versions-and-effective-dates)) and that every canary and shadow names a registered version, and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
 
 `DecisionTableJson.read(...)` accepts a `String`, an `InputStream` (read as UTF-8) or a `Path`, and throws `InvalidDecisionException` for any problem in the file. Load files from wherever you keep them: the classpath, a directory, a database column or a configuration service.
@@ -163,6 +165,8 @@ record Applicant(int age, BigDecimal monthlyIncome, BigDecimal monthlyDebt,
 ```
 
 For other classes, such as JavaBeans or JPA entities, convert to a `Map` or a record at the boundary. This keeps lazy-loading proxies and unrelated fields out of your decisions.
+
+Facts can also carry the results of models that you ran yourself, for the [model nodes](flows.md#model-nodes) of a flow in `supplied` mode: `facts.withModelResult("fraud", result)`, or `withModelFailure("fraud", ModelStatus.TIMEOUT)` if the call failed. They are kept apart from the inputs, under the id of the node: `asMap()` returns the inputs only, and `models()` the model results. A decision that has no such node rejects them.
 
 ## Money, dates and the business date
 
@@ -284,7 +288,7 @@ DecisionResult result = engine.evaluate(
 | `factsHash` | A hash of the declared inputs; see below. Left out if the inputs were invalid. |
 | `output` | The outputs, written as by `FactsJson`. Empty unless the status is `OK`. |
 | `reasonCodes` | Each reason code with the node that produced it. |
-| `path` | Each node evaluated. For a decision table, the table with its version and the rules that matched; for a [decision flow](flows.md#decision-records), every node visited, in order. When evaluation fails inside a table, it shows the rules that matched before the failure. |
+| `path` | Each node evaluated. For a decision table, the table with its version and the rules that matched; for a [decision flow](flows.md#decision-records), every node visited, in order, and for a model node, the model, its status and, on success, its outputs and ranked attributions (see [Model steps in the record](flows.md#model-steps-in-the-record)). When evaluation fails inside a table, it shows the rules that matched before the failure. |
 | `error` | Present only when the status is not `OK`: the exception's message, which never contains input values. For exceptions that are not `RuleStoneException`s, only the exception type is recorded. |
 | `routing` | Present only when a version other than the one in force was evaluated, as a canary or a shadow; see [Canary and shadow versions](#canary-and-shadow-versions). |
 
@@ -370,11 +374,29 @@ Writing produces the same forms, with decimals as strings in plain notation (`"0
 | Method | Converts |
 |---|---|
 | `readFacts(String json, Map<String, ValueType> inputs)`, `readFacts(JsonNode, Map<String, ValueType>)`, `readFacts(JsonNode, DecisionTable)` | a JSON object of inputs to `Facts` |
+| `readModels(JsonNode json)` | a JSON `models` object of model node id to result or failure, as in [Supplied results](flows.md#supplied-results), to the `Map` that `Facts.withModels` takes |
+| `readFacts(JsonNode facts, Map<String, ValueType> inputs, JsonNode models)` | inputs and model results together; problems in the model results are located under `models.` |
 | `readValues(JsonNode json, Map<String, ValueType> types)` | a JSON object of named values to a `Map`, e.g. expected outputs with the types from `resultTypes(table)` |
 | `readValue(JsonNode json, ValueType type)` | one value |
 | `resultTypes(DecisionTable table)` | the types of the values in `DecisionResult.output()`: the declared outputs, each a list under `COLLECT` |
 | `writeValue(Object value)`, `writeValues(Map<String, ?> values)` | Java values to a `JsonNode` or an `ObjectNode` |
 | `write(Map<String, ?> values)` | Java values to compact JSON text |
+
+## Models in decision flows
+
+A decision flow can use machine-learning models through [model nodes](flows.md#model-nodes). The types are in `rulestone-api`, so `rulestone-core` depends on no model vendor; adapters for HTTP model servers, scorecards and ONNX are planned as separate modules.
+
+| Type | Role |
+|---|---|
+| `ModelInvoker` | Calls a model: `ModelResult invoke(ModelCall call) throws ModelException`. Register one per model id with `RuleStone.builder().modelInvoker(modelId, invoker)`. Must be thread-safe and return within `call.timeout()`. |
+| `ModelCall` | The model id and pinned version, the node's declared features as typed values, the time available, and the correlation id. |
+| `ModelResult` | What the model returned: model id and version, outputs, an optional confidence, and attributions (`ModelResult.Attribution`: feature and contribution) with the name of the method that computed them. `ModelResult.of(id, version, outputs)`, then `withConfidence` and `withAttributions`. |
+| `ModelException` | Thrown by an invoker that cannot answer. Like any exception from an invoker, it becomes a model failure of kind `ERROR`, never an exception for the caller. |
+| `ModelStatus` | `OK`, or the kind of failure: `TIMEOUT`, `ERROR`, `CONTRACT_VIOLATION`, `INVALID_OUTPUT`, `LOW_CONFIDENCE`, `MISSING`. |
+| `SuppliedModel` | A result or a failure that the caller passes with the facts, see `Facts.withModelResult`. |
+| `DecisionRecord.ModelStep` | The model part of a record's path step: what the model was asked and answered, without feature values or contributions. |
+
+`toString()` of `ModelCall` and `ModelResult` names features and outputs but never shows values. See [Model nodes](flows.md#model-nodes) for the contract a result must meet, the failure path and the reason codes.
 
 ## Errors
 

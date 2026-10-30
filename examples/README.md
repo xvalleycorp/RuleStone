@@ -1,6 +1,6 @@
 # Examples
 
-Complete decision tables, and a decision flow, for common banking problems. They are explained in [docs/examples.md](../docs/examples.md) and evaluated by the test suite on every build.
+Complete decision tables, and decision flows, for common banking problems. They are explained in [docs/examples.md](../docs/examples.md) and evaluated by the test suite on every build.
 
 | File | Hit policy | Problem |
 |---|---|---|
@@ -16,6 +16,6 @@ Complete decision tables, and a decision flow, for common banking problems. They
 | `aml_transaction_monitoring.stone.json` | `COLLECT` | AML alerts and their scores for a transaction and the account's recent activity |
 | `aml_alert_action.stone.json` | `FIRST` | AML action (suspicious transaction report, analyst review, large cash report) from the alert score |
 
-[`flows/`](flows/) holds a decision flow, `card_origination.flow.json`, with the four tables it uses and its tests. It is explained in [docs/flows.md](../docs/flows.md). The browser engine, which does not run flows, skips this folder.
+[`flows/`](flows/) holds two decision flows with the tables they use and their tests: `card_origination.flow.json`, and `card_origination_scored.flow.json`, which uses machine-learning models through model nodes. They are explained in [docs/flows.md](../docs/flows.md). The browser engine, which does not run flows, skips this folder.
 
 These files illustrate the format. Their thresholds, scores and rates are invented and are not anyone's actual policy. The names in the AML examples are invented and refer to no real person, company or listed entity.

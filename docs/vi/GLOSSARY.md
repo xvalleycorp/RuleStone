@@ -88,8 +88,10 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | shadow mode | chế độ bóng (shadow) | |
 | shadow version | phiên bản bóng (shadow) | Được đánh giá chỉ để ghi lại, không trả kết quả cho bên gọi. |
 | SPI (service provider interface) | SPI (giao diện nhà cung cấp dịch vụ) | |
+| monotonic clock | đồng hồ đơn điệu | Đồng hồ đo thời gian trôi qua, không bị chỉnh giờ (`System.nanoTime`). |
 | test case | ca kiểm thử | |
 | test coverage, rule coverage | độ bao phủ kiểm thử, độ bao phủ luật | |
+| thread | luồng thực thi (thread) | Để phân biệt với luồng quyết định. |
 | thread-safe | an toàn đa luồng | |
 | timeout | thời gian chờ tối đa | |
 
@@ -144,6 +146,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | English | Tiếng Việt | Ghi chú |
 |---|---|---|
 | activity (Temporal) | activity | Giữ nguyên; một bước công việc do worker thực thi. |
+| adapter (model) | adapter | Giữ nguyên; mô-đun nối RuleStone với một loại máy chủ hoặc định dạng mô hình. |
 | attribution (model) | attribution (mức đóng góp của đặc trưng) | |
 | attested input | đầu vào có chứng thực | |
 | BPMN error | BPMN error | Giữ nguyên. |
@@ -151,28 +154,39 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | branch (of a flow node) | nhánh | Một lối ra của nút có nhiều lối ra. |
 | bucket (split node) | nhóm (bucket) | |
 | champion/challenger | champion/challenger | Xem bảng "Banking and governance". Nhóm: bucket → nhóm. |
+| confidence (model) | độ tin cậy | `minConfidence`. |
+| contract (model node) | hợp đồng | "Hợp đồng có kiểu" của nút mô hình: phiên bản ghim, đầu ra và kiểu, điều kiện `valid`. |
+| contribution (attribution) | mức đóng góp | |
 | decision flow | luồng quyết định | |
 | decision record | bản ghi quyết định | |
 | delegate (Camunda 7) | delegate | Giữ nguyên (`JavaDelegate`). |
 | derived value | giá trị dẫn xuất | Giá trị do nút `derive` tính. |
 | element template | element template | Giữ nguyên. |
+| failure path (`onFailure`) | đường xử lý lỗi | Đường mà nút mô hình đi theo khi mô hình lỗi. |
 | feature (model) | đặc trưng | |
 | hybrid AI decisioning | ra quyết định AI lai | |
 | incident (Camunda) | incident | Giữ nguyên; sự cố cần người vận hành xử lý. |
+| invoke mode, supplied mode | chế độ `invoke`, chế độ `supplied` | Giữ nguyên tên chế độ. |
+| invoker (model) | invoker | Giữ nguyên (`ModelInvoker`): đối tượng gọi mô hình. |
 | job worker | job worker | Giữ nguyên. |
 | knock-out (policy rule) | luật loại trừ (knock-out) | Luật chính sách từ chối hồ sơ ngay. |
+| latency | độ trễ | `latencyMs`. |
 | machine-learning model | mô hình học máy (ML) | |
+| model node | nút mô hình | Nút `model` của luồng quyết định. |
 | node | nút | |
 | node coverage | độ bao phủ nút | Mọi nút được đi qua và mọi nhánh được đi theo. |
 | path (of a flow) | đường đi | Các nút mà một lần đánh giá đi qua. |
 | payload | payload | Giữ nguyên. |
 | pin (a version) | ghim (phiên bản) | |
+| probability of default (PD) | xác suất vỡ nợ (PD) | |
 | process variable | biến quy trình | |
 | publish (node values) | công bố (giá trị của nút) | Nút công bố giá trị dưới id của nó hoặc tên `as`. |
+| rank (attribution) | thứ hạng | Cùng với chiều (direction): tăng rủi ro, giảm rủi ro. |
 | refer (to a person) | chuyển người xét duyệt, chuyển xem xét thủ công | Kết quả `REFER`. |
 | replay (decision) | replay, chạy lại | "Replay" giữ nguyên khi nói về Temporal. |
 | re-score | chấm điểm lại | |
 | salt (split) | salt | Giữ nguyên. |
+| scorecard | thẻ điểm | Mô hình chấm điểm dạng cộng điểm. |
 | search attribute | search attribute | Giữ nguyên. |
 | shadow model | mô hình chạy bóng (shadow) | |
 | side effect (Temporal) | side effect | Giữ nguyên (`Workflow.sideEffect`). |
