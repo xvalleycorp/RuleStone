@@ -5,7 +5,9 @@
 // `vitepress build`. VitePress inlines a few small scripts in every page (dark mode, the
 // asset hash map), and their content changes between builds, so the policy allows each one
 // by its SHA-256 hash instead of 'unsafe-inline'. Styles need 'unsafe-inline': VitePress
-// renders many style attributes.
+// renders many style attributes. Cloudflare Web Analytics, which Cloudflare injects into the
+// pages it serves, loads its beacon from static.cloudflareinsights.com and reports to
+// cloudflareinsights.com.
 // Exits with status 1 if the build has no "/*" header block to add the policy to.
 
 import { createHash } from 'node:crypto';
@@ -34,11 +36,11 @@ for (const page of walk(dist).filter((f) => f.endsWith('.html'))) {
 
 const policy = [
   "default-src 'self'",
-  `script-src 'self' ${[...hashes].sort().join(' ')}`,
+  `script-src 'self' ${[...hashes].sort().join(' ')} https://static.cloudflareinsights.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' https://cloudflareinsights.com",
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
