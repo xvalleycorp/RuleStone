@@ -152,7 +152,7 @@ class StoneTestJsonTest {
                 "$.decisions: unknown field (allowed: cases, decision, description)",
                 "$.cases[0].fact: unknown field (allowed: asOf, description, expect, facts, name, version)",
                 "$.cases[0].expect.matchedRule: unknown field"
-                        + " (allowed: error, exactOutput, matchedRules, output, reasonCodes, ruleVersion)");
+                        + " (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)");
     }
 
     @Test
@@ -187,12 +187,12 @@ class StoneTestJsonTest {
                 "$.cases[2].name: required non-empty string",
                 "$.cases[2].facts: required object of fact names to values",
                 "$.cases[2].expect: \"error\" cannot be combined with [output, matchedRules]:"
-                        + " a failed evaluation has no output, reason codes or matched rules",
+                        + " a failed evaluation has no output, reason codes, matched rules or path",
                 "$.cases[3].expect: required object (use {} to check only that the evaluation succeeds)",
                 "$.cases[4].expect.exactOutput: requires \"output\"",
                 "$.cases[4].expect.error: required non-empty text that the error message must contain",
                 "$.cases[4].expect: \"error\" cannot be combined with [exactOutput]:"
-                        + " a failed evaluation has no output, reason codes or matched rules",
+                        + " a failed evaluation has no output, reason codes, matched rules or path",
                 "$.cases[5]: expected an object");
     }
 

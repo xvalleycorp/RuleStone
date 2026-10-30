@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
 import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.Money;
 
@@ -61,6 +62,11 @@ final class Expectations {
 
     static Optional<String> matchedRules(DecisionResult result, List<String> expected) {
         return list("matched rules", expected, result.matchedRules());
+    }
+
+    /** Checks the ids of the nodes visited, in order; for a decision table, its single step is the decision id. */
+    static Optional<String> path(DecisionResult result, List<String> expected) {
+        return list("path", expected, result.record().path().stream().map(PathStep::node).toList());
     }
 
     /**

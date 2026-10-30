@@ -111,11 +111,11 @@ class StoneTestsTest {
     }
 
     @Test
-    void coverageTestPassesWhenEveryRuleIsMatched() throws Throwable {
+    void coverageTestPassesWhenEveryRuleNodeAndBranchIsCovered() throws Throwable {
         var tests = StoneTests.dynamicTests(engine, ExamplesStoneTest.EXAMPLES,
-                RuleCoverage.of(ExamplesStoneTest.exampleTables())).toList();
+                RuleCoverage.of(ExamplesStoneTest.allExampleTables(), ExamplesStoneTest.exampleFlows())).toList();
 
-        assertThat(tests.get(tests.size() - 1).getDisplayName()).isEqualTo("rule coverage");
+        assertThat(tests.get(tests.size() - 1).getDisplayName()).isEqualTo("rule and node coverage");
         run(tests.get(tests.size() - 1).getExecutable());
     }
 

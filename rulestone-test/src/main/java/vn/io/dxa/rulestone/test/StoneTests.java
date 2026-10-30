@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
+import vn.io.dxa.rulestone.core.DecisionFlow;
 import vn.io.dxa.rulestone.core.DecisionTable;
 
 /**
@@ -47,7 +48,7 @@ public final class StoneTests {
      * @throws IllegalArgumentException if {@code path} does not exist or contains no test file
      */
     public static Stream<DynamicTest> dynamicTests(RuleStoneEngine engine, Path path) {
-        return tests(engine, path, null, null);
+        return tests(engine, path, null, null, null);
     }
 
     /**
@@ -63,15 +64,32 @@ public final class StoneTests {
      */
     public static Stream<DynamicTest> dynamicTests(RuleStoneEngine engine, Path path,
                                                    Collection<DecisionTable> tables) {
-        return tests(engine, path, List.copyOf(tables), null);
+        return tests(engine, path, List.copyOf(tables), List.of(), null);
     }
 
     /**
-     * Like {@link #dynamicTests(RuleStoneEngine, Path, Collection)} with {@code coverage}'s tables,
-     * followed by a test named
-     * {@code rule coverage} that fails unless every rule of {@code coverage}'s tables is matched by
-     * at least one passing case. Cases that expect an error or fail their expectations cover
-     * nothing.
+     * Like {@link #dynamicTests(RuleStoneEngine, Path, Collection)}, but also reads the cases of
+     * decision flows with the types that {@code flows} declare.
+     *
+     * @param engine the engine to evaluate the cases with
+     * @param path   a test file, or a directory searched recursively for {@code *.stone-test.json} files
+     * @param tables the decision tables under test, including those the flows use
+     * @param flows  the decision flows under test
+     * @return the tests, ordered by file path and then by position in the file
+     * @throws IllegalArgumentException if {@code path} does not exist or contains no test file
+     */
+    public static Stream<DynamicTest> dynamicTests(RuleStoneEngine engine, Path path,
+                                                   Collection<DecisionTable> tables, Collection<DecisionFlow> flows) {
+        return tests(engine, path, List.copyOf(tables), List.copyOf(flows), null);
+    }
+
+    /**
+     * Like {@link #dynamicTests(RuleStoneEngine, Path, Collection, Collection)} with
+     * {@code coverage}'s tables and flows, followed by a test that fails unless every rule of
+     * {@code coverage}'s tables is matched, and every node and branch of its flows exercised, by
+     * at least one passing case. The test is named {@code rule coverage}, or
+     * {@code rule and node coverage} when flows are tracked. Cases that expect an error or fail
+     * their expectations cover nothing.
      *
      * <p>The coverage test evaluates every case itself, so its verdict does not depend on the order
      * in which tests run, nor on running the other tests at all.
@@ -83,11 +101,12 @@ public final class StoneTests {
      * @throws IllegalArgumentException if {@code path} does not exist or contains no test file
      */
     public static Stream<DynamicTest> dynamicTests(RuleStoneEngine engine, Path path, RuleCoverage coverage) {
-        return tests(engine, path, Objects.requireNonNull(coverage, "coverage").tables(), coverage);
+        Objects.requireNonNull(coverage, "coverage");
+        return tests(engine, path, coverage.tables(), coverage.flows(), coverage);
     }
 
     private static Stream<DynamicTest> tests(RuleStoneEngine engine, Path path, List<DecisionTable> tables,
-                                             RuleCoverage coverage) {
+                                             List<DecisionFlow> flows, RuleCoverage coverage) {
         Objects.requireNonNull(engine, "engine");
         List<Path> files = StoneTestJson.find(path);
         if (files.isEmpty()) {
@@ -100,7 +119,7 @@ public final class StoneTests {
             String name = displayName(path, file);
             URI source = file.toUri();
             try {
-                for (StoneTestCase c : StoneTestJson.parse(StoneTestJson.readString(file), name, tables)) {
+                for (StoneTestCase c : StoneTestJson.parse(StoneTestJson.readString(file), name, tables, flows)) {
                     cases.add(c);
                     tests.add(DynamicTest.dynamicTest(name + ": " + c.name(), source, () -> c.check(engine)));
                 }
@@ -112,7 +131,8 @@ public final class StoneTests {
             }
         }
         if (coverage != null) {
-            tests.add(DynamicTest.dynamicTest("rule coverage", path.toUri(), () -> {
+            String title = flows.isEmpty() ? "rule coverage" : "rule and node coverage";
+            tests.add(DynamicTest.dynamicTest(title, path.toUri(), () -> {
                 for (StoneTestCase c : cases) {
                     try {
                         c.check(engine).ifPresent(coverage::record);

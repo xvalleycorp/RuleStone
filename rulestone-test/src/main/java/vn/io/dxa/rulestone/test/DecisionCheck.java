@@ -204,6 +204,19 @@ public final class DecisionCheck {
     }
 
     /**
+     * Expects the evaluation to visit exactly these nodes of a decision flow, in order, from the
+     * start node to the end node. For a decision table the path is the decision id alone.
+     *
+     * @param nodes the expected node ids, in order
+     * @return this check
+     * @throws AssertionError if the path differs, or the evaluation failed
+     */
+    public DecisionCheck expectPath(String... nodes) {
+        Expectations.path(result(), List.of(nodes)).ifPresent(this::fail);
+        return this;
+    }
+
+    /**
      * Expects the evaluation to have used this rule version: {@code "3"} accepts any content of
      * version 3, {@code "3@sha256:…"} only that exact content.
      *

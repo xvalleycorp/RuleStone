@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.cel.ValueType;
+import vn.io.dxa.rulestone.core.DecisionFlow;
 import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionVersions;
 import vn.io.dxa.rulestone.core.FactsJson;
@@ -51,8 +52,12 @@ import vn.io.dxa.rulestone.core.InvalidFactsException;
  * }
  * }</pre>
  *
- * <p>Given the decision tables, facts and expected outputs are read with the types the table
- * declares, as by {@link FactsJson}: money as {@code "1500000 VND"}, dates as
+ * <p>A case of a decision flow can also expect the {@code "path"}: the ids of the nodes the
+ * evaluation visits, in order, from the start node to the end node. {@code "matchedRules"} then
+ * lists the matched rules of every table node, in order.
+ *
+ * <p>Given the decision tables (and flows), facts and expected outputs are read with the types the
+ * table (or flow) declares, as by {@link FactsJson}: money as {@code "1500000 VND"}, dates as
  * {@code "2026-11-01"}, decimals as numbers or strings; undeclared inputs, struct fields and
  * outputs are problems. The table is the version the case selects with {@code "version"} or
  * {@code "asOf"}; without either, all versions of the decision must declare the same types. Cases
@@ -83,7 +88,7 @@ public final class StoneTestJson {
     private static final Set<String> FILE_FIELDS = Set.of("decision", "description", "cases");
     private static final Set<String> CASE_FIELDS = Set.of("name", "description", "version", "asOf", "facts", "expect");
     private static final Set<String> EXPECT_FIELDS =
-            Set.of("output", "exactOutput", "reasonCodes", "matchedRules", "ruleVersion", "error");
+            Set.of("output", "exactOutput", "reasonCodes", "matchedRules", "path", "ruleVersion", "error");
 
     private StoneTestJson() {}
 
@@ -141,8 +146,48 @@ public final class StoneTestJson {
         return parse(json, source, List.copyOf(tables));
     }
 
+    /**
+     * Reads the test cases of one file, with the types declared by {@code tables} and {@code flows}.
+     *
+     * @param file   a {@code .stone-test.json} file, read as UTF-8
+     * @param tables the decision tables under test, including those the flows use
+     * @param flows  the decision flows under test
+     * @return the cases, in file order
+     * @throws InvalidStoneTestException listing every problem in the file, including values that do
+     *                                   not match their declared types
+     * @throws UncheckedIOException      if the file cannot be read
+     */
+    public static List<StoneTestCase> read(Path file, Collection<DecisionTable> tables,
+                                           Collection<DecisionFlow> flows) {
+        Path fileName = file.getFileName();
+        return parse(readString(file), fileName == null ? file.toString() : fileName.toString(),
+                List.copyOf(tables), List.copyOf(flows));
+    }
+
+    /**
+     * Reads test cases from JSON text, with the types declared by {@code tables} and {@code flows}.
+     *
+     * @param json   the content of a {@code .stone-test.json} file
+     * @param source name used in test names and messages, usually the file name
+     * @param tables the decision tables under test, including those the flows use
+     * @param flows  the decision flows under test
+     * @return the cases, in file order
+     * @throws InvalidStoneTestException listing every problem in the text, including values that do
+     *                                   not match their declared types
+     */
+    public static List<StoneTestCase> read(String json, String source, Collection<DecisionTable> tables,
+                                           Collection<DecisionFlow> flows) {
+        return parse(json, source, List.copyOf(tables), List.copyOf(flows));
+    }
+
     /** Reads with the types of {@code tables}, or without types when it is null. */
     static List<StoneTestCase> parse(String json, String source, List<DecisionTable> tables) {
+        return parse(json, source, tables, tables == null ? null : List.of());
+    }
+
+    /** Reads with the types of {@code tables} and {@code flows}, or without types when they are null. */
+    static List<StoneTestCase> parse(String json, String source, List<DecisionTable> tables,
+                                     List<DecisionFlow> flows) {
         JsonNode root;
         try {
             root = MAPPER.readTree(json);
@@ -151,7 +196,7 @@ public final class StoneTestJson {
                     : " (line " + e.getLocation().getLineNr() + ", column " + e.getLocation().getColumnNr() + ")";
             throw new InvalidStoneTestException(source, List.of("invalid JSON: " + e.getOriginalMessage() + location));
         }
-        return new Reader(source, tables).file(root);
+        return new Reader(source, tables, flows).file(root);
     }
 
     /** The test files at {@code path}: the file itself, or every {@code *.stone-test.json} below a directory, sorted. */
@@ -185,11 +230,13 @@ public final class StoneTestJson {
 
         private final String source;
         private final List<DecisionTable> tables;   // null: read without types
+        private final List<DecisionFlow> flows;     // null: read without types
         private final List<String> problems = new ArrayList<>();
 
-        Reader(String source, List<DecisionTable> tables) {
+        Reader(String source, List<DecisionTable> tables, List<DecisionFlow> flows) {
             this.source = source;
             this.tables = tables;
+            this.flows = flows;
         }
 
         List<StoneTestCase> file(JsonNode root) {
@@ -270,6 +317,7 @@ public final class StoneTestJson {
             }
             Optional<List<String>> reasonCodes = stringList(expect, "reasonCodes", at);
             Optional<List<String>> matchedRules = stringList(expect, "matchedRules", at);
+            Optional<List<String>> nodes = stringList(expect, "path", at);
             Optional<String> ruleVersion = optionalText(expect, "ruleVersion", at);
             Optional<String> error = optionalText(expect, "error", at);
             if (error.isPresent()) {
@@ -284,20 +332,40 @@ public final class StoneTestJson {
                 });
                 if (!others.isEmpty()) {
                     problem(at, "\"error\" cannot be combined with " + others
-                            + ": a failed evaluation has no output, reason codes or matched rules");
+                            + ": a failed evaluation has no output, reason codes, matched rules or path");
                 }
             }
             if (problems.size() > before) {
                 return null;
             }
             return new StoneTestCase(source, decision, name, description, version, asOf, facts,
-                    output, exactOutput, reasonCodes, matchedRules, ruleVersion, error);
+                    output, exactOutput, reasonCodes, matchedRules, nodes, ruleVersion, error);
         }
 
         /** The declared types for a case, or null to read without types. */
         private Schema schema(String decision, Optional<String> version, Optional<LocalDate> asOf, String path) {
             if (tables == null) {
                 return null;
+            }
+            List<DecisionFlow> flowVersions = flows == null ? List.of()
+                    : flows.stream().filter(f -> f.id().equals(decision)).toList();
+            if (!flowVersions.isEmpty()) {
+                List<DecisionFlow> candidates = version.isPresent()
+                        ? flowVersions.stream().filter(f -> f.version().equals(version.get())).toList()
+                        : asOf.map(date -> DecisionVersions.inForce(flowVersions, date).stream().toList())
+                                .orElse(flowVersions);
+                if (candidates.isEmpty()) {
+                    return null;   // the engine reports the unknown version
+                }
+                Schema schema = new Schema(candidates.get(0).inputs(), candidates.get(0).outputs());
+                for (DecisionFlow flow : candidates) {
+                    if (!flow.inputs().equals(schema.inputs()) || !flow.outputs().equals(schema.results())) {
+                        problem(path, "set \"version\" or \"asOf\": the versions of " + Expectations.quote(decision)
+                                + " declare different inputs or outputs");
+                        return null;
+                    }
+                }
+                return schema;
             }
             List<DecisionTable> versions = tables.stream().filter(t -> t.id().equals(decision)).toList();
             List<DecisionTable> candidates = version.isPresent()
