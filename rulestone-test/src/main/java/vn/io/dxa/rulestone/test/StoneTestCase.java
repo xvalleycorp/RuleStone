@@ -40,13 +40,15 @@ public final class StoneTestCase {
     private final boolean exactOutput;
     private final Optional<List<String>> reasonCodes;
     private final Optional<List<String>> matchedRules;
+    private final Optional<List<String>> path;
     private final Optional<String> ruleVersion;
     private final Optional<String> error;
 
     StoneTestCase(String source, String decision, String name, Optional<String> description,
                   Optional<String> version, Optional<LocalDate> asOf, Facts facts,
                   Map<String, Object> output, boolean exactOutput, Optional<List<String>> reasonCodes,
-                  Optional<List<String>> matchedRules, Optional<String> ruleVersion, Optional<String> error) {
+                  Optional<List<String>> matchedRules, Optional<List<String>> path, Optional<String> ruleVersion,
+                  Optional<String> error) {
         this.source = Objects.requireNonNull(source, "source");
         this.decision = Objects.requireNonNull(decision, "decision");
         this.name = Objects.requireNonNull(name, "name");
@@ -58,6 +60,7 @@ public final class StoneTestCase {
         this.exactOutput = exactOutput;
         this.reasonCodes = reasonCodes.map(List::copyOf);
         this.matchedRules = matchedRules.map(List::copyOf);
+        this.path = path.map(List::copyOf);
         this.ruleVersion = ruleVersion;
         this.error = error;
     }
@@ -188,6 +191,7 @@ public final class StoneTestCase {
         DecisionResult actual = result;
         reasonCodes.flatMap(codes -> Expectations.reasonCodes(actual, codes)).ifPresent(problems::add);
         matchedRules.flatMap(rules -> Expectations.matchedRules(actual, rules)).ifPresent(problems::add);
+        path.flatMap(nodes -> Expectations.path(actual, nodes)).ifPresent(problems::add);
         ruleVersion.flatMap(v -> Expectations.ruleVersion(actual, v)).ifPresent(problems::add);
         if (!problems.isEmpty()) {
             throw failed(result, problems, null);

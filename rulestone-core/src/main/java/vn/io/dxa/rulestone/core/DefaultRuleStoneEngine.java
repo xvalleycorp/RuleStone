@@ -12,7 +12,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,7 +22,6 @@ import vn.io.dxa.rulestone.api.AuditException;
 import vn.io.dxa.rulestone.api.AuditSink;
 import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 import vn.io.dxa.rulestone.api.DecisionRecord;
-import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
 import vn.io.dxa.rulestone.api.DecisionRecord.ReasonCode;
 import vn.io.dxa.rulestone.api.DecisionRecord.Routing;
 import vn.io.dxa.rulestone.api.DecisionRecord.Status;
@@ -33,23 +31,19 @@ import vn.io.dxa.rulestone.api.DecisionTimeoutException;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.api.RuleStoneException;
-import vn.io.dxa.rulestone.api.TraceStep;
-import vn.io.dxa.rulestone.cel.Bindings;
 
-/** Embedded engine over an immutable set of compiled decisions. */
+/** Embedded engine over an immutable set of compiled decision tables and flows. */
 final class DefaultRuleStoneEngine implements RuleStoneEngine {
 
     /** Names the engine in every record, e.g. {@code rulestone 0.1.0}; {@code dev} when not run from a jar. */
     static final String ENGINE = "rulestone " + Optional.ofNullable(
             DefaultRuleStoneEngine.class.getPackage().getImplementationVersion()).orElse("dev");
 
-    private static final String TABLE = "table";
-
     /** A version that receives {@code share} of the correlation ids of a decision instead of the version in force. */
-    record Canary(CompiledDecision decision, double share) {}
+    record Canary(Executable decision, double share) {}
 
     /** How the engine routes evaluations to versions other than the one in force; see {@link RuleStone.Builder#canary}. */
-    record Routes(Map<String, Canary> canaries, Map<String, CompiledDecision> shadows, Executor shadowExecutor) {
+    record Routes(Map<String, Canary> canaries, Map<String, Executable> shadows, Executor shadowExecutor) {
 
         Routes {
             canaries = Map.copyOf(canaries);
@@ -57,7 +51,7 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
         }
     }
 
-    private final Map<String, List<CompiledDecision>> decisions;
+    private final Map<String, List<Executable>> decisions;
     private final Clock clock;
     private final List<AuditSink> sinks;
     private final FactsHasher hasher;
@@ -66,7 +60,7 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
     private final LongSupplier nanoTime;
     private final Routes routes;
 
-    DefaultRuleStoneEngine(Map<String, List<CompiledDecision>> decisions, Clock clock, List<AuditSink> sinks,
+    DefaultRuleStoneEngine(Map<String, List<Executable>> decisions, Clock clock, List<AuditSink> sinks,
                            FactsHasher hasher, Supplier<String> recordIds, Optional<Duration> timeout,
                            LongSupplier nanoTime, Routes routes) {
         this.decisions = Map.copyOf(decisions);
@@ -128,7 +122,7 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
      * the caller of {@link #evaluate} is never affected.
      */
     private void shadow(Attempt champion, Facts facts) {
-        CompiledDecision candidate = routes.shadows().get(champion.ref.id());
+        Executable candidate = routes.shadows().get(champion.ref.id());
         if (candidate == null || champion.ref.version().isPresent() || champion.decision == null
                 || champion.decision == candidate) {
             return;
@@ -158,14 +152,14 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
         }
     }
 
-    private CompiledDecision resolve(DecisionRef ref, LocalDate date) {
-        List<CompiledDecision> versions = decisions.get(ref.id());
+    private Executable resolve(DecisionRef ref, LocalDate date) {
+        List<Executable> versions = decisions.get(ref.id());
         if (versions == null) {
             throw new DecisionNotFoundException("unknown decision '" + ref.id() + "'");
         }
-        DecisionTable table = DecisionVersions.select(ref.id(),
-                versions.stream().map(CompiledDecision::table).toList(), ref.version(), date);
-        return versions.stream().filter(d -> d.table() == table).findFirst().orElseThrow();
+        VersionedDefinition definition = DecisionVersions.select(ref.id(),
+                versions.stream().map(Executable::definition).toList(), ref.version(), date);
+        return versions.stream().filter(d -> d.definition() == definition).findFirst().orElseThrow();
     }
 
     /**
@@ -196,10 +190,9 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
         private final DecisionRef ref;
         private final LocalDate businessDate;
         private final Instant evaluatedAt;
-        private final List<TraceStep> trace = new ArrayList<>();
-        private CompiledDecision decision;
+        private final Progress progress = new Progress();
+        private Executable decision;
         private Optional<Routing> routing = Optional.empty();
-        private Optional<String> factsHash = Optional.empty();
 
         Attempt(String recordId, DecisionRef ref, LocalDate businessDate, Instant evaluatedAt) {
             this.recordId = recordId;
@@ -212,15 +205,10 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
             if (decision == null) {
                 select();
             }
-            Bindings bindings = decision.bind(facts, businessDate);
-            factsHash = Optional.of(hasher.hash(bindings));
-            CompiledDecision.Outcome outcome = decision.evaluate(bindings, trace, deadline);
-            String source = decision.table().id();
-            DecisionRecord record = record(Status.OK, outcome.output(),
-                    outcome.reasonCodes().stream().map(code -> new ReasonCode(code, source)).toList(),
-                    Optional.empty());
-            return new DecisionResult(decision.table().id(), decision.ruleVersion(), outcome.output(),
-                    outcome.reasonCodes(), trace, record);
+            Executable.Run run = decision.run(facts, businessDate, deadline, progress, hasher);
+            DecisionRecord record = record(Status.OK, run.output(), run.reasonCodes(), Optional.empty());
+            return new DecisionResult(decision.definition().id(), decision.ruleVersion(), run.output(),
+                    run.reasonCodes().stream().map(ReasonCode::code).toList(), progress.trace, record);
         }
 
         /** The version in force, or the canary if the request falls into its share. */
@@ -246,12 +234,9 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
 
         private DecisionRecord record(Status status, Map<String, Object> output, List<ReasonCode> reasonCodes,
                                       Optional<String> error) {
-            List<PathStep> path = decision == null ? List.of() : List.of(new PathStep(
-                    decision.table().id(), TABLE, decision.ruleVersion(),
-                    trace.stream().filter(TraceStep::matched).map(TraceStep::ruleId).toList()));
             return new DecisionRecord(recordId, ref.correlationId(), ref.id(),
-                    Optional.ofNullable(decision).map(CompiledDecision::ruleVersion), businessDate, evaluatedAt,
-                    ENGINE, status, factsHash, output, reasonCodes, path, error, routing);
+                    Optional.ofNullable(decision).map(Executable::ruleVersion), businessDate, evaluatedAt,
+                    ENGINE, status, progress.factsHash(), output, reasonCodes, progress.path(), error, routing);
         }
     }
 }

@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: a41876f63261017476da058e930ddbd5c7f2d34441ffde6c444eb9bf312e5da9
+sourceHash: 0e1b5e3dfcc0329a5efc8d594d016fb6424cb8f5a24bac7f047080cfc7473fd7
 ---
 
 # Java API
@@ -61,6 +61,7 @@ RuleStoneEngine engine = RuleStone.builder()
 |---|---|
 | `clock(Clock)` | Xác định "hôm nay" khi yêu cầu không có ngày `asOf`. Mặc định dùng múi giờ mặc định của JVM; **hãy đặt tường minh** theo múi giờ nghiệp vụ của ngân hàng bạn. |
 | `decision(DecisionTable)` / `decisions(Collection)` | Đăng ký bảng quyết định. Hãy đăng ký mọi phiên bản của một quyết định; engine chọn một phiên bản cho mỗi yêu cầu. |
+| `flow(DecisionFlow)` / `flows(Collection)` | Đăng ký [luồng quyết định](flows.md), đọc bằng `DecisionFlowJson.read(...)`. Hãy đăng ký các bảng mà luồng dùng với cùng builder. |
 | `maxIterations(int)` | Giới hạn trên của số vòng lặp trong mọi hàm trên danh sách, ở mọi luật. Mặc định 10.000. |
 | `currencyScale(String, int)` | Số chữ số sau dấu thập phân mà `money.round()` dùng cho một loại tiền tệ, ghi đè ISO 4217. Bắt buộc với các mã không có đơn vị nhỏ nhất trong ISO 4217, như `XAU`. Ném `IllegalArgumentException` nếu mã không phải mã ISO 4217 viết hoa, hoặc số chữ số nằm ngoài khoảng 0 đến 18. |
 | `auditSink(AuditSink)` | Nhận `DecisionRecord` của mọi lần đánh giá, dù thành công hay thất bại. Có thể gọi nhiều lần; các sink chạy theo thứ tự. Xem [Bản ghi quyết định và kiểm toán](#bản-ghi-quyết-định-và-kiểm-toán). |
@@ -69,7 +70,7 @@ RuleStoneEngine engine = RuleStone.builder()
 | `timeout(Duration)` | Thời gian chờ tối đa mặc định của mọi lần đánh giá, cho các yêu cầu không tự đặt; xem [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa). Mặc định không có. |
 | `canary(String, String, double)` / `shadow(String, String)` | Chuyển một phần yêu cầu của một quyết định sang phiên bản mới, hoặc đánh giá phiên bản mới ở chế độ bóng trên mọi yêu cầu; xem [Phiên bản canary và phiên bản bóng](#phiên-bản-canary-và-phiên-bản-bóng). |
 | `shadowExecutor(Executor)` | Chạy các lần đánh giá bóng trên executor này thay vì trên luồng của bên gọi. |
-| `build()` | Biên dịch và kiểm tra kiểu mọi luật, kiểm tra các phiên bản trùng lặp và ngày tháng mâu thuẫn (xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực)) và việc mỗi canary và phiên bản bóng đều trỏ tới một phiên bản đã đăng ký, rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
+| `build()` | Biên dịch và kiểm tra kiểu mọi luật và mọi luồng, kiểm tra các phiên bản trùng lặp và ngày tháng mâu thuẫn (xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực)) và việc mỗi canary và phiên bản bóng đều trỏ tới một phiên bản đã đăng ký, rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
 
 `DecisionTableJson.read(...)` nhận một `String`, một `InputStream` (đọc theo UTF-8) hoặc một `Path`, và ném `InvalidDecisionException` khi tệp có bất kỳ lỗi nào. Hãy nạp tệp từ bất cứ nơi nào bạn lưu chúng: classpath, một thư mục, một cột trong cơ sở dữ liệu hay một dịch vụ cấu hình.
 
@@ -288,7 +289,7 @@ DecisionResult result = engine.evaluate(
 | `factsHash` | Hash của các đầu vào đã khai báo; xem bên dưới. Bị bỏ qua nếu đầu vào không hợp lệ. |
 | `output` | Các đầu ra, viết theo cách của `FactsJson`. Rỗng khi trạng thái không phải `OK`. |
 | `reasonCodes` | Từng reason code kèm nút đã tạo ra nó. |
-| `path` | Từng nút đã được đánh giá: hiện tại là bảng quyết định, kèm phiên bản và các luật đã khớp. Khi việc đánh giá lỗi giữa chừng trong một bảng, trường này cho thấy các luật đã khớp trước khi lỗi. |
+| `path` | Từng nút đã được đánh giá. Với một bảng quyết định, đó là bảng kèm phiên bản và các luật đã khớp; với một [luồng quyết định](flows.md#bản-ghi-quyết-định), đó là mọi nút đã đi qua, theo thứ tự. Khi việc đánh giá lỗi giữa chừng trong một bảng, trường này cho thấy các luật đã khớp trước khi lỗi. |
 | `error` | Chỉ có khi trạng thái không phải `OK`: thông điệp của exception, không bao giờ chứa giá trị đầu vào. Với exception không phải `RuleStoneException`, chỉ kiểu exception được ghi lại. |
 | `routing` | Chỉ có khi một phiên bản khác với phiên bản đang có hiệu lực được đánh giá, dưới dạng canary hoặc phiên bản bóng; xem [Phiên bản canary và phiên bản bóng](#phiên-bản-canary-và-phiên-bản-bóng). |
 
@@ -450,6 +451,8 @@ Việc định tuyến áp dụng cho các yêu cầu không chỉ định phiê
 Để so sánh champion và challenger, hãy nối các bản ghi bóng qua `shadowOf` với các bản ghi có `recordId` mà nó trỏ tới, rồi so sánh `output` và `reasonCodes`. Hai bản ghi có cùng `factsHash` khi hai phiên bản khai báo cùng các đầu vào. Mặc định phiên bản bóng chạy trên luồng của bên gọi sau lần đánh giá của chính yêu cầu, nên thời gian của nó cộng vào mọi yêu cầu; với `shadowExecutor` nó chạy trên executor của bạn, và phiên bản bóng nào bị executor từ chối thì bị bỏ qua. Khi đó các fact không được thay đổi sau khi `evaluate` trả về.
 
 Phiên bản bóng bị bỏ qua khi yêu cầu chỉ định phiên bản, khi không tìm thấy phiên bản nào cho yêu cầu, và khi yêu cầu đã dùng chính phiên bản bóng, chẳng hạn làm canary. Để đổi tỷ lệ, hoặc nâng canary thành phiên bản chính, hãy tạo engine mới rồi hoán đổi, như trong [Nạp lại luật](#nạp-lại-luật).
+
+Canary và phiên bản bóng hoạt động y hệt với [luồng quyết định](flows.md): hãy dùng id của luồng. Bên trong một luồng, các nút `table` luôn dùng phiên bản bảng đang có hiệu lực, hoặc phiên bản mà nút ghim; canary và phiên bản bóng của các bảng đó chỉ áp dụng khi các bảng được đánh giá riêng lẻ.
 
 ## Đa luồng và hiệu năng
 

@@ -1,0 +1,149 @@
+{
+  "decision": "card_origination",
+  "description": "Every path through the card origination flow: knock-outs, both segments, every grade, referral, and both limit strategies",
+  "cases": [
+    {
+      "name": "an under-age applicant is rejected before grading",
+      "facts": {
+        "applicant": { "id": "C-1010", "age": 17, "income": "20000000 VND", "existingCustomer": false },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "REJECT", "riskGrade": "N/A", "limit": "0 VND" },
+        "reasonCodes": ["UNDERAGE"],
+        "matchedRules": ["UNDERAGE"],
+        "path": ["policy", "rejected"]
+      }
+    },
+    {
+      "name": "two recent delinquencies are a knock-out",
+      "facts": {
+        "applicant": { "id": "C-1011", "age": 40, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 2, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "REJECT" },
+        "reasonCodes": ["RECENT_DELINQUENCY"],
+        "path": ["policy", "rejected"]
+      }
+    },
+    {
+      "name": "an existing customer with low utilisation gets grade A and the champion limit",
+      "facts": {
+        "applicant": { "id": "C-1002", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "limit": "120000000 VND" },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["PASS", "A", "A"],
+        "path": ["policy", "affordability", "segment", "grade_existing", "limit_strategy", "limit", "approved"]
+      }
+    },
+    {
+      "name": "the challenger bucket gets a higher limit for grade A",
+      "description": "Applicant C-1001 falls into the 10% challenger bucket of salt card-limit-2026Q4",
+      "facts": {
+        "applicant": { "id": "C-1001", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "limit": "144000000 VND" },
+        "matchedRules": ["PASS", "A", "A_CHALLENGER"],
+        "path": ["policy", "affordability", "segment", "grade_existing", "limit_strategy", "limit", "approved"]
+      }
+    },
+    {
+      "name": "an existing customer with one delinquency and moderate utilisation gets grade B",
+      "facts": {
+        "applicant": { "id": "C-1003", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 1, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "limit": "72000000 VND" },
+        "matchedRules": ["PASS", "B", "B"]
+      }
+    },
+    {
+      "name": "high utilisation gives grade C with a reason code",
+      "facts": {
+        "applicant": { "id": "C-1004", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.80" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "limit": "36000000 VND" },
+        "reasonCodes": ["HIGH_UTILISATION"],
+        "matchedRules": ["PASS", "C", "C"]
+      }
+    },
+    {
+      "name": "an existing customer at grade D is referred, not declined",
+      "facts": {
+        "applicant": { "id": "C-1005", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.95" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "D", "limit": "0 VND" },
+        "reasonCodes": ["HIGH_UTILISATION"],
+        "path": ["policy", "affordability", "segment", "grade_existing", "referred"]
+      }
+    },
+    {
+      "name": "a young new customer has a thin file and is referred",
+      "facts": {
+        "applicant": { "id": "C-1006", "age": 19, "income": "20000000 VND", "existingCustomer": false },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "D" },
+        "reasonCodes": ["THIN_CREDIT_FILE"],
+        "matchedRules": ["PASS", "THIN_FILE"],
+        "path": ["policy", "affordability", "segment", "grade_new", "referred"]
+      }
+    },
+    {
+      "name": "a new customer with low utilisation gets grade B at most",
+      "facts": {
+        "applicant": { "id": "C-1007", "age": 30, "income": "20000000 VND", "existingCustomer": false },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.20" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "limit": "72000000 VND" },
+        "path": ["policy", "affordability", "segment", "grade_new", "limit_strategy", "limit", "approved"]
+      }
+    },
+    {
+      "name": "a new customer with moderate utilisation gets grade C",
+      "facts": {
+        "applicant": { "id": "C-1008", "age": 30, "income": "20000000 VND", "existingCustomer": false },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.50" }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "limit": "36000000 VND" },
+        "matchedRules": ["PASS", "C", "C"]
+      }
+    },
+    {
+      "name": "a new customer with high utilisation is referred",
+      "facts": {
+        "applicant": { "id": "C-1009", "age": 30, "income": "20000000 VND", "existingCustomer": false },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.80" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "D" },
+        "reasonCodes": ["HIGH_UTILISATION"],
+        "path": ["policy", "affordability", "segment", "grade_new", "referred"]
+      }
+    },
+    {
+      "name": "the flow is not in force before 1 November 2026",
+      "asOf": "2026-10-31",
+      "facts": {
+        "applicant": { "id": "C-1002", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "expect": { "error": "no version of decision 'card_origination' is effective on 2026-10-31" }
+    }
+  ]
+}

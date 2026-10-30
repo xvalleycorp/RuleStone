@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: 80ff8a12813b77ce8d4ba4e9572cf2763fd806602e4d7f51ca4c396dda632688
+sourceHash: b65106555d46bd52b475414b6eb3aa9ecedd7ab1a50a78d7ae3c8c7f5eb4099a
 ---
 
 # SDK trình soạn thảo
@@ -309,7 +309,7 @@ Bảng các nút có các loại `table`, `switch`, `derive`, `model`, `split`, 
 
 Cho tới khi có người di chuyển một nút, vùng vẽ tự bố trí luồng theo kích thước của chính nó: một chuỗi nút dài được xuống hàng, như các dòng chữ, để toàn bộ luồng đọc được mà không cần cuộn nếu vừa. Khi vừa khung, vùng vẽ không bao giờ thu nhỏ quá mức mà chữ trên nút còn đọc được (80%); khi đó phần còn lại của một luồng lớn được xem bằng cách kéo nền, dùng phím mũi tên hoặc các nút thu phóng.
 
-**Luồng hiện chỉ để thiết kế.** Bộ máy luật chưa chạy được luồng quyết định, và vùng vẽ có ghi rõ điều đó.
+**Trên trình duyệt, luồng chỉ để thiết kế.** Bộ máy luật Java đã chạy được [luồng quyết định](flows.md), nhưng bộ máy luật trên trình duyệt (`@rulestone/engine`) chưa chạy được luồng, và vùng vẽ có ghi rõ điều đó.
 
 ## Kiểm tra phía máy chủ: hook validator
 
@@ -504,6 +504,6 @@ Các khác biệt đã biết:
 ## Hạn chế
 
 - Các gói chưa có trên npm, và tên gói có thể thay đổi khi được phát hành.
-- Luồng chỉ để thiết kế cho tới khi bộ máy luật hỗ trợ chúng. Vùng vẽ chỉ kiểm tra những gì nó kiểm tra được khi không có bộ máy luật: không có kiểm tra tên hay kiểu xuyên qua các nút.
-- Các trường của nút `derive` và `flow` theo cách hiểu của trình soạn thảo về đề xuất luồng (`values`, `flow`, `version`), và có thể thay đổi cùng định dạng.
+- Bộ máy luật trên trình duyệt chưa chạy luồng; chỉ bộ máy luật Java chạy được (xem [Luồng quyết định](flows.md)). Vùng vẽ chỉ kiểm tra những gì nó kiểm tra được khi không có bộ máy luật: không có kiểm tra tên hay kiểu xuyên qua các nút.
+- Vùng vẽ đọc các giá trị của nút `derive` dưới dạng `values` (tên ánh xạ tới biểu thức), còn định dạng của bộ máy luật Java khai báo chúng cùng kiểu trong `outputs` và đặt chúng bằng `set`. Các trường của nút `flow` (`flow`, `version`) theo đề xuất; bộ máy luật Java chưa hỗ trợ nút `flow`.
 - Lưới luật không ảo hoá (virtualize) các dòng, nên bảng có hàng nghìn luật hiển thị chậm.

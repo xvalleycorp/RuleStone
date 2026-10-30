@@ -41,6 +41,7 @@ export const LOCALES = {
       'README.md': 'Tổng quan',
       'getting-started.md': 'Bắt đầu',
       'decision-tables.md': 'Bảng quyết định',
+      'flows.md': 'Luồng quyết định',
       'expressions.md': 'Ngôn ngữ biểu thức',
       'fuzzy-matching.md': 'So khớp gần đúng',
       'java-api.md': 'Java API',

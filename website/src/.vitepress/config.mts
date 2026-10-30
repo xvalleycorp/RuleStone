@@ -47,6 +47,7 @@ const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
     vi: 'Tham khảo',
     items: [
       ['decision-tables.md', 'Decision tables'],
+      ['flows.md', 'Decision flows'],
       ['expressions.md', 'Expression language'],
       ['fuzzy-matching.md', 'Fuzzy matching'],
       ['java-api.md', 'Java API'],

@@ -51,7 +51,7 @@ import vn.io.dxa.rulestone.cel.ValueType;
  */
 public final class DecisionTableJson {
 
-    private static final JsonMapper MAPPER = JsonMapper.builder()
+    static final JsonMapper MAPPER = JsonMapper.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
             .build();
 
@@ -63,15 +63,18 @@ public final class DecisionTableJson {
 
     /** @throws InvalidDecisionException listing every structural problem found */
     public static DecisionTable read(String json) {
-        JsonNode root;
+        return new Reader().table(parse(json));
+    }
+
+    /** Parses JSON text strictly, reporting malformed JSON as an {@link InvalidDecisionException}. */
+    static JsonNode parse(String json) {
         try {
-            root = MAPPER.readTree(json);
+            return MAPPER.readTree(json);
         } catch (JsonProcessingException e) {
             String location = e.getLocation() == null ? ""
                     : " (line " + e.getLocation().getLineNr() + ", column " + e.getLocation().getColumnNr() + ")";
             throw new InvalidDecisionException(List.of("invalid JSON: " + e.getOriginalMessage() + location));
         }
-        return new Reader().table(root);
     }
 
     public static DecisionTable read(InputStream in) {
@@ -123,7 +126,7 @@ public final class DecisionTableJson {
         }
     }
 
-    private static Map<String, Object> typesJson(Map<String, ValueType> types) {
+    static Map<String, Object> typesJson(Map<String, ValueType> types) {
         Map<String, Object> json = new TreeMap<>();
         types.forEach((name, type) -> json.put(name, typeJson(type)));
         return json;
@@ -139,10 +142,22 @@ public final class DecisionTableJson {
         return typesJson(((ValueType.Struct) type).fields());
     }
 
-    /** Collects every problem instead of stopping at the first. */
-    private static final class Reader {
+    /** Writes canonical JSON text. */
+    static String writeCanonical(Object json) {
+        try {
+            return MAPPER.writeValueAsString(json);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
-        private final List<String> problems = new ArrayList<>();
+    /**
+     * Collects every problem instead of stopping at the first. Also reads the common parts of
+     * flow files for {@link DecisionFlowJson}.
+     */
+    static final class Reader {
+
+        final List<String> problems = new ArrayList<>();
 
         DecisionTable table(JsonNode root) {
             if (!root.isObject()) {
@@ -218,15 +233,19 @@ public final class DecisionTableJson {
             }
         }
 
-        private Map<String, ValueType> typeMap(JsonNode root, String field) {
-            JsonNode node = root.get(field);
+        Map<String, ValueType> typeMap(JsonNode root, String field) {
+            return typeMap(root, field, "$");
+        }
+
+        Map<String, ValueType> typeMap(JsonNode parent, String field, String path) {
+            JsonNode node = parent.get(field);
             if (node == null || !node.isObject()) {
-                problem("$." + field, "required object of name to type");
+                problem(path + "." + field, "required object of name to type");
                 return Map.of();
             }
             Map<String, ValueType> types = new LinkedHashMap<>();
             node.properties().forEach(e -> {
-                ValueType type = type(e.getValue(), "$." + field + "." + e.getKey());
+                ValueType type = type(e.getValue(), path + "." + field + "." + e.getKey());
                 if (type != null) {
                     types.put(e.getKey(), type);
                 }
@@ -273,7 +292,7 @@ public final class DecisionTableJson {
             return null;
         }
 
-        private Optional<LocalDate> optionalDate(JsonNode root, String field) {
+        Optional<LocalDate> optionalDate(JsonNode root, String field) {
             return optionalText(root, field, "$").flatMap(text -> {
                 try {
                     return Optional.of(LocalDate.parse(text));
@@ -284,7 +303,7 @@ public final class DecisionTableJson {
             });
         }
 
-        private String requiredText(JsonNode node, String field, String path) {
+        String requiredText(JsonNode node, String field, String path) {
             JsonNode value = node.get(field);
             if (value == null || !value.isTextual() || value.asText().isBlank()) {
                 problem(path + "." + field, "required non-empty string");
@@ -293,7 +312,7 @@ public final class DecisionTableJson {
             return value.asText();
         }
 
-        private Optional<String> optionalText(JsonNode node, String field, String path) {
+        Optional<String> optionalText(JsonNode node, String field, String path) {
             JsonNode value = node.get(field);
             if (value == null || value.isNull()) {
                 return Optional.empty();
@@ -305,7 +324,7 @@ public final class DecisionTableJson {
             return Optional.of(value.asText());
         }
 
-        private void unknownFields(JsonNode node, Set<String> allowed, String path) {
+        void unknownFields(JsonNode node, Set<String> allowed, String path) {
             node.fieldNames().forEachRemaining(name -> {
                 if (!allowed.contains(name)) {
                     problem(path + "." + name,
@@ -314,7 +333,7 @@ public final class DecisionTableJson {
             });
         }
 
-        private void problem(String path, String message) {
+        void problem(String path, String message) {
             problems.add(path + ": " + message);
         }
     }

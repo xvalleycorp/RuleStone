@@ -1,0 +1,20 @@
+{
+  "id": "card_limit",
+  "version": "1",
+  "description": "Credit limit matrix by risk grade, with a more generous challenger strategy for grade A",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "riskGrade": "string",
+    "annualIncome": "money",
+    "strategy": "string"
+  },
+  "outputs": {
+    "limit": "money"
+  },
+  "rules": [
+    { "id": "A_CHALLENGER", "when": "riskGrade == 'A' && strategy == 'challenger'", "then": { "limit": "(annualIncome * decimal('0.6')).round()" } },
+    { "id": "A", "when": "riskGrade == 'A'", "then": { "limit": "(annualIncome * decimal('0.5')).round()" } },
+    { "id": "B", "when": "riskGrade == 'B'", "then": { "limit": "(annualIncome * decimal('0.3')).round()" } },
+    { "id": "C", "when": "true", "then": { "limit": "(annualIncome * decimal('0.15')).round()" } }
+  ]
+}

@@ -147,18 +147,54 @@ public record DecisionRecord(
     /**
      * One node visited during the evaluation.
      *
-     * @param node         the node id; for a decision evaluated on its own, the decision id
-     * @param type         the kind of node, e.g. {@code table}
-     * @param version      the exact version of the node's definition, e.g. {@code 3@sha256:…}
-     * @param matchedRules ids of the rules that matched, in evaluation order
+     * <p>A decision table evaluated on its own has one step, of type {@code table}, whose node is
+     * the decision id. A decision flow has one step per node it visits, in order, ending with an
+     * {@code end} node unless the evaluation failed.
+     *
+     * @param node         the node id; for a decision table evaluated on its own, the decision id
+     * @param type         the kind of node: {@code table}, {@code switch}, {@code derive},
+     *                     {@code split} or {@code end}
+     * @param decision     for a {@code table} node of a flow, the id of the decision table it
+     *                     evaluated; empty for other nodes, and for a table evaluated on its own,
+     *                     whose node is already the decision id
+     * @param version      for a {@code table} step, the exact version of the table used, e.g.
+     *                     {@code 3@sha256:…}; empty for other nodes
+     * @param matchedRules for a {@code table} step, ids of the rules that matched, in evaluation
+     *                     order; empty for other nodes
+     * @param taken        for a {@code switch} node, the node its chosen branch leads to; for a
+     *                     {@code split} node, the name of the chosen bucket; empty for other nodes
      */
-    public record PathStep(String node, String type, String version, List<String> matchedRules) {
+    public record PathStep(String node, String type, Optional<String> decision, Optional<String> version,
+                           List<String> matchedRules, Optional<String> taken) {
 
         public PathStep {
             Objects.requireNonNull(node, "node");
             Objects.requireNonNull(type, "type");
+            Objects.requireNonNull(decision, "decision");
             Objects.requireNonNull(version, "version");
+            Objects.requireNonNull(taken, "taken");
             matchedRules = List.copyOf(matchedRules);
+        }
+
+        /** The step of a decision table evaluated on its own: node {@code decision}, type {@code table}. */
+        public PathStep(String node, String type, String version, List<String> matchedRules) {
+            this(node, type, Optional.empty(), Optional.of(version), matchedRules, Optional.empty());
+        }
+
+        /** The step of a {@code table} node of a flow, which evaluated {@code version} of {@code decision}. */
+        public static PathStep table(String node, String decision, String version, List<String> matchedRules) {
+            return new PathStep(node, "table", Optional.of(decision), Optional.of(version), matchedRules,
+                    Optional.empty());
+        }
+
+        /** The step of a {@code switch} or {@code split} node, which took {@code taken}. */
+        public static PathStep branch(String node, String type, String taken) {
+            return new PathStep(node, type, Optional.empty(), Optional.empty(), List.of(), Optional.of(taken));
+        }
+
+        /** The step of a node that records nothing but its visit, such as {@code derive} or {@code end}. */
+        public static PathStep visit(String node, String type) {
+            return new PathStep(node, type, Optional.empty(), Optional.empty(), List.of(), Optional.empty());
         }
     }
 

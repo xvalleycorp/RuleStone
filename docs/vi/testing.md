@@ -1,24 +1,25 @@
 ---
 source: testing.md
-sourceHash: d3eb30a5e01925654ef0e94c59840943bb887f353cf548373580d762c9ffac1c
+sourceHash: 58178ed0b20453a42dde676fb0cdc94a394d0ca00b72602a41f8dba7dca57824
 ---
 
 # Kiểm thử bảng quyết định
 
-Bảng quyết định cũng là mã nguồn: chỉ cần đổi một ngưỡng hay đảo thứ tự một luật là đã thay đổi việc ai được vay. Trang này giải thích cách kiểm thử bảng quyết định bằng mô-đun `rulestone-test`, để mọi luật đều được kiểm thử trước khi lên môi trường production.
+Bảng quyết định cũng là mã nguồn: chỉ cần đổi một ngưỡng hay đảo thứ tự một luật là đã thay đổi việc ai được vay. Trang này giải thích cách kiểm thử bảng quyết định, và các [luồng quyết định](flows.md) được xây từ chúng, bằng mô-đun `rulestone-test`, để mọi luật đều được kiểm thử trước khi lên môi trường production.
 
 Mô-đun cung cấp ba công cụ:
 
 | Công cụ | Dùng để |
 |---|---|
 | [Tệp `.stone-test.json`](#ca-kiểm-thử-bằng-json) | Viết ca kiểm thử dưới dạng dữ liệu, không cần Java. Chuyên viên phân tích nghiệp vụ có thể viết và rà soát chúng ngay cạnh bảng quyết định. |
-| [`StoneTests`](#chạy-tệp-kiểm-thử-với-junit-5) và [`RuleCoverage`](#độ-bao-phủ-luật) | Chạy các tệp đó trong mọi bản build dùng JUnit 5, mỗi ca là một test, và làm bản build thất bại nếu có luật không được ca kiểm thử nào khớp. |
+| [`StoneTests`](#chạy-tệp-kiểm-thử-với-junit-5) và [`RuleCoverage`](#độ-bao-phủ-luật) | Chạy các tệp đó trong mọi bản build dùng JUnit 5, mỗi ca là một test, và làm bản build thất bại nếu có luật không được ca kiểm thử nào khớp, hoặc có nút hay nhánh của luồng chưa từng được đi qua. |
 | [`DecisionCheck`](#assertion-dạng-fluent-trong-java) | Viết ca kiểm thử bằng Java với assertion dạng fluent, trong bất kỳ framework kiểm thử nào. |
 
 - [Thêm mô-đun](#thêm-mô-đun)
 - [Ca kiểm thử bằng JSON](#ca-kiểm-thử-bằng-json)
 - [Chạy tệp kiểm thử với JUnit 5](#chạy-tệp-kiểm-thử-với-junit-5)
 - [Độ bao phủ luật](#độ-bao-phủ-luật)
+- [Kiểm thử luồng quyết định](#kiểm-thử-luồng-quyết-định)
 - [Assertion dạng fluent trong Java](#assertion-dạng-fluent-trong-java)
 - [Thực hành khuyến nghị cho ngân hàng](#thực-hành-khuyến-nghị-cho-ngân-hàng)
 
@@ -80,7 +81,7 @@ Mỗi ca kiểm thử đánh giá quyết định một lần với các `facts`
 
 | Trường | Bắt buộc | Nội dung |
 |---|---|---|
-| `decision` | có | Id của quyết định được kiểm thử, giống `id` của bảng. |
+| `decision` | có | Id của quyết định được kiểm thử, giống `id` của bảng hoặc của luồng. |
 | `description` | không | Mô tả tự do, ví dụ văn bản chính sách làm căn cứ cho các ca kiểm thử. |
 | `cases` | có | Mảng ca kiểm thử không rỗng. |
 
@@ -102,7 +103,8 @@ Mỗi ca kiểm thử đánh giá quyết định một lần với các `facts`
 | `output` | Mỗi đầu ra được liệt kê bằng giá trị đã cho. Đầu ra không được liệt kê thì không được kiểm tra. Giá trị `null` nghĩa là đầu ra phải vắng mặt, như khi một luật `FIRST` không đặt nó. |
 | `exactOutput` | Với `true`, quyết định không được tạo ra đầu ra nào ngoài các đầu ra liệt kê trong `output`. Đòi hỏi phải có `output`. |
 | `reasonCodes` | Đúng các mã lý do này, theo đúng thứ tự này. `[]` nghĩa là không có mã nào. |
-| `matchedRules` | Đúng các luật này khớp, theo thứ tự đánh giá. `[]` nghĩa là không có luật nào. |
+| `matchedRules` | Đúng các luật này khớp, theo thứ tự đánh giá. `[]` nghĩa là không có luật nào. Với một luồng, đó là các luật của mọi nút `table`, theo thứ tự. |
+| `path` | Với một luồng: đúng các nút này được đi qua, theo thứ tự, từ nút bắt đầu tới nút kết thúc. Với một bảng, đường đi chỉ gồm id của quyết định. |
 | `ruleVersion` | Phiên bản được dùng: `"3"` chấp nhận mọi nội dung của phiên bản 3; `"3@sha256:…"` (giá trị `ruleVersion` đầy đủ của một kết quả) chỉ chấp nhận đúng nội dung đó. |
 | `error` | Việc đánh giá thất bại với một `RuleStoneException` có thông báo chứa đoạn văn bản này, ví dụ `"division by zero"`, `"balance: missing input"` hoặc `"no version of decision 'loan_eligibility' is effective on 2025-12-31"`. Không thể kết hợp với các trường khác. |
 
@@ -154,7 +156,7 @@ Giống như bảng quyết định, khoá không xác định và khoá trùng 
 
 ```
 invalid test file loan_eligibility.v3.stone-test.json (1 problem):
-  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, matchedRules, output, reasonCodes, ruleVersion)
+  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)
 ```
 
 ## Chạy tệp kiểm thử với JUnit 5
@@ -231,6 +233,53 @@ coverage.assertComplete();          // throws AssertionError with the report
 
 Độ bao phủ luật cho thấy mọi luật *có thể* được kích hoạt đúng như dự định. Nó không cho thấy ranh giới giữa các luật là đúng; để kiểm tra điều đó, hãy thêm ca kiểm thử ở cả hai phía của mọi ngưỡng (xem bên dưới).
 
+## Kiểm thử luồng quyết định
+
+Tệp kiểm thử cho một [luồng quyết định](flows.md) ghi tên luồng trong `decision`. Các ca kiểm thử được viết như với bảng, và còn có thể kỳ vọng `path`: đường đi gồm các nút mà việc đánh giá đi qua. Ca kiểm thử này, lấy từ [`examples/flows/card_origination.stone-test.json`](../../examples/flows/card_origination.stone-test.json), kiểm tra rằng một khách hàng hạng `D` được chuyển cho người xét duyệt:
+
+```json
+{
+  "name": "an existing customer at grade D is referred, not declined",
+  "facts": {
+    "applicant": { "id": "C-1005", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+    "bureau": { "dpd30Count12m": 0, "utilisation": "0.95" }
+  },
+  "expect": {
+    "output": { "decision": "REFER", "riskGrade": "D", "limit": "0 VND" },
+    "reasonCodes": ["HIGH_UTILISATION"],
+    "path": ["policy", "affordability", "segment", "grade_existing", "referred"]
+  }
+}
+```
+
+Hãy truyền các luồng cùng với các bảng, để fact và đầu ra được đọc theo kiểu mà luồng khai báo, và để độ bao phủ tính cả các luồng:
+
+```java
+@TestFactory
+Stream<DynamicTest> cardOrigination() {
+    List<DecisionTable> tables = Stream.of("card_policy", "card_grade_existing", "card_grade_new", "card_limit")
+            .map(id -> DecisionTableJson.read(Path.of("rules/" + id + ".stone.json")))
+            .toList();
+    List<DecisionFlow> flows = List.of(DecisionFlowJson.read(Path.of("rules/card_origination.flow.json")));
+    RuleStoneEngine engine = RuleStone.builder().decisions(tables).flows(flows).build();
+    return StoneTests.dynamicTests(engine, Path.of("rules"), RuleCoverage.of(tables, flows));
+}
+```
+
+Khi đó test cuối cùng có tên `rule and node coverage`. Ngoài mọi luật của mọi bảng, kể cả các luật mà nút `table` khớp bên trong luồng, test này đòi hỏi mọi nút của mọi luồng đều được đi qua và mọi **nhánh** đều được một ca kiểm thử thành công đi theo. Một nhánh là một lối ra của nút có nhiều lối ra: mỗi đích khác nhau của một `switch` hoặc của một `next` có điều kiện, viết là `segment -> grade_new`, và mỗi nhóm (bucket) của một `split`, viết là `limit_strategy[challenger]`. Nếu tệp ví dụ không có ca kiểm thử challenger, báo cáo sẽ là:
+
+```
+rule coverage: 14 of 15 rules matched by a passing test
+  card_grade_existing@1: 4 of 4 rules
+  card_grade_new@1: 4 of 4 rules
+  card_limit@1: 3 of 4 rules, never matched: A_CHALLENGER
+  card_policy@1: 3 of 3 rules
+node coverage: 10 of 10 nodes and 9 of 10 branches exercised by a passing test
+  card_origination@1: 10 of 10 nodes, 9 of 10 branches, never taken: limit_strategy[challenger]
+```
+
+Để kiểm thử một nhóm của `split`, hãy chọn một khoá rơi vào nhóm đó: với cùng một salt, nhóm của một khoá không bao giờ thay đổi. `RuleCoverage.uncoveredNodes()` và `uncoveredBranches()` trả về những gì còn thiếu, như `uncoveredRules()` làm với luật. Khi không dùng JUnit, hãy đọc các tệp bằng `StoneTestJson.read(path, tables, flows)`.
+
 ## Assertion dạng fluent trong Java
 
 `DecisionCheck` kiểm tra một lần đánh giá bằng API dạng fluent. Nó ném `AssertionError`, nên dùng được với JUnit, TestNG hay bất kỳ framework nào khác:
@@ -254,6 +303,7 @@ Các phương thức thiết lập yêu cầu `decision`, `version`, `asOf` và 
 | `expectExactOutput(Map)` | Đúng các đầu ra này, với đúng các giá trị này. |
 | `expectReasonCodes(codes…)` | Đúng các mã lý do này, theo thứ tự. Không có tham số: không có mã nào. |
 | `expectMatchedRules(ids…)` | Đúng các luật này khớp, theo thứ tự. Không có tham số: không có luật nào. |
+| `expectPath(nodes…)` | Với một luồng, đúng các nút này được đi qua, theo thứ tự. |
 | `expectRuleVersion(version)` | `"3"`, hoặc giá trị đầy đủ `"3@sha256:…"`. |
 | `expectFailure(type)` | Việc đánh giá ném ra kiểu ngoại lệ này, ví dụ `DecisionEvaluationException.class`. |
 | `expectFailureMessage(text)` | Việc đánh giá ném ra một `RuleStoneException` có thông báo chứa `text`. |

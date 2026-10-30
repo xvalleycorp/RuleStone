@@ -148,26 +148,39 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | attested input | đầu vào có chứng thực | |
 | BPMN error | BPMN error | Giữ nguyên. |
 | boundary event | boundary event | Giữ nguyên. |
+| branch (of a flow node) | nhánh | Một lối ra của nút có nhiều lối ra. |
+| bucket (split node) | nhóm (bucket) | |
 | champion/challenger | champion/challenger | Xem bảng "Banking and governance". Nhóm: bucket → nhóm. |
 | decision flow | luồng quyết định | |
 | decision record | bản ghi quyết định | |
 | delegate (Camunda 7) | delegate | Giữ nguyên (`JavaDelegate`). |
+| derived value | giá trị dẫn xuất | Giá trị do nút `derive` tính. |
 | element template | element template | Giữ nguyên. |
 | feature (model) | đặc trưng | |
 | hybrid AI decisioning | ra quyết định AI lai | |
 | incident (Camunda) | incident | Giữ nguyên; sự cố cần người vận hành xử lý. |
 | job worker | job worker | Giữ nguyên. |
+| knock-out (policy rule) | luật loại trừ (knock-out) | Luật chính sách từ chối hồ sơ ngay. |
 | machine-learning model | mô hình học máy (ML) | |
 | node | nút | |
+| node coverage | độ bao phủ nút | Mọi nút được đi qua và mọi nhánh được đi theo. |
+| path (of a flow) | đường đi | Các nút mà một lần đánh giá đi qua. |
 | payload | payload | Giữ nguyên. |
 | pin (a version) | ghim (phiên bản) | |
 | process variable | biến quy trình | |
+| publish (node values) | công bố (giá trị của nút) | Nút công bố giá trị dưới id của nó hoặc tên `as`. |
+| refer (to a person) | chuyển người xét duyệt, chuyển xem xét thủ công | Kết quả `REFER`. |
 | replay (decision) | replay, chạy lại | "Replay" giữ nguyên khi nói về Temporal. |
 | re-score | chấm điểm lại | |
+| salt (split) | salt | Giữ nguyên. |
 | search attribute | search attribute | Giữ nguyên. |
 | shadow model | mô hình chạy bóng (shadow) | |
 | side effect (Temporal) | side effect | Giữ nguyên (`Workflow.sideEffect`). |
+| split (node) | phép chia (nút `split`) | Chia theo tỷ lệ phần trăm. |
+| start node, end node | nút bắt đầu, nút kết thúc | |
 | strategy tree | cây chiến lược | |
+| switch (node) | nút rẽ nhánh (`switch`) | |
+| utilisation (credit) | mức sử dụng hạn mức | |
 | web editor | trình soạn thảo web | |
 | workflow | workflow | Giữ nguyên. |
 | workflow history | history của workflow | |

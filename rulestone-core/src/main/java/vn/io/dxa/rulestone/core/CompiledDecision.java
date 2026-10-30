@@ -20,6 +20,8 @@ import java.util.Set;
 import java.util.HexFormat;
 import java.util.regex.Pattern;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
+import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
+import vn.io.dxa.rulestone.api.DecisionRecord.ReasonCode;
 import vn.io.dxa.rulestone.api.DecisionTimeoutException;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.TraceStep;
@@ -31,7 +33,7 @@ import vn.io.dxa.rulestone.cel.InvalidValueException;
 import vn.io.dxa.rulestone.cel.ValueType;
 
 /** A decision table whose expressions are all compiled and type-checked. Immutable and thread-safe. */
-final class CompiledDecision {
+final class CompiledDecision implements Executable {
 
     /**
      * Implicit input of every decision: the date the decision is made for, which is also the
@@ -39,8 +41,8 @@ final class CompiledDecision {
      */
     static final String BUSINESS_DATE = "businessDate";
 
-    private static final Pattern ID = Pattern.compile("[A-Za-z][A-Za-z0-9_.-]*");
-    private static final Pattern REASON_CODE = Pattern.compile("[A-Z][A-Z0-9_]*");
+    static final Pattern ID = Pattern.compile("[A-Za-z][A-Za-z0-9_.-]*");
+    static final Pattern REASON_CODE = Pattern.compile("[A-Z][A-Z0-9_]*");
 
     private final DecisionTable table;
     private final String ruleVersion;
@@ -59,8 +61,26 @@ final class CompiledDecision {
         return table;
     }
 
-    String ruleVersion() {
+    @Override
+    public DecisionTable definition() {
+        return table;
+    }
+
+    @Override
+    public String ruleVersion() {
         return ruleVersion;
+    }
+
+    @Override
+    public Run run(Facts facts, LocalDate businessDate, Deadline deadline, Progress progress, FactsHasher hasher) {
+        // The step shows the rules matched so far, also when the evaluation fails.
+        progress.open(() -> new PathStep(table.id(), "table", ruleVersion, progress.matchedSince(0)));
+        Bindings bindings = bind(facts, businessDate);
+        progress.factsHash(hasher.hash(bindings));
+        Outcome outcome = evaluate(bindings, progress.trace, deadline);
+        progress.close();
+        return new Run(outcome.output(), outcome.reasonCodes().stream()
+                .map(code -> new ReasonCode(code, table.id())).toList());
     }
 
     /**
@@ -279,12 +299,12 @@ final class CompiledDecision {
         }
     }
 
-    private static boolean containsStruct(ValueType type) {
+    static boolean containsStruct(ValueType type) {
         return type instanceof ValueType.Struct
                 || type instanceof ValueType.ListOf list && containsStruct(list.element());
     }
 
-    private static String sha256(String text) {
+    static String sha256(String text) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);

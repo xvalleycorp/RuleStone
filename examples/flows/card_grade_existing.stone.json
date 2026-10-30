@@ -1,0 +1,18 @@
+{
+  "id": "card_grade_existing",
+  "version": "1",
+  "description": "Risk grade of an existing customer from bureau utilisation and recent delinquency",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "bureau": { "dpd30Count12m": "int", "utilisation": "decimal" }
+  },
+  "outputs": {
+    "riskGrade": "string"
+  },
+  "rules": [
+    { "id": "A", "when": "bureau.utilisation < decimal('0.3') && bureau.dpd30Count12m == 0", "then": { "riskGrade": "'A'" } },
+    { "id": "B", "when": "bureau.utilisation < decimal('0.6')", "then": { "riskGrade": "'B'" } },
+    { "id": "C", "when": "bureau.utilisation < decimal('0.9')", "then": { "riskGrade": "'C'" }, "reasonCode": "HIGH_UTILISATION" },
+    { "id": "D", "when": "true", "then": { "riskGrade": "'D'" }, "reasonCode": "HIGH_UTILISATION" }
+  ]
+}

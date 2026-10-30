@@ -10,11 +10,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.function.LongSupplier;
@@ -50,6 +52,7 @@ public final class RuleStone {
     public static final class Builder {
 
         private final List<DecisionTable> tables = new ArrayList<>();
+        private final List<DecisionFlow> flows = new ArrayList<>();
         private Clock clock = Clock.systemDefaultZone();
         private int maxIterations = ExpressionEnvironment.DEFAULT_MAX_ITERATIONS;
         private final Map<String, Integer> currencyScales = new HashMap<>();
@@ -82,6 +85,21 @@ public final class RuleStone {
 
         public Builder decisions(Collection<DecisionTable> tables) {
             tables.forEach(this::decision);
+            return this;
+        }
+
+        /**
+         * Registers a version of a decision flow. Flows are evaluated by id like decision tables,
+         * share their id namespace, and are versioned and effective-dated the same way. Every
+         * decision table a flow uses must be registered with the same builder.
+         */
+        public Builder flow(DecisionFlow flow) {
+            flows.add(Objects.requireNonNull(flow, "flow"));
+            return this;
+        }
+
+        public Builder flows(Collection<DecisionFlow> flows) {
+            flows.forEach(this::flow);
             return this;
         }
 
@@ -220,23 +238,36 @@ public final class RuleStone {
         }
 
         /**
-         * @throws InvalidDecisionException listing every problem in every registered table,
-         *         including inconsistent versions (see {@link DecisionVersions#problems}) and
+         * @throws InvalidDecisionException listing every problem in every registered table and
+         *         flow, including inconsistent versions (see {@link DecisionVersions#problems}) and
          *         canaries or shadows of unknown versions
          */
         public RuleStoneEngine build() {
             List<String> problems = new ArrayList<>();
-            Map<String, List<CompiledDecision>> byId = new LinkedHashMap<>();
+            Map<String, List<CompiledDecision>> compiledTables = new LinkedHashMap<>();
+            Map<String, List<DecisionTable>> registered = new LinkedHashMap<>();
             for (DecisionTable table : tables) {
+                registered.computeIfAbsent(table.id(), id -> new ArrayList<>()).add(table);
                 CompiledDecision.compile(table, maxIterations, currencyScales, problems)
-                        .ifPresent(d -> byId.computeIfAbsent(table.id(), id -> new ArrayList<>()).add(d));
+                        .ifPresent(d -> compiledTables.computeIfAbsent(table.id(), id -> new ArrayList<>()).add(d));
             }
-            byId.values().forEach(versions -> problems.addAll(
+            compiledTables.values().forEach(versions -> problems.addAll(
                     DecisionVersions.problems(versions.stream().map(CompiledDecision::table).toList())));
+            Set<String> flowIds = new HashSet<>();
+            flows.forEach(f -> flowIds.add(f.id()));
+            Map<String, List<Executable>> byId = new LinkedHashMap<>();
+            compiledTables.forEach((id, versions) -> byId.put(id, new ArrayList<>(versions)));
+            Map<String, List<DecisionFlow>> flowVersions = new LinkedHashMap<>();
+            for (DecisionFlow flow : flows) {
+                flowVersions.computeIfAbsent(flow.id(), id -> new ArrayList<>()).add(flow);
+                CompiledFlow.compile(flow, compiledTables, registered, flowIds, maxIterations, currencyScales, problems)
+                        .ifPresent(f -> byId.computeIfAbsent(flow.id(), id -> new ArrayList<>()).add(f));
+            }
+            flowVersions.values().forEach(versions -> problems.addAll(DecisionVersions.problems(versions)));
             Map<String, DefaultRuleStoneEngine.Canary> canaries = new HashMap<>();
             canaryVersions.forEach((id, version) -> route("canary", id, version, byId, problems)
                     .ifPresent(d -> canaries.put(id, new DefaultRuleStoneEngine.Canary(d, canaryShares.get(id)))));
-            Map<String, CompiledDecision> shadows = new HashMap<>();
+            Map<String, Executable> shadows = new HashMap<>();
             shadowVersions.forEach((id, version) -> route("shadow", id, version, byId, problems)
                     .ifPresent(d -> shadows.put(id, d)));
             if (!problems.isEmpty()) {
@@ -256,14 +287,16 @@ public final class RuleStone {
         }
 
         /** The compiled {@code version} of decision {@code id}, or a problem if it was never registered. */
-        private Optional<CompiledDecision> route(String kind, String id, String version,
-                                                 Map<String, List<CompiledDecision>> byId, List<String> problems) {
-            Optional<CompiledDecision> decision = byId.getOrDefault(id, List.of()).stream()
-                    .filter(d -> d.table().version().equals(version)).findFirst();
-            boolean registered = tables.stream().anyMatch(t -> t.id().equals(id) && t.version().equals(version));
+        private Optional<Executable> route(String kind, String id, String version,
+                                           Map<String, List<Executable>> byId, List<String> problems) {
+            Optional<Executable> decision = byId.getOrDefault(id, List.of()).stream()
+                    .filter(d -> d.definition().version().equals(version)).findFirst();
+            List<VersionedDefinition> definitions = new ArrayList<>(tables);
+            definitions.addAll(flows);
+            boolean registered = definitions.stream().anyMatch(t -> t.id().equals(id) && t.version().equals(version));
             if (!registered) {
                 problems.add(kind + " " + id + "@" + version + ": "
-                        + (tables.stream().anyMatch(t -> t.id().equals(id))
+                        + (definitions.stream().anyMatch(t -> t.id().equals(id))
                                 ? "decision '" + id + "' has no version '" + version + "'"
                                 : "unknown decision '" + id + "'"));
             }

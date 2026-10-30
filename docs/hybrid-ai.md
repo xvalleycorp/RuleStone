@@ -1,8 +1,8 @@
 # Hybrid AI decisioning
 
-> Status: **design proposal**, partly implemented · Last updated: 2026-10-23
+> Status: **design proposal**, partly implemented · Last updated: 2026-10-30
 >
-> Step 1 of the [implementation plan](#9-implementation-plan) is **available**: every evaluation of a decision table produces a decision record. See [Decision records and auditing](java-api.md#decision-records-and-auditing). Everything else on this page is a proposal for review and will change before it ships.
+> Steps 1 and 2 of the [implementation plan](#9-implementation-plan) are **available**: every evaluation produces a decision record (see [Decision records and auditing](java-api.md#decision-records-and-auditing)), and decision flows without model nodes run in the Java engine (see [Decision flows](flows.md)). Everything else on this page is a proposal for review and will change before it ships.
 
 This page specifies how RuleStone combines machine-learning models with rules, and how every decision explains itself. It covers three things:
 
@@ -254,7 +254,7 @@ A flow is rejected, with all problems listed together as for decision tables tod
 
 ### 4.1 Always produced
 
-Each call to `evaluate` builds a `DecisionRecord`, whether it runs a single table or a flow, and whether it succeeds or fails. The record is returned on `DecisionResult.record()` and handed to every configured `AuditSink`. *Available for decision tables.*
+Each call to `evaluate` builds a `DecisionRecord`, whether it runs a single table or a flow, and whether it succeeds or fails. The record is returned on `DecisionResult.record()` and handed to every configured `AuditSink`. *Available for decision tables and flows.*
 
 - **Embedded use:** the caller decides where records go. `rulestone-test` can assert on them.
 - **`rulestone-server`, the Spring Boot starter, Temporal and Camunda:** startup fails if no audit sink is configured, unless it is turned off explicitly with a documented property, intended for local development only.
@@ -451,7 +451,15 @@ This table guides the design; it is not legal advice. The current texts must be 
 Each step is a separate, reviewable change with its own tests and documentation.
 
 1. **Decision record for tables.** *Done.* Add `DecisionRecord`, `DecisionResult.record()`, `AuditSink` and `correlationId` for today's decision tables, with no models yet. This delivers the "always explain" obligation first.
-2. **Flows without models.** Add the flow format, the `table`, `switch`, `derive`, `split` and `end` nodes, the load-time checks including the dominance rule, the executor, and `rulestone-test` support for paths and node coverage.
+2. **Flows without models.** *Done.* Add the flow format, the `table`, `switch`, `derive`, `split` and `end` nodes, the load-time checks including the dominance rule, the executor, and `rulestone-test` support for paths and node coverage. See [Decision flows](flows.md) and [Testing decision flows](testing.md#testing-decision-flows). Points this page left open were decided as follows:
+   - **`derive` nodes** declare their values with types in `outputs` and set them with `set`, as tables declare outputs and `end` nodes set them, so that they can be type-checked when the flow loads. `as` is allowed on `derive` nodes too.
+   - **Table versions.** A flow's content hash covers the flow file only. A `table` node uses the version of its table in force on the business date, unless it pins one with `version`, and it is checked against every version it may use. Each table step of the record names the table (`decision`) and its exact `version`; `switch` and `split` steps record `taken`.
+   - **Split buckets** come from the first 64 bits of the SHA-256 of `"<salt>\n<key>"`, as a fraction, as for canary routing. The key is a `string`, and percentages are whole numbers.
+   - **Reason codes** of a flow are listed once each, with the node that first produced them.
+   - **Canary and shadow versions** apply to a flow by its id; inside a flow, canaries and shadows of the tables it uses do not apply.
+   - **Outputs that no rule set** are absent, as for tables: reading one fails the evaluation, so flows test them with `has()`.
+   - **Reserved node types.** `model` and `flow` nodes are rejected as not supported yet, so adding them later changes no existing flow or hash. No step of this plan schedules `flow` (sub-flow) nodes yet.
+   - Flows share the `id` namespace of tables. The browser engine does not run flows.
 3. **Model nodes.** Add `ModelInvoker`, `ModelResult`, the `invoke` and `supplied` modes, failure handling, and reason codes from attributions. Add the `models` object to the test format and to `FactsJson`-based JSON callers (Temporal, Camunda, editor).
 4. **Explanations.** Add the reason-code catalog with EN/VI messages and a deterministic explanation renderer.
 5. **Replay and re-score.** Add these APIs, and extend the Temporal and Camunda integrations to carry record ids.
@@ -462,7 +470,7 @@ Each step is a separate, reviewable change with its own tests and documentation.
 
 | Question | Current proposal |
 |---|---|
-| Should flows share the `.stone.json` extension? | Use `.flow.json`, with `id`/`version`/effective dating identical to tables, in the same repository. |
+| Should flows share the `.stone.json` extension? | Decided: `.flow.json`, with `id`/`version`/effective dating identical to tables, in the same repository. |
 | Asynchronous model calls | Keep evaluation synchronous with deadlines first. Add a non-blocking API once the server module needs one. |
 | How many model reason codes to emit by default | Three, configurable per node. Banks often need up to four for adverse-action notices. |
 | Should `factsHash` be salted? | Decided: a plain hash of low-entropy inputs can be brute-forced, so `factsHashKey` makes it an HMAC-SHA256 with a bank-held key. Without a key it is plain SHA-256. |

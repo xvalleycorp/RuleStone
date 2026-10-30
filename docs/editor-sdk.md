@@ -304,7 +304,7 @@ The palette has the node types `table`, `switch`, `derive`, `model`, `split`, `e
 
 Until someone moves a node, the canvas arranges the flow for its own size: a long chain of nodes wraps into rows, like lines of text, so that the whole flow is readable without panning where it fits. Fitting never zooms out below the size at which node text stays legible (80%); a larger flow is then reached by dragging the background, the arrow keys, or the zoom buttons.
 
-**Flows are design-only.** The engine cannot run decision flows yet, and the canvas says so.
+**Flows are design-only in the browser.** The Java engine runs [decision flows](flows.md), but the browser engine (`@rulestone/engine`) does not run them yet, and the canvas says so.
 
 ## Server-side checks: the validator hook
 
@@ -499,6 +499,6 @@ The [engine's README](../sdk/packages/engine/README.md) lists its API and every 
 ## Limitations
 
 - The packages are not on npm yet, and their names may change when they are published.
-- Flows are design-only until the engine implements them. The canvas checks only what it can check without the engine: there are no name or type checks across nodes.
-- The `derive` and `flow` node fields follow the editor's reading of the flow proposal (`values`, `flow`, `version`), which may change with the format.
+- The browser engine does not run flows; only the Java engine does (see [Decision flows](flows.md)). The canvas checks only what it can check without the engine: there are no name or type checks across nodes.
+- The canvas reads a `derive` node's values as `values` (name to expression), while the Java engine's format declares them with types in `outputs` and sets them with `set`. Its `flow` node fields (`flow`, `version`) follow the proposal; the Java engine does not support `flow` nodes yet.
 - The rules grid does not virtualize rows, so tables with thousands of rules render slowly.

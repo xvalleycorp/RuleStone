@@ -56,6 +56,7 @@ RuleStoneEngine engine = RuleStone.builder()
 |---|---|
 | `clock(Clock)` | Determines "today" when a request has no `asOf` date. Defaults to the JVM's default time zone; **set it explicitly** to your bank's business time zone. |
 | `decision(DecisionTable)` / `decisions(Collection)` | Registers tables. Register every version of a decision; the engine selects one per request. |
+| `flow(DecisionFlow)` / `flows(Collection)` | Registers [decision flows](flows.md), read with `DecisionFlowJson.read(...)`. Register the tables they use with the same builder. |
 | `maxIterations(int)` | Upper bound on iterations of any list function in any rule. Default 10,000. |
 | `currencyScale(String, int)` | Number of digits after the decimal point that `money.round()` uses for a currency, overriding ISO 4217. Required for codes without minor units in ISO 4217, such as `XAU`. Throws `IllegalArgumentException` for a code that is not upper-case ISO 4217 or digits outside 0 to 18. |
 | `auditSink(AuditSink)` | Receives the `DecisionRecord` of every evaluation, successful or not. May be called several times; sinks run in order. See [Decision records and auditing](#decision-records-and-auditing). |
@@ -64,7 +65,7 @@ RuleStoneEngine engine = RuleStone.builder()
 | `timeout(Duration)` | Default timeout of every evaluation, for requests without their own; see [Timeouts](#timeouts). By default there is none. |
 | `canary(String, String, double)` / `shadow(String, String)` | Routes a share of the requests for a decision to a new version, or evaluates a new version in shadow on every request; see [Canary and shadow versions](#canary-and-shadow-versions). |
 | `shadowExecutor(Executor)` | Runs shadow evaluations on this executor instead of the caller's thread. |
-| `build()` | Compiles and type-checks every rule, checks versions for duplicates and contradictory dates (see [Versions and effective dates](decision-tables.md#versions-and-effective-dates)) and that every canary and shadow names a registered version, and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
+| `build()` | Compiles and type-checks every rule and flow, checks versions for duplicates and contradictory dates (see [Versions and effective dates](decision-tables.md#versions-and-effective-dates)) and that every canary and shadow names a registered version, and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
 
 `DecisionTableJson.read(...)` accepts a `String`, an `InputStream` (read as UTF-8) or a `Path`, and throws `InvalidDecisionException` for any problem in the file. Load files from wherever you keep them: the classpath, a directory, a database column or a configuration service.
 
@@ -283,7 +284,7 @@ DecisionResult result = engine.evaluate(
 | `factsHash` | A hash of the declared inputs; see below. Left out if the inputs were invalid. |
 | `output` | The outputs, written as by `FactsJson`. Empty unless the status is `OK`. |
 | `reasonCodes` | Each reason code with the node that produced it. |
-| `path` | Each node evaluated: today, the decision table with its version and the rules that matched. When evaluation fails inside a table, it shows the rules that matched before the failure. |
+| `path` | Each node evaluated. For a decision table, the table with its version and the rules that matched; for a [decision flow](flows.md#decision-records), every node visited, in order. When evaluation fails inside a table, it shows the rules that matched before the failure. |
 | `error` | Present only when the status is not `OK`: the exception's message, which never contains input values. For exceptions that are not `RuleStoneException`s, only the exception type is recorded. |
 | `routing` | Present only when a version other than the one in force was evaluated, as a canary or a shadow; see [Canary and shadow versions](#canary-and-shadow-versions). |
 
@@ -445,6 +446,8 @@ Routing applies to requests that do not name a version; a request with `Decision
 To compare champion and challenger, join the records of shadows on `shadowOf` with the records whose `recordId` it names, and compare `output` and `reasonCodes`. Both have the same `factsHash` when the two versions declare the same inputs. By default the shadow runs on the caller's thread after the request's own evaluation, which adds its time to every request; with `shadowExecutor` it runs on your executor instead, and a shadow the executor rejects is skipped. The facts must then not change after `evaluate` returns.
 
 A shadow is skipped when the request names a version, when no version was found for it, and when the request already used the shadow version, for example as its canary. Change the share, or promote the canary, by building a new engine and swapping it in, as in [Reloading rules](#reloading-rules).
+
+Canaries and shadows work the same way for [decision flows](flows.md): name the flow's id. Inside a flow, table nodes always use the table version in force, or the version they pin; canaries and shadows of those tables apply only when the tables are evaluated on their own.
 
 ## Threading and performance
 

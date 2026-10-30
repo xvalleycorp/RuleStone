@@ -1,0 +1,19 @@
+{
+  "id": "card_grade_new",
+  "version": "1",
+  "description": "Risk grade of a new customer, who has no history with the bank",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "applicant": { "age": "int" },
+    "bureau": { "utilisation": "decimal" }
+  },
+  "outputs": {
+    "riskGrade": "string"
+  },
+  "rules": [
+    { "id": "THIN_FILE", "when": "applicant.age < 21", "then": { "riskGrade": "'D'" }, "reasonCode": "THIN_CREDIT_FILE" },
+    { "id": "B", "when": "bureau.utilisation < decimal('0.3')", "then": { "riskGrade": "'B'" } },
+    { "id": "C", "when": "bureau.utilisation < decimal('0.7')", "then": { "riskGrade": "'C'" } },
+    { "id": "D", "when": "true", "then": { "riskGrade": "'D'" }, "reasonCode": "HIGH_UTILISATION" }
+  ]
+}
