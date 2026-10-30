@@ -24,7 +24,7 @@
         <!-- Pinned toolchain for the user interface, downloaded into target/ by frontend-maven-plugin. -->
         <frontend.node.version>v24.21.0</frontend.node.version>
         <frontend.npm.version>11.19.0</frontend.npm.version>
-        <frontend-maven-plugin.version>1.15.4</frontend-maven-plugin.version>
+        <frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
         <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
         <!-- -DskipTests also skips the frontend unit tests; -Dfrontend.skip skips the whole frontend build. -->
         <skipTests>false</skipTests>
