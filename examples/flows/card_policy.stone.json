@@ -1,0 +1,18 @@
+{
+  "id": "card_policy",
+  "version": "1",
+  "description": "Credit card knock-out rules, applied before any grading",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "applicant": { "age": "int" },
+    "bureau": { "dpd30Count12m": "int" }
+  },
+  "outputs": {
+    "decision": "string"
+  },
+  "rules": [
+    { "id": "UNDERAGE", "when": "applicant.age < 18", "then": { "decision": "'REJECT'" }, "reasonCode": "UNDERAGE" },
+    { "id": "DELINQUENT", "when": "bureau.dpd30Count12m >= 2", "then": { "decision": "'REJECT'" }, "reasonCode": "RECENT_DELINQUENCY" },
+    { "id": "PASS", "when": "true", "then": { "decision": "'PASS'" } }
+  ]
+}

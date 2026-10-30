@@ -14,7 +14,7 @@ import java.util.Optional;
 import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 
 /**
- * Which version of a decision is in force on a date.
+ * Which version of a decision, a {@link DecisionTable} or a {@link DecisionFlow}, is in force on a date.
  *
  * <p>Versions of one decision are ordered by {@code effectiveFrom}; a version without one
  * starts at the beginning of time. A version stays in force until the earlier of its own
@@ -29,7 +29,7 @@ import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 public final class DecisionVersions {
 
     /** By effective start; a version without {@code effectiveFrom} comes first. */
-    private static final Comparator<DecisionTable> BY_START =
+    private static final Comparator<VersionedDefinition> BY_START =
             Comparator.comparing(t -> t.effectiveFrom().orElse(LocalDate.MIN));
 
     private DecisionVersions() {}
@@ -51,8 +51,8 @@ public final class DecisionVersions {
      * @param versions every registered version of one decision
      * @return the problems, each starting with the versions involved; empty if consistent
      */
-    public static List<String> problems(Collection<DecisionTable> versions) {
-        List<DecisionTable> sorted = sorted(versions);
+    public static <T extends VersionedDefinition> List<String> problems(Collection<T> versions) {
+        List<T> sorted = sorted(versions);
         List<String> problems = new ArrayList<>();
         for (int i = 0; i < sorted.size(); i++) {
             for (int j = i + 1; j < sorted.size(); j++) {
@@ -62,8 +62,8 @@ public final class DecisionVersions {
             }
         }
         for (int i = 0; i + 1 < sorted.size(); i++) {
-            DecisionTable current = sorted.get(i);
-            DecisionTable next = sorted.get(i + 1);
+            VersionedDefinition current = sorted.get(i);
+            VersionedDefinition next = sorted.get(i + 1);
             if (current.version().equals(next.version())) {
                 continue;   // already reported
             }
@@ -88,9 +88,9 @@ public final class DecisionVersions {
      *
      * @param versions every registered version of one decision, consistent by {@link #problems}
      */
-    public static Optional<DecisionTable> inForce(Collection<DecisionTable> versions, LocalDate date) {
-        DecisionTable candidate = null;
-        for (DecisionTable table : sorted(versions)) {
+    public static <T extends VersionedDefinition> Optional<T> inForce(Collection<T> versions, LocalDate date) {
+        T candidate = null;
+        for (T table : sorted(versions)) {
             if (table.effectiveFrom().isPresent() && table.effectiveFrom().get().isAfter(date)) {
                 break;
             }
@@ -110,8 +110,8 @@ public final class DecisionVersions {
      * @param versions every registered version of decision {@code id}
      * @throws DecisionNotFoundException if there is no such version, or none is in force on {@code date}
      */
-    public static DecisionTable select(String id, Collection<DecisionTable> versions, Optional<String> version,
-                                       LocalDate date) {
+    public static <T extends VersionedDefinition> T select(String id, Collection<T> versions,
+                                                         Optional<String> version, LocalDate date) {
         if (version.isPresent()) {
             return versions.stream()
                     .filter(t -> t.version().equals(version.get()))
@@ -123,8 +123,8 @@ public final class DecisionVersions {
                 "no version of decision '" + id + "' is effective on " + date));
     }
 
-    private static List<DecisionTable> sorted(Collection<DecisionTable> versions) {
-        List<DecisionTable> sorted = new ArrayList<>(versions);
+    private static <T extends VersionedDefinition> List<T> sorted(Collection<T> versions) {
+        List<T> sorted = new ArrayList<>(versions);
         sorted.sort(BY_START);
         return sorted;
     }

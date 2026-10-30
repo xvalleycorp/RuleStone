@@ -32,7 +32,7 @@ public record DecisionTable(
         HitPolicy hitPolicy,
         Map<String, ValueType> inputs,
         Map<String, ValueType> outputs,
-        List<Rule> rules) {
+        List<Rule> rules) implements VersionedDefinition {
 
     public DecisionTable {
         Objects.requireNonNull(id, "id");
@@ -57,6 +57,7 @@ public record DecisionTable(
     }
 
     /** {@code id@version}, for messages. */
+    @Override
     public String ref() {
         return id + "@" + version;
     }

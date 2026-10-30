@@ -20,7 +20,9 @@ import vn.io.dxa.rulestone.api.DecisionRecord;
  *     .auditSink(record -> auditLog.info(DecisionRecordJson.write(record)))
  * }</pre>
  *
- * <p>Fields are written in a fixed order. Absent optional fields are left out. Output
+ * <p>Fields are written in a fixed order. Absent optional fields are left out, also in the
+ * steps of the path: a {@code switch} step, for example, has {@code taken} but no
+ * {@code version} or {@code matchedRules}. Output
  * values use the {@link FactsJson} forms, e.g. {@code "25000 VND"} for money.
  */
 public final class DecisionRecordJson {
@@ -49,10 +51,15 @@ public final class DecisionRecordJson {
         record.path().forEach(step -> {
             ObjectNode node = path.addObject()
                     .put("node", step.node())
-                    .put("type", step.type())
-                    .put("version", step.version());
-            ArrayNode matched = node.putArray("matchedRules");
-            step.matchedRules().forEach(matched::add);
+                    .put("type", step.type());
+            step.decision().ifPresent(decision -> node.put("decision", decision));
+            step.version().ifPresent(version -> node.put("version", version));
+            // A table step always lists its matched rules, even none; other steps have none to list.
+            if (step.type().equals("table") || !step.matchedRules().isEmpty()) {
+                ArrayNode matched = node.putArray("matchedRules");
+                step.matchedRules().forEach(matched::add);
+            }
+            step.taken().ifPresent(taken -> node.put("taken", taken));
         });
         record.error().ifPresent(error -> json.put("error", error));
         record.routing().ifPresent(routing -> {

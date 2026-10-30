@@ -1,0 +1,58 @@
+{
+  "id": "card_origination",
+  "version": "1",
+  "description": "Credit card origination: knock-out policy, segmentation, risk grade, and a champion/challenger limit strategy",
+  "effectiveFrom": "2026-11-01",
+  "inputs": {
+    "applicant": { "id": "string", "age": "int", "income": "money", "existingCustomer": "bool" },
+    "bureau": { "dpd30Count12m": "int", "utilisation": "decimal" }
+  },
+  "outputs": { "decision": "string", "limit": "money", "riskGrade": "string" },
+  "start": "policy",
+  "nodes": {
+    "policy": {
+      "type": "table", "decision": "card_policy",
+      "next": [ { "when": "policy.decision == 'REJECT'", "to": "rejected" }, { "to": "affordability" } ]
+    },
+    "affordability": {
+      "type": "derive",
+      "outputs": { "annualIncome": "money" },
+      "set": { "annualIncome": "applicant.income * 12" },
+      "next": "segment"
+    },
+    "segment": {
+      "type": "switch",
+      "cases": [ { "when": "applicant.existingCustomer", "to": "grade_existing" }, { "to": "grade_new" } ]
+    },
+    "grade_existing": {
+      "type": "table", "decision": "card_grade_existing", "as": "grade",
+      "next": [ { "when": "grade.riskGrade == 'D'", "to": "referred" }, { "to": "limit_strategy" } ]
+    },
+    "grade_new": {
+      "type": "table", "decision": "card_grade_new", "as": "grade",
+      "next": [ { "when": "grade.riskGrade == 'D'", "to": "referred" }, { "to": "limit_strategy" } ]
+    },
+    "limit_strategy": {
+      "type": "split", "key": "applicant.id", "salt": "card-limit-2026Q4",
+      "buckets": [
+        { "name": "champion", "percent": 90, "to": "limit" },
+        { "name": "challenger", "percent": 10, "to": "limit" }
+      ]
+    },
+    "limit": {
+      "type": "table", "decision": "card_limit",
+      "facts": {
+        "riskGrade": "grade.riskGrade",
+        "annualIncome": "affordability.annualIncome",
+        "strategy": "limit_strategy.taken"
+      },
+      "next": "approved"
+    },
+    "approved": { "type": "end", "set": {
+      "decision": "'APPROVE'", "riskGrade": "grade.riskGrade", "limit": "limit.limit" } },
+    "referred": { "type": "end", "set": {
+      "decision": "'REFER'", "riskGrade": "grade.riskGrade", "limit": "money(0, applicant.income.currency())" } },
+    "rejected": { "type": "end", "set": {
+      "decision": "'REJECT'", "riskGrade": "'N/A'", "limit": "money(0, applicant.income.currency())" } }
+  }
+}
