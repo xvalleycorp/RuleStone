@@ -22,6 +22,8 @@ type Drag =
   | { readonly kind: 'move'; readonly id: string; readonly startX: number; readonly startY: number; readonly origX: number; readonly origY: number; moved: boolean }
   | { readonly kind: 'pan'; readonly startX: number; readonly startY: number; readonly view: View }
   | { readonly kind: 'connect'; readonly from: string; readonly failure: boolean }
+  /** Two fingers: zoom around their midpoint, and pan as it moves. */
+  | { readonly kind: 'pinch'; readonly distance: number; readonly anchor: { x: number; y: number }; readonly view: View }
 
 /** The detail of rulestone-change. */
 export interface FlowChangeDetail {
@@ -77,6 +79,8 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   declare _fieldErrors: ReadonlyMap<string, string>
 
   private drag: Drag | undefined
+  /** Touch and pen pointers down on the canvas, by id, for pinch zoom. */
+  private readonly touches = new Map<number, { x: number; y: number }>()
   private observer: ResizeObserver | undefined
   private focusNode: string | undefined
   /**
@@ -298,7 +302,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         stroke: var(--_color-bg);
         stroke-width: 4px;
       }
-      .edge-label.failure {
+      .edge-label .failure {
         fill: var(--_color-error);
       }
       .arrow {
@@ -551,6 +555,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       @pointerdown=${this.onBackgroundDown}
       @pointermove=${this.onPointerMove}
       @pointerup=${this.onPointerUp}
+      @pointercancel=${this.onPointerCancel}
       @keydown=${this.onCanvasKey}
     >
       <desc id="canvas-help">${this.t('flow.canvasHelp')}</desc>
@@ -567,7 +572,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         ? svg`<path class="edge temp" d=${curve(temp.x + NODE_WIDTH, temp.y + NODE_HEIGHT / 2, this._pointer.x, this._pointer.y)}></path>`
         : nothing}
       <g class="nodes">${Object.entries(this.flow.nodes).map(([id, node]) => this.renderNode(id, node, problems.filter((p) => p.node === id)))}</g>
-      <g class="edge-labels" aria-hidden="true">${edges.map((e) => this.renderEdgeLabel(e))}</g>
+      <g class="edge-labels" aria-hidden="true">${this.renderEdgeLabels(edges)}</g>
     </svg>`
   }
 
@@ -587,14 +592,26 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   }
 
   /**
-   * An edge's label, where the edge arrives: just above the target node's top left corner,
-   * drawn over nodes and edges so that it stays readable wherever the nodes are.
+   * Edge labels, where the edges arrive: just above the target node's top left corner, drawn
+   * over nodes and edges so that they stay readable wherever the nodes are. The labels of the
+   * edges into one node share one line, each label once, so that they never overlap.
    */
-  private renderEdgeLabel(edge: Edge): SVGTemplateResult | typeof nothing {
-    if (edge.kind === 'next' || edge.label === '') return nothing
-    const b = this.layout[edge.to]!
-    const label = edge.label.length > 26 ? edge.label.slice(0, 25) + '…' : edge.label
-    return svg`<text class="edge-label ${edge.kind === 'failure' ? 'failure' : ''}" x=${b.x + 6} y=${b.y - 6}>${label}</text>`
+  private renderEdgeLabels(edges: readonly Edge[]): SVGTemplateResult[] {
+    const byTarget = new Map<string, Map<string, boolean>>()
+    for (const e of edges) {
+      if (e.kind === 'next' || e.label === '') continue
+      const labels = byTarget.get(e.to) ?? new Map<string, boolean>()
+      labels.set(e.label, (labels.get(e.label) ?? false) || e.kind === 'failure')
+      byTarget.set(e.to, labels)
+    }
+    return [...byTarget].map(([to, labels]) => {
+      const b = this.layout[to]!
+      const parts = [...labels].map(([label, failure], i) => {
+        const text = label.length > 26 ? label.slice(0, 25) + '…' : label
+        return svg`${i > 0 ? svg`<tspan> · </tspan>` : nothing}<tspan class=${failure ? 'failure' : ''}>${text}</tspan>`
+      })
+      return svg`<text class="edge-label" x=${b.x + 6} y=${b.y - 6}>${parts}</text>`
+    })
   }
 
   private renderNode(id: string, node: FlowNodeJson, problems: readonly FlowProblem[]): SVGTemplateResult {
@@ -1106,7 +1123,26 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     }
   }
 
+  /**
+   * Records a touch or pen pointer; with a second one down, any drag becomes a pinch.
+   * Returns whether a pinch started.
+   */
+  private trackTouch(e: PointerEvent): boolean {
+    if (e.pointerType === 'mouse') return false
+    this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (this.touches.size !== 2) return false
+    if (this.drag?.kind === 'move' && this.drag.moved) this.change(this.flow, this.layout)
+    this._connecting = undefined
+    this._pointer = undefined
+    const [a, b] = [...this.touches.values()] as [{ x: number; y: number }, { x: number; y: number }]
+    const mid = { clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 }
+    this.drag = { kind: 'pinch', distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), anchor: this.toCanvas(mid), view: this._view }
+    this.capture(e)
+    return true
+  }
+
   private onBackgroundDown = (e: PointerEvent): void => {
+    if (this.trackTouch(e)) return
     if (this.drag || e.button !== 0) return
     this.drag = { kind: 'pan', startX: e.clientX, startY: e.clientY, view: this._view }
     this.capture(e)
@@ -1115,6 +1151,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   private onNodeDown(e: PointerEvent, id: string): void {
     if (e.button !== 0) return
     e.stopPropagation()
+    if (this.trackTouch(e)) return
     const p = this.layout[id]!
     this._selected = id
     if (this.readonly) return
@@ -1131,10 +1168,13 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   }
 
   private onPointerMove = (e: PointerEvent): void => {
+    if (this.touches.has(e.pointerId)) this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
     const drag = this.drag
     if (!drag) return
     const zoom = this._view.zoom
-    if (drag.kind === 'pan') {
+    if (drag.kind === 'pinch') {
+      this.pinch(drag)
+    } else if (drag.kind === 'pan') {
       this._view = { ...drag.view, x: drag.view.x - (e.clientX - drag.startX) / zoom, y: drag.view.y - (e.clientY - drag.startY) / zoom }
     } else if (drag.kind === 'move') {
       const dx = (e.clientX - drag.startX) / zoom
@@ -1146,8 +1186,27 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     }
   }
 
+  /** Keeps the canvas point first under the fingers' midpoint under it, at the new zoom. */
+  private pinch(drag: Extract<Drag, { kind: 'pinch' }>): void {
+    if (this.touches.size < 2) return
+    const rect = this.renderRoot.querySelector('svg')?.getBoundingClientRect()
+    if (!rect || rect.width === 0) return
+    const [a, b] = [...this.touches.values()] as [{ x: number; y: number }, { x: number; y: number }]
+    const distance = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y))
+    const zoom = Math.max(0.15, Math.min(2.5, drag.view.zoom * (distance / drag.distance)))
+    const mx = ((a.x + b.x) / 2 - rect.left) / rect.width
+    const my = ((a.y + b.y) / 2 - rect.top) / rect.height
+    this._view = { zoom, x: drag.anchor.x - mx * (this._size.w / zoom), y: drag.anchor.y - my * (this._size.h / zoom) }
+  }
+
   private onPointerUp = (e: PointerEvent): void => {
+    this.touches.delete(e.pointerId)
     const drag = this.drag
+    if (drag?.kind === 'pinch') {
+      // The pinch ends with the first finger lifted; the other one does nothing until lifted.
+      if (this.touches.size === 0) this.drag = undefined
+      return
+    }
     this.drag = undefined
     if (!drag) return
     if (drag.kind === 'move' && drag.moved) this.change(this.flow, this.layout)
@@ -1157,6 +1216,17 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       this._pointer = undefined
       if (target && target !== drag.from) this.connectNodes(drag.from, target, drag.failure)
     }
+  }
+
+  /** The browser took the pointer over: keep a move made so far, but never connect. */
+  private onPointerCancel = (e: PointerEvent): void => {
+    this.touches.delete(e.pointerId)
+    const drag = this.drag
+    if (drag?.kind === 'pinch' && this.touches.size > 0) return
+    this.drag = undefined
+    this._connecting = undefined
+    this._pointer = undefined
+    if (drag?.kind === 'move' && drag.moved) this.change(this.flow, this.layout)
   }
 
   /** Ctrl or Cmd with the wheel (and a trackpad pinch) zooms; the wheel alone scrolls the page. */

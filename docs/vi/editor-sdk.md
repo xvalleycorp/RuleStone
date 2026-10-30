@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: 906e0c5c1da2677f0f30d71465fd78b52b7efa7cec3e8b6b4bbe00f244e2ddde
+sourceHash: 80ff8a12813b77ce8d4ba4e9572cf2763fd806602e4d7f51ca4c396dda632688
 ---
 
 # SDK trình soạn thảo
@@ -440,7 +440,7 @@ Các phần tử được xây dựng theo WCAG 2.1 AA. Mọi thao tác kéo th�
 | Trình tạo điều kiện | Trên tay nắm của một khối: Alt+↑ và Alt+↓ di chuyển khối trong nhóm của nó, Alt+→ đưa khối vào nhóm phía trên, Alt+← đưa ra khỏi nhóm. Mỗi khối cũng có các nút di chuyển. |
 | Trình thiết kế đầu vào và đầu ra | ↑ và ↓ để di chuyển giữa các trường, → và ← để hiện và ẩn trường lồng nhau, Alt+↑ và Alt+↓ để sắp xếp lại, Enter để sửa tên. |
 | Ô nhập CEL | Ctrl+Space hiện gợi ý; ↑ và ↓ để chọn, Enter hoặc Tab để nhận, Escape để đóng. |
-| Vùng vẽ luồng | Các nút trong bảng các nút để thêm một nút. Trên vùng vẽ: phím mũi tên để cuộn, + và − để thu phóng, 0 để vừa khung; Ctrl hoặc ⌘ cùng con lăn chuột cũng thu phóng, còn con lăn một mình thì cuộn trang. Trên một nút: phím mũi tên để di chuyển (Shift để bước lớn hơn), C để bắt đầu nối (F cho `onFailure` của nút mô hình) và Enter trên nút đích để hoàn tất, Delete để xoá. Cũng có thể đặt và bỏ các cạnh trong bảng thuộc tính. |
+| Vùng vẽ luồng | Các nút trong bảng các nút để thêm một nút. Trên vùng vẽ: phím mũi tên để cuộn, + và − để thu phóng, 0 để vừa khung; Ctrl hoặc ⌘ cùng con lăn chuột cũng thu phóng, còn con lăn một mình thì cuộn trang. Trên màn hình cảm ứng, một ngón tay để cuộn, hai ngón tay chụm hoặc mở ra để thu phóng. Trên một nút: phím mũi tên để di chuyển (Shift để bước lớn hơn), C để bắt đầu nối (F cho `onFailure` của nút mô hình) và Enter trên nút đích để hoàn tất, Delete để xoá. Cũng có thể đặt và bỏ các cạnh trong bảng thuộc tính. |
 
 ## Content Security Policy
 
@@ -464,12 +464,12 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@rulestone/editor` (mọi phần tử) | 281.7 KiB, 82.7 KiB khi nén gzip | 192.1 KiB, 53.5 KiB khi nén gzip |
+| `@rulestone/editor` (mọi phần tử) | 283.3 KiB, 83.3 KiB khi nén gzip | 193.7 KiB, 54.0 KiB khi nén gzip |
 | `./table-editor` | 235.5 KiB, 69.9 KiB khi nén gzip | 145.9 KiB, 40.6 KiB khi nén gzip |
 | `./rules-grid` | 154.5 KiB, 47.7 KiB khi nén gzip | 98.8 KiB, 28.3 KiB khi nén gzip |
 | `./condition-builder` | 134.9 KiB, 42.6 KiB khi nén gzip | 78.9 KiB, 23.2 KiB khi nén gzip |
 | `./schema-designer` | 111.7 KiB, 36.8 KiB khi nén gzip | 55.7 KiB, 17.5 KiB khi nén gzip |
-| `./flow-canvas` | 96.1 KiB, 29.6 KiB khi nén gzip | 81.1 KiB, 24.0 KiB khi nén gzip |
+| `./flow-canvas` | 97.7 KiB, 30.1 KiB khi nén gzip | 82.7 KiB, 24.5 KiB khi nén gzip |
 | `./try-it` | 142.5 KiB, 45.8 KiB khi nén gzip | 53.3 KiB, 16.3 KiB khi nén gzip |
 | `./cel-input` | 103.2 KiB, 34.3 KiB khi nén gzip | 47.7 KiB, 15.0 KiB khi nén gzip |
 

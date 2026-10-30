@@ -219,7 +219,7 @@ onMounted(() => import('@rulestone/editor/table-editor'))
 | Condition builder | On a block's handle: Alt+↑ / Alt+↓ move it within its group, Alt+→ moves it into the group above, Alt+← out of its group. Every block also has move buttons. |
 | Schema designer | ↑ / ↓ move between fields, → / ← show and hide nested fields, Alt+↑ / Alt+↓ reorder, Enter edits the name. |
 | CEL input | Ctrl+Space shows suggestions; ↑ / ↓ choose, Enter or Tab accept, Escape closes. |
-| Flow canvas | Palette buttons add a node. On the canvas: drag the background or use the arrow keys to pan, + and − zoom, 0 fits; Ctrl or ⌘ with the mouse wheel zooms, the wheel alone scrolls the page. On a node: arrow keys move it (Shift for larger steps), C starts a connection (F for a model's onFailure) and Enter on the target completes it, Delete removes it. Edges can also be set and removed in the properties panel. |
+| Flow canvas | Palette buttons add a node. On the canvas: drag the background or use the arrow keys to pan, + and − zoom, 0 fits; Ctrl or ⌘ with the mouse wheel zooms, the wheel alone scrolls the page; on a touch screen, one finger pans and two fingers pinch to zoom. On a node: arrow keys move it (Shift for larger steps), C starts a connection (F for a model's onFailure) and Enter on the target completes it, Delete removes it. Edges can also be set and removed in the properties panel. |
 
 Moves and other changes are announced through a polite live region.
 
@@ -294,12 +294,12 @@ Minified and minified + gzipped with esbuild (`npm run size`), with Lit and the 
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 281.7 KiB min, 82.7 KiB gzip | 192.1 KiB min, 53.5 KiB gzip |
+| `@rulestone/editor` (all elements) | 283.3 KiB min, 83.3 KiB gzip | 193.7 KiB min, 54.0 KiB gzip |
 | `./table-editor` | 235.5 KiB min, 69.9 KiB gzip | 145.9 KiB min, 40.6 KiB gzip |
 | `./rules-grid` | 154.5 KiB min, 47.7 KiB gzip | 98.8 KiB min, 28.3 KiB gzip |
 | `./condition-builder` | 134.9 KiB min, 42.6 KiB gzip | 78.9 KiB min, 23.2 KiB gzip |
 | `./schema-designer` | 111.7 KiB min, 36.8 KiB gzip | 55.7 KiB min, 17.5 KiB gzip |
-| `./flow-canvas` | 96.1 KiB min, 29.6 KiB gzip | 81.1 KiB min, 24.0 KiB gzip |
+| `./flow-canvas` | 97.7 KiB min, 30.1 KiB gzip | 82.7 KiB min, 24.5 KiB gzip |
 | `./try-it` | 142.5 KiB min, 45.8 KiB gzip | 53.3 KiB min, 16.3 KiB gzip |
 | `./cel-input` | 103.2 KiB min, 34.3 KiB gzip | 47.7 KiB min, 15.0 KiB gzip |
 

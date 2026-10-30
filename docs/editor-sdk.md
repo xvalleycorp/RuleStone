@@ -435,7 +435,7 @@ The elements are built to WCAG 2.1 AA. Every drag and drop has a keyboard altern
 | Condition builder | On a block's handle: Alt+↑ and Alt+↓ move it within its group, Alt+→ moves it into the group above, Alt+← out of its group. Every block also has move buttons. |
 | Schema designer | ↑ and ↓ move between fields, → and ← show and hide nested fields, Alt+↑ and Alt+↓ reorder, Enter edits the name. |
 | CEL input | Ctrl+Space shows suggestions; ↑ and ↓ choose, Enter or Tab accept, Escape closes. |
-| Flow canvas | Palette buttons add a node. On the canvas: arrow keys pan, + and − zoom, 0 fits; Ctrl or ⌘ with the mouse wheel also zooms, and the wheel alone scrolls the page. On a node: arrow keys move it (Shift for larger steps), C starts a connection (F for a model's `onFailure`) and Enter on the target completes it, Delete removes it. Edges can also be set and removed in the properties panel. |
+| Flow canvas | Palette buttons add a node. On the canvas: arrow keys pan, + and − zoom, 0 fits; Ctrl or ⌘ with the mouse wheel also zooms, and the wheel alone scrolls the page. On a touch screen, one finger pans and two fingers pinch to zoom. On a node: arrow keys move it (Shift for larger steps), C starts a connection (F for a model's `onFailure`) and Enter on the target completes it, Delete removes it. Edges can also be set and removed in the properties panel. |
 
 ## Content Security Policy
 
@@ -459,12 +459,12 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 281.7 KiB, 82.7 KiB gzipped | 192.1 KiB, 53.5 KiB gzipped |
+| `@rulestone/editor` (all elements) | 283.3 KiB, 83.3 KiB gzipped | 193.7 KiB, 54.0 KiB gzipped |
 | `./table-editor` | 235.5 KiB, 69.9 KiB gzipped | 145.9 KiB, 40.6 KiB gzipped |
 | `./rules-grid` | 154.5 KiB, 47.7 KiB gzipped | 98.8 KiB, 28.3 KiB gzipped |
 | `./condition-builder` | 134.9 KiB, 42.6 KiB gzipped | 78.9 KiB, 23.2 KiB gzipped |
 | `./schema-designer` | 111.7 KiB, 36.8 KiB gzipped | 55.7 KiB, 17.5 KiB gzipped |
-| `./flow-canvas` | 96.1 KiB, 29.6 KiB gzipped | 81.1 KiB, 24.0 KiB gzipped |
+| `./flow-canvas` | 97.7 KiB, 30.1 KiB gzipped | 82.7 KiB, 24.5 KiB gzipped |
 | `./try-it` | 142.5 KiB, 45.8 KiB gzipped | 53.3 KiB, 16.3 KiB gzipped |
 | `./cel-input` | 103.2 KiB, 34.3 KiB gzipped | 47.7 KiB, 15.0 KiB gzipped |
 
