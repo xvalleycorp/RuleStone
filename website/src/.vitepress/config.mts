@@ -65,6 +65,7 @@ const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
       ['examples.md', 'Examples'],
       ['architecture.md', 'Architecture'],
       ['hybrid-ai.md', 'Hybrid AI decisioning'],
+      ['parameters.md', 'Parameters and aggregates'],
     ],
   },
 ];

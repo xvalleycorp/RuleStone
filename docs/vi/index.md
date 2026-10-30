@@ -1,6 +1,6 @@
 ---
 source: README.md
-sourceHash: e687b4b30455ef2116b9637a292f772fd0955b30c3b82ad23966d0e03b477513
+sourceHash: 3da78efd20f2337845dc5294d6057f377ede14980707cbd90ce8e1df5781d7b1
 ---
 
 # Tài liệu RuleStone
@@ -30,6 +30,7 @@ sourceHash: e687b4b30455ef2116b9637a292f772fd0955b30c3b82ad23966d0e03b477513
 |---|---|
 | [Kiến trúc](architecture.md) | Mục tiêu, nguyên tắc thiết kế, các mô-đun, các chế độ tích hợp, yêu cầu của ngân hàng, tích hợp AI và lộ trình. |
 | [Ra quyết định AI lai](hybrid-ai.md) | Đề xuất thiết kế: điểm số của mô hình làm đầu vào cho luật, mô hình là nút trong luồng quyết định, và bản ghi quyết định giải thích mọi quyết định. |
+| [Tham số, hàm tổng hợp và giá trị cục bộ](parameters.md) | Đề xuất thiết kế: bộ tham số cho các ngưỡng của chính sách, hàm tổng hợp trên danh sách, và giá trị cục bộ trong bảng. |
 
 ## Dự án
 

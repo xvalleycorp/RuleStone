@@ -23,6 +23,7 @@
 |---|---|
 | [Architecture](architecture.md) | Goals, design principles, modules, integration modes, banking requirements, AI integration and roadmap. |
 | [Hybrid AI decisioning](hybrid-ai.md) | Design proposal: model scores as rule inputs, models as nodes in decision flows, and the decision record that explains every decision. |
+| [Parameters, aggregates and local values](parameters.md) | Design proposal: parameter sets for policy thresholds, aggregate functions on lists, and local values in tables. |
 
 ## Project
 

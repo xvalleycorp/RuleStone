@@ -51,6 +51,7 @@ export const LOCALES = {
       'editor-sdk.md': 'SDK trình soạn thảo',
       'camunda.md': 'Tích hợp Camunda',
       'hybrid-ai.md': 'Ra quyết định AI lai',
+      'parameters.md': 'Tham số và hàm tổng hợp',
       'examples.md': 'Ví dụ',
       'architecture.md': 'Kiến trúc',
     },
