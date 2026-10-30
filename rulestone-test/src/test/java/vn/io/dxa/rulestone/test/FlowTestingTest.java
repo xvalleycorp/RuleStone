@@ -218,6 +218,20 @@ class FlowTestingTest {
     }
 
     @Test
+    void decisionCheckGivesModelResultsAndFailures() {
+        DecisionCheck.of(engine)
+                .decision("card_origination_scored").asOf(LocalDate.of(2026, 12, 1))
+                .given("applicant", Map.of("id", "C-1", "age", 35, "income", Money.of("1000", "VND"), "existingCustomer", false))
+                .given("bureau", Map.of("dpd30Count12m", 0, "utilisation", java.math.BigDecimal.ONE))
+                .givenModelResult("fraud", vn.io.dxa.rulestone.api.ModelResult.of("card_application_fraud", "1.2.0",
+                        Map.of("score", new java.math.BigDecimal("0.01"))))
+                .givenModelFailure("pd_application", vn.io.dxa.rulestone.api.ModelStatus.ERROR)
+                .expectOutput("decision", "REFER")
+                .expectReasonCodes("MODEL_UNAVAILABLE")
+                .expectPath("policy", "fraud", "segment", "pd_application", "referred");
+    }
+
+    @Test
     void invalidModelResultsAreReportedWithTheirLocation() {
         assertThatThrownBy(() -> StoneTestJson.read("{ \"decision\": \"card_origination_scored\", \"cases\": [{ "
                 + "\"name\": \"a\", " + SCORED_FACTS + ", \"models\": { \"fraud\": { \"failure\": \"SLOW\" }, "
