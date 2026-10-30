@@ -1,11 +1,11 @@
 ---
 source: examples.md
-sourceHash: da8b452ada0b02595f9df941a44adadfe84ba39d28cd7faf71d51cf989cb159c
+sourceHash: 7b0bb3a96126f0c31a7c413644bf8b9939acdfd45360c2ff81f0496460990bda
 ---
 
 # Ví dụ
 
-Thư mục [`examples/`](../../examples/) chứa các bảng quyết định hoàn chỉnh cho những bài toán ngân hàng thường gặp. Mỗi bảng đều được bộ kiểm thử của dự án nạp và đánh giá, nên các kết quả nêu ở đây được kiểm tra trong mọi lần build. Các ngưỡng, điểm số và lãi suất là số liệu giả định để minh hoạ; số tiền tính bằng VND.
+Thư mục [`examples/`](../../examples/) chứa các bảng quyết định hoàn chỉnh cho những bài toán ngân hàng thường gặp, và một luồng quyết định nối các bảng với nhau. Mỗi bảng đều được bộ kiểm thử của dự án nạp và đánh giá, nên các kết quả nêu ở đây được kiểm tra trong mọi lần build. Các ngưỡng, điểm số và lãi suất là số liệu giả định để minh hoạ; số tiền tính bằng VND.
 
 | Tệp | Bài toán | Minh hoạ |
 |---|---|---|
@@ -15,6 +15,7 @@ Thư mục [`examples/`](../../examples/) chứa các bảng quyết định ho�
 | [`card_fraud_signals.stone.json`](../../examples/card_fraud_signals.stone.json), [`card_fraud_action.stone.json`](../../examples/card_fraud_action.stone.json) | Sàng lọc gian lận thẻ | `COLLECT` cho các tín hiệu rủi ro và `FIRST` cho hành động, do ứng dụng nối tiếp; danh sách với `in` |
 | [`consumer_loan_underwriting.stone.json`](../../examples/consumer_loan_underwriting.stone.json), [`consumer_loan_conditions.stone.json`](../../examples/consumer_loan_conditions.stone.json) | Thẩm định tín dụng khoản vay tiêu dùng | `FIRST` với từ chối, chuyển xem xét và hạng rủi ro; trường tuỳ chọn với `has()`; `min`, các chế độ làm tròn; `COLLECT` cho điều kiện phê duyệt |
 | [`aml_name_screening.stone.json`](../../examples/aml_name_screening.stone.json), [`aml_transaction_monitoring.stone.json`](../../examples/aml_transaction_monitoring.stone.json), [`aml_alert_action.stone.json`](../../examples/aml_alert_action.stone.json) | Phòng, chống rửa tiền: sàng lọc danh sách theo dõi và giám sát giao dịch | So khớp tên gần đúng với bí danh và ngày sinh; số học và so sánh với `money`; các hàm ngày và `businessDate`; cảnh báo `COLLECT` nối tiếp tới hành động `FIRST` |
+| [`flows/card_origination.flow.json`](../../examples/flows/card_origination.flow.json) và các bảng trong [`flows/`](../../examples/flows/) | Phát hành thẻ tín dụng | Một [luồng quyết định](flows.md): luật loại trừ (knock-out) của chính sách, phân khúc bằng `switch`, một nút `derive`, hai bảng xếp hạng dùng chung một tên, và một phép chia champion/challenger bằng `split` |
 
 ## Xét điều kiện vay: thứ tự ưu tiên và phiên bản
 
@@ -485,3 +486,17 @@ Những điểm cần lưu ý:
 - **Không bao giờ ghi log tên.** Tên khách hàng và tên trong danh sách theo dõi là dữ liệu cá nhân. Lỗi khi đánh giá và vết thực thi không bao giờ chứa giá trị đầu vào; hãy giữ nguyên tắc đó trong log của bạn, và lưu mã lý do, `bestScore` và `ruleVersion()` thay vì tên.
 - **Một loại tiền tệ.** Mọi số tiền phải bằng VND. Một giao dịch bằng loại tiền khác làm việc đánh giá thất bại với lỗi `money currencies differ` thay vì âm thầm lọt qua các ngưỡng: hãy quy đổi số tiền trước khi giám sát, hoặc viết luật riêng cho từng loại tiền tệ.
 - **Thống nhất về lịch sử giao dịch.** `cashDepositsLast7d`, `totalInLast24h` và `totalOutLast24h` có tính giao dịch hiện tại, còn `lastActivityBeforeToday` không tính ngày nghiệp vụ. Hãy ghi lại các quy ước như vậy bên cạnh các bảng; luật không thể tự kiểm tra chúng.
+
+## Phát hành thẻ tín dụng: một luồng quyết định
+
+[`examples/flows/card_origination.flow.json`](../../examples/flows/card_origination.flow.json) nối bốn bảng thành một quyết định, và được giải thích từng bước trong [Luồng quyết định](flows.md#một-luồng-đầu-tiên). Mọi người nộp hồ sơ dưới đây có thu nhập 20.000.000 mỗi tháng và không có lần quá hạn nào gần đây, trừ khi ghi khác.
+
+| Người nộp hồ sơ | Đường đi | Kết quả |
+|---|---|---|
+| 17 tuổi | `policy`, `rejected` | `REJECT`, lý do `UNDERAGE` |
+| Khách hàng hiện hữu, mức sử dụng hạn mức 10%, id `C-1002` | `policy`, `affordability`, `segment`, `grade_existing`, `limit_strategy` (champion), `limit`, `approved` | `APPROVE`, hạng A, hạn mức 120.000.000 |
+| Như trên, id `C-1001` | như trên, với nhóm challenger | `APPROVE`, hạng A, hạn mức 144.000.000 |
+| Khách hàng hiện hữu, mức sử dụng hạn mức 95% | `policy`, `affordability`, `segment`, `grade_existing`, `referred` | `REFER`, hạng D, lý do `HIGH_UTILISATION` |
+| Khách hàng mới, 19 tuổi | `policy`, `affordability`, `segment`, `grade_new`, `referred` | `REFER`, hạng D, lý do `THIN_CREDIT_FILE` |
+
+Nhóm chỉ phụ thuộc vào id người nộp hồ sơ và salt của phép chia, nên `C-1001` luôn thuộc nhóm challenger trong mọi lần đánh giá. [`card_origination.stone-test.json`](../../examples/flows/card_origination.stone-test.json) kiểm tra các đường đi này và nhiều đường khác, và bao phủ mọi luật, mọi nút và mọi nhánh.

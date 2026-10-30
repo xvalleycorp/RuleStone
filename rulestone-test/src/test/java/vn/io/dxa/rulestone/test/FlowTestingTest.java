@@ -103,6 +103,55 @@ class FlowTestingTest {
                 .hasMessageContaining("path: expected [other] but was [deposit_rate]");
     }
 
+    // --- docs/testing.md, "Testing decision flows" ---------------------------------------------
+
+    private static List<String> docBlocks(String language) throws IOException {
+        List<String> blocks = new java.util.ArrayList<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("```(\\w*)\\n(.*?)```", java.util.regex.Pattern.DOTALL)
+                .matcher(Files.readString(Path.of("..", "docs", "testing.md")));
+        while (m.find()) {
+            if (m.group(1).equals(language)) {
+                blocks.add(m.group(2));
+            }
+        }
+        return blocks;
+    }
+
+    @Test
+    void theFlowCaseInThePagePassesAndIsInTheExampleFile() throws IOException {
+        String caseJson = docBlocks("json").stream().filter(b -> b.contains("\"path\"")).findFirst().orElseThrow();
+        List<StoneTestCase> cases = StoneTestJson.read("{ \"decision\": \"card_origination\", \"cases\": [" + caseJson
+                + "] }", "testing.md", TABLES, FLOWS);
+
+        assertThat(cases).singleElement().satisfies(c -> assertThat(c.check(engine)).isPresent());
+        assertThat(StoneTestJson.read(ExamplesStoneTest.FLOWS.resolve("card_origination.stone-test.json"), TABLES, FLOWS))
+                .extracting(StoneTestCase::name).contains(cases.get(0).name());
+    }
+
+    @Test
+    void theCoverageReportInThePageIsForTheExampleWithoutItsChallengerCase() throws Throwable {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        com.fasterxml.jackson.databind.node.ObjectNode file = (com.fasterxml.jackson.databind.node.ObjectNode)
+                mapper.readTree(ExamplesStoneTest.FLOWS.resolve("card_origination.stone-test.json").toFile());
+        com.fasterxml.jackson.databind.node.ArrayNode cases = (com.fasterxml.jackson.databind.node.ArrayNode) file.get("cases");
+        for (int i = cases.size() - 1; i >= 0; i--) {
+            if (cases.get(i).get("name").asText().contains("challenger")) {
+                cases.remove(i);
+            }
+        }
+        Files.writeString(dir.resolve("card_origination.stone-test.json"), mapper.writeValueAsString(file));
+        List<DecisionTable> flowTables = ExamplesStoneTest.allExampleTables().stream()
+                .filter(t -> List.of("card_policy", "card_grade_existing", "card_grade_new", "card_limit").contains(t.id()))
+                .toList();
+        List<DynamicTest> tests = StoneTests.dynamicTests(engine, dir, RuleCoverage.of(flowTables, FLOWS)).toList();
+        DynamicTest coverage = tests.get(tests.size() - 1);
+
+        assertThat(coverage.getDisplayName()).isEqualTo("rule and node coverage");
+        assertThatThrownBy(() -> coverage.getExecutable().execute())
+                .isInstanceOf(AssertionError.class)
+                .satisfies(e -> assertThat(docBlocks("")).contains(e.getMessage() + "\n"));
+    }
+
     @Test
     void coverageReportsNodesNeverVisitedAndBranchesNeverTaken() throws Throwable {
         write(String.join(",",

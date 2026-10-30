@@ -1,19 +1,20 @@
 # Testing decision tables
 
-A decision table is code: a changed threshold or a reordered rule changes who gets a loan. This page explains how to test tables with the `rulestone-test` module, so that every rule is checked by a test before it reaches production.
+A decision table is code: a changed threshold or a reordered rule changes who gets a loan. This page explains how to test tables, and the [decision flows](flows.md) built from them, with the `rulestone-test` module, so that every rule is checked by a test before it reaches production.
 
 The module offers three tools:
 
 | Tool | Use it to |
 |---|---|
 | [`.stone-test.json` files](#test-cases-in-json) | Write test cases as data, without Java. Business analysts can write and review them next to the table. |
-| [`StoneTests`](#running-test-files-with-junit-5) and [`RuleCoverage`](#rule-coverage) | Run those files in any JUnit 5 build, one test per case, and fail the build if a rule is never matched by any test. |
+| [`StoneTests`](#running-test-files-with-junit-5) and [`RuleCoverage`](#rule-coverage) | Run those files in any JUnit 5 build, one test per case, and fail the build if a rule is never matched by any test, or a flow node or branch never exercised. |
 | [`DecisionCheck`](#fluent-assertions-in-java) | Write test cases in Java with fluent assertions, in any test framework. |
 
 - [Adding the module](#adding-the-module)
 - [Test cases in JSON](#test-cases-in-json)
 - [Running test files with JUnit 5](#running-test-files-with-junit-5)
 - [Rule coverage](#rule-coverage)
+- [Testing decision flows](#testing-decision-flows)
 - [Fluent assertions in Java](#fluent-assertions-in-java)
 - [Recommended practice for banks](#recommended-practice-for-banks)
 
@@ -75,7 +76,7 @@ Each case evaluates the decision once with its `facts` and compares the result w
 
 | Field | Required | Content |
 |---|---|---|
-| `decision` | yes | Id of the decision under test, as in the table's `id`. |
+| `decision` | yes | Id of the decision under test, as in the table's or flow's `id`. |
 | `description` | no | Free text, e.g. the policy document the cases come from. |
 | `cases` | yes | Non-empty array of cases. |
 
@@ -97,7 +98,8 @@ Each case evaluates the decision once with its `facts` and compares the result w
 | `output` | Each listed output equals the given value. Outputs not listed are not checked. The value `null` means the output must be absent, as when a `FIRST` rule does not set it. |
 | `exactOutput` | With `true`, the decision must produce no output besides those listed in `output`. Requires `output`. |
 | `reasonCodes` | Exactly these reason codes, in this order. `[]` means none. |
-| `matchedRules` | Exactly these rules matched, in evaluation order. `[]` means none. |
+| `matchedRules` | Exactly these rules matched, in evaluation order. `[]` means none. For a flow, the rules of every table node, in order. |
+| `path` | For a flow: exactly these nodes were visited, in order, from the start node to the end node. For a table, the path is the decision id alone. |
 | `ruleVersion` | The version used: `"3"` accepts any content of version 3; `"3@sha256:…"` (the full `ruleVersion` of a result) accepts only that exact content. |
 | `error` | The evaluation fails with a `RuleStoneException` whose message contains this text, e.g. `"division by zero"`, `"balance: missing input"` or `"no version of decision 'loan_eligibility' is effective on 2025-12-31"`. Cannot be combined with the other fields. |
 
@@ -149,7 +151,7 @@ As for decision tables, unknown and duplicate keys are errors, so that a misspel
 
 ```
 invalid test file loan_eligibility.v3.stone-test.json (1 problem):
-  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, matchedRules, output, reasonCodes, ruleVersion)
+  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)
 ```
 
 ## Running test files with JUnit 5
@@ -226,6 +228,53 @@ coverage.assertComplete();          // throws AssertionError with the report
 
 Rule coverage shows that every rule *can* fire as intended. It does not show that the boundaries between rules are right; for that, add cases on both sides of every threshold (see below).
 
+## Testing decision flows
+
+A test file for a [decision flow](flows.md) names the flow in `decision`. Its cases are written as for a table, and can also expect the `path` of nodes the evaluation visits. This case, from [`examples/flows/card_origination.stone-test.json`](../examples/flows/card_origination.stone-test.json), checks that a grade `D` customer is referred:
+
+```json
+{
+  "name": "an existing customer at grade D is referred, not declined",
+  "facts": {
+    "applicant": { "id": "C-1005", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+    "bureau": { "dpd30Count12m": 0, "utilisation": "0.95" }
+  },
+  "expect": {
+    "output": { "decision": "REFER", "riskGrade": "D", "limit": "0 VND" },
+    "reasonCodes": ["HIGH_UTILISATION"],
+    "path": ["policy", "affordability", "segment", "grade_existing", "referred"]
+  }
+}
+```
+
+Pass the flows with the tables, so that facts and outputs are read with the flow's types, and so that coverage includes the flows:
+
+```java
+@TestFactory
+Stream<DynamicTest> cardOrigination() {
+    List<DecisionTable> tables = Stream.of("card_policy", "card_grade_existing", "card_grade_new", "card_limit")
+            .map(id -> DecisionTableJson.read(Path.of("rules/" + id + ".stone.json")))
+            .toList();
+    List<DecisionFlow> flows = List.of(DecisionFlowJson.read(Path.of("rules/card_origination.flow.json")));
+    RuleStoneEngine engine = RuleStone.builder().decisions(tables).flows(flows).build();
+    return StoneTests.dynamicTests(engine, Path.of("rules"), RuleCoverage.of(tables, flows));
+}
+```
+
+The final test is then named `rule and node coverage`. Besides every rule of every table, including the rules that table nodes match inside flows, it requires every node of every flow to be visited and every **branch** to be taken by a passing case. A branch is a way out of a node that has several: each distinct target of a `switch` or of a conditional `next`, written `segment -> grade_new`, and each bucket of a `split`, written `limit_strategy[challenger]`. Without the challenger case in the example file, the report is:
+
+```
+rule coverage: 14 of 15 rules matched by a passing test
+  card_grade_existing@1: 4 of 4 rules
+  card_grade_new@1: 4 of 4 rules
+  card_limit@1: 3 of 4 rules, never matched: A_CHALLENGER
+  card_policy@1: 3 of 3 rules
+node coverage: 10 of 10 nodes and 9 of 10 branches exercised by a passing test
+  card_origination@1: 10 of 10 nodes, 9 of 10 branches, never taken: limit_strategy[challenger]
+```
+
+To test a `split` bucket, choose a key that falls into it: the bucket of a key never changes for the same salt. `RuleCoverage.uncoveredNodes()` and `uncoveredBranches()` return what is missing, as `uncoveredRules()` does for rules. Without JUnit, read the files with `StoneTestJson.read(path, tables, flows)`.
+
 ## Fluent assertions in Java
 
 `DecisionCheck` checks one evaluation with a fluent API. It throws `AssertionError`, so it works with JUnit, TestNG or any other framework:
@@ -249,6 +298,7 @@ The request methods `decision`, `version`, `asOf` and `given` set up the evaluat
 | `expectExactOutput(Map)` | Exactly these outputs, with these values. |
 | `expectReasonCodes(codes…)` | Exactly these reason codes, in order. No arguments: none. |
 | `expectMatchedRules(ids…)` | Exactly these rules matched, in order. No arguments: none. |
+| `expectPath(nodes…)` | For a flow, exactly these nodes were visited, in order. |
 | `expectRuleVersion(version)` | `"3"`, or the full `"3@sha256:…"`. |
 | `expectFailure(type)` | The evaluation threw this exception type, e.g. `DecisionEvaluationException.class`. |
 | `expectFailureMessage(text)` | The evaluation threw a `RuleStoneException` whose message contains `text`. |

@@ -1,6 +1,6 @@
 # Examples
 
-The [`examples/`](../examples/) directory holds complete decision tables for common banking problems. Each one is loaded and evaluated by the project's test suite, so the results quoted here are checked on every build. Thresholds, scores and rates are invented for illustration; amounts are in VND.
+The [`examples/`](../examples/) directory holds complete decision tables for common banking problems, and a decision flow that chains tables. Each one is loaded and evaluated by the project's test suite, so the results quoted here are checked on every build. Thresholds, scores and rates are invented for illustration; amounts are in VND.
 
 | File | Problem | Shows |
 |---|---|---|
@@ -10,6 +10,7 @@ The [`examples/`](../examples/) directory holds complete decision tables for com
 | [`card_fraud_signals.stone.json`](../examples/card_fraud_signals.stone.json), [`card_fraud_action.stone.json`](../examples/card_fraud_action.stone.json) | Card fraud screening | `COLLECT` for risk signals and `FIRST` for the action, chained by the application; `in` lists |
 | [`consumer_loan_underwriting.stone.json`](../examples/consumer_loan_underwriting.stone.json), [`consumer_loan_conditions.stone.json`](../examples/consumer_loan_conditions.stone.json) | Consumer loan underwriting | `FIRST` with declines, referrals and risk grades; optional fields with `has()`; `min`, rounding modes; `COLLECT` for approval conditions |
 | [`aml_name_screening.stone.json`](../examples/aml_name_screening.stone.json), [`aml_transaction_monitoring.stone.json`](../examples/aml_transaction_monitoring.stone.json), [`aml_alert_action.stone.json`](../examples/aml_alert_action.stone.json) | Anti-money laundering: watchlist screening and transaction monitoring | Fuzzy name matching with aliases and dates of birth; `money` arithmetic and comparisons; date functions and `businessDate`; `COLLECT` alerts chained to a `FIRST` action |
+| [`flows/card_origination.flow.json`](../examples/flows/card_origination.flow.json) and the tables in [`flows/`](../examples/flows/) | Credit card origination | A [decision flow](flows.md): policy knock-outs, segmentation with `switch`, a `derive` node, two grade tables sharing a name, and a champion/challenger `split` |
 
 ## Loan eligibility: priorities and versions
 
@@ -480,3 +481,17 @@ Pitfalls:
 - **Never log names.** Customer and watchlist names are personal data. Evaluation errors and traces never contain input values; keep it that way in your own logs, and store the reason codes, `bestScore` and `ruleVersion()` instead of the names.
 - **One currency.** Every amount must be in VND. A transaction in another currency fails the evaluation with `money currencies differ` instead of silently escaping the thresholds: convert amounts before monitoring them, or write rules per currency.
 - **Agree on the history.** `cashDepositsLast7d`, `totalInLast24h` and `totalOutLast24h` include the current transaction, and `lastActivityBeforeToday` excludes the business date. Write such conventions down next to the tables; the rules cannot check them.
+
+## Card origination: a decision flow
+
+[`examples/flows/card_origination.flow.json`](../examples/flows/card_origination.flow.json) chains four tables into one decision, and is explained step by step in [Decision flows](flows.md#a-first-flow). Every applicant below earns 20,000,000 a month and has no recent delinquency unless stated.
+
+| Applicant | Path | Outcome |
+|---|---|---|
+| 17 years old | `policy`, `rejected` | `REJECT`, reason `UNDERAGE` |
+| Existing customer, utilisation 10%, id `C-1002` | `policy`, `affordability`, `segment`, `grade_existing`, `limit_strategy` (champion), `limit`, `approved` | `APPROVE`, grade A, limit 120,000,000 |
+| The same, id `C-1001` | as above, with the challenger bucket | `APPROVE`, grade A, limit 144,000,000 |
+| Existing customer, utilisation 95% | `policy`, `affordability`, `segment`, `grade_existing`, `referred` | `REFER`, grade D, reason `HIGH_UTILISATION` |
+| New customer, 19 years old | `policy`, `affordability`, `segment`, `grade_new`, `referred` | `REFER`, grade D, reason `THIN_CREDIT_FILE` |
+
+The bucket depends only on the applicant id and the split's salt, so `C-1001` is in the challenger bucket on every evaluation. [`card_origination.stone-test.json`](../examples/flows/card_origination.stone-test.json) checks these paths and more, and covers every rule, node and branch.

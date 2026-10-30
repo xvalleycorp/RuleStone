@@ -1,13 +1,13 @@
 ---
 source: hybrid-ai.md
-sourceHash: f090ea0bddd6384a1aed75017d6e72e14ce45e9c90aac718335a2f0a033ca939
+sourceHash: 157e1e4efc800bfaa58a5ba8eb1cc14729856bfafafe0c85b3620399720123c6
 ---
 
 # Ra quyết định AI lai
 
-> Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-10-23
+> Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-10-30
 >
-> Bước 1 của [kế hoạch triển khai](#9-kế-hoạch-triển-khai) **đã có**: mọi lần đánh giá một bảng quyết định đều tạo ra một bản ghi quyết định. Xem [Bản ghi quyết định và kiểm toán](java-api.md#bản-ghi-quyết-định-và-kiểm-toán). Mọi phần còn lại trong trang này là đề xuất để rà soát và sẽ thay đổi trước khi phát hành.
+> Bước 1 và 2 của [kế hoạch triển khai](#9-kế-hoạch-triển-khai) **đã có**: mọi lần đánh giá đều tạo ra một bản ghi quyết định (xem [Bản ghi quyết định và kiểm toán](java-api.md#bản-ghi-quyết-định-và-kiểm-toán)), và luồng quyết định chưa có nút mô hình đã chạy được trong bộ máy luật Java (xem [Luồng quyết định](flows.md)). Mọi phần còn lại trong trang này là đề xuất để rà soát và sẽ thay đổi trước khi phát hành.
 
 Trang này đặc tả cách RuleStone kết hợp mô hình học máy (machine learning) với luật, và cách mọi quyết định tự giải thích. Trang đề cập ba nội dung:
 
@@ -259,7 +259,7 @@ Một luồng bị từ chối, với mọi lỗi được liệt kê cùng lúc
 
 ### 4.1 Luôn được tạo ra
 
-Mỗi lần gọi `evaluate` đều tạo một `DecisionRecord`, dù chạy một bảng đơn lẻ hay một luồng, và dù thành công hay thất bại. Bản ghi được trả về qua `DecisionResult.record()` và được chuyển cho mọi `AuditSink` đã cấu hình. *Đã có cho bảng quyết định.*
+Mỗi lần gọi `evaluate` đều tạo một `DecisionRecord`, dù chạy một bảng đơn lẻ hay một luồng, và dù thành công hay thất bại. Bản ghi được trả về qua `DecisionResult.record()` và được chuyển cho mọi `AuditSink` đã cấu hình. *Đã có cho bảng quyết định và luồng quyết định.*
 
 - **Dùng nhúng:** bên gọi quyết định bản ghi được gửi tới đâu. `rulestone-test` có thể assert trên bản ghi.
 - **`rulestone-server`, Spring Boot starter, Temporal và Camunda:** việc khởi động thất bại nếu chưa cấu hình audit sink nào, trừ khi được tắt tường minh bằng một thuộc tính có tài liệu hướng dẫn, chỉ dành cho phát triển cục bộ.
@@ -456,7 +456,15 @@ Bảng này định hướng cho thiết kế; đây không phải tư vấn ph�
 Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử và tài liệu riêng.
 
 1. **Bản ghi quyết định cho bảng.** *Đã xong.* Thêm `DecisionRecord`, `DecisionResult.record()`, `AuditSink` và `correlationId` cho các bảng quyết định hiện nay, chưa có mô hình. Bước này thực hiện trước nghĩa vụ "luôn giải thích".
-2. **Luồng chưa có mô hình.** Thêm định dạng luồng, các nút `table`, `switch`, `derive`, `split` và `end`, các bước kiểm tra khi nạp kể cả quy tắc chi phối (dominance), bộ thực thi, và hỗ trợ trong `rulestone-test` cho đường đi và độ bao phủ nút.
+2. **Luồng chưa có mô hình.** *Đã xong.* Thêm định dạng luồng, các nút `table`, `switch`, `derive`, `split` và `end`, các bước kiểm tra khi nạp kể cả quy tắc chi phối (dominance), bộ thực thi, và hỗ trợ trong `rulestone-test` cho đường đi và độ bao phủ nút. Xem [Luồng quyết định](flows.md) và [Kiểm thử luồng quyết định](testing.md#kiểm-thử-luồng-quyết-định). Những điểm trang này còn để ngỏ đã được quyết định như sau:
+   - **Nút `derive`** khai báo các giá trị của nó cùng kiểu trong `outputs` và đặt chúng bằng `set`, giống như bảng khai báo đầu ra và nút `end` đặt đầu ra, để có thể kiểm tra kiểu khi nạp luồng. Nút `derive` cũng được dùng `as`.
+   - **Phiên bản bảng.** Mã băm nội dung của một luồng chỉ bao gồm tệp luồng. Một nút `table` dùng phiên bản của bảng có hiệu lực vào ngày nghiệp vụ, trừ khi nút ghim một phiên bản bằng `version`, và nút được kiểm tra với mọi phiên bản mà nó có thể dùng. Mỗi bước `table` trong bản ghi nêu tên bảng (`decision`) và đúng `version` của nó; các bước `switch` và `split` ghi `taken`.
+   - **Nhóm của `split`** được lấy từ 64 bit đầu của SHA-256 của `"<salt>\n<key>"`, đọc như một phân số, giống cách định tuyến canary. Khoá là một `string`, và tỷ lệ phần trăm là số nguyên.
+   - **Mã lý do** của một luồng được liệt kê mỗi mã một lần, cùng với nút đầu tiên đã tạo ra mã đó.
+   - **Phiên bản canary và phiên bản bóng** áp dụng cho một luồng theo id của luồng; bên trong luồng, canary và phiên bản bóng của các bảng mà luồng dùng không được áp dụng.
+   - **Đầu ra không luật nào đặt** thì vắng mặt, như với bảng: đọc một đầu ra như vậy làm việc đánh giá thất bại, nên luồng kiểm tra chúng bằng `has()`.
+   - **Loại nút được dành riêng.** Nút `model` và `flow` bị từ chối vì chưa được hỗ trợ, nên việc bổ sung chúng về sau không thay đổi luồng hay mã băm hiện có nào. Chưa bước nào trong kế hoạch này lên lịch cho nút `flow` (luồng con).
+   - Luồng dùng chung không gian `id` với bảng. Bộ máy luật trên trình duyệt chưa chạy luồng.
 3. **Nút mô hình.** Thêm `ModelInvoker`, `ModelResult`, các chế độ `invoke` và `supplied`, xử lý lỗi, và mã lý do từ attribution. Thêm đối tượng `models` vào định dạng kiểm thử và cho các bên gọi JSON dựa trên `FactsJson` (Temporal, Camunda, trình soạn thảo).
 4. **Giải thích.** Thêm danh mục mã lý do với thông điệp EN/VI và một bộ hiển thị giải thích tất định.
 5. **Replay và chấm điểm lại.** Thêm các API này, và mở rộng tích hợp Temporal và Camunda để mang theo id bản ghi.
@@ -467,7 +475,7 @@ Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử
 
 | Vấn đề | Đề xuất hiện tại |
 |---|---|
-| Luồng có nên dùng chung phần mở rộng `.stone.json` không? | Dùng `.flow.json`, với `id`/`version`/hiệu lực theo ngày giống hệt bảng, trong cùng repository. |
+| Luồng có nên dùng chung phần mở rộng `.stone.json` không? | Đã quyết định: `.flow.json`, với `id`/`version`/hiệu lực theo ngày giống hệt bảng, trong cùng repository. |
 | Gọi mô hình bất đồng bộ | Trước hết giữ việc đánh giá đồng bộ với deadline. Thêm API không chặn khi mô-đun máy chủ cần đến. |
 | Mặc định đưa ra bao nhiêu mã lý do từ mô hình | Ba, cấu hình được theo từng nút. Ngân hàng thường cần tới bốn cho thông báo từ chối. |
 | `factsHash` có nên dùng salt không? | Đã quyết định: băm trực tiếp các đầu vào có ít entropy có thể bị dò ngược, nên `factsHashKey` biến hash thành HMAC-SHA256 với khoá do ngân hàng nắm giữ. Nếu không có khoá, hash là SHA-256 thông thường. |
