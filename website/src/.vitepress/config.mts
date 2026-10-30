@@ -89,15 +89,20 @@ for (const t of vi) {
   alternates.set(pair.vi, pair);
 }
 
-const editLinkPattern = ({ filePath }: { filePath: string }) => {
-  // Pages under docs/ and vi/docs/ are copied from the repository's docs/ folder; edit the originals.
-  // This function is serialized to the browser, so it cannot use constants from this file.
-  const edit = 'https://github.com/xvalleycorp/RuleStone/edit/main/';
-  if (filePath === 'docs/index.md') return edit + 'docs/README.md';
-  if (filePath.startsWith('docs/')) return edit + filePath;
-  if (filePath.startsWith('vi/docs/')) return edit + 'docs/vi/' + filePath.slice('vi/docs/'.length);
-  return edit + 'website/src/' + filePath;
+/**
+ * The repository path of a page's source, for "Edit this page": pages under docs/ and vi/docs/
+ * are copied from the repository's docs/ folder, so the link edits the originals.
+ */
+const sourcePath = (relativePath: string) => {
+  if (relativePath === 'docs/index.md') return 'docs/README.md';
+  if (relativePath.startsWith('docs/')) return relativePath;
+  if (relativePath.startsWith('vi/docs/')) return 'docs/vi/' + relativePath.slice('vi/docs/'.length);
+  return 'website/src/' + relativePath;
 };
+// A string, not a function: VitePress evaluates function-valued config in the browser,
+// which the Content-Security-Policy (scripts/csp.mjs) forbids. transformPageData sets
+// filePath, the page's only use on the client, to the source path.
+const editLinkPattern = 'https://github.com/xvalleycorp/RuleStone/edit/main/:path';
 
 export default defineConfig({
   lang: 'en-US',
@@ -146,10 +151,12 @@ export default defineConfig({
     ['meta', { property: 'og:url', content: SITE }],
   ],
 
-  // Marks a translation whose English source changed since it was stamped (see
-  // scripts/i18n-lib.mjs); the theme then shows a notice at the top of the page.
+  // Sets the source path for "Edit this page", and marks a translation whose English source
+  // changed since it was stamped (see scripts/i18n-lib.mjs); the theme then shows a notice
+  // at the top of the page.
   transformPageData(pageData) {
     const path = pageData.relativePath;
+    pageData.filePath = sourcePath(path);
     const translation = path.startsWith('vi/docs/')
       ? `docs/vi/${path.slice('vi/docs/'.length)}`
       : LOCALES.vi.site.files.some((f: string) => path === `vi/${f}`)
