@@ -14,3 +14,18 @@ updates:
       interval: weekly
     commit-message:
       prefix: ci
+
+  # npm: the browser SDK, the website and the standalone editor's frontend. Versions
+  # must be at least two weeks old before they are proposed.
+  - package-ecosystem: npm
+    directories:
+      - /sdk
+      - /website
+      - /rulestone-editor/frontend
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
