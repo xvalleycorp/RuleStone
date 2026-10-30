@@ -33,10 +33,14 @@ class Iso4217Test {
         assertThat(Iso4217.isCurrencyCode("ZWG")).isTrue();
         assertThat(Iso4217.minorUnits("ZWG")).isEqualTo(OptionalInt.of(2));
         assertThat(Money.of("1", "XCG")).hasToString("1 XCG");
-        // Withdrawn codes that java.util.Currency has long accepted stay valid.
+        // XAD (amendment 179) is unknown to java.util.Currency before JDK 25.
+        assertThat(Iso4217.minorUnits("XAD")).isEqualTo(OptionalInt.of(2));
+        // Withdrawn codes that java.util.Currency has long accepted stay valid, and so does
+        // BGN, withdrawn by amendment 180 when Bulgaria adopts the euro.
         assertThat(Iso4217.minorUnits("DEM")).isEqualTo(OptionalInt.of(2));
-        assertThat(Iso4217.table()).hasSize(232).containsEntry("VND", 0).containsEntry("XAU", -1);
-        assertThat(Iso4217.AMENDMENT).isEqualTo(177);
+        assertThat(Iso4217.minorUnits("BGN")).isEqualTo(OptionalInt.of(2));
+        assertThat(Iso4217.table()).hasSize(233).containsEntry("VND", 0).containsEntry("XAU", -1);
+        assertThat(Iso4217.AMENDMENT).isEqualTo(180);
     }
 
     @Test

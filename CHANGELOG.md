@@ -43,5 +43,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - `DecisionRef` has a `timeout` component and `DecisionRecord` a `routing` component; the previous constructors remain. `DecisionEvaluationException` is no longer final, and a `DecisionRecord` with the status `TIMEOUT`, like `ERROR`, carries an `error` and no output.
-- Money accepts the same currency codes on every JDK: a fixed ISO 4217 table (amendment 177, plus withdrawn codes that Java has long accepted) replaces `java.util.Currency`, whose codes differ between JDK versions. `XCG` and `ZWG` are now accepted on Java 17 and 21 too.
+- Money accepts the same currency codes on every JDK: a fixed ISO 4217 table (amendment 180, plus withdrawn codes that Java has long accepted) replaces `java.util.Currency`, whose codes differ between JDK versions. `XCG`, `ZWG` and `XAD` are now accepted on Java 17 and 21 too.
 - Errors of CEL's standard conversions, list indexing and `matches()` no longer quote the argument: `int('x')` fails with `int() argument is not a valid integer` instead of `For input string: "x"`, and an index out of range with `list index out of bounds` instead of `Index out of bounds: 5`.

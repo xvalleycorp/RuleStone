@@ -115,7 +115,7 @@ Rounding to a multiple, e.g. down to the nearest million:
 
 The currency is an upper-case ISO 4217 code. An unknown code or an unparsable amount fails the evaluation.
 
-RuleStone accepts a fixed list of codes, so every Java version accepts and rounds the same codes: the current codes of ISO 4217 up to amendment 177 (June 2024, which added `ZWG`), and withdrawn codes that Java has long accepted, such as `DEM`. In Java the list is `vn.io.dxa.rulestone.api.Iso4217`.
+RuleStone accepts a fixed list of codes, so every Java version accepts and rounds the same codes: the current codes of ISO 4217 up to amendment 180 (September 2025), and withdrawn codes that Java has long accepted, such as `DEM`, or that were withdrawn recently, such as `BGN` when Bulgaria adopted the euro. In Java the list is `vn.io.dxa.rulestone.api.Iso4217`.
 
 ### Arithmetic and comparison
 

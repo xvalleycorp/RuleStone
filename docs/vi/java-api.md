@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: b1950e29da68739220d33ff79f00890ed999463aadadde9f121966791d94005e
+sourceHash: 3070fbe8a721d6b2299450c84a954667655a01b4656a343997300ed0669932b1
 ---
 
 # Java API
@@ -179,7 +179,7 @@ price.currency();                                   // "VND"
 price.toString();                                   // "1500000.50 VND"
 ```
 
-Constructor và các phương thức factory từ chối số tiền `null` và mã tiền tệ không phải mã ISO 4217 viết hoa. Các mã hợp lệ và đơn vị nhỏ nhất của chúng lấy từ `Iso4217`, một bảng cố định (ISO 4217 đến bản sửa đổi 177, cùng các mã đã ngừng sử dụng mà Java vẫn chấp nhận từ lâu), không lấy từ `java.util.Currency`, vốn có danh sách mã khác nhau giữa các phiên bản JDK. `Money` không bao giờ làm tròn. Giống như `BigDecimal`, `equals` của nó phân biệt scale (`1.0 VND` không bằng `1.00 VND`); hãy so sánh số tiền bằng `compareTo` khi điều đó quan trọng. Bên trong luật, `==` so sánh theo giá trị số.
+Constructor và các phương thức factory từ chối số tiền `null` và mã tiền tệ không phải mã ISO 4217 viết hoa. Các mã hợp lệ và đơn vị nhỏ nhất của chúng lấy từ `Iso4217`, một bảng cố định (ISO 4217 đến bản sửa đổi 180, cùng các mã đã ngừng sử dụng mà Java vẫn chấp nhận từ lâu), không lấy từ `java.util.Currency`, vốn có danh sách mã khác nhau giữa các phiên bản JDK. `Money` không bao giờ làm tròn. Giống như `BigDecimal`, `equals` của nó phân biệt scale (`1.0 VND` không bằng `1.00 VND`); hãy so sánh số tiền bằng `compareTo` khi điều đó quan trọng. Bên trong luật, `==` so sánh theo giá trị số.
 
 Ngày là `java.time.LocalDate`, cả ở đầu vào lẫn đầu ra. Mọi luật cũng đọc được `businessDate`, tức ngày của yêu cầu (xem [Ngày nghiệp vụ](expressions.md#ngày-nghiệp-vụ)). Ví dụ, bảng sau thu phí thẻ thường niên bằng 0,1% chi tiêu trong năm, miễn phí cho khách hàng dưới 25 tuổi:
 

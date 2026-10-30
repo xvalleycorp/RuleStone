@@ -28,7 +28,7 @@ import java.util.TreeMap;
 public final class Iso4217 {
 
     /** The ISO 4217 amendment the table reflects. */
-    public static final int AMENDMENT = 177;
+    public static final int AMENDMENT = 180;
 
     /** Code to minor units; -1 for a code without a minor unit, such as {@code XAU}. */
     private static final Map<String, Integer> MINOR_UNITS = load();
