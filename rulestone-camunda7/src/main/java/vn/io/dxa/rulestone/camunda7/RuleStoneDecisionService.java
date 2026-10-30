@@ -148,6 +148,7 @@ public final class RuleStoneDecisionService {
             throw notFound(e);
         }
         Facts facts = readFacts(call, table, variables);
+        facts = withModels(call, table, variables, facts);
 
         DecisionRef ref = DecisionRef.of(call.decisionId()).asOf(businessDate);
         if (call.version().isPresent()) {
@@ -206,6 +207,28 @@ public final class RuleStoneDecisionService {
                 return FactsJson.readFacts(inputs, table);
             } catch (InvalidFactsException e) {
                 problems.addAll(e.problems());
+            }
+        }
+        throw new BpmnError(call.errorCode(), "RuleStone decision " + table.ref() + ": invalid process variables: "
+                + String.join("; ", problems));
+    }
+
+    /** {@code facts} with the supplied model results of the call's models variable, if it names one. */
+    private static Facts withModels(DecisionCall call, DecisionTable table, VariableScope variables, Facts facts) {
+        if (call.modelsVariable().isEmpty()) {
+            return facts;
+        }
+        String name = call.modelsVariable().get();
+        List<String> problems = new ArrayList<>();
+        JsonNode models = read(name, variables, problems);
+        if (problems.isEmpty() && (models == null || models.isNull())) {
+            throw new BpmnError(call.errorCode(), "RuleStone: models variable '" + name + "' is missing");
+        }
+        if (problems.isEmpty()) {
+            try {
+                return facts.withModels(FactsJson.readModels(models));
+            } catch (InvalidFactsException e) {
+                e.problems().forEach(p -> problems.add(p.startsWith("$") ? name + p.substring(1) : name + "." + p));
             }
         }
         throw new BpmnError(call.errorCode(), "RuleStone decision " + table.ref() + ": invalid process variables: "

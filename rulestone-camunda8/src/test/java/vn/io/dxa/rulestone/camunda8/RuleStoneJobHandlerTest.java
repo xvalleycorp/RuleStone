@@ -208,6 +208,42 @@ class RuleStoneJobHandlerTest {
         assertThat(bpmnError(RuleStoneHeaders.DEFAULT_ERROR_CODE)).contains("as-of variable 'valueDate' is missing");
     }
 
+    // --- supplied model results ----------------------------------------------------------------
+
+    private static String withModels(String models) {
+        String variables = loanVariables("\"25750000\"", "\"5000000\"");
+        return variables.substring(0, variables.lastIndexOf('}')) + ", \"scores\": " + models + "}";
+    }
+
+    @Test
+    void theModelsVariableIsMissing() {
+        handler.handle(client.client, job(headers(RuleStoneHeaders.MODELS_VARIABLE, "scores"),
+                loanVariables("\"25750000\"", "\"5000000\"")));
+
+        assertThat(bpmnError(RuleStoneHeaders.DEFAULT_ERROR_CODE)).contains("models variable 'scores' is missing");
+    }
+
+    @Test
+    void invalidModelResultsAreABpmnError() {
+        handler.handle(client.client, job(headers(RuleStoneHeaders.MODELS_VARIABLE, "scores"),
+                withModels("{\"pd\": {\"failure\": \"SLOW\"}, \"lgd\": {\"modelId\": \"m\", \"modelVersion\": \"1\","
+                        + " \"outputs\": {\"lgd\": 0.12345678901234567}}}")));
+
+        assertThat(bpmnError(RuleStoneHeaders.DEFAULT_ERROR_CODE))
+                .contains("models.lgd.outputs.lgd: a JSON number with more than 15 significant digits")
+                .doesNotContain("SLOW");
+    }
+
+    @Test
+    void modelResultsReachTheEngine() {
+        // The worker evaluates decision tables, which have no model nodes: the engine rejects the results.
+        handler.handle(client.client, job(headers(RuleStoneHeaders.MODELS_VARIABLE, "scores"),
+                withModels("{\"pd\": {\"failure\": \"TIMEOUT\"}}")));
+
+        assertThat(bpmnError(RuleStoneHeaders.DEFAULT_ERROR_CODE))
+                .endsWith("model results supplied for [pd], but a decision table has no model nodes");
+    }
+
     // --- BPMN errors -------------------------------------------------------------------------
 
     @Test
@@ -340,7 +376,7 @@ class RuleStoneJobHandlerTest {
                 RuleStoneHeaders.VERSION, " ", RuleStoneHeaders.ERROR_CODE, ""), "DEFAULT_CODE");
 
         assertThat(task).isEqualTo(new DecisionTask("loan_eligibility", java.util.Optional.empty(),
-                java.util.Optional.empty(), "decision", false, "DEFAULT_CODE"));
+                java.util.Optional.empty(), java.util.Optional.empty(), "decision", false, "DEFAULT_CODE"));
     }
 
     // --- unexpected failures -----------------------------------------------------------------

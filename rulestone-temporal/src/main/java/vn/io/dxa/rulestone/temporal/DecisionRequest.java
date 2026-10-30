@@ -26,6 +26,12 @@ import vn.io.dxa.rulestone.api.Facts;
  * records, and reject {@code Double} and {@code Float}. The activity reads the facts with the types
  * the decision declares.
  *
+ * <p>{@code models} carries the results of models that the caller ran itself, for the {@code model}
+ * nodes of a decision flow in {@code supplied} mode, in the form that
+ * {@code FactsJson.readModels} reads: node id to {@code { "modelId", "modelVersion", "outputs", … }},
+ * or to {@code { "failure": "TIMEOUT" }}. The activity evaluates decision tables only for now, so a
+ * request with model results fails until flows can be evaluated through it.
+ *
  * <p>Payloads are stored in workflow history. Treat facts as the personal data they usually are:
  * use a payload codec that encrypts them if your history must not hold them in clear.
  *
@@ -34,13 +40,16 @@ import vn.io.dxa.rulestone.api.Facts;
  *                   business date
  * @param asOf       the business date, or {@code null} for today according to the activity's clock
  * @param facts      the inputs in JSON forms; {@code null} means none
+ * @param models     supplied model results by model node id; {@code null} means none
  */
 public record DecisionRequest(
         String decisionId,
         String version,
         LocalDate asOf,
         @JsonDeserialize(using = PayloadJson.ExactObjectDeserializer.class)
-        ObjectNode facts) {
+        ObjectNode facts,
+        @JsonDeserialize(using = PayloadJson.ExactObjectDeserializer.class)
+        ObjectNode models) {
 
     /**
      * Validates the request and keeps a copy of the facts.
@@ -56,6 +65,19 @@ public record DecisionRequest(
             throw new IllegalArgumentException("version must not be blank");
         }
         facts = facts == null ? JsonNodeFactory.instance.objectNode() : facts.deepCopy();
+        models = models == null ? null : models.deepCopy();
+    }
+
+    /**
+     * A request without model results.
+     *
+     * @param decisionId the decision to evaluate
+     * @param version    an exact version label, or {@code null}
+     * @param asOf       the business date, or {@code null}
+     * @param facts      the inputs in JSON forms; {@code null} means none
+     */
+    public DecisionRequest(String decisionId, String version, LocalDate asOf, ObjectNode facts) {
+        this(decisionId, version, asOf, facts, null);
     }
 
     /**
@@ -81,7 +103,7 @@ public record DecisionRequest(
      *                                  message names the fact, never its value
      */
     public static DecisionRequest of(String decisionId, Map<String, ?> facts) {
-        return new DecisionRequest(decisionId, null, null, PayloadJson.write(facts));
+        return new DecisionRequest(decisionId, null, null, PayloadJson.write(facts), null);
     }
 
     /**
@@ -95,13 +117,34 @@ public record DecisionRequest(
     }
 
     /**
+     * The supplied model results, by model node id.
+     *
+     * @return a copy, or {@code null} if there are none
+     */
+    @Override
+    public ObjectNode models() {
+        return models == null ? null : models.deepCopy();
+    }
+
+    /**
+     * Returns a copy with supplied model results, in the JSON form described above.
+     *
+     * @param models model node id to result, e.g.
+     *               {@code {"pd": {"modelId": "retail_pd", "modelVersion": "3.1.0", "outputs": {"pd": "0.031"}}}}
+     * @return the new request
+     */
+    public DecisionRequest withModels(ObjectNode models) {
+        return new DecisionRequest(decisionId, version, asOf, facts, Objects.requireNonNull(models, "models"));
+    }
+
+    /**
      * Returns a copy that evaluates exactly version {@code version}.
      *
      * @param version a version label, e.g. {@code "3"}
      * @return the new request
      */
     public DecisionRequest withVersion(String version) {
-        return new DecisionRequest(decisionId, Objects.requireNonNull(version, "version"), asOf, facts);
+        return new DecisionRequest(decisionId, Objects.requireNonNull(version, "version"), asOf, facts, models);
     }
 
     /**
@@ -112,7 +155,7 @@ public record DecisionRequest(
      * @return the new request
      */
     public DecisionRequest withAsOf(LocalDate date) {
-        return new DecisionRequest(decisionId, version, Objects.requireNonNull(date, "date"), facts);
+        return new DecisionRequest(decisionId, version, Objects.requireNonNull(date, "date"), facts, models);
     }
 
     /**

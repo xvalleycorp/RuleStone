@@ -15,6 +15,8 @@ import static vn.io.dxa.rulestone.temporal.TestSupport.clockAt;
 import static vn.io.dxa.rulestone.temporal.TestSupport.engine;
 import static vn.io.dxa.rulestone.temporal.TestSupport.failureText;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowFailedException;
 import io.temporal.client.WorkflowOptions;
@@ -194,6 +196,31 @@ class RuleStoneActivitiesTest {
                 .contains("spend", "customer.birthDate", "nickname");
         assertThat(failureText(failure)).doesNotContain("SECRET").doesNotContain("20/05/1980");
         assertThat(activities.calls).hasValue(1);
+    }
+
+    @Test
+    void suppliedModelResultsAreReadAndReachTheEngine() {
+        WorkflowClient client = start();
+        DecisionRequest request = DecisionRequest.of("loan_eligibility",
+                        Facts.of("applicant", adult("20000000", "0"), "amount", new BigDecimal("50000000")))
+                .withAsOf(LocalDate.of(2026, 11, 15));
+
+        ObjectNode invalid = JsonNodeFactory.instance.objectNode();
+        invalid.putObject("pd").put("failure", "SLOW");
+        ApplicationFailure malformed = failureOf(client, request.withModels(invalid));
+        assertThat(malformed.getType()).isEqualTo(RuleStoneFailures.INVALID_REQUEST);
+        assertThat(malformed.getOriginalMessage()).endsWith("models.pd.failure: expected \"TIMEOUT\" or \"ERROR\"");
+
+        // The activity evaluates tables, which have no model nodes, so the engine rejects the results.
+        ObjectNode models = JsonNodeFactory.instance.objectNode();
+        models.putObject("pd").put("modelId", "retail_pd").put("modelVersion", "3.1.0").putObject("outputs")
+                .put("pd", "0.031");
+        ApplicationFailure rejected = failureOf(client, request.withModels(models));
+        assertThat(rejected.getType()).isEqualTo(RuleStoneFailures.DECISION_EVALUATION_FAILED);
+        assertThat(rejected.getOriginalMessage())
+                .endsWith("model results supplied for [pd], but a decision table has no model nodes");
+        assertThat(request.withModels(models).models()).isEqualTo(models);
+        assertThat(request.models()).isNull();
     }
 
     @Test

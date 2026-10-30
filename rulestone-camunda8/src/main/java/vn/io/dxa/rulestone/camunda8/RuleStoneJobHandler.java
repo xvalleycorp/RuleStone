@@ -13,6 +13,7 @@ import io.camunda.client.api.response.ActivatedJob;
 import io.camunda.client.api.worker.JobClient;
 import io.camunda.client.api.worker.JobHandler;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -132,13 +133,17 @@ public final class RuleStoneJobHandler implements JobHandler {
             throw notFound(e);
         }
         ObjectNode inputs = JobVariables.select(variables, table.inputs().keySet());
-        List<String> inexact = JobVariables.inexactNumbers(inputs);
+        List<String> inexact = new ArrayList<>(JobVariables.inexactNumbers(inputs));
+        JsonNode models = models(task, variables);
+        if (models != null && models.isObject()) {
+            JobVariables.inexactNumbers((ObjectNode) models).forEach(p -> inexact.add("models." + p));
+        }
         if (!inexact.isEmpty()) {
             throw invalidInput(table, inexact);
         }
         Facts facts;
         try {
-            facts = FactsJson.readFacts(inputs, table);
+            facts = FactsJson.readFacts(inputs, table.inputs(), models);
         } catch (InvalidFactsException e) {
             throw invalidInput(table, e.problems());
         }
@@ -160,6 +165,20 @@ public final class RuleStoneJobHandler implements JobHandler {
                     + " matched no rule, and the task sets " + RuleStoneHeaders.FAIL_ON_NO_MATCH + "=true");
         }
         return completionVariables(task.resultVariable(), result);
+    }
+
+    /** The supplied model results, or null if the task names no models variable. */
+    private JsonNode models(DecisionTask task, ObjectNode variables) {
+        if (task.modelsVariable().isEmpty()) {
+            return null;
+        }
+        String name = task.modelsVariable().get();
+        JsonNode value = variables.get(name);
+        if (value == null || value.isNull()) {
+            throw TaskFailure.bpmnError("RuleStone task: models variable '" + name + "' is missing"
+                    + (options.fetchVariables().isEmpty() ? "" : "; is it among the worker's fetched variables?"));
+        }
+        return value;
     }
 
     private LocalDate businessDate(DecisionTask task, ObjectNode variables) {
