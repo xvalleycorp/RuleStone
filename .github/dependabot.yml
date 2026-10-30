@@ -4,6 +4,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Pinned to the slf4j-api version that Camunda 7 ships (1.7.x); a 2.x binding
+      # would not bind to it.
+      - dependency-name: org.slf4j:slf4j-nop
+        update-types: [version-update:semver-major]
     open-pull-requests-limit: 5
     commit-message:
       prefix: deps
