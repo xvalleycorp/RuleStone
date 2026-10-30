@@ -16,6 +16,7 @@ This page covers what rule authors need. The full language is described in the [
 - [Dates](#dates)
 - [The business date](#the-business-date)
 - [Structs, lists and missing fields](#structs-lists-and-missing-fields)
+- [Aggregate functions](#aggregate-functions)
 - [Text](#text)
 - [Fuzzy matching](#fuzzy-matching)
 - [Errors](#errors)
@@ -246,6 +247,33 @@ has(applicant.segment) && applicant.segment == 'VIP'
 
 `has()` takes a field selection (`has(applicant.segment)`), not a top-level input name. Top-level inputs are always required.
 
+## Aggregate functions
+
+Lists of `int`, `decimal` and `money` can be summed, and their smallest, largest and mean element found. The functions are methods on the list:
+
+| Expression | Result | Example → result |
+|---|---|---|
+| `list.sum()` | The total. `0` for an empty `list<int>`, `decimal('0')` for an empty `list<decimal>`. An empty `list<money>` has no currency, so it fails the evaluation: use `sum(zero)`. | `[3, 1, 2].sum()` → 6 |
+| `list.sum(zero)` | The total, or `zero` when the list is empty. `zero` has the element type; for money it also fixes the currency, and every element must be in it. | `[1].filter(x, x > 5).sum(0)` → 0 |
+| `list.min()`, `list.max()` | The smallest and the largest element; of equal elements, the first. An empty list fails the evaluation. | `[money(100, 'VND'), money(50, 'VND')].min()` → 50 VND |
+| `list.avg()` | The mean: a `decimal` for `int` and `decimal` lists, `money` for money lists, divided as `/` divides (34 significant digits, half-even). An empty list fails the evaluation. | `[1, 2].avg()` → 1.5 |
+
+They combine with `map` and `filter`, so a list of structs is aggregated by first mapping it to the field:
+
+```
+loans.map(l, l.outstanding).sum(money(0, 'VND')) > money(500000000, 'VND')
+transactions.filter(t, t.channel == 'ATM').map(t, t.amount).max() > money(50000000, 'VND')
+scores.avg() >= decimal('0.7')
+```
+
+`max()` fails on an empty list, so guard it when the list may be empty, for example with `transactions.exists(t, t.channel == 'ATM') && …`. `sum(zero)` never needs a guard.
+
+- **Currencies are never mixed.** Money elements in different currencies fail the evaluation, as `+` does, with an error such as `money currencies differ: VND and USD`.
+- **Integer totals are exact.** A sum of `int` fails only if the total does not fit in 64 bits. `avg()` of an `int` list never overflows.
+- **Each element counts towards the [iteration limit](#limits)**, like the other list functions.
+- The two-argument `min(a, b)` and `max(a, b)` are unchanged: `min(a, b)` compares two values, `list.min()` the elements of a list.
+- There is no `count`: `list.filter(x, cond).size()` already counts.
+
 ## Text
 
 | Expression | Result |
@@ -285,7 +313,8 @@ Found when evaluating, and reported as `DecisionEvaluationException` with the ru
 - integer overflow;
 - reading an unset field;
 - an unparsable `decimal('…')`, `money('…', '…')` or `date('…')` argument, an unknown currency code or an unknown rounding mode;
-- money in two different currencies combined with `+`, `-`, `<`, `<=`, `>`, `>=`, `min` or `max`;
+- money in two different currencies combined with `+`, `-`, `<`, `<=`, `>`, `>=`, `min` or `max`, or in one list passed to `sum`, `min`, `max` or `avg`;
+- `min()`, `max()` or `avg()` of an empty list, `sum()` of an empty money list, and an `int` sum beyond 64 bits;
 - rounding money in a currency that has no minor unit and no configured `currencyScale`;
 - date arithmetic beyond the supported range of years;
 - exceeding the iteration limit.
@@ -296,7 +325,7 @@ An evaluation error **fails the whole decision**. RuleStone does not skip the ru
 
 ## Limits
 
-To protect the engine from a runaway rule, list functions (`exists`, `all`, `map`, …) may perform at most **10,000 iterations** per call by default. Exceeding this fails the evaluation. Change it with `RuleStone.builder().maxIterations(n)`.
+To protect the engine from a runaway rule, list functions (`exists`, `all`, `map`, `sum`, …) may perform at most **10,000 iterations** by default. Each element a list function visits counts as one iteration, and the count is shared by every list function of the expression: `loans.map(l, l.outstanding).sum()` takes two iterations per loan. Exceeding this fails the evaluation. Change it with `RuleStone.builder().maxIterations(n)`.
 
 ## Quick reference
 
@@ -329,6 +358,11 @@ has(applicant.segment) && applicant.segment == 'VIP'
 // lists
 customer.accounts.exists(a, a.balance < 0)
 customer.accounts.filter(a, a.type == 'LOAN').size()
+
+// totals, minimum, maximum and mean
+loans.map(l, l.outstanding).sum(money(0, 'VND'))
+transactions.map(t, t.amount).max() > money(50000000, 'VND')
+scores.avg() >= decimal('0.7')
 
 // text
 applicant.idNumber.matches('^[0-9]{12}$')

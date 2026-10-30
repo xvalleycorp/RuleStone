@@ -56,6 +56,11 @@ class ExpressionsDocTest {
                     "accounts", ValueType.listOf(ValueType.struct(Map.of(
                             "type", ValueType.STRING, "balance", ValueType.DECIMAL))))))
             .variable("watchlist", ValueType.listOf(ValueType.STRING))
+            .variable("loans", ValueType.listOf(ValueType.struct(Map.of(
+                    "type", ValueType.STRING, "outstanding", ValueType.MONEY))))
+            .variable("transactions", ValueType.listOf(ValueType.struct(Map.of(
+                    "channel", ValueType.STRING, "amount", ValueType.MONEY))))
+            .variable("scores", ValueType.listOf(ValueType.DECIMAL))
             .variable("businessDate", ValueType.DATE)
             .build();
 
@@ -65,6 +70,7 @@ class ExpressionsDocTest {
             Map.entry("transfer", Map.of("amount", 1)), Map.entry("payment", Map.of("amount", Money.of("1500000", "VND"))),
             Map.entry("loan", Map.of()),
             Map.entry("invoice", Map.of()), Map.entry("customer", Map.of()), Map.entry("watchlist", List.of()),
+            Map.entry("loans", List.of()), Map.entry("transactions", List.of()), Map.entry("scores", List.of()),
             Map.entry("businessDate", LocalDate.of(2026, 11, 1)));
 
     private Object eval(String source) {

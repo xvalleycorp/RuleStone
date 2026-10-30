@@ -166,10 +166,15 @@ final class MoneyLibrary {
 
     /** Returns {@code b} if it has the currency of {@code a}, else fails naming both currencies. */
     private static CelMoney sameCurrency(CelMoney a, CelMoney b) throws CelEvaluationException {
+        requireSameCurrency(a, b);
+        return b;
+    }
+
+    /** Fails, naming both currencies, unless {@code a} and {@code b} have the same currency. */
+    static void requireSameCurrency(CelMoney a, CelMoney b) throws CelEvaluationException {
         if (!a.currency.equals(b.currency)) {
             throw new CelEvaluationException("money currencies differ: " + a.currency + " and " + b.currency);
         }
-        return b;
     }
 
     private static CelMoney times(CelMoney m, BigDecimal factor) {

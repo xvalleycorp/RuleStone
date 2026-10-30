@@ -35,6 +35,9 @@ const env = new ExpressionEnvironment({
       segment: 'string', fullName: 'string', accounts: listOf(structOf({ type: 'string', balance: 'decimal' })),
     }),
     watchlist: listOf('string'),
+    loans: listOf(structOf({ type: 'string', outstanding: 'money' })),
+    transactions: listOf(structOf({ channel: 'string', amount: 'money' })),
+    scores: listOf('decimal'),
     businessDate: 'date',
   },
 })
@@ -53,6 +56,9 @@ const inputs = env.bind({
   invoice: {},
   customer: {},
   watchlist: [],
+  loans: [],
+  transactions: [],
+  scores: [],
   businessDate: LocalDate.of(2026, 11, 1),
 })
 

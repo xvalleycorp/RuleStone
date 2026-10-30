@@ -1,6 +1,6 @@
 ---
 source: expressions.md
-sourceHash: fd2857baeb8589914a18e2b948b3e632fa147451bc28aa2a7213401d7a5e61d3
+sourceHash: 4a7f845f49641767fb40cb799ecfc0e1ca48411251d1ae905cf447ee3d37dedb
 ---
 
 # Ngôn ngữ biểu thức
@@ -21,6 +21,7 @@ Trang này trình bày những gì người viết luật cần biết. Toàn b�
 - [Ngày](#ngày)
 - [Ngày nghiệp vụ](#ngày-nghiệp-vụ)
 - [Struct, danh sách và trường bị thiếu](#struct-danh-sách-và-trường-bị-thiếu)
+- [Hàm tổng hợp](#hàm-tổng-hợp)
 - [Văn bản](#văn-bản)
 - [So khớp gần đúng](#so-khớp-gần-đúng)
 - [Lỗi](#lỗi)
@@ -251,6 +252,33 @@ has(applicant.segment) && applicant.segment == 'VIP'
 
 `has()` nhận một phép chọn trường (`has(applicant.segment)`), không nhận tên đầu vào cấp cao nhất. Đầu vào cấp cao nhất luôn là bắt buộc.
 
+## Hàm tổng hợp
+
+Danh sách các phần tử `int`, `decimal` và `money` có thể được tính tổng, tìm phần tử nhỏ nhất, lớn nhất và giá trị trung bình. Các hàm này là phương thức của danh sách:
+
+| Biểu thức | Kết quả | Ví dụ → kết quả |
+|---|---|---|
+| `list.sum()` | Tổng. `0` với `list<int>` rỗng, `decimal('0')` với `list<decimal>` rỗng. `list<money>` rỗng không có loại tiền tệ nên làm việc đánh giá thất bại: hãy dùng `sum(zero)`. | `[3, 1, 2].sum()` → 6 |
+| `list.sum(zero)` | Tổng, hoặc `zero` khi danh sách rỗng. `zero` có kiểu của phần tử; với tiền, nó còn xác định loại tiền tệ, và mọi phần tử phải thuộc loại tiền tệ đó. | `[1].filter(x, x > 5).sum(0)` → 0 |
+| `list.min()`, `list.max()` | Phần tử nhỏ nhất và lớn nhất; nếu có nhiều phần tử bằng nhau, lấy phần tử đầu tiên. Danh sách rỗng làm việc đánh giá thất bại. | `[money(100, 'VND'), money(50, 'VND')].min()` → 50 VND |
+| `list.avg()` | Giá trị trung bình: `decimal` với danh sách `int` và `decimal`, `money` với danh sách tiền, chia như phép `/` (34 chữ số có nghĩa, làm tròn half-even). Danh sách rỗng làm việc đánh giá thất bại. | `[1, 2].avg()` → 1.5 |
+
+Các hàm này kết hợp được với `map` và `filter`, nên để tổng hợp một danh sách struct, trước hết hãy dùng `map` để lấy trường cần tính:
+
+```
+loans.map(l, l.outstanding).sum(money(0, 'VND')) > money(500000000, 'VND')
+transactions.filter(t, t.channel == 'ATM').map(t, t.amount).max() > money(50000000, 'VND')
+scores.avg() >= decimal('0.7')
+```
+
+`max()` thất bại với danh sách rỗng, nên khi danh sách có thể rỗng hãy kiểm tra trước, ví dụ bằng `transactions.exists(t, t.channel == 'ATM') && …`. `sum(zero)` không bao giờ cần kiểm tra như vậy.
+
+- **Không bao giờ trộn loại tiền tệ.** Các phần tử tiền thuộc những loại tiền tệ khác nhau làm việc đánh giá thất bại, giống phép `+`, với lỗi như `money currencies differ: VND and USD`.
+- **Tổng số nguyên là chính xác.** Tổng của `int` chỉ thất bại khi kết quả không vừa 64 bit. `avg()` của danh sách `int` không bao giờ bị tràn.
+- **Mỗi phần tử được tính vào [giới hạn số vòng lặp](#giới-hạn)**, như các hàm khác trên danh sách.
+- `min(a, b)` và `max(a, b)` hai tham số không thay đổi: `min(a, b)` so sánh hai giá trị, còn `list.min()` so sánh các phần tử của một danh sách.
+- Không có hàm `count`: `list.filter(x, cond).size()` đã đếm được.
+
 ## Văn bản
 
 | Biểu thức | Kết quả |
@@ -290,7 +318,8 @@ Phát hiện khi đánh giá, và được báo dưới dạng `DecisionEvaluati
 - tràn số nguyên;
 - đọc một trường chưa đặt;
 - tham số không phân tích được của `decimal('…')`, `money('…', '…')` hoặc `date('…')`, mã tiền tệ không xác định hoặc chế độ làm tròn không xác định;
-- hai số tiền khác loại tiền tệ được kết hợp bằng `+`, `-`, `<`, `<=`, `>`, `>=`, `min` hoặc `max`;
+- hai số tiền khác loại tiền tệ được kết hợp bằng `+`, `-`, `<`, `<=`, `>`, `>=`, `min` hoặc `max`, hoặc nằm chung một danh sách truyền cho `sum`, `min`, `max` hay `avg`;
+- `min()`, `max()` hoặc `avg()` của danh sách rỗng, `sum()` của danh sách tiền rỗng, và tổng `int` vượt quá 64 bit;
 - làm tròn tiền thuộc loại tiền tệ không có đơn vị nhỏ nhất và chưa cấu hình `currencyScale`;
 - tính toán ngày vượt ngoài phạm vi năm được hỗ trợ;
 - vượt quá giới hạn số vòng lặp.
@@ -301,7 +330,7 @@ Một lỗi khi đánh giá **làm thất bại toàn bộ quyết định**. Ru
 
 ## Giới hạn
 
-Để bảo vệ engine khỏi một luật chạy mất kiểm soát, các hàm trên danh sách (`exists`, `all`, `map`, …) mặc định chỉ được thực hiện tối đa **10.000 vòng lặp** mỗi lần gọi. Vượt quá giới hạn này làm việc đánh giá thất bại. Thay đổi giới hạn bằng `RuleStone.builder().maxIterations(n)`.
+Để bảo vệ engine khỏi một luật chạy mất kiểm soát, các hàm trên danh sách (`exists`, `all`, `map`, `sum`, …) mặc định chỉ được thực hiện tối đa **10.000 vòng lặp**. Mỗi phần tử mà một hàm trên danh sách duyệt qua được tính là một vòng lặp, và số đếm này dùng chung cho mọi hàm trên danh sách trong biểu thức: `loans.map(l, l.outstanding).sum()` tốn hai vòng lặp cho mỗi khoản vay. Vượt quá giới hạn này làm việc đánh giá thất bại. Thay đổi giới hạn bằng `RuleStone.builder().maxIterations(n)`.
 
 ## Tra cứu nhanh
 
@@ -334,6 +363,11 @@ has(applicant.segment) && applicant.segment == 'VIP'
 // lists
 customer.accounts.exists(a, a.balance < 0)
 customer.accounts.filter(a, a.type == 'LOAN').size()
+
+// totals, minimum, maximum and mean
+loans.map(l, l.outstanding).sum(money(0, 'VND'))
+transactions.map(t, t.amount).max() > money(50000000, 'VND')
+scores.avg() >= decimal('0.7')
 
 // text
 applicant.idNumber.matches('^[0-9]{12}$')

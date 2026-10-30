@@ -74,10 +74,12 @@ public final class ExpressionEnvironment {
         CelCompilerBuilder compilerBuilder = CelCompilerFactory.standardCelCompilerBuilder()
                 .setOptions(options)
                 .setStandardMacros(CelStandardMacro.STANDARD_MACROS)
+                .addMacros(AggregateLibrary.macros())
                 .addFunctionDeclarations(DecimalLibrary.declarations())
                 .addFunctionDeclarations(MoneyLibrary.declarations())
                 .addFunctionDeclarations(DateLibrary.declarations())
-                .addFunctionDeclarations(FuzzyLibrary.declarations());
+                .addFunctionDeclarations(FuzzyLibrary.declarations())
+                .addFunctionDeclarations(AggregateLibrary.declarations());
         variables.forEach((name, type) -> compilerBuilder.addVar(name, celType(type, "rulestone.input." + name, structs)));
         this.compiler = compilerBuilder.setTypeProvider(new StructTypeProvider(structs)).build();
         this.runtime = CelRuntimeFactory.standardCelRuntimeBuilder()
@@ -90,6 +92,7 @@ public final class ExpressionEnvironment {
                 .addFunctionBindings(MoneyLibrary.bindings(currencyScales))
                 .addFunctionBindings(DateLibrary.bindings())
                 .addFunctionBindings(FuzzyLibrary.bindings())
+                .addFunctionBindings(AggregateLibrary.bindings())
                 .build();
     }
 

@@ -452,6 +452,9 @@ export function parseCel(source: string): Expr {
         }
         return node
       }
+      if ((name === 'sum' && args.length <= 1) || ((name === 'min' || name === 'max' || name === 'avg') && args.length === 0)) {
+        return { ...call(name, pos, target, args, start, end), aggregate: true }
+      }
     }
     return call(name, pos, target, args, start, end)
   }

@@ -3785,4 +3785,272 @@
   "expr" : "[0, 1, 2, 3].map(x, x != 0, x == 0 ? 1/x : [1, 2].map(y, y)[0])",
   "type" : "list<int>",
   "evalError" : "evaluation error at <input>:16: Iteration budget exceeded: 5 in: [0, 1, 2, 3].map(x, x != 0, x == 0 ? 1/x : [1, 2].map(y, y)[0])"
+}, {
+  "expr" : "[1, 2, 3].sum()",
+  "type" : "int",
+  "json" : 6,
+  "text" : "6"
+}, {
+  "expr" : "[decimal('1.50'), decimal('2.5')].sum()",
+  "type" : "decimal",
+  "json" : "4.00",
+  "text" : "4.00"
+}, {
+  "expr" : "[m, money('0.50', 'VND')].sum()",
+  "type" : "money",
+  "json" : "1500000.50 VND",
+  "text" : "1500000.50 VND"
+}, {
+  "expr" : "[1, 2].sum(0)",
+  "type" : "int",
+  "json" : 3,
+  "text" : "3"
+}, {
+  "expr" : "[d, d].sum(decimal('0'))",
+  "type" : "decimal",
+  "json" : "3.00",
+  "text" : "3.00"
+}, {
+  "expr" : "[m].sum(money(0, 'VND'))",
+  "type" : "money",
+  "json" : "1500000 VND",
+  "text" : "1500000 VND"
+}, {
+  "expr" : "[1, 2].filter(x, x > 5).sum()",
+  "type" : "int",
+  "json" : 0,
+  "text" : "0"
+}, {
+  "expr" : "[d].filter(x, false).sum()",
+  "type" : "decimal",
+  "json" : "0",
+  "text" : "0"
+}, {
+  "expr" : "[m].filter(x, false).sum()",
+  "type" : "money",
+  "evalError" : "sum() of an empty money list has no currency; give the result for an empty list, e.g. sum(money(0, 'VND')) in: [m].filter(x, false).sum()"
+}, {
+  "expr" : "[m].filter(x, false).sum(money(0, 'USD'))",
+  "type" : "money",
+  "json" : "0 USD",
+  "text" : "0 USD"
+}, {
+  "expr" : "[1].filter(x, false).sum(7)",
+  "type" : "int",
+  "json" : 7,
+  "text" : "7"
+}, {
+  "expr" : "[money(1, 'USD')].sum(money(0, 'VND'))",
+  "type" : "money",
+  "evalError" : "money currencies differ: VND and USD in: [money(1, 'USD')].sum(money(0, 'VND'))"
+}, {
+  "expr" : "[m, money(1, 'USD')].sum()",
+  "type" : "money",
+  "evalError" : "money currencies differ: VND and USD in: [m, money(1, 'USD')].sum()"
+}, {
+  "expr" : "[m, money(1, 'USD')].min()",
+  "type" : "money",
+  "evalError" : "money currencies differ: VND and USD in: [m, money(1, 'USD')].min()"
+}, {
+  "expr" : "[m, money(1, 'USD')].max()",
+  "type" : "money",
+  "evalError" : "money currencies differ: VND and USD in: [m, money(1, 'USD')].max()"
+}, {
+  "expr" : "[m, money(1, 'USD')].avg()",
+  "type" : "money",
+  "evalError" : "money currencies differ: VND and USD in: [m, money(1, 'USD')].avg()"
+}, {
+  "expr" : "[big, 1].sum()",
+  "type" : "int",
+  "evalError" : "sum() result is out of int range in: [big, 1].sum()"
+}, {
+  "expr" : "[-big, -2].sum()",
+  "type" : "int",
+  "evalError" : "sum() result is out of int range in: [-big, -2].sum()"
+}, {
+  "expr" : "[big, 1, -1].sum()",
+  "type" : "int",
+  "json" : 9223372036854775807,
+  "text" : "9223372036854775807"
+}, {
+  "expr" : "[big, big].avg()",
+  "type" : "decimal",
+  "json" : "9223372036854775807",
+  "text" : "9223372036854775807"
+}, {
+  "expr" : "[1, 2, 3, 4, 5].sum()",
+  "type" : "int",
+  "json" : 15,
+  "text" : "15"
+}, {
+  "expr" : "[1, 2, 3, 4, 5, 6].sum()",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:22: Iteration budget exceeded: 5 in: [1, 2, 3, 4, 5, 6].sum()"
+}, {
+  "expr" : "[1, 2, 3].map(x, x).sum()",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:23: Iteration budget exceeded: 5 in: [1, 2, 3].map(x, x).sum()"
+}, {
+  "expr" : "[[1], [2]].map(x, x.sum())",
+  "type" : "list<int>",
+  "json" : [ 1, 2 ],
+  "text" : "[1, 2]"
+}, {
+  "expr" : "[[1], [2]].map(x, x.sum()).sum()",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:30: Iteration budget exceeded: 5 in: [[1], [2]].map(x, x.sum()).sum()"
+}, {
+  "expr" : "[3, 1, 2].min()",
+  "type" : "int",
+  "json" : 1,
+  "text" : "1"
+}, {
+  "expr" : "[3, 1, 2].max()",
+  "type" : "int",
+  "json" : 3,
+  "text" : "3"
+}, {
+  "expr" : "[3, 1, 2].avg()",
+  "type" : "decimal",
+  "json" : "2",
+  "text" : "2"
+}, {
+  "expr" : "[1, 1, 2].avg()",
+  "type" : "decimal",
+  "json" : "1.333333333333333333333333333333333",
+  "text" : "1.333333333333333333333333333333333"
+}, {
+  "expr" : "[1, 2].avg()",
+  "type" : "decimal",
+  "json" : "1.5",
+  "text" : "1.5"
+}, {
+  "expr" : "[decimal('1.0'), decimal('1.00')].max()",
+  "type" : "decimal",
+  "json" : "1.0",
+  "text" : "1.0"
+}, {
+  "expr" : "[decimal('1.0'), decimal('1.00')].min()",
+  "type" : "decimal",
+  "json" : "1.0",
+  "text" : "1.0"
+}, {
+  "expr" : "[d, decimal('0.25')].min()",
+  "type" : "decimal",
+  "json" : "0.25",
+  "text" : "0.25"
+}, {
+  "expr" : "[d, decimal('3')].avg()",
+  "type" : "decimal",
+  "json" : "2.25",
+  "text" : "2.25"
+}, {
+  "expr" : "[m, money(1000000, 'VND'), money(1, 'VND')].avg()",
+  "type" : "money",
+  "json" : "833333.6666666666666666666666666667 VND",
+  "text" : "833333.6666666666666666666666666667 VND"
+}, {
+  "expr" : "[m, money(2, 'VND')].max()",
+  "type" : "money",
+  "json" : "1500000 VND",
+  "text" : "1500000 VND"
+}, {
+  "expr" : "[1].filter(x, false).min()",
+  "type" : "int",
+  "evalError" : "min() of an empty list in: [1].filter(x, false).min()"
+}, {
+  "expr" : "[d].filter(x, false).max()",
+  "type" : "decimal",
+  "evalError" : "max() of an empty list in: [d].filter(x, false).max()"
+}, {
+  "expr" : "[m].filter(x, false).avg()",
+  "type" : "money",
+  "evalError" : "avg() of an empty list in: [m].filter(x, false).avg()"
+}, {
+  "expr" : "[0].map(x, 1/x).sum()",
+  "type" : "int",
+  "evalError" : "evaluation error at <input>:12: / by zero in: [0].map(x, 1/x).sum()"
+}, {
+  "expr" : "[1, 2].sum() + d",
+  "type" : "decimal",
+  "json" : "4.50",
+  "text" : "4.50"
+}, {
+  "expr" : "min(d, decimal('2'))",
+  "type" : "decimal",
+  "json" : "1.50",
+  "text" : "1.50"
+}, {
+  "expr" : "max(m, money(1, 'VND'))",
+  "type" : "money",
+  "json" : "1500000 VND",
+  "text" : "1500000 VND"
+}, {
+  "expr" : "names.sum()",
+  "compileError" : "ERROR: <input>:1:10: found no matching overload for 'sum' applied to 'list(string).()' (candidates: list(int).(),list(decimal).(),list(money).(),list(int).(int),list(decimal).(decimal),list(money).(money))\n | names.sum()\n | .........^"
+}, {
+  "expr" : "i.sum()",
+  "compileError" : "ERROR: <input>:1:1: expression of type 'int' cannot be range of a comprehension (must be list, map, or dynamic)\n | i.sum()\n | ^"
+}, {
+  "expr" : "[1].sum(d)",
+  "compileError" : "ERROR: <input>:1:8: found no matching overload for 'sum' applied to 'list(int).(decimal)' (candidates: list(int).(),list(decimal).(),list(money).(),list(int).(int),list(decimal).(decimal),list(money).(money))\n | [1].sum(d)\n | .......^"
+}, {
+  "expr" : "[1].sum(0, 1)",
+  "compileError" : "ERROR: <input>:1:8: found no matching overload for 'sum' applied to 'list(int).(int, int)' (candidates: list(int).(),list(decimal).(),list(money).(),list(int).(int),list(decimal).(decimal),list(money).(money))\n | [1].sum(0, 1)\n | .......^"
+}, {
+  "expr" : "[true].min()",
+  "compileError" : "ERROR: <input>:1:11: found no matching overload for 'min' applied to 'list(bool).()' (candidates: list(int).(),list(decimal).(),list(money).())\n | [true].min()\n | ..........^"
+}, {
+  "expr" : "d.max()",
+  "compileError" : "ERROR: <input>:1:1: expression of type 'decimal' cannot be range of a comprehension (must be list, map, or dynamic)\n | d.max()\n | ^"
+}, {
+  "expr" : "[1].avg() == 1",
+  "compileError" : "ERROR: <input>:1:11: found no matching overload for '_==_' applied to '(decimal, int)' (candidates: (%A2, %A2))\n | [1].avg() == 1\n | ..........^"
+}, {
+  "expr" : "sum([1, 2])",
+  "compileError" : "ERROR: <input>:1:4: found no matching overload for 'sum' applied to '(list(int))'\n | sum([1, 2])\n | ...^"
+}, {
+  "expr" : "[].sum()",
+  "type" : "int",
+  "json" : 0,
+  "text" : "0"
+}, {
+  "expr" : "[].sum(0)",
+  "type" : "int",
+  "json" : 0,
+  "text" : "0"
+}, {
+  "expr" : "[].max()",
+  "type" : "int",
+  "evalError" : "max() of an empty list in: [].max()"
+}, {
+  "expr" : "dyn([1, 2]).sum()",
+  "type" : "bool",
+  "evalError" : "evaluation error: Ambiguous overloads for function 'sum'. Matching candidates: rulestone_sum_list_int, rulestone_sum_list_decimal, rulestone_sum_list_money in: dyn([1, 2]).sum()"
+}, {
+  "expr" : "[x].sum()",
+  "compileError" : "ERROR: <input>:1:2: undeclared reference to 'x' (in container '')\n | [x].sum()\n | .^"
+}, {
+  "expr" : "i.sum(x)",
+  "compileError" : "ERROR: <input>:1:1: expression of type 'int' cannot be range of a comprehension (must be list, map, or dynamic)\n | i.sum(x)\n | ^\nERROR: <input>:1:7: undeclared reference to 'x' (in container '')\n | i.sum(x)\n | ......^"
+}, {
+  "expr" : "[m, money(2, 'VND')].min()",
+  "type" : "money",
+  "json" : "2 VND",
+  "text" : "2 VND"
+}, {
+  "expr" : "[money(2, 'VND'), m, money('1500000.0', 'VND')].max()",
+  "type" : "money",
+  "json" : "1500000 VND",
+  "text" : "1500000 VND"
+}, {
+  "expr" : "[2, 5, 5, 1].max()",
+  "type" : "int",
+  "json" : 5,
+  "text" : "5"
+}, {
+  "expr" : "[decimal('2'), decimal('-1.0'), decimal('-1')].min()",
+  "type" : "decimal",
+  "json" : "-1.0",
+  "text" : "-1.0"
 } ]

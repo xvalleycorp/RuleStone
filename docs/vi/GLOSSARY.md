@@ -37,11 +37,14 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 
 | English | Tiếng Việt | Ghi chú |
 |---|---|---|
+| aggregate function | hàm tổng hợp | `sum`, `min`, `max`, `avg` trên danh sách. |
 | expression | biểu thức | |
 | expression language | ngôn ngữ biểu thức | |
 | field | trường | |
 | floating point, floating-point number | dấu phẩy động, số dấu phẩy động | |
 | input / output | đầu vào / đầu ra | |
+| local value | giá trị cục bộ | Khai báo trong `let` của bảng quyết định. |
+| mean | trung bình | |
 | missing field | trường bị thiếu | |
 | normalization | chuẩn hoá | Chuẩn hoá tên trước khi so khớp. |
 | overload | overload | Giữ nguyên trong thông báo lỗi; có thể giải thích "phiên bản nạp chồng của hàm". |
