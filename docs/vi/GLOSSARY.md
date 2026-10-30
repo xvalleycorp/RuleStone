@@ -65,6 +65,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | buffer (producer buffer) | bộ đệm (buffer) | Bộ đệm của Kafka producer. |
 | builder | builder | Giữ nguyên (mẫu thiết kế). |
 | canary, canary release | canary, phát hành canary | Giữ nguyên; một phần lưu lượng được chuyển sang phiên bản mới. |
+| case management | quản lý case | Hàng đợi và xử lý các case cần người review; thuộc ứng dụng, không thuộc RuleStone. |
 | compile | biên dịch | |
 | correlation id | mã tương quan (correlation id) | Mã giao dịch nghiệp vụ của bên gọi, ví dụ số hồ sơ vay. |
 | dependency | thư viện phụ thuộc, phụ thuộc | |
@@ -76,6 +77,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | HMAC key | khoá HMAC | |
 | hot reload | nạp lại nóng (hot reload) | |
 | immutable | bất biến | |
+| label (of a reviewed case) | nhãn | Kết luận của người review, dùng để huấn luyện mô hình. |
 | load, load time | nạp, lúc nạp | "Bắt lỗi ngay lúc nạp luật". |
 | module | mô-đun | Tên mô-đun (`rulestone-core`) giữ nguyên. |
 | pre-release | bản tiền phát hành | |

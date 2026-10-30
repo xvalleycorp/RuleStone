@@ -492,8 +492,6 @@ What the figures say:
 - **One engine scales across threads.** The median with 4 threads on one engine is within noise of the median with one thread: evaluation shares nothing mutable. The tails grow with 4 threads on 4 vCPUs, because the benchmark threads then compete with the JIT and the garbage collector for the same cores.
 - **Allocation is the main cost of the tail.** An evaluation allocates about 44 KB, plus 2 to 3 KB per rule examined, and about 50 KB per rule that scans a list of 20. Size the young generation for the request rate, and prefer a low-pause collector (Generational ZGC) where p99.9 matters.
 
-From [OpenFRAML](https://github.com/xvalleycorp/OpenFRAML), which evaluates a 12-rule `COLLECT` table inline for every payment: on an Apple M2 with JDK 22 and G1, 4 threads, a whole gate decision takes 16.8 µs at p50, 50.6 µs at p99 and 129 µs at p99.9.
-
 ## Using expressions directly
 
 `rulestone-cel` evaluates single expressions without a decision table, for example to validate a formula entered in an admin screen:
