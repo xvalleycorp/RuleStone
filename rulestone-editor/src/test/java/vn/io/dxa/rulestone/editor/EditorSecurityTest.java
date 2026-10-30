@@ -113,7 +113,9 @@ class EditorSecurityTest {
 
     @Test
     void missingHostIsRefused() {
-        assertThat(editor.raw("GET", "/api/meta", null, Map.of()).status()).isEqualTo(421);
+        // The guard answers 421; the October 2026 JDK updates (17.0.21, 21.0.13, 25.0.5) reject an HTTP/1.1
+        // request without Host with 400 before it reaches the guard.
+        assertThat(editor.raw("GET", "/api/meta", null, Map.of()).status()).isIn(400, 421);
     }
 
     @Test

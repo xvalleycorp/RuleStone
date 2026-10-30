@@ -13,7 +13,7 @@ The source of [rulestone.dxa.io.vn](https://rulestone.dxa.io.vn): a [VitePress](
 | `src/vi/docs/` | **Generated.** Vietnamese guides copied from [`docs/vi/`](../docs/vi/), plus placeholder pages for guides not translated yet. |
 | `src/.vitepress/config.mts` | Locales, navigation, sidebar, search, footer. |
 | `src/.vitepress/theme/` | Colours, home page styles, and the notice shown on outdated translations. |
-| `scripts/` | `sync-docs.mjs` (copy and check docs), `i18n-*.mjs` (translation status and stamping), `check-site.mjs` (links, anchors and languages of the built site). |
+| `scripts/` | `sync-docs.mjs` (copy and check docs), `i18n-*.mjs` (translation status and stamping), `check-site.mjs` (links, anchors and languages of the built site), `csp.mjs` (adds the Content-Security-Policy to the built `_headers`). |
 | `src/public/` | Logo, favicon, `robots.txt` and `_headers` (security and cache headers). |
 | `wrangler.jsonc` | Cloudflare Worker configuration, including the custom domain. |
 
@@ -32,6 +32,8 @@ npm run preview   # serve the build locally
 ```
 
 The build fails on links to pages or anchors that do not exist (`npm run check:links` runs the anchor check on an existing build).
+
+The build also adds a Content-Security-Policy to `_headers`. It allows the few scripts VitePress inlines in every page by their SHA-256 hashes, which change between builds, Cloudflare Web Analytics, and no `eval`. So config values must not be functions: VitePress would evaluate them in the browser. `npm run preview` does not send the headers; to check the policy, serve `src/.vitepress/dist` with them, or deploy.
 
 The VitePress development server has known advisories that only affect the local dev server (`npm audit`). It listens on `localhost` only; do not expose it to a network. The published site is static files and is not affected.
 

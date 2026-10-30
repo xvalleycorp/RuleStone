@@ -340,6 +340,48 @@ describe('<rulestone-flow-canvas>', () => {
     expect(zoom.defaultPrevented).toBe(true)
   })
 
+  it('writes the labels of the edges into one node on one line, each label once', async () => {
+    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: flow() })
+    // pd_behaviour and pd_application both fail over to referred.
+    const labels = $$(el, 'text.edge-label')
+    expect(new Set(labels.map((t) => `${t.getAttribute('x')},${t.getAttribute('y')}`)).size).toBe(labels.length)
+    const referred = el.layout['referred']!
+    const into = labels.find((t) => Number(t.getAttribute('x')) === referred.x + 6 && Number(t.getAttribute('y')) === referred.y - 6)!
+    expect(into.textContent!.trim()).toBe('onFailure')
+    expect(into.querySelector('tspan.failure')).not.toBeNull()
+  })
+
+  it('zooms with two fingers around their midpoint, and never connects on a cancelled drag', async () => {
+    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: flow() })
+    const svg = $(el, 'svg')!
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 900, height: 540, right: 900, bottom: 540, x: 0, y: 0, toJSON: () => ({}) })
+    const view = () => (el as unknown as { _view: { x: number; y: number; zoom: number } })._view
+    const pointer = (type: string, id: number, x: number, y: number) =>
+      svg.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: x, clientY: y, button: 0, bubbles: true, composed: true }))
+    const before = view()
+    const anchor = { x: before.x + (450 / 900) * (900 / before.zoom), y: before.y + (270 / 540) * (540 / before.zoom) }
+    pointer('pointerdown', 1, 400, 270)
+    pointer('pointerdown', 2, 500, 270)
+    pointer('pointermove', 1, 350, 270)
+    pointer('pointermove', 2, 550, 270)
+    await settle(el)
+    const after = view()
+    expect(after.zoom).toBeCloseTo(Math.min(2.5, before.zoom * 2))
+    // The canvas point under the midpoint stays under it.
+    expect(after.x + 0.5 * (900 / after.zoom)).toBeCloseTo(anchor.x)
+    expect(after.y + 0.5 * (540 / after.zoom)).toBeCloseTo(anchor.y)
+    pointer('pointerup', 1, 350, 270)
+    pointer('pointerup', 2, 550, 270)
+
+    const changes = events(el, 'rulestone-change')
+    const port = $(el, 'g.node[data-id="grade"] circle.port')!
+    port.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 3, pointerType: 'mouse', button: 0, bubbles: true, composed: true }))
+    svg.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 3, pointerType: 'mouse', bubbles: true, composed: true }))
+    await settle(el)
+    expect(changes).toHaveLength(0)
+    expect($(el, 'path.edge.temp')).toBeNull()
+  })
+
   it('routes an edge to a node on the left around the nodes in between', () => {
     const layout = autoLayout(flow(), {}, { maxColumns: 3 })
     for (const [from, to, kind] of [['pd_application', 'grade', 'next'], ['pd_behaviour', 'referred', 'failure']] as const) {

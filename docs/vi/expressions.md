@@ -1,6 +1,6 @@
 ---
 source: expressions.md
-sourceHash: 897ac3de1ee0ebbb6886ad93c5d55f300f70b32d6b2b26475643253d69289245
+sourceHash: fd2857baeb8589914a18e2b948b3e632fa147451bc28aa2a7213401d7a5e61d3
 ---
 
 # Ngôn ngữ biểu thức
@@ -120,7 +120,7 @@ Làm tròn tới bội số, ví dụ làm tròn xuống tới hàng triệu g�
 
 Mã tiền tệ là mã ISO 4217 viết hoa. Mã không xác định hoặc số tiền không phân tích được làm việc đánh giá thất bại.
 
-RuleStone chấp nhận một danh sách mã cố định, nên mọi phiên bản Java đều chấp nhận và làm tròn các mã như nhau: các mã hiện hành của ISO 4217 đến bản sửa đổi 177 (tháng 6 năm 2024, bổ sung `ZWG`), cùng các mã đã ngừng sử dụng mà Java vẫn chấp nhận từ lâu, như `DEM`. Trong Java, danh sách này là `vn.io.dxa.rulestone.api.Iso4217`.
+RuleStone chấp nhận một danh sách mã cố định, nên mọi phiên bản Java đều chấp nhận và làm tròn các mã như nhau: các mã hiện hành của ISO 4217 đến bản sửa đổi 180 (tháng 9 năm 2025), cùng các mã đã ngừng sử dụng mà Java vẫn chấp nhận từ lâu, như `DEM`, hoặc mới ngừng sử dụng gần đây, như `BGN` khi Bulgaria chuyển sang đồng euro. Trong Java, danh sách này là `vn.io.dxa.rulestone.api.Iso4217`.
 
 ### Số học và so sánh
 

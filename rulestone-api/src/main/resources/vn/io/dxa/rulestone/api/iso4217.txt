@@ -10,12 +10,13 @@
 # "npm run generate:iso4217" in sdk/packages/engine; a test fails if the two differ). The set
 # is fixed here, not taken from java.util.Currency, so that every JDK accepts the same codes.
 #
-# Contents: the current codes of ISO 4217 up to amendment 177 (June 2024, which added ZWG),
+# Contents: the current codes of ISO 4217 up to amendment 180 (September 2025; 177 added ZWG,
+# 179 added XAD, and 180 replaces BGN with EUR in Bulgaria from 2026-01-01),
 # plus the withdrawn codes that java.util.Currency has long accepted (e.g. DEM, FRF, VEF),
 # kept so that existing rules and facts stay valid. Format: one "<CODE> <digits>" or
 # "<CODE> -" per line, sorted by code; lines starting with # are comments.
 
-amendment 177
+amendment 180
 
 ADP 0
 AED 2
@@ -219,6 +220,7 @@ VES 2
 VND 0
 VUV 0
 WST 2
+XAD 2
 XAF 0
 XAG -
 XAU -
