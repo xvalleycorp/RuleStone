@@ -150,7 +150,7 @@ class StoneTestJsonTest {
                 { "decision": "d", "decisions": 1, "cases": [
                   { "name": "n", "fact": {}, "facts": {}, "expect": { "matchedRule": [] } } ] }""")).containsExactly(
                 "$.decisions: unknown field (allowed: cases, decision, description)",
-                "$.cases[0].fact: unknown field (allowed: asOf, description, expect, facts, name, version)",
+                "$.cases[0].fact: unknown field (allowed: asOf, description, expect, facts, models, name, version)",
                 "$.cases[0].expect.matchedRule: unknown field"
                         + " (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)");
     }

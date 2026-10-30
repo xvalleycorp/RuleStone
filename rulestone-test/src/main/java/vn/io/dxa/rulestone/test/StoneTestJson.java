@@ -56,6 +56,13 @@ import vn.io.dxa.rulestone.core.InvalidFactsException;
  * evaluation visits, in order, from the start node to the end node. {@code "matchedRules"} then
  * lists the matched rules of every table node, in order.
  *
+ * <p>A case of a flow with {@code model} nodes gives the models' results in {@code "models"}, in the
+ * form that {@link FactsJson#readModels} reads: node id to {@code { "modelId", "modelVersion",
+ * "outputs", … }}, or to {@code { "failure": "TIMEOUT" }} or {@code "ERROR"}. A model node without a
+ * result fails with {@code MISSING}. Build the engine under test with
+ * {@code RuleStone.builder().suppliedModelsOnly()}, so that nodes in {@code invoke} mode use these
+ * results too and the tests need no model server.
+ *
  * <p>Given the decision tables (and flows), facts and expected outputs are read with the types the
  * table (or flow) declares, as by {@link FactsJson}: money as {@code "1500000 VND"}, dates as
  * {@code "2026-11-01"}, decimals as numbers or strings; undeclared inputs, struct fields and
@@ -86,7 +93,8 @@ public final class StoneTestJson {
             .build();
 
     private static final Set<String> FILE_FIELDS = Set.of("decision", "description", "cases");
-    private static final Set<String> CASE_FIELDS = Set.of("name", "description", "version", "asOf", "facts", "expect");
+    private static final Set<String> CASE_FIELDS =
+            Set.of("name", "description", "version", "asOf", "facts", "models", "expect");
     private static final Set<String> EXPECT_FIELDS =
             Set.of("output", "exactOutput", "reasonCodes", "matchedRules", "path", "ruleVersion", "error");
 
@@ -288,6 +296,14 @@ public final class StoneTestJson {
             });
             Schema schema = schema(decision, version, asOf, path);
             Facts facts = facts(node.get("facts"), path + ".facts", schema);
+            JsonNode models = node.get("models");
+            if (models != null) {
+                try {
+                    facts = facts.withModels(FactsJson.readModels(models));
+                } catch (InvalidFactsException e) {
+                    e.problems().forEach(p -> problems.add(path + ".models" + (p.startsWith("$") ? p.substring(1) : "." + p)));
+                }
+            }
 
             JsonNode expect = node.get("expect");
             String at = path + ".expect";
