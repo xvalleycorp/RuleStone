@@ -5,6 +5,7 @@
 
 package vn.io.dxa.rulestone.api;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.OptionalLong;
 
 /**
  * The explanation of one evaluation: what was decided, with which exact rules, and why.
@@ -152,7 +154,7 @@ public record DecisionRecord(
      * {@code end} node unless the evaluation failed.
      *
      * @param node         the node id; for a decision table evaluated on its own, the decision id
-     * @param type         the kind of node: {@code table}, {@code switch}, {@code derive},
+     * @param type         the kind of node: {@code table}, {@code switch}, {@code derive}, {@code model},
      *                     {@code split} or {@code end}
      * @param decision     for a {@code table} node of a flow, the id of the decision table it
      *                     evaluated; empty for other nodes, and for a table evaluated on its own,
@@ -163,9 +165,11 @@ public record DecisionRecord(
      *                     order; empty for other nodes
      * @param taken        for a {@code switch} node, the node its chosen branch leads to; for a
      *                     {@code split} node, the name of the chosen bucket; empty for other nodes
+     * @param model        for a {@code model} node, what the model was asked and answered; empty
+     *                     for other nodes
      */
     public record PathStep(String node, String type, Optional<String> decision, Optional<String> version,
-                           List<String> matchedRules, Optional<String> taken) {
+                           List<String> matchedRules, Optional<String> taken, Optional<ModelStep> model) {
 
         public PathStep {
             Objects.requireNonNull(node, "node");
@@ -173,7 +177,14 @@ public record DecisionRecord(
             Objects.requireNonNull(decision, "decision");
             Objects.requireNonNull(version, "version");
             Objects.requireNonNull(taken, "taken");
+            Objects.requireNonNull(model, "model");
             matchedRules = List.copyOf(matchedRules);
+        }
+
+        /** A step of any node but a {@code model} node. */
+        public PathStep(String node, String type, Optional<String> decision, Optional<String> version,
+                        List<String> matchedRules, Optional<String> taken) {
+            this(node, type, decision, version, matchedRules, taken, Optional.empty());
         }
 
         /** The step of a decision table evaluated on its own: node {@code decision}, type {@code table}. */
@@ -195,6 +206,97 @@ public record DecisionRecord(
         /** The step of a node that records nothing but its visit, such as {@code derive} or {@code end}. */
         public static PathStep visit(String node, String type) {
             return new PathStep(node, type, Optional.empty(), Optional.empty(), List.of(), Optional.empty());
+        }
+
+        /** The step of a {@code model} node. */
+        public static PathStep model(String node, ModelStep model) {
+            return new PathStep(node, "model", Optional.empty(), Optional.empty(), List.of(), Optional.empty(),
+                    Optional.of(model));
+        }
+    }
+
+    /**
+     * What a {@code model} node asked of its model and what it got. It holds no feature values
+     * and no raw contributions: only identifiers, the outcome, the outputs the flow read, and the
+     * ranks of the attributions. The outputs are recorded so that the decision can be replayed
+     * with them after the model has changed.
+     *
+     * @param modelId           the model, as the node pins it
+     * @param modelVersion      the exact version, as the node pins it
+     * @param mode              how the result was obtained: called by the engine, or supplied by
+     *                          the caller (also for an {@code invoke} node of an engine built
+     *                          with {@code suppliedModelsOnly()})
+     * @param status            {@link ModelStatus#OK}, or the kind of failure, after which the flow
+     *                          took the node's {@code onFailure} path
+     * @param detail            for a failure, what went wrong, e.g. the output that broke the
+     *                          contract or the type of the exception the invoker threw; never a value
+     * @param latencyMs         for a model the engine called, how long the call took, in milliseconds
+     * @param outputs           when the status is {@link ModelStatus#OK}, the outputs that later
+     *                          nodes read; empty otherwise
+     * @param confidence        when the status is {@link ModelStatus#OK}, the confidence the model reported, if any
+     * @param attributionMethod how the attributions were computed, e.g. {@code SHAP}, if the model said
+     * @param attributions      when the status is {@link ModelStatus#OK}, every attribution the
+     *                          model returned, by rank; empty if it returned none
+     */
+    public record ModelStep(String modelId, String modelVersion, ModelMode mode, ModelStatus status,
+                            Optional<String> detail, OptionalLong latencyMs, Map<String, Object> outputs,
+                            Optional<BigDecimal> confidence, Optional<String> attributionMethod,
+                            List<RankedAttribution> attributions) {
+
+        public ModelStep {
+            Objects.requireNonNull(modelId, "modelId");
+            Objects.requireNonNull(modelVersion, "modelVersion");
+            Objects.requireNonNull(mode, "mode");
+            Objects.requireNonNull(status, "status");
+            Objects.requireNonNull(detail, "detail");
+            Objects.requireNonNull(latencyMs, "latencyMs");
+            Objects.requireNonNull(confidence, "confidence");
+            Objects.requireNonNull(attributionMethod, "attributionMethod");
+            if (status.failed() && (!outputs.isEmpty() || !attributions.isEmpty() || confidence.isPresent())) {
+                throw new IllegalArgumentException("a failed model step records no outputs, confidence or attributions");
+            }
+            outputs.forEach((name, value) -> {
+                Objects.requireNonNull(name, "output name");
+                Objects.requireNonNull(value, () -> "value of output '" + name + "'");
+            });
+            outputs = Collections.unmodifiableMap(new LinkedHashMap<>(outputs));
+            attributions = List.copyOf(attributions);
+        }
+
+        @Override
+        public String toString() {
+            return "ModelStep[" + modelId + "@" + modelVersion + ", " + mode + ", " + status + "]";
+        }
+    }
+
+    /**
+     * One attribution of a model's result, by rank, without its contribution value.
+     *
+     * @param feature    the feature name
+     * @param rank       1 for the feature that moved the result most, in either direction
+     * @param direction  whether the feature increased or decreased risk
+     * @param reasonCode the reason code the node maps the feature to, when the flow emitted it as a
+     *                   reason for the decision
+     */
+    public record RankedAttribution(String feature, int rank, Direction direction, Optional<String> reasonCode) {
+
+        /** The sign of a feature's contribution. */
+        public enum Direction {
+            /** A positive contribution. */
+            INCREASES_RISK,
+            /** A negative contribution. */
+            DECREASES_RISK,
+            /** A contribution of zero. */
+            NONE
+        }
+
+        public RankedAttribution {
+            Objects.requireNonNull(feature, "feature");
+            Objects.requireNonNull(direction, "direction");
+            Objects.requireNonNull(reasonCode, "reasonCode");
+            if (rank < 1) {
+                throw new IllegalArgumentException("rank must be at least 1");
+            }
         }
     }
 

@@ -50,4 +50,13 @@ final class Deadline {
     Duration timeout() {
         return timeout;
     }
+
+    /** The time left, never negative; {@code max} when there is no timeout or more than {@code max} is left. */
+    Duration remaining(Duration max) {
+        if (this == NONE) {
+            return max;
+        }
+        long left = nanos - (nanoTime.getAsLong() - start);
+        return left <= 0 ? Duration.ZERO : left < max.toNanos() ? Duration.ofNanos(left) : max;
+    }
 }

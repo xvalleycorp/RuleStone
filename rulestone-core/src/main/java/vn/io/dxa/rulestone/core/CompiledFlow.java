@@ -5,10 +5,14 @@
 
 package vn.io.dxa.rulestone.core;
 
+import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,14 +21,25 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
+import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
+import vn.io.dxa.rulestone.api.DecisionRecord.ModelStep;
 import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
+import vn.io.dxa.rulestone.api.DecisionRecord.RankedAttribution;
+import vn.io.dxa.rulestone.api.DecisionRecord.RankedAttribution.Direction;
 import vn.io.dxa.rulestone.api.DecisionRecord.ReasonCode;
 import vn.io.dxa.rulestone.api.DecisionTimeoutException;
 import vn.io.dxa.rulestone.api.Facts;
+import vn.io.dxa.rulestone.api.ModelCall;
+import vn.io.dxa.rulestone.api.ModelInvoker;
+import vn.io.dxa.rulestone.api.ModelMode;
+import vn.io.dxa.rulestone.api.ModelResult;
+import vn.io.dxa.rulestone.api.ModelStatus;
 import vn.io.dxa.rulestone.api.RuleStoneException;
+import vn.io.dxa.rulestone.api.SuppliedModel;
 import vn.io.dxa.rulestone.cel.Bindings;
 import vn.io.dxa.rulestone.cel.CelExpression;
 import vn.io.dxa.rulestone.cel.ExpressionEnvironment;
@@ -48,16 +63,37 @@ final class CompiledFlow implements Executable {
             "true", "false", "null", "in", "as", "break", "const", "continue", "else", "for", "function",
             "if", "import", "let", "loop", "package", "namespace", "return", "var", "void", "while");
 
+    /** Model versions must be exact: no range, wildcard or {@code latest}. */
+    private static final Pattern MODEL_VERSION = Pattern.compile("[A-Za-z0-9][A-Za-z0-9_.+-]*");
+    private static final int MAX_REASON_CODES = 10;
+
+    /**
+     * How the engine obtains model results.
+     *
+     * @param invokers     model id to the invoker that calls it
+     * @param suppliedOnly whether every model node runs in {@code supplied} mode, for tests and replay
+     * @param nanoTime     the monotonic clock that model latencies and timeouts are measured with
+     */
+    record Models(Map<String, ModelInvoker> invokers, boolean suppliedOnly, LongSupplier nanoTime) {
+
+        Models {
+            invokers = Map.copyOf(invokers);
+        }
+    }
+
     private final DecisionFlow flow;
     private final String ruleVersion;
     private final ExpressionEnvironment inputs;
     private final Map<String, Node> nodes;
+    private final Models models;
 
-    private CompiledFlow(DecisionFlow flow, String ruleVersion, ExpressionEnvironment inputs, Map<String, Node> nodes) {
+    private CompiledFlow(DecisionFlow flow, String ruleVersion, ExpressionEnvironment inputs, Map<String, Node> nodes,
+                         Models models) {
         this.flow = flow;
         this.ruleVersion = ruleVersion;
         this.inputs = inputs;
         this.nodes = Map.copyOf(nodes);
+        this.models = models;
     }
 
     @Override
@@ -78,14 +114,16 @@ final class CompiledFlow implements Executable {
      * @param tables     every compiled decision table, by id
      * @param registered every registered decision table, by id, including tables that failed to compile
      * @param flowIds    the ids of every registered flow
+     * @param models     how model nodes obtain their results
      * @param problems receives every problem found, prefixed with the flow and location
      * @return the compiled flow, or empty if any problem was found
      */
     static Optional<CompiledFlow> compile(DecisionFlow flow, Map<String, List<CompiledDecision>> tables,
                                           Map<String, List<DecisionTable>> registered, Set<String> flowIds,
-                                          int maxIterations, Map<String, Integer> currencyScales,
+                                          int maxIterations, Map<String, Integer> currencyScales, Models models,
                                           List<String> problems) {
-        return new Compiler(flow, tables, registered, flowIds, maxIterations, currencyScales, problems).compile();
+        return new Compiler(flow, tables, registered, flowIds, maxIterations, currencyScales, models, problems)
+                .compile();
     }
 
     /** Compiles one flow, collecting every problem instead of stopping at the first. */
@@ -97,6 +135,7 @@ final class CompiledFlow implements Executable {
         private final Set<String> flowIds;
         private final int maxIterations;
         private final Map<String, Integer> currencyScales;
+        private final Models models;
         private final List<String> problems;
         private final String at;
         private final Map<Map<String, ValueType>, ExpressionEnvironment> environments = new HashMap<>();
@@ -111,8 +150,9 @@ final class CompiledFlow implements Executable {
 
         Compiler(DecisionFlow flow, Map<String, List<CompiledDecision>> tables,
                  Map<String, List<DecisionTable>> registered, Set<String> flowIds, int maxIterations,
-                 Map<String, Integer> currencyScales, List<String> problems) {
+                 Map<String, Integer> currencyScales, Models models, List<String> problems) {
             this.flow = flow;
+            this.models = models;
             this.tables = tables;
             this.registered = registered;
             this.flowIds = flowIds;
@@ -166,7 +206,7 @@ final class CompiledFlow implements Executable {
                 return Optional.empty();
             }
             String ruleVersion = flow.version() + "@sha256:" + CompiledDecision.sha256(DecisionFlowJson.write(flow));
-            return Optional.of(new CompiledFlow(flow, ruleVersion, inputEnvironment, compiled));
+            return Optional.of(new CompiledFlow(flow, ruleVersion, inputEnvironment, compiled, models));
         }
 
         private void header() {
@@ -248,6 +288,9 @@ final class CompiledFlow implements Executable {
                 branchTargets(table.next(), path + ".next", targets);
             } else if (node instanceof FlowNode.Derive derive) {
                 branchTargets(derive.next(), path + ".next", targets);
+            } else if (node instanceof FlowNode.Model model) {
+                branchTargets(model.next(), path + ".next", targets);
+                targets.put(path + ".onFailure.to", model.onFailure().to());
             } else if (node instanceof FlowNode.Switch sw) {
                 branchTargets(sw.cases(), path + ".cases", targets);
             } else if (node instanceof FlowNode.Split split) {
@@ -291,6 +334,9 @@ final class CompiledFlow implements Executable {
                         }
                     });
                     sameNames(derive.set(), derive.outputs(), path, "value");
+                } else if (node instanceof FlowNode.Model model) {
+                    branches(model.next(), path + ".next");
+                    model(model, path);
                 } else if (node instanceof FlowNode.Switch sw) {
                     branches(sw.cases(), path + ".cases");
                 } else if (node instanceof FlowNode.Split split) {
@@ -343,6 +389,80 @@ final class CompiledFlow implements Executable {
             }
             if (total != 100) {
                 problem(path + ".buckets", "percentages add up to " + total + ", not 100");
+            }
+        }
+
+        /** The contract of a model node, apart from its expressions. */
+        private void model(FlowNode.Model model, String path) {
+            if (!CompiledDecision.ID.matcher(model.modelId()).matches()) {
+                problem(path + ".model.id", "must match " + CompiledDecision.ID.pattern());
+            }
+            String version = model.modelVersion();
+            if (!MODEL_VERSION.matcher(version).matches() || version.equalsIgnoreCase("latest")
+                    || Arrays.stream(version.split("\\.")).anyMatch(part -> part.equalsIgnoreCase("x"))) {
+                problem(path + ".model.version", "must pin one exact model version, e.g. \"2.4.0\"; "
+                        + "ranges, wildcards and \"latest\" are not allowed");
+            }
+            if (model.outputs().isEmpty()) {
+                problem(path + ".outputs", "a model node needs at least one output");
+            }
+            model.outputs().forEach((name, type) -> {
+                if (!NAME.matcher(name).matches() || RESERVED.contains(name)) {
+                    problem(path + ".outputs." + name, "invalid output name: the valid condition reads outputs "
+                            + "by name, so it must be an identifier (letters, digits and '_', not starting with a "
+                            + "digit) and not a CEL keyword");
+                }
+                if (CompiledDecision.containsStruct(type)) {
+                    problem(path + ".outputs." + name,
+                            "outputs must be bool, int, string, decimal, money, date or lists of them");
+                }
+            });
+            if (model.mode() == ModelMode.INVOKE) {
+                if (model.features().isEmpty()) {
+                    problem(path + ".features", "required in invoke mode: the values sent to the model, as "
+                            + "feature name to expression");
+                }
+                if (model.timeoutMs().isEmpty()) {
+                    problem(path + ".timeoutMs", "required in invoke mode: how long the model may take, in "
+                            + "milliseconds");
+                }
+                if (!models.suppliedOnly() && CompiledDecision.ID.matcher(model.modelId()).matches()
+                        && !models.invokers().containsKey(model.modelId())) {
+                    problem(path + ".model.id", "no ModelInvoker registered for model '" + model.modelId()
+                            + "'; register one with RuleStone.builder().modelInvoker(\"" + model.modelId()
+                            + "\", invoker), or build with suppliedModelsOnly() for tests");
+                }
+            } else {
+                if (!model.features().isEmpty()) {
+                    problem(path + ".features", "not allowed in supplied mode: the caller runs the model, so the "
+                            + "engine sends it nothing");
+                }
+                if (model.timeoutMs().isPresent()) {
+                    problem(path + ".timeoutMs", "not allowed in supplied mode: the engine calls no model");
+                }
+            }
+            model.timeoutMs().ifPresent(timeout -> {
+                if (timeout < 1) {
+                    problem(path + ".timeoutMs", "must be at least 1");
+                }
+            });
+            model.minConfidence().ifPresent(min -> {
+                if (min.signum() < 0 || min.compareTo(BigDecimal.ONE) > 0) {
+                    problem(path + ".minConfidence", "must be from 0 to 1");
+                }
+            });
+            model.reasonCodes().forEach((feature, code) -> {
+                if (!CompiledDecision.REASON_CODE.matcher(code).matches()) {
+                    problem(path + ".reasonCodes." + feature, "must be UPPER_SNAKE_CASE, e.g. HIGH_UTILISATION");
+                }
+            });
+            model.maxReasonCodes().ifPresent(max -> {
+                if (max < 1 || max > MAX_REASON_CODES) {
+                    problem(path + ".maxReasonCodes", "must be from 1 to " + MAX_REASON_CODES);
+                }
+            });
+            if (!CompiledDecision.REASON_CODE.matcher(model.onFailure().reasonCode()).matches()) {
+                problem(path + ".onFailure.reasonCode", "must be UPPER_SNAKE_CASE, e.g. MODEL_UNAVAILABLE");
             }
         }
 
@@ -466,6 +586,8 @@ final class CompiledFlow implements Executable {
                     });
                 } else if (node instanceof FlowNode.Derive derive) {
                     fields.putAll(derive.outputs());
+                } else if (node instanceof FlowNode.Model model) {
+                    fields.putAll(model.outputs());
                 } else if (node instanceof FlowNode.Switch || node instanceof FlowNode.Split) {
                     fields.put(TAKEN, ValueType.STRING);
                 }
@@ -538,14 +660,20 @@ final class CompiledFlow implements Executable {
             scopes.put(flow.start(), inputTypes);
             for (String id : order) {
                 Map<String, ValueType> after = after(id, scopes.get(id));
+                // A model node that fails publishes nothing: its onFailure node sees only what the
+                // model node itself saw. (If onFailure also leads where next does, that is what
+                // every path there has in common.)
+                String failureTarget = flow.nodes().get(id) instanceof FlowNode.Model model
+                        ? model.onFailure().to() : null;
                 for (String next : successors.get(id)) {
+                    Map<String, ValueType> reaching = next.equals(failureTarget) ? scopes.get(id) : after;
                     Map<String, ValueType> existing = scopes.get(next);
                     if (existing == null) {
-                        scopes.put(next, new LinkedHashMap<>(after));
+                        scopes.put(next, new LinkedHashMap<>(reaching));
                     } else {
                         Map<String, ValueType> both = new LinkedHashMap<>();
                         existing.forEach((name, type) -> {
-                            if (type.equals(after.get(name))) {
+                            if (type.equals(reaching.get(name))) {
                                 both.put(name, type);
                             }
                         });
@@ -582,6 +710,9 @@ final class CompiledFlow implements Executable {
                 derive.outputs().forEach((name, type) -> set.put(name,
                         expression(environment, scope, derive.set().get(name), type, path + ".set." + name)));
                 return new DeriveNode(environment, set, publishedAs.get(id), router(id, derive.next(), scope));
+            }
+            if (node instanceof FlowNode.Model model) {
+                return model(id, model, scope, environment);
             }
             if (node instanceof FlowNode.Split split) {
                 CelExpression key = expression(environment, scope, split.key(), ValueType.STRING, path + ".key");
@@ -657,6 +788,26 @@ final class CompiledFlow implements Executable {
                     byName, Optional.ofNullable(publishedAs.get(id)), router(id, table.next(), scope));
         }
 
+        private Node model(String id, FlowNode.Model model, Map<String, ValueType> scope,
+                           ExpressionEnvironment environment) {
+            String path = "nodes." + id;
+            Map<String, CelExpression> features = new LinkedHashMap<>();
+            model.features().forEach((name, source) -> {
+                CelExpression feature = expression(environment, scope, source, null, path + ".features." + name);
+                if (feature != null) {
+                    features.put(name, feature);
+                }
+            });
+            ExpressionEnvironment outputs = environment(model.outputs(), path + ".outputs");
+            CelExpression valid = model.valid().isEmpty() || outputs == null ? null
+                    : expression(outputs, model.outputs(), model.valid().get(), ValueType.BOOL, path + ".valid");
+            boolean invoke = model.mode() == ModelMode.INVOKE && !models.suppliedOnly();
+            return new ModelNode(model, environment, features, outputs, valid,
+                    invoke ? models.invokers().get(model.modelId()) : null,
+                    model.timeoutMs().map(Duration::ofMillis).orElse(Duration.ZERO),
+                    publishedAs.get(id), router(id, model.next(), scope));
+        }
+
         /** Why {@code name} cannot be read here. */
         private String unset(String name) {
             boolean exists = flow.inputs().containsKey(name) || publishedAs.containsValue(name);
@@ -691,13 +842,14 @@ final class CompiledFlow implements Executable {
         }
 
         /**
-         * Compiles {@code source}. When it fails because it reads a name that exists in the flow
+         * Compiles {@code source}, of type {@code type}, or of the type it produces when that is null.
+         * When it fails because it reads a name that exists in the flow
          * but is not set on every path to the node, says so instead of reporting an undeclared name.
          */
         private CelExpression expression(ExpressionEnvironment environment, Map<String, ValueType> scope,
                                          String source, ValueType type, String path) {
             try {
-                return environment.compile(source, type);
+                return type == null ? environment.compile(source) : environment.compile(source, type);
             } catch (ExpressionException e) {
                 List<String> unset = new ArrayList<>();
                 Set<String> known = new LinkedHashSet<>(flow.inputs().keySet());
@@ -755,6 +907,9 @@ final class CompiledFlow implements Executable {
         if (node instanceof FlowNode.Derive derive) {
             return derive.as();
         }
+        if (node instanceof FlowNode.Model model) {
+            return model.as();
+        }
         return Optional.empty();
     }
 
@@ -785,7 +940,8 @@ final class CompiledFlow implements Executable {
     // --- Evaluation -----------------------------------------------------------------------------
 
     @Override
-    public Run run(Facts facts, LocalDate businessDate, Deadline deadline, Progress progress, FactsHasher hasher) {
+    public Run run(Facts facts, LocalDate businessDate, Optional<String> correlationId, Deadline deadline,
+                   Progress progress, FactsHasher hasher) {
         if (facts.asMap().containsKey(CompiledDecision.BUSINESS_DATE)) {
             throw failure("invalid input " + CompiledDecision.BUSINESS_DATE + ": reserved name; the business date "
                     + "comes from DecisionRef.asOf or the engine clock and cannot be passed as a fact", null);
@@ -798,6 +954,17 @@ final class CompiledFlow implements Executable {
         } catch (InvalidValueException e) {
             throw failure("invalid input " + e.getMessage(), e);
         }
+        facts.models().keySet().forEach(node -> {
+            if (!(nodes.get(node) instanceof ModelNode model)) {
+                throw failure("model result supplied for '" + node + "', which is not a model node of this flow", null);
+            }
+            if (model.invoker() != null) {
+                throw failure("model result supplied for node '" + node + "', which calls its model (mode invoke); "
+                        + "supply results only for nodes in supplied mode, or build the engine with "
+                        + "suppliedModelsOnly() for tests", null);
+            }
+        });
+        Evaluation evaluation = new Evaluation(facts, correlationId, deadline);
         List<ReasonCode> reasons = new ArrayList<>();
         String id = flow.start();
         while (true) {
@@ -811,7 +978,7 @@ final class CompiledFlow implements Executable {
                     progress.open(() -> PathStep.visit(endId, "end"));
                     return finish(end, values, reasons, progress);
                 }
-                id = step(id, node, values, businessDate, deadline, progress, reasons);
+                id = step(id, node, values, businessDate, evaluation, progress, reasons);
             } catch (DecisionTimeoutException e) {
                 throw new DecisionTimeoutException(flow.id(), ruleVersion, e.timeout(), progress.trace);
             } catch (RuleStoneException | ExpressionException e) {
@@ -832,8 +999,9 @@ final class CompiledFlow implements Executable {
     }
 
     /** Evaluates node {@code id} and returns the id of the next node. */
-    private String step(String id, Node node, Map<String, Object> values, LocalDate businessDate, Deadline deadline,
-                        Progress progress, List<ReasonCode> reasons) {
+    private String step(String id, Node node, Map<String, Object> values, LocalDate businessDate,
+                        Evaluation evaluation, Progress progress, List<ReasonCode> reasons) {
+        Deadline deadline = evaluation.deadline();
         if (node instanceof TableNode table) {
             progress.open(() -> new PathStep(id, "table", Optional.of(table.decision()), Optional.empty(),
                     List.of(), Optional.empty()));
@@ -871,6 +1039,9 @@ final class CompiledFlow implements Executable {
             progress.close();
             return derive.next().route(values);
         }
+        if (node instanceof ModelNode model) {
+            return model(id, model, values, evaluation, progress, reasons);
+        }
         SplitNode split = (SplitNode) node;
         progress.open(() -> PathStep.visit(id, "split"));
         String key = (String) split.key().evaluate(split.environment().bind(values));
@@ -881,6 +1052,168 @@ final class CompiledFlow implements Executable {
         progress.close();
         values.put(id, Map.of(TAKEN, slice.name()));
         return slice.to();
+    }
+
+    /** What one evaluation passes to its model nodes. */
+    private record Evaluation(Facts facts, Optional<String> correlationId, Deadline deadline) {}
+
+    /**
+     * Obtains, checks and records the result of a model node, and returns the id of the next node:
+     * {@code next} if the result met the contract, {@code onFailure} otherwise.
+     */
+    private String model(String id, ModelNode node, Map<String, Object> values, Evaluation evaluation,
+                         Progress progress, List<ReasonCode> reasons) {
+        FlowNode.Model model = node.definition();
+        ModelMode mode = node.invoker() == null ? ModelMode.SUPPLIED : ModelMode.INVOKE;
+        progress.open(() -> PathStep.visit(id, "model"));
+        // Features are computed in every mode, so that tests and replays meet the same expression errors.
+        Map<String, Object> features = new LinkedHashMap<>();
+        if (!node.features().isEmpty()) {
+            Bindings bindings = node.environment().bind(values);
+            node.features().forEach((name, expression) -> features.put(name, expression.evaluate(bindings)));
+        }
+        ModelOutcome outcome;
+        OptionalLong latency = OptionalLong.empty();
+        if (mode == ModelMode.SUPPLIED) {
+            SuppliedModel supplied = evaluation.facts().models().get(id);
+            if (supplied == null) {
+                outcome = ModelOutcome.failed(ModelStatus.MISSING, "no result was supplied for this node");
+            } else if (supplied.failure().isPresent()) {
+                outcome = ModelOutcome.failed(supplied.failure().get(), "reported by the caller");
+            } else {
+                outcome = check(node, supplied.result().orElseThrow());
+            }
+        } else {
+            Duration timeout = evaluation.deadline().remaining(node.timeout());
+            long start = models.nanoTime().getAsLong();
+            ModelResult result = null;
+            String error = null;
+            try {
+                result = node.invoker().invoke(new ModelCall(model.modelId(), model.modelVersion(), features,
+                        timeout, evaluation.correlationId()));
+            } catch (RuntimeException e) {
+                // The message may contain feature values: record the type only.
+                error = "the invoker threw " + e.getClass().getName();
+            }
+            long elapsed = models.nanoTime().getAsLong() - start;
+            latency = OptionalLong.of(Duration.ofNanos(elapsed).toMillis());
+            if (evaluation.deadline().passed()) {
+                OptionalLong took = latency;
+                progress.open(() -> PathStep.model(id, step(model, mode, ModelOutcome.failed(ModelStatus.TIMEOUT,
+                        "the evaluation's timeout passed while the model was called"), took)));
+                throw new DecisionTimeoutException(flow.id(), ruleVersion, evaluation.deadline().timeout(), progress.trace);
+            }
+            if (elapsed > node.timeout().toNanos()) {
+                outcome = ModelOutcome.failed(ModelStatus.TIMEOUT, "no result within " + model.timeoutMs().orElseThrow()
+                        + " ms");
+            } else if (error != null) {
+                outcome = ModelOutcome.failed(ModelStatus.ERROR, error);
+            } else if (result == null) {
+                outcome = ModelOutcome.failed(ModelStatus.ERROR, "the invoker returned no result");
+            } else {
+                outcome = check(node, result);
+            }
+        }
+        ModelOutcome done = outcome;
+        OptionalLong took = latency;
+        if (outcome.status().failed()) {
+            reasons.add(new ReasonCode(model.onFailure().reasonCode(), id));
+            progress.open(() -> PathStep.model(id, step(model, mode, done, took)));
+            progress.close();
+            return model.onFailure().to();
+        }
+        outcome.reasonCodes().forEach(code -> reasons.add(new ReasonCode(code, id)));
+        values.put(node.publish(), outcome.outputs());
+        progress.open(() -> PathStep.model(id, step(model, mode, done, took)));
+        progress.close();
+        return node.next().route(values);
+    }
+
+    private static ModelStep step(FlowNode.Model model, ModelMode mode, ModelOutcome outcome, OptionalLong latency) {
+        return new ModelStep(model.modelId(), model.modelVersion(), mode, outcome.status(),
+                Optional.ofNullable(outcome.detail()), latency, outcome.outputs(), outcome.confidence(),
+                outcome.attributionMethod(), outcome.attributions());
+    }
+
+    /** Checks a result against the node's contract, and ranks its attributions. */
+    private static ModelOutcome check(ModelNode node, ModelResult result) {
+        FlowNode.Model model = node.definition();
+        if (!result.modelId().equals(model.modelId()) || !result.modelVersion().equals(model.modelVersion())) {
+            return ModelOutcome.failed(ModelStatus.CONTRACT_VIOLATION, "answered by " + result.modelId() + "@"
+                    + result.modelVersion() + ", not the pinned " + model.modelId() + "@" + model.modelVersion());
+        }
+        Map<String, Object> outputs = new LinkedHashMap<>();
+        for (Map.Entry<String, ValueType> declared : model.outputs().entrySet()) {
+            String name = declared.getKey();
+            Object value = result.outputs().get(name);
+            if (value == null) {
+                return ModelOutcome.failed(ModelStatus.CONTRACT_VIOLATION, "output '" + name + "' is missing");
+            }
+            try {
+                // Through the JSON forms: exact decimals, money and dates, also from their text forms.
+                outputs.put(name, FactsJson.readValue(FactsJson.writeValue(value), declared.getValue()));
+            } catch (InvalidFactsException | IllegalArgumentException e) {
+                return ModelOutcome.failed(ModelStatus.CONTRACT_VIOLATION, "output '" + name + "' is not "
+                        + describe(declared.getValue()));
+            }
+        }
+        for (String name : result.outputs().keySet()) {
+            if (!model.outputs().containsKey(name)) {
+                return ModelOutcome.failed(ModelStatus.CONTRACT_VIOLATION, "undeclared output '" + name + "'");
+            }
+        }
+        if (model.minConfidence().isPresent() && result.confidence().isEmpty()) {
+            return ModelOutcome.failed(ModelStatus.CONTRACT_VIOLATION,
+                    "no confidence reported, and the node sets minConfidence");
+        }
+        if (node.valid() != null) {
+            boolean valid;
+            try {
+                valid = (Boolean) node.valid().evaluate(node.outputs().bind(outputs));
+            } catch (ExpressionException e) {
+                return ModelOutcome.failed(ModelStatus.INVALID_OUTPUT, "the valid condition could not be evaluated");
+            }
+            if (!valid) {
+                return ModelOutcome.failed(ModelStatus.INVALID_OUTPUT, "the valid condition is false");
+            }
+        }
+        if (model.minConfidence().isPresent()
+                && result.confidence().orElseThrow().compareTo(model.minConfidence().get()) < 0) {
+            return ModelOutcome.failed(ModelStatus.LOW_CONFIDENCE, "confidence below minConfidence");
+        }
+        // Rank by the size of the contribution, in either direction; ties keep the model's order.
+        List<ModelResult.Attribution> ranked = new ArrayList<>(result.attributions());
+        ranked.sort(Comparator.comparing((ModelResult.Attribution a) -> a.contribution().abs()).reversed());
+        int max = model.maxReasonCodes().orElse(FlowNode.Model.DEFAULT_MAX_REASON_CODES);
+        List<String> codes = new ArrayList<>();
+        List<RankedAttribution> attributions = new ArrayList<>();
+        for (int i = 0; i < ranked.size(); i++) {
+            ModelResult.Attribution attribution = ranked.get(i);
+            int sign = attribution.contribution().signum();
+            Direction direction = sign > 0 ? Direction.INCREASES_RISK
+                    : sign < 0 ? Direction.DECREASES_RISK : Direction.NONE;
+            String code = model.reasonCodes().get(attribution.feature());
+            Optional<String> emitted = Optional.empty();
+            if (direction == Direction.INCREASES_RISK && code != null && codes.size() < max) {
+                if (!codes.contains(code)) {
+                    codes.add(code);
+                }
+                emitted = Optional.of(code);
+            }
+            attributions.add(new RankedAttribution(attribution.feature(), i + 1, direction, emitted));
+        }
+        return new ModelOutcome(ModelStatus.OK, null, outputs, result.confidence(), result.attributionMethod(),
+                attributions, codes);
+    }
+
+    /** What a model node found: the status, and on success what it publishes and records. */
+    private record ModelOutcome(ModelStatus status, String detail, Map<String, Object> outputs,
+                                Optional<BigDecimal> confidence, Optional<String> attributionMethod,
+                                List<RankedAttribution> attributions, List<String> reasonCodes) {
+
+        static ModelOutcome failed(ModelStatus status, String detail) {
+            return new ModelOutcome(status, detail, Map.of(), Optional.empty(), Optional.empty(), List.of(), List.of());
+        }
     }
 
     private static String choose(List<Route> routes, Bindings bindings) {
@@ -898,7 +1231,7 @@ final class CompiledFlow implements Executable {
 
     // --- Compiled nodes -------------------------------------------------------------------------
 
-    private sealed interface Node permits TableNode, SwitchNode, DeriveNode, SplitNode, EndNode {}
+    private sealed interface Node permits TableNode, SwitchNode, DeriveNode, ModelNode, SplitNode, EndNode {}
 
     /** One alternative; {@code when} is null for the final one. */
     private record Route(CelExpression when, String to) {}
@@ -930,6 +1263,14 @@ final class CompiledFlow implements Executable {
 
     private record DeriveNode(ExpressionEnvironment environment, Map<String, CelExpression> set, String publish,
                               Router next) implements Node {}
+
+    /**
+     * A model node. {@code invoker} is null when the node runs in supplied mode; {@code outputs} is
+     * the environment of the {@code valid} condition, which is null when there is none.
+     */
+    private record ModelNode(FlowNode.Model definition, ExpressionEnvironment environment,
+                             Map<String, CelExpression> features, ExpressionEnvironment outputs, CelExpression valid,
+                             ModelInvoker invoker, Duration timeout, String publish, Router next) implements Node {}
 
     /** A bucket that takes the keys whose point, from 0 to 100, is below {@code upper}. */
     private record Slice(String name, int upper, String to) {}

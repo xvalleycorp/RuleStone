@@ -25,6 +25,7 @@ import vn.io.dxa.rulestone.api.AuditSink;
 import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionTimeoutException;
+import vn.io.dxa.rulestone.api.ModelInvoker;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.cel.ExpressionEnvironment;
 
@@ -65,6 +66,8 @@ public final class RuleStone {
         private final Map<String, Double> canaryShares = new HashMap<>();
         private final Map<String, String> shadowVersions = new LinkedHashMap<>();
         private Executor shadowExecutor = Runnable::run;
+        private final Map<String, ModelInvoker> modelInvokers = new LinkedHashMap<>();
+        private boolean suppliedModelsOnly;
 
         private Builder() {}
 
@@ -100,6 +103,35 @@ public final class RuleStone {
 
         public Builder flows(Collection<DecisionFlow> flows) {
             flows.forEach(this::flow);
+            return this;
+        }
+
+        /**
+         * Registers the invoker that calls model {@code modelId} for the {@code model} nodes of
+         * flows in {@code invoke} mode. Every such node needs one, unless the engine is built with
+         * {@link #suppliedModelsOnly()}. The invoker receives the node's pinned version in each
+         * {@link vn.io.dxa.rulestone.api.ModelCall}, so one invoker can serve every version of a model.
+         *
+         * @throws IllegalArgumentException if {@code modelId} already has an invoker
+         */
+        public Builder modelInvoker(String modelId, ModelInvoker invoker) {
+            Objects.requireNonNull(modelId, "modelId");
+            Objects.requireNonNull(invoker, "invoker");
+            if (modelInvokers.putIfAbsent(modelId, invoker) != null) {
+                throw new IllegalArgumentException("model '" + modelId + "' already has an invoker");
+            }
+            return this;
+        }
+
+        /**
+         * Runs every {@code model} node in {@code supplied} mode: the engine calls no model, and
+         * reads each node's result from the facts ({@link vn.io.dxa.rulestone.api.Facts#withModelResult}).
+         * A node whose result is not supplied fails with {@code MISSING} and takes its
+         * {@code onFailure} path. Meant for tests, which then need no model server and are
+         * deterministic, and for replaying recorded decisions; not for production.
+         */
+        public Builder suppliedModelsOnly() {
+            this.suppliedModelsOnly = true;
             return this;
         }
 
@@ -258,9 +290,11 @@ public final class RuleStone {
             Map<String, List<Executable>> byId = new LinkedHashMap<>();
             compiledTables.forEach((id, versions) -> byId.put(id, new ArrayList<>(versions)));
             Map<String, List<DecisionFlow>> flowVersions = new LinkedHashMap<>();
+            CompiledFlow.Models models = new CompiledFlow.Models(modelInvokers, suppliedModelsOnly, nanoTime);
             for (DecisionFlow flow : flows) {
                 flowVersions.computeIfAbsent(flow.id(), id -> new ArrayList<>()).add(flow);
-                CompiledFlow.compile(flow, compiledTables, registered, flowIds, maxIterations, currencyScales, problems)
+                CompiledFlow.compile(flow, compiledTables, registered, flowIds, maxIterations, currencyScales, models,
+                                problems)
                         .ifPresent(f -> byId.computeIfAbsent(flow.id(), id -> new ArrayList<>()).add(f));
             }
             flowVersions.values().forEach(versions -> problems.addAll(DecisionVersions.problems(versions)));
