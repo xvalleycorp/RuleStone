@@ -119,5 +119,55 @@
   {
     "name": "let: macro variables are not local values",
     "tables": ["{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\", \"xs\": [\"int\"], \"loans\": [{\"amount\": \"money\"}]}, \"outputs\": {}, \"let\": {\"x2\": \"xs.map(a, a * 2)\", \"a\": \"x2.size()\"}, \"rules\": [{\"id\": \"R\", \"when\": \"a > 0 && xs.all(x2, x2 > 0)\"}]}"]
+  },
+  {
+    "name": "params: reading parameter sets",
+    "paramSets": [
+      "{\"id\": \"s\", \"version\": \"1\", \"efectiveFrom\": \"2027-01-01\", \"values\": {\"a\": {\"type\": \"int\", \"value\": \"18\"}, \"b\": {\"type\": \"decimal\", \"value\": 0.45}, \"c\": {\"type\": \"money\", \"value\": \"500 XXY\"}, \"d\": {\"type\": \"date\", \"value\": \"2027-02-30\"}, \"e\": {\"type\": [\"string\"], \"value\": [\"X\", 1]}, \"f\": {\"type\": {\"x\": \"int\"}, \"value\": {}}, \"g\": {\"type\": \"double\", \"value\": 1}, \"h\": {\"value\": 1}, \"i\": {\"type\": \"int\"}, \"j\": 5, \"k\": {\"type\": \"int\", \"value\": 1, \"note\": \"x\"}, \"l\": {\"type\": \"bool\", \"value\": null}, \"m\": {\"type\": \"money\", \"value\": 500000}, \"n\": {\"type\": \"int\", \"value\": 1.5}}}",
+      "{\n  \"id\": \"s\",\n  \"id\": \"t\"\n}",
+      "{ \"id\": \"s\", }",
+      "[1, 2]",
+      "   ",
+      "{\"id\": 1, \"version\": \" \", \"description\": 2, \"effectiveFrom\": \"2027-07-01\", \"effectiveTo\": \"2027-01-01\", \"values\": []}",
+      "{\"id\": \"s\", \"version\": \"1\", \"effectiveFrom\": \"soon\"}"
+    ],
+    "tables": []
+  },
+  {
+    "name": "params: checks of parameter sets",
+    "paramSets": [
+      "{\"id\": \"1s\", \"version\": \"v 1\", \"values\": {\"not-valid\": {\"type\": \"int\", \"value\": 1}, \"in\": {\"type\": \"int\", \"value\": 1}}}",
+      "{\"id\": \"s\", \"version\": \"1\", \"effectiveFrom\": \"2027-01-01\", \"values\": {\"a\": {\"type\": \"int\", \"value\": 1}}}",
+      "{\"id\": \"s\", \"version\": \"1\", \"effectiveFrom\": \"2027-02-01\", \"values\": {\"a\": {\"type\": \"int\", \"value\": 1}}}",
+      "{\"id\": \"s\", \"version\": \"2\", \"effectiveFrom\": \"2027-01-01\", \"values\": {\"a\": {\"type\": \"int\", \"value\": 1}}}",
+      "{\"id\": \"u\", \"version\": \"1\", \"effectiveFrom\": \"2027-01-01\", \"effectiveTo\": \"2027-09-01\", \"values\": {\"a\": {\"type\": \"int\", \"value\": 1}}}",
+      "{\"id\": \"u\", \"version\": \"2\", \"effectiveFrom\": \"2027-07-01\", \"values\": {\"a\": {\"type\": \"int\", \"value\": 1}}}"
+    ],
+    "tables": []
+  },
+  {
+    "name": "params: reading declarations",
+    "tables": [
+      "{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": \"retail_credit\", \"rules\": [{\"id\": \"R\", \"when\": \"true\"}]}",
+      "{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"sets\": \"x\", \"version\": \" \", \"values\": []}, \"rules\": [{\"id\": \"R\", \"when\": \"true\"}]}",
+      "{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"set\": \"s\", \"version\": 7, \"values\": {\"a\": \"double\", \"b\": [\"int\", \"int\"]}}, \"rules\": [{\"id\": \"R\", \"when\": \"true\"}]}"
+    ]
+  },
+  {
+    "name": "params: declarations checked against every version of the set",
+    "paramSets": [
+      "{\"id\": \"s\", \"version\": \"1\", \"effectiveFrom\": \"2027-01-01\", \"values\": {\"a\": {\"type\": \"int\", \"value\": 18}, \"b\": {\"type\": \"decimal\", \"value\": \"0.5\"}, \"c\": {\"type\": [\"string\"], \"value\": [\"X\"]}}}",
+      "{\"id\": \"s\", \"version\": \"2\", \"effectiveFrom\": \"2027-07-01\", \"values\": {\"a\": {\"type\": \"int\", \"value\": 18}, \"b\": {\"type\": \"int\", \"value\": 1}}}"
+    ],
+    "tables": [
+      "{\"id\": \"all\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"params\": \"int\", \"x\": \"int\"}, \"outputs\": {}, \"params\": {\"set\": \"s\", \"values\": {\"a\": \"int\", \"b\": \"decimal\", \"c\": [\"string\"], \"bad-name\": \"int\", \"st\": {\"x\": \"int\"}}}, \"let\": {\"q\": \"params.q + x\", \"ok\": \"params.a + 1\"}, \"rules\": [{\"id\": \"R\", \"when\": \"params.a > 1 && params.z && has(params.y)\"}, {\"id\": \"S\", \"when\": \"ok > 1 && params.c.exists(p, p == \\\"X\\\") && [1].all(params, params > 0)\"}]}",
+      "{\"id\": \"unknown\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"set\": \"nope\", \"values\": {\"a\": \"int\"}}, \"rules\": [{\"id\": \"R\", \"when\": \"params.a > 1\"}]}",
+      "{\"id\": \"pinned\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"set\": \"s\", \"version\": \"9\", \"values\": {\"a\": \"int\"}}, \"rules\": [{\"id\": \"R\", \"when\": \"true\"}]}",
+      "{\"id\": \"pinned_ok\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"set\": \"s\", \"version\": \"1\", \"values\": {\"b\": \"decimal\", \"c\": [\"string\"]}}, \"rules\": [{\"id\": \"R\", \"when\": \"params.b > decimal('0.1') && 'X' in params.c\"}]}",
+      "{\"id\": \"undeclared\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\"}, \"outputs\": {}, \"let\": {\"y\": \"params.limit * x\"}, \"rules\": [{\"id\": \"R\", \"when\": \"params.a > x || params.b\"}, {\"id\": \"S\", \"when\": \"params == null\"}]}",
+      "{\"id\": \"input_named_params\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"params\": {\"x\": \"int\"}}, \"outputs\": {}, \"rules\": [{\"id\": \"R\", \"when\": \"params.x > 1\"}]}",
+      "{\"id\": \"empty\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"set\": \"s\", \"values\": {}}, \"rules\": [{\"id\": \"R\", \"when\": \"params.a > 1\"}]}",
+      "{\"id\": \"wrong_types\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"set\": \"s\", \"values\": {\"a\": \"int\", \"b\": \"int\"}}, \"rules\": [{\"id\": \"R\", \"when\": \"params.a + 1\"}]}"
+    ]
   }
 ]

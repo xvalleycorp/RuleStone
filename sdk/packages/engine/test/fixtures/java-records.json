@@ -4799,6 +4799,242 @@
       "error" : "loan_eligibility@3@sha256:20086bceed39338618c0e6d98dda386bebebeae02f5876b5c43ecf9ea473377a: rule R3 condition failed: decimal division by zero in: applicant.monthlyDebt / applicant.monthlyIncome > decimal('0.5')"
     }
   },
+  "loan_eligibility.v4.stone-test.json" : {
+    "17-year-old is rejected as underage" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "1@sha256:7433bec90f1c2a65635fb6287eaa75f6ddb1ba51c6db1f16de374b1087180306"
+      } ],
+      "businessDate" : "2027-03-01",
+      "status" : "OK",
+      "factsHash" : "sha256:942e4da6e27a1552ebde59948a6073c6da278f2795041a51946b7aebf120fd5d",
+      "output" : {
+        "decision" : "REJECT"
+      },
+      "reasonCodes" : [ {
+        "code" : "UNDERAGE",
+        "source" : "loan_eligibility"
+      } ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R1" ]
+      } ],
+      "trace" : [ [ "R1", true ] ]
+    },
+    "blacklisted applicant is rejected" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "1@sha256:7433bec90f1c2a65635fb6287eaa75f6ddb1ba51c6db1f16de374b1087180306"
+      } ],
+      "businessDate" : "2027-03-01",
+      "status" : "OK",
+      "factsHash" : "sha256:b57ea101edb9c98006d36e718cbf7084c26e3b8edf7a75295f75feb9f6f2438f",
+      "output" : {
+        "decision" : "REJECT"
+      },
+      "reasonCodes" : [ {
+        "code" : "BLACKLISTED",
+        "source" : "loan_eligibility"
+      } ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R2" ]
+      } ],
+      "trace" : [ [ "R1", false ], [ "R2", true ] ]
+    },
+    "dormant customer is rejected" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "1@sha256:7433bec90f1c2a65635fb6287eaa75f6ddb1ba51c6db1f16de374b1087180306"
+      } ],
+      "businessDate" : "2027-03-01",
+      "status" : "OK",
+      "factsHash" : "sha256:67234f680f20d799b6b0487b8a3c6196835aab2e98a2c12aba61f7e699ca3d2a",
+      "output" : {
+        "decision" : "REJECT"
+      },
+      "reasonCodes" : [ {
+        "code" : "SEGMENT_BLOCKED",
+        "source" : "loan_eligibility"
+      } ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R3" ]
+      } ],
+      "trace" : [ [ "R1", false ], [ "R2", false ], [ "R3", true ] ]
+    },
+    "sanctioned segment is not blocked under parameter set version 1" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "1@sha256:7433bec90f1c2a65635fb6287eaa75f6ddb1ba51c6db1f16de374b1087180306"
+      } ],
+      "businessDate" : "2027-03-01",
+      "status" : "OK",
+      "factsHash" : "sha256:d40b0a0225f0c664d992487aa0a137a897dc0b125f7888ee234b77cc28794714",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "600000000"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R5" ]
+      } ],
+      "trace" : [ [ "R1", false ], [ "R2", false ], [ "R3", false ], [ "R4", false ], [ "R5", true ] ]
+    },
+    "sanctioned segment is blocked from 1 July 2027" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "2@sha256:65c656c2b20a9a80576385c254eb21252ac218db57beb5e08d23411bf06eef59"
+      } ],
+      "businessDate" : "2027-07-01",
+      "status" : "OK",
+      "factsHash" : "sha256:d40b0a0225f0c664d992487aa0a137a897dc0b125f7888ee234b77cc28794714",
+      "output" : {
+        "decision" : "REJECT"
+      },
+      "reasonCodes" : [ {
+        "code" : "SEGMENT_BLOCKED",
+        "source" : "loan_eligibility"
+      } ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R3" ]
+      } ],
+      "trace" : [ [ "R1", false ], [ "R2", false ], [ "R3", true ] ]
+    },
+    "debt of 48% of income is accepted until 30 June 2027" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "1@sha256:7433bec90f1c2a65635fb6287eaa75f6ddb1ba51c6db1f16de374b1087180306"
+      } ],
+      "businessDate" : "2027-06-30",
+      "status" : "OK",
+      "factsHash" : "sha256:f63378851989ae34d40c829147ef5f886360771d257f1b68d3e50058f495291b",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "240000000"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R5" ]
+      } ],
+      "trace" : [ [ "R1", false ], [ "R2", false ], [ "R3", false ], [ "R4", false ], [ "R5", true ] ]
+    },
+    "debt of 48% of income is rejected from 1 July 2027" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "2@sha256:65c656c2b20a9a80576385c254eb21252ac218db57beb5e08d23411bf06eef59"
+      } ],
+      "businessDate" : "2027-07-01",
+      "status" : "OK",
+      "factsHash" : "sha256:f63378851989ae34d40c829147ef5f886360771d257f1b68d3e50058f495291b",
+      "output" : {
+        "decision" : "REJECT"
+      },
+      "reasonCodes" : [ {
+        "code" : "DTI_HIGH",
+        "source" : "loan_eligibility"
+      } ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R4" ]
+      } ],
+      "trace" : [ [ "R1", false ], [ "R2", false ], [ "R3", false ], [ "R4", true ] ]
+    },
+    "11 monthly incomes are referred for review under parameter set version 2" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "2@sha256:65c656c2b20a9a80576385c254eb21252ac218db57beb5e08d23411bf06eef59"
+      } ],
+      "businessDate" : "2027-09-15",
+      "status" : "OK",
+      "factsHash" : "sha256:3d54e5244b05790a545df8c689bafac1998a65939b3fa7ac9075067296f0c093",
+      "output" : {
+        "decision" : "REVIEW"
+      },
+      "reasonCodes" : [ {
+        "code" : "AMOUNT_ABOVE_LIMIT",
+        "source" : "loan_eligibility"
+      } ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R6" ]
+      } ],
+      "trace" : [ [ "R1", false ], [ "R2", false ], [ "R3", false ], [ "R4", false ], [ "R5", false ], [ "R6", true ] ]
+    },
+    "replay with parameter set version 1 ignores the date" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "params" : [ {
+        "set" : "retail_credit",
+        "version" : "1@sha256:7433bec90f1c2a65635fb6287eaa75f6ddb1ba51c6db1f16de374b1087180306"
+      } ],
+      "businessDate" : "2027-09-15",
+      "status" : "OK",
+      "factsHash" : "sha256:3d54e5244b05790a545df8c689bafac1998a65939b3fa7ac9075067296f0c093",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "360000000"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ "R5" ]
+      } ],
+      "trace" : [ [ "R1", false ], [ "R2", false ], [ "R3", false ], [ "R4", false ], [ "R5", true ] ]
+    },
+    "replay with a parameter set version that does not exist fails" : {
+      "decision" : "loan_eligibility",
+      "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+      "businessDate" : "2027-09-15",
+      "status" : "ERROR",
+      "output" : { },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "loan_eligibility",
+        "type" : "table",
+        "version" : "4@sha256:487683e2469ade4646470229f1f19c7831f231c7607c1a414db4039688bc4f4d",
+        "matchedRules" : [ ]
+      } ],
+      "error" : "parameter set 'retail_credit' has no version '9'"
+    }
+  },
   "transfer_fees.stone-test.json" : {
     "interbank transfer at the counter pays both fees" : {
       "decision" : "transfer_fees",

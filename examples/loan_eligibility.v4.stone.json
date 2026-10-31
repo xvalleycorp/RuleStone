@@ -1,0 +1,78 @@
+{
+  "id": "loan_eligibility",
+  "version": "4",
+  "description": "Unsecured consumer loan eligibility, with the limits of the retail_credit parameter set",
+  "effectiveFrom": "2027-01-01",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "applicant": {
+      "age": "int",
+      "monthlyIncome": "decimal",
+      "monthlyDebt": "decimal",
+      "segment": "string",
+      "blacklisted": "bool"
+    },
+    "amount": "decimal"
+  },
+  "outputs": {
+    "decision": "string",
+    "limit": "decimal"
+  },
+  "params": {
+    "set": "retail_credit",
+    "values": {
+      "minAge": "int",
+      "maxDti": "decimal",
+      "incomeMultiple": "int",
+      "blockedSegments": ["string"]
+    }
+  },
+  "let": {
+    "dti": "applicant.monthlyDebt / applicant.monthlyIncome",
+    "maxAmount": "applicant.monthlyIncome * params.incomeMultiple"
+  },
+  "rules": [
+    {
+      "id": "R1",
+      "description": "Applicants must be of the minimum age",
+      "when": "applicant.age < params.minAge",
+      "then": { "decision": "'REJECT'" },
+      "reasonCode": "UNDERAGE"
+    },
+    {
+      "id": "R2",
+      "when": "applicant.blacklisted",
+      "then": { "decision": "'REJECT'" },
+      "reasonCode": "BLACKLISTED"
+    },
+    {
+      "id": "R3",
+      "description": "Segments the policy does not lend to",
+      "when": "applicant.segment in params.blockedSegments",
+      "then": { "decision": "'REJECT'" },
+      "reasonCode": "SEGMENT_BLOCKED"
+    },
+    {
+      "id": "R4",
+      "description": "Debt-to-income above the policy limit",
+      "when": "dti > params.maxDti",
+      "then": { "decision": "'REJECT'" },
+      "reasonCode": "DTI_HIGH"
+    },
+    {
+      "id": "R5",
+      "description": "Up to the policy's multiple of monthly income, rounded down to the nearest million",
+      "when": "amount <= maxAmount",
+      "then": {
+        "decision": "'APPROVE'",
+        "limit": "(maxAmount / 1000000).round(0, 'FLOOR') * 1000000"
+      }
+    },
+    {
+      "id": "R6",
+      "when": "true",
+      "then": { "decision": "'REVIEW'" },
+      "reasonCode": "AMOUNT_ABOVE_LIMIT"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 [ {
   "name" : "unknown, misspelt and missing fields",
-  "read" : [ [ "$.efectiveFrom: unknown field (allowed: description, effectiveFrom, effectiveTo, hitPolicy, id, inputs, let, outputs, rules, version)", "$.rules[0].reason: unknown field (allowed: description, id, reasonCode, then, when)" ] ],
+  "read" : [ [ "$.efectiveFrom: unknown field (allowed: description, effectiveFrom, effectiveTo, hitPolicy, id, inputs, let, outputs, params, rules, version)", "$.rules[0].reason: unknown field (allowed: description, id, reasonCode, then, when)" ] ],
   "build" : [ ]
 }, {
   "name" : "duplicate key",
@@ -110,4 +110,23 @@
   "name" : "let: macro variables are not local values",
   "read" : [ null ],
   "build" : [ ]
+}, {
+  "name" : "params: reading parameter sets",
+  "read" : [ ],
+  "readParams" : [ [ "$.efectiveFrom: unknown field (allowed: description, effectiveFrom, effectiveTo, id, values, version)", "$.values.a.value: expected an integer", "$.values.c.value: expected money as \"<amount> <CCY>\", e.g. \"1500000 VND\", with an ISO 4217 currency code", "$.values.d.value: expected an existing date as \"yyyy-MM-dd\"", "$.values.e.value[1]: expected a string", "$.values.f.type: parameters must be bool, int, string, decimal, money, date or lists of them", "$.values.g.type: unknown type 'double' (floating point is not supported; use decimal)", "$.values.h.type: required: the parameter's type, e.g. \"decimal\"", "$.values.i.value: required: the parameter's value", "$.values.j: expected an object with \"type\" and \"value\"", "$.values.k.note: unknown field (allowed: type, value)", "$.values.l.value: required: the parameter's value", "$.values.m.value: expected money as \"<amount> <CCY>\", e.g. \"1500000 VND\"", "$.values.n.value: expected an integer" ], [ "invalid JSON: Duplicate field 'id' (line 3, column 7)" ], [ "invalid JSON: Unexpected character ('}' (code 125)): was expecting double-quote to start field name (line 1, column 14)" ], [ "$: expected a JSON object" ], [ "$: expected a JSON object" ], [ "$.id: required non-empty string", "$.version: required non-empty string", "$.description: expected a string", "$.effectiveTo: must be after effectiveFrom", "$.values: required object of name to { \"type\", \"value\" }" ], [ "$.effectiveFrom: expected an ISO date (yyyy-MM-dd) but got 'soon'", "$.values: required object of name to { \"type\", \"value\" }" ] ],
+  "build" : [ ]
+}, {
+  "name" : "params: checks of parameter sets",
+  "read" : [ ],
+  "readParams" : [ null, null, null, null, null, null ],
+  "build" : [ "parameter set 1s@v 1 id: must match [A-Za-z][A-Za-z0-9_.-]*", "parameter set 1s@v 1 version: must be letters, digits, '.', '_' or '-'", "parameter set 1s@v 1 values.not-valid: must be an identifier (a letter or '_', then letters, digits or '_') and not a reserved word", "parameter set 1s@v 1 values.in: must be an identifier (a letter or '_', then letters, digits or '_') and not a reserved word", "parameter set s@1: version registered more than once", "parameter set s@1 and s@2: both take effect on 2027-01-01, so neither supersedes the other; give the later version a later effectiveFrom", "parameter set u@1 and u@2: u@1 is in force until 2027-09-01 (effectiveTo), after u@2 takes effect on 2027-07-01; remove effectiveTo from u@1 or set it to 2027-07-01" ]
+}, {
+  "name" : "params: reading declarations",
+  "read" : [ [ "$.params: expected an object with \"set\", \"values\" and optionally \"version\"" ], [ "$.params.sets: unknown field (allowed: set, values, version)", "$.params.set: required non-empty string", "$.params.version: expected a non-empty string", "$.params.values: required object of name to type" ], [ "$.params.version: expected a non-empty string", "$.params.values.a: unknown type 'double' (floating point is not supported; use decimal)", "$.params.values.b: a list type is written as a one-element array, e.g. [\"decimal\"]" ] ],
+  "build" : [ ]
+}, {
+  "name" : "params: declarations checked against every version of the set",
+  "read" : [ null, null, null, null, null, null, null, null ],
+  "readParams" : [ null, null ],
+  "build" : [ "all@1 inputs.params: reserved name: the parameters declared in \"params\" are read as params.<name>", "all@1 params.values.bad-name: must be an identifier (a letter or '_', then letters, digits or '_') and not a reserved word", "all@1 params.values.st: parameters must be bool, int, string, decimal, money, date or lists of them", "all@1 params.values.b: declared decimal but parameter set s@2 has it as int", "all@1 params.values.c: parameter set s@2 has no parameter 'c'", "all@1 let.q: reads params.q, which params.values does not declare (declared: [a, b, c, bad-name, st])", "all@1 rules[R].when: reads params.y, params.z, which params.values does not declare (declared: [a, b, c, bad-name, st])", "unknown@1 params.set: no parameter set 'nope' is registered", "pinned@1 params.version: parameter set 's' has no version '9'", "undeclared@1 let.y: reads params.limit, but no parameters are declared; declare them in \"params\"", "undeclared@1 rules[R].when: reads params.a, params.b, but no parameters are declared; declare them in \"params\"", "undeclared@1 rules[S].when: reads params, but no parameters are declared; declare them in \"params\"", "empty@1 params.values: declare at least one parameter", "empty@1 rules[R].when: reads params.a, which params.values does not declare (declared: [])", "wrong_types@1 params.values.b: declared int but parameter set s@1 has it as decimal", "wrong_types@1 rules[R].when: expression must produce bool but produces int: params.a + 1" ]
 } ]

@@ -22,6 +22,8 @@ import vn.io.dxa.rulestone.core.DecisionFlow;
 import vn.io.dxa.rulestone.core.DecisionFlowJson;
 import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
+import vn.io.dxa.rulestone.core.ParameterSet;
+import vn.io.dxa.rulestone.core.ParameterSetJson;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 /**
@@ -34,7 +36,7 @@ class ExamplesStoneTest {
     /** The decision flow example and the tables it uses; the browser engine, which runs no flows, skips them. */
     static final Path FLOWS = EXAMPLES.resolve("flows");
 
-    /** Every {@code *.stone.json} table in {@code examples/}, without the flow example's tables. */
+    /** Every {@code *.stone.json} table in {@code examples/}, without the flow examples' tables. */
     static List<DecisionTable> exampleTables() {
         return files(EXAMPLES, ".stone.json").stream().map(DecisionTableJson::read).toList();
     }
@@ -44,6 +46,11 @@ class ExamplesStoneTest {
         List<DecisionTable> tables = new ArrayList<>(exampleTables());
         files(FLOWS, ".stone.json").stream().map(DecisionTableJson::read).forEach(tables::add);
         return tables;
+    }
+
+    /** Every {@code *.params.json} parameter set in {@code examples/}. */
+    static List<ParameterSet> exampleParamSets() {
+        return files(EXAMPLES, ParameterSetJson.FILE_SUFFIX).stream().map(ParameterSetJson::read).toList();
     }
 
     /** Every {@code *.flow.json} flow in {@code examples/flows/}. */
@@ -68,6 +75,7 @@ class ExamplesStoneTest {
                 .clock(Clock.fixed(Instant.parse("2026-12-01T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh")))
                 .decisions(allExampleTables())
                 .flows(exampleFlows())
+                .paramSets(exampleParamSets())
                 .suppliedModelsOnly()   // the model results come from the test cases
                 .build();
     }

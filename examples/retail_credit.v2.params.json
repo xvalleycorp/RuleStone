@@ -1,0 +1,12 @@
+{
+  "id": "retail_credit",
+  "version": "2",
+  "description": "Tighter debt-to-income limit and lower income multiple, approved by the Credit Committee on 2027-06-10",
+  "effectiveFrom": "2027-07-01",
+  "values": {
+    "minAge": { "type": "int", "value": 18 },
+    "maxDti": { "type": "decimal", "value": "0.45" },
+    "incomeMultiple": { "type": "int", "value": 10 },
+    "blockedSegments": { "type": ["string"], "value": ["DORMANT", "SANCTIONED"] }
+  }
+}

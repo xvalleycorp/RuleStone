@@ -154,7 +154,7 @@ class TestingDocTest {
         // The page quotes the report for the four original examples; later examples must not change it.
         Set<String> documented = Set.of("loan_eligibility", "deposit_rate", "transfer_fees");
         List<DecisionTable> tables = ExamplesStoneTest.exampleTables().stream()
-                .filter(t -> documented.contains(t.id()))
+                .filter(t -> documented.contains(t.id()) && !t.ref().equals("loan_eligibility@4"))
                 .toList();
         List<DynamicTest> tests = StoneTests.dynamicTests(engine, dir, RuleCoverage.of(tables)).toList();
         DynamicTest coverage = tests.get(tests.size() - 1);

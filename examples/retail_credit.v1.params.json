@@ -1,0 +1,12 @@
+{
+  "id": "retail_credit",
+  "version": "1",
+  "description": "Retail credit policy limits, approved by the Credit Committee on 2026-12-15",
+  "effectiveFrom": "2027-01-01",
+  "values": {
+    "minAge": { "type": "int", "value": 18 },
+    "maxDti": { "type": "decimal", "value": "0.50" },
+    "incomeMultiple": { "type": "int", "value": 12 },
+    "blockedSegments": { "type": ["string"], "value": ["DORMANT"] }
+  }
+}

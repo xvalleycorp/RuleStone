@@ -145,12 +145,26 @@ class StoneTestJsonTest {
     }
 
     @Test
+    void casesCanForceParameterSetVersions() {
+        StoneTestCase forced = single("""
+                { "name": "n", "params": { "retail_credit": "1" }, "facts": {}, "expect": { } }""");
+        assertThat(forced.params()).containsExactly(Map.entry("retail_credit", "1"));
+        assertThat(forced.ref().params()).containsExactly(Map.entry("retail_credit", "1"));
+        assertThat(problems("""
+                { "decision": "d", "cases": [ { "name": "n", "params": { "a": 1, "b": " " }, "facts": {}, "expect": {} },
+                  { "name": "m", "params": [], "facts": {}, "expect": {} } ] }""")).containsExactly(
+                "$.cases[0].params.a: expected a version label, e.g. \"1\"",
+                "$.cases[0].params.b: expected a version label, e.g. \"1\"",
+                "$.cases[1].params: expected an object of parameter set id to version, e.g. { \"retail_credit\": \"1\" }");
+    }
+
+    @Test
     void rejectsUnknownFieldsAtEveryLevel() {
         assertThat(problems("""
                 { "decision": "d", "decisions": 1, "cases": [
                   { "name": "n", "fact": {}, "facts": {}, "expect": { "matchedRule": [] } } ] }""")).containsExactly(
                 "$.decisions: unknown field (allowed: cases, decision, description)",
-                "$.cases[0].fact: unknown field (allowed: asOf, description, expect, facts, models, name, version)",
+                "$.cases[0].fact: unknown field (allowed: asOf, description, expect, facts, models, name, params, version)",
                 "$.cases[0].expect.matchedRule: unknown field"
                         + " (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)");
     }

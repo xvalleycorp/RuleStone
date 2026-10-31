@@ -1,0 +1,138 @@
+{
+  "decision": "loan_eligibility",
+  "description": "Loan eligibility policy version 4, in force from 2027-01-01, with the limits of parameter set retail_credit: version 1 from 2027-01-01, version 2 from 2027-07-01",
+  "cases": [
+    {
+      "name": "17-year-old is rejected as underage",
+      "asOf": "2027-03-01",
+      "facts": {
+        "applicant": { "age": 17, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT", "limit": null },
+        "reasonCodes": ["UNDERAGE"],
+        "matchedRules": ["R1"]
+      }
+    },
+    {
+      "name": "blacklisted applicant is rejected",
+      "asOf": "2027-03-01",
+      "facts": {
+        "applicant": { "age": 40, "monthlyIncome": 50000000, "monthlyDebt": 0, "segment": "PRIORITY", "blacklisted": true },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT", "limit": null },
+        "reasonCodes": ["BLACKLISTED"],
+        "matchedRules": ["R2"]
+      }
+    },
+    {
+      "name": "dormant customer is rejected",
+      "asOf": "2027-03-01",
+      "facts": {
+        "applicant": { "age": 40, "monthlyIncome": 50000000, "monthlyDebt": 0, "segment": "DORMANT", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT" },
+        "reasonCodes": ["SEGMENT_BLOCKED"],
+        "matchedRules": ["R3"]
+      }
+    },
+    {
+      "name": "sanctioned segment is not blocked under parameter set version 1",
+      "asOf": "2027-03-01",
+      "facts": {
+        "applicant": { "age": 40, "monthlyIncome": 50000000, "monthlyDebt": 0, "segment": "SANCTIONED", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 600000000 },
+        "matchedRules": ["R5"]
+      }
+    },
+    {
+      "name": "sanctioned segment is blocked from 1 July 2027",
+      "description": "Version 2 of retail_credit adds SANCTIONED to blockedSegments; the table is unchanged",
+      "asOf": "2027-07-01",
+      "facts": {
+        "applicant": { "age": 40, "monthlyIncome": 50000000, "monthlyDebt": 0, "segment": "SANCTIONED", "blacklisted": false },
+        "amount": 100000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT" },
+        "reasonCodes": ["SEGMENT_BLOCKED"],
+        "matchedRules": ["R3"]
+      }
+    },
+    {
+      "name": "debt of 48% of income is accepted until 30 June 2027",
+      "description": "Version 1 of retail_credit allows a debt-to-income ratio up to 0.50",
+      "asOf": "2027-06-30",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 20000000, "monthlyDebt": 9600000, "segment": "RETAIL", "blacklisted": false },
+        "amount": 200000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 240000000 },
+        "reasonCodes": [],
+        "matchedRules": ["R5"]
+      }
+    },
+    {
+      "name": "debt of 48% of income is rejected from 1 July 2027",
+      "description": "The same facts: version 2 of retail_credit lowers maxDti to 0.45",
+      "asOf": "2027-07-01",
+      "facts": {
+        "applicant": { "age": 30, "monthlyIncome": 20000000, "monthlyDebt": 9600000, "segment": "RETAIL", "blacklisted": false },
+        "amount": 200000000
+      },
+      "expect": {
+        "output": { "decision": "REJECT" },
+        "exactOutput": true,
+        "reasonCodes": ["DTI_HIGH"],
+        "matchedRules": ["R4"]
+      }
+    },
+    {
+      "name": "11 monthly incomes are referred for review under parameter set version 2",
+      "description": "Version 2 of retail_credit lends up to 10 monthly incomes instead of 12",
+      "asOf": "2027-09-15",
+      "facts": {
+        "applicant": { "age": 35, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 330000000
+      },
+      "expect": {
+        "output": { "decision": "REVIEW", "limit": null },
+        "reasonCodes": ["AMOUNT_ABOVE_LIMIT"],
+        "matchedRules": ["R6"]
+      }
+    },
+    {
+      "name": "replay with parameter set version 1 ignores the date",
+      "description": "For replaying a decision whose record lists retail_credit version 1",
+      "asOf": "2027-09-15",
+      "params": { "retail_credit": "1" },
+      "facts": {
+        "applicant": { "age": 35, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 330000000
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "limit": 360000000 },
+        "matchedRules": ["R5"]
+      }
+    },
+    {
+      "name": "replay with a parameter set version that does not exist fails",
+      "asOf": "2027-09-15",
+      "params": { "retail_credit": "9" },
+      "facts": {
+        "applicant": { "age": 35, "monthlyIncome": 30000000, "monthlyDebt": 0, "segment": "RETAIL", "blacklisted": false },
+        "amount": 330000000
+      },
+      "expect": { "error": "parameter set 'retail_credit' has no version '9'" }
+    }
+  ]
+}

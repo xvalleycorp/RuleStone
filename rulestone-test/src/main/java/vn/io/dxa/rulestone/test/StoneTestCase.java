@@ -33,6 +33,7 @@ public final class StoneTestCase {
     private final Optional<String> description;
     private final Optional<String> version;
     private final Optional<LocalDate> asOf;
+    private final Map<String, String> params;
     private final Facts facts;
 
     // Expectations; an absent Optional or an empty map means "not checked".
@@ -45,7 +46,7 @@ public final class StoneTestCase {
     private final Optional<String> error;
 
     StoneTestCase(String source, String decision, String name, Optional<String> description,
-                  Optional<String> version, Optional<LocalDate> asOf, Facts facts,
+                  Optional<String> version, Optional<LocalDate> asOf, Map<String, String> params, Facts facts,
                   Map<String, Object> output, boolean exactOutput, Optional<List<String>> reasonCodes,
                   Optional<List<String>> matchedRules, Optional<List<String>> path, Optional<String> ruleVersion,
                   Optional<String> error) {
@@ -55,6 +56,7 @@ public final class StoneTestCase {
         this.description = description;
         this.version = version;
         this.asOf = asOf;
+        this.params = Collections.unmodifiableMap(new LinkedHashMap<>(params));
         this.facts = facts;
         this.output = Collections.unmodifiableMap(new LinkedHashMap<>(output));
         this.exactOutput = exactOutput;
@@ -120,6 +122,15 @@ public final class StoneTestCase {
     }
 
     /**
+     * The parameter set versions the case forces, by parameter set id.
+     *
+     * @return the {@code "params"} field; empty if absent
+     */
+    public Map<String, String> params() {
+        return params;
+    }
+
+    /**
      * The input facts. Read with the tables' types, they are as {@code FactsJson} produces them:
      * {@code Money}, {@code LocalDate}, {@code BigDecimal}, {@code Long} and so on. Read without
      * types, numbers are {@code Long} (or {@code BigInteger} beyond 64 bits) and
@@ -143,10 +154,13 @@ public final class StoneTestCase {
     /**
      * The reference this case evaluates.
      *
-     * @return the decision with the case's version and date, if any
+     * @return the decision with the case's version, date and parameter set versions, if any
      */
     public DecisionRef ref() {
         DecisionRef ref = DecisionRef.of(decision);
+        for (Map.Entry<String, String> forced : params.entrySet()) {
+            ref = ref.params(forced.getKey(), forced.getValue());
+        }
         if (version.isPresent()) {
             ref = ref.version(version.get());
         }
