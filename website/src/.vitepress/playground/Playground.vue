@@ -98,9 +98,21 @@ async function show(table: unknown, facts: string | undefined, asOf: string | un
   el.facts = undefined;
   el.asOf = asOf;
   el.paramSets = data.paramSets;
+  // Try it explains runs with the examples' catalog, for tables whose reason codes all have messages in it.
+  el.reasonCodes = coveredByCatalog(table) ? data.reasonCodes : undefined;
   el.table = table as TableEditor['table'];
   await el.updateComplete;
   el.facts = facts ?? '{}';
+}
+
+const catalogCodes = new Set(Object.keys((JSON.parse(data.reasonCodes) as { codes: object }).codes));
+
+function coveredByCatalog(table: unknown): boolean {
+  const rules = (table as { rules?: unknown }).rules;
+  return Array.isArray(rules) && rules.every((r) => {
+    const code = (r as { reasonCode?: unknown } | null)?.reasonCode;
+    return code === undefined || (typeof code === 'string' && catalogCodes.has(code));
+  });
 }
 
 function clearHash(): void {

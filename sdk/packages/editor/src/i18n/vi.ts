@@ -243,6 +243,8 @@ export const vi: Messages = {
     matchedRules: 'Luật khớp',
     trace: 'Vết thực thi (trace)',
     record: 'Bản ghi quyết định',
+    explanation: 'Giải thích',
+    explanationLocale: 'Nội dung bằng {locale}, theo danh mục mã lý do {catalog}.',
     ruleVersion: 'Phiên bản luật',
     noMatch: 'Không có luật nào khớp.',
     invalidTable: 'Hãy sửa các lỗi của bảng trước khi chạy thử ({n} lỗi).',

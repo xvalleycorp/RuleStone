@@ -238,6 +238,8 @@ export const en = {
     matchedRules: 'Matched rules',
     trace: 'Trace',
     record: 'Decision record',
+    explanation: 'Explanation',
+    explanationLocale: 'Messages in {locale}, from reason-code catalog {catalog}.',
     ruleVersion: 'Rule version',
     noMatch: 'No rule matched.',
     invalidTable: 'Fix the table’s problems to try it ({n} problems).',
