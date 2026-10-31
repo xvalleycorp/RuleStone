@@ -225,13 +225,13 @@ class EditorApiTest {
         JsonNode loaded = editor.get("/api/tables/" + V3).json();
         String ruleVersion = loaded.get("ruleVersion").asText();
         ObjectNode table = (ObjectNode) loaded.get("table");
-        table.put("version", "4");
-        table.put("effectiveFrom", "2027-01-01");
+        table.put("version", "5");
+        table.put("effectiveFrom", "2028-01-01");
 
         EditorHarness.Response created = editor.post("/api/tables", "{\"table\": " + table + "}");
 
         assertThat(created.status()).isEqualTo(201);
-        assertThat(created.json().get("file").asText()).isEqualTo("loan_eligibility.v4.stone.json");
+        assertThat(created.json().get("file").asText()).isEqualTo("loan_eligibility.v5.stone.json");
         assertThat(EditorHarness.read(editor.dir.resolve(V3))).isEqualTo(before);
         assertThat(editor.get("/api/tables/" + V3).json().get("ruleVersion").asText()).isEqualTo(ruleVersion);
         assertThat(editor.get("/api/tables").json().get("tables").findValues("problems")).allMatch(JsonNode::isEmpty);

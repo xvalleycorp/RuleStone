@@ -12,6 +12,9 @@ import type { RulestoneConditionBuilder, RulestoneElement, RulestoneFlowCanvas, 
 import flowText from './card_origination.flow.json?raw'
 
 const tables = import.meta.glob('../../../../examples/*.stone.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+const paramSets = Object.values(
+  import.meta.glob('../../../../examples/*.params.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>,
+)
 const tests = import.meta.glob('../../../../examples/*.stone-test.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 
 const examples = new Map(
@@ -82,6 +85,7 @@ function render(): void {
   if (view.value === 'table') {
     const editor = document.createElement('rulestone-table-editor') as RulestoneTableEditor
     shared(editor)
+    editor.paramSets = paramSets
     editor.table = table as never
     const { facts, asOf } = firstCase(example.value)
     if (asOf) editor.asOf = asOf

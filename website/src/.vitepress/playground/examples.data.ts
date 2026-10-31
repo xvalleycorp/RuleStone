@@ -24,6 +24,8 @@ export interface PlaygroundExample {
 
 export interface PlaygroundData {
   examples: PlaygroundExample[];
+  /** Every .params.json parameter set of examples/, as written, for the tables that read them. */
+  paramSets: string[];
   /** The card_origination flow of docs/hybrid-ai.md, section 3.2. */
   flow: string;
 }
@@ -48,7 +50,12 @@ interface TestCase {
 }
 
 export default {
-  watch: ['../../../../examples/*.stone.json', '../../../../examples/*.stone-test.json', '../../../../docs/hybrid-ai.md'],
+  watch: [
+    '../../../../examples/*.stone.json',
+    '../../../../examples/*.stone-test.json',
+    '../../../../examples/*.params.json',
+    '../../../../docs/hybrid-ai.md',
+  ],
   load(files: string[]): PlaygroundData {
     const read = (suffix: string) => files.filter((f) => f.endsWith(suffix));
     const tests = new Map(
@@ -85,6 +92,8 @@ export default {
     if (!flow) throw new Error('docs/hybrid-ai.md has no card_origination flow (website playground)');
     JSON.parse(flow);
 
-    return { examples, flow: flow + '\n' };
+    const paramSets = read('.params.json').sort().map((f) => readFileSync(f, 'utf8'));
+
+    return { examples, paramSets, flow: flow + '\n' };
   },
 };

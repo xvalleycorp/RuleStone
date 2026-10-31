@@ -28,6 +28,8 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import vn.io.dxa.rulestone.core.ParameterSet;
+import vn.io.dxa.rulestone.core.ParameterSetJson;
 
 /**
  * The directory of {@code .stone.json} files the editor works on. The only class that touches the file system.
@@ -38,6 +40,9 @@ import java.util.regex.Pattern;
  * is at most {@value #MAX_DEPTH} directories deep; and it resolves, without following symbolic links,
  * to a regular file inside the directory. So {@code ..}, absolute paths, hidden files, backslashes,
  * encoded separators and symbolic links pointing elsewhere are all refused.
+ *
+ * <p>The {@code .params.json} parameter sets in the directory, read with the same rules, are
+ * registered with every table the editor checks or evaluates; the editor does not edit them.
  */
 final class RulesDirectory {
 
@@ -68,6 +73,29 @@ final class RulesDirectory {
 
     /** Every {@code .stone.json} file, as relative names, sorted. Hidden directories (e.g. {@code .git}) are skipped. */
     List<String> list() {
+        return list(SUFFIX);
+    }
+
+    /**
+     * Every {@code .params.json} parameter set in the directory that can be read, in file name order.
+     * A file that cannot be read is left out; tables that read it then report the set as not registered.
+     */
+    List<ParameterSet> paramSets() {
+        List<ParameterSet> sets = new ArrayList<>();
+        for (String name : list(ParameterSetJson.FILE_SUFFIX)) {
+            try {
+                Path file = root.resolve(name);
+                if (Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) && Files.size(file) <= MAX_FILE_BYTES) {
+                    sets.add(ParameterSetJson.read(Files.readString(file, StandardCharsets.UTF_8)));
+                }
+            } catch (IOException | RuntimeException e) {
+                // left out, as documented
+            }
+        }
+        return sets;
+    }
+
+    private List<String> list(String suffix) {
         List<String> files = new ArrayList<>();
         try {
             Files.walkFileTree(root, java.util.Set.of(), MAX_DEPTH + 1, new SimpleFileVisitor<>() {
@@ -83,7 +111,7 @@ final class RulesDirectory {
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                     if (attrs.isRegularFile()) {
                         String name = relative(file);
-                        if (isValidName(name)) {
+                        if (isValidName(name, suffix)) {
                             files.add(name);
                         }
                     }
@@ -193,7 +221,11 @@ final class RulesDirectory {
 
     /** Whether {@code name} is acceptable as a file name, without touching the file system. */
     static boolean isValidName(String name) {
-        if (name == null || name.isEmpty() || name.length() > 512 || !name.endsWith(SUFFIX)) {
+        return isValidName(name, SUFFIX);
+    }
+
+    private static boolean isValidName(String name, String suffix) {
+        if (name == null || name.isEmpty() || name.length() > 512 || !name.endsWith(suffix)) {
             return false;
         }
         String[] segments = name.split("/", -1);
@@ -205,7 +237,7 @@ final class RulesDirectory {
                 return false;
             }
         }
-        return segments[segments.length - 1].length() > SUFFIX.length();
+        return segments[segments.length - 1].length() > suffix.length();
     }
 
     /** Resolves a name to a path inside the directory, or throws 400. The file need not exist. */

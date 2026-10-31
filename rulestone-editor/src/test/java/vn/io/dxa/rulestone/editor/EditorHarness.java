@@ -33,7 +33,7 @@ final class EditorHarness implements AutoCloseable {
         this.server = server;
     }
 
-    /** Starts an editor over a copy of every {@code *.stone.json} in examples/. */
+    /** Starts an editor over a copy of every {@code *.stone.json} and {@code *.params.json} in examples/. */
     static EditorHarness start(Path tempDir) {
         return start(tempDir, EditorServer.DEFAULT_MAX_BODY_BYTES);
     }
@@ -55,7 +55,7 @@ final class EditorHarness implements AutoCloseable {
         try {
             Path dir = Files.createDirectories(tempDir.resolve("rules"));
             try (Stream<Path> files = Files.list(EXAMPLES)) {
-                for (Path file : files.filter(f -> f.getFileName().toString().endsWith(".stone.json")).toList()) {
+                for (Path file : files.filter(f -> f.getFileName().toString().endsWith(".stone.json") || f.getFileName().toString().endsWith(".params.json")).toList()) {
                     Files.copy(file, dir.resolve(file.getFileName()));
                 }
             }

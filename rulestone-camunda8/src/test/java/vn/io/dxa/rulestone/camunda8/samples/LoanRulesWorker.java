@@ -19,6 +19,8 @@ import vn.io.dxa.rulestone.camunda8.RuleStoneJobWorker;
 import vn.io.dxa.rulestone.camunda8.RuleStoneWorkerOptions;
 import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
+import vn.io.dxa.rulestone.core.ParameterSet;
+import vn.io.dxa.rulestone.core.ParameterSetJson;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 /** The worker setup shown in docs/camunda.md. */
@@ -30,13 +32,19 @@ public final class LoanRulesWorker {
     /** One worker for every RuleStone task. */
     public static JobWorker start(CamundaClient client, Path rulesDirectory) throws IOException {
         List<DecisionTable> tables;
+        List<ParameterSet> paramSets;
         try (Stream<Path> files = Files.list(rulesDirectory)) {
             tables = files.filter(f -> f.toString().endsWith(".stone.json"))
                     .map(DecisionTableJson::read)
                     .toList();
         }
+        try (Stream<Path> files = Files.list(rulesDirectory)) {
+            paramSets = files.filter(f -> f.toString().endsWith(ParameterSetJson.FILE_SUFFIX))
+                    .map(ParameterSetJson::read)
+                    .toList();
+        }
         Clock clock = Clock.system(ZoneId.of("Asia/Ho_Chi_Minh"));
-        RuleStoneEngine engine = RuleStone.builder().clock(clock).decisions(tables).build();
+        RuleStoneEngine engine = RuleStone.builder().clock(clock).decisions(tables).paramSets(paramSets).build();
 
         return RuleStoneJobWorker.register(client, engine, tables,
                 RuleStoneWorkerOptions.builder().clock(clock).build());
