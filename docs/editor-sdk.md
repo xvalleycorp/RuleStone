@@ -468,16 +468,16 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 283.3 KiB, 83.3 KiB gzipped | 193.7 KiB, 54.0 KiB gzipped |
-| `./table-editor` | 235.5 KiB, 69.9 KiB gzipped | 145.9 KiB, 40.6 KiB gzipped |
-| `./rules-grid` | 154.5 KiB, 47.7 KiB gzipped | 98.8 KiB, 28.3 KiB gzipped |
-| `./condition-builder` | 134.9 KiB, 42.6 KiB gzipped | 78.9 KiB, 23.2 KiB gzipped |
-| `./schema-designer` | 111.7 KiB, 36.8 KiB gzipped | 55.7 KiB, 17.5 KiB gzipped |
-| `./flow-canvas` | 97.7 KiB, 30.1 KiB gzipped | 82.7 KiB, 24.5 KiB gzipped |
-| `./try-it` | 142.5 KiB, 45.8 KiB gzipped | 53.3 KiB, 16.3 KiB gzipped |
-| `./cel-input` | 103.2 KiB, 34.3 KiB gzipped | 47.7 KiB, 15.0 KiB gzipped |
+| `@rulestone/editor` (all elements) | 296.3 KiB, 86.8 KiB gzipped | 199.7 KiB, 55.3 KiB gzipped |
+| `./table-editor` | 248.4 KiB, 73.3 KiB gzipped | 151.8 KiB, 42.0 KiB gzipped |
+| `./rules-grid` | 171.8 KiB, 52.8 KiB gzipped | 100.8 KiB, 28.9 KiB gzipped |
+| `./condition-builder` | 151.6 KiB, 47.5 KiB gzipped | 80.4 KiB, 23.6 KiB gzipped |
+| `./schema-designer` | 128.7 KiB, 41.7 KiB gzipped | 57.6 KiB, 18.0 KiB gzipped |
+| `./flow-canvas` | 98.8 KiB, 30.4 KiB gzipped | 83.8 KiB, 24.8 KiB gzipped |
+| `./try-it` | 150.2 KiB, 48.1 KiB gzipped | 54.6 KiB, 16.6 KiB gzipped |
+| `./cel-input` | 106.6 KiB, 35.2 KiB gzipped | 48.8 KiB, 15.3 KiB gzipped |
 
-`@rulestone/engine` alone is 86.2 KiB, 28.1 KiB gzipped. The flow canvas does not load the engine. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
+`@rulestone/engine` alone is 93.1 KiB, 30.3 KiB gzipped. The flow canvas does not load the engine. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
 
 ## The browser engine and the Java engine
 
