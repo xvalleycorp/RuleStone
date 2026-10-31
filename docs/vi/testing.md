@@ -160,7 +160,7 @@ Giống như bảng quyết định, khoá không xác định và khoá trùng 
 
 ```
 invalid test file loan_eligibility.v3.stone-test.json (1 problem):
-  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)
+  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, explanation, matchedRules, output, path, reasonCodes, ruleVersion)
 ```
 
 ## Chạy tệp kiểm thử với JUnit 5

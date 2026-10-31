@@ -68,6 +68,13 @@ import vn.io.dxa.rulestone.core.InvalidFactsException;
  * {@code RuleStone.builder().suppliedModelsOnly()}, so that nodes in {@code invoke} mode use these
  * results too and the tests need no model server.
  *
+ * <p>A case can expect the explanation of its decision record in one locale, as
+ * {@code RuleStoneEngine.explain} gives it: {@code "explanation": { "locale": "vi", "reasons":
+ * ["DTI_HIGH"], "messages": ["…"] }}, with {@code "reasons"}, {@code "messages"} or both.
+ * {@code "reasons"} lists the reason codes in order, and fails for a code without a message;
+ * {@code "messages"} lists the catalog's messages in order. Build the engine under test with
+ * {@code RuleStone.builder().reasonCodeCatalog(…)}.
+ *
  * <p>Given the decision tables (and flows), facts and expected outputs are read with the types the
  * table (or flow) declares, as by {@link FactsJson}: money as {@code "1500000 VND"}, dates as
  * {@code "2026-11-01"}, decimals as numbers or strings; undeclared inputs, struct fields and
@@ -101,7 +108,8 @@ public final class StoneTestJson {
     private static final Set<String> CASE_FIELDS =
             Set.of("name", "description", "version", "asOf", "params", "facts", "models", "expect");
     private static final Set<String> EXPECT_FIELDS =
-            Set.of("output", "exactOutput", "reasonCodes", "matchedRules", "path", "ruleVersion", "error");
+            Set.of("output", "exactOutput", "reasonCodes", "matchedRules", "path", "ruleVersion", "explanation", "error");
+    private static final Set<String> EXPLANATION_FIELDS = Set.of("locale", "reasons", "messages");
 
     private StoneTestJson() {}
 
@@ -341,6 +349,8 @@ public final class StoneTestJson {
             Optional<List<String>> matchedRules = stringList(expect, "matchedRules", at);
             Optional<List<String>> nodes = stringList(expect, "path", at);
             Optional<String> ruleVersion = optionalText(expect, "ruleVersion", at);
+            Optional<StoneTestCase.ExplanationExpectation> explanation = explanation(expect.get("explanation"),
+                    at + ".explanation");
             Optional<String> error = optionalText(expect, "error", at);
             if (error.isPresent()) {
                 if (error.get().isBlank()) {
@@ -361,7 +371,26 @@ public final class StoneTestJson {
                 return null;
             }
             return new StoneTestCase(source, decision, name, description, version, asOf, params, facts,
-                    output, exactOutput, reasonCodes, matchedRules, nodes, ruleVersion, error);
+                    output, exactOutput, reasonCodes, matchedRules, nodes, ruleVersion, explanation, error);
+        }
+
+        /** The expected explanation: a locale, and its reason codes or messages or both. */
+        private Optional<StoneTestCase.ExplanationExpectation> explanation(JsonNode node, String path) {
+            if (node == null) {
+                return Optional.empty();
+            }
+            if (!node.isObject()) {
+                problem(path, "expected an object { \"locale\", \"reasons\", \"messages\" }");
+                return Optional.empty();
+            }
+            unknownFields(node, EXPLANATION_FIELDS, path);
+            String locale = requiredText(node, "locale", path);
+            Optional<List<String>> reasons = stringList(node, "reasons", path);
+            Optional<List<String>> messages = stringList(node, "messages", path);
+            if (reasons.isEmpty() && messages.isEmpty()) {
+                problem(path, "expected \"reasons\", \"messages\" or both");
+            }
+            return Optional.of(new StoneTestCase.ExplanationExpectation(locale, reasons, messages));
         }
 
         /** Parameter set id to the version a case forces; empty when the field is absent. */

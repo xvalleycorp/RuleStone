@@ -16,7 +16,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
 import vn.io.dxa.rulestone.api.DecisionResult;
+import vn.io.dxa.rulestone.api.Explanation;
 import vn.io.dxa.rulestone.api.Money;
+import vn.io.dxa.rulestone.api.RuleStoneEngine;
 
 /**
  * Compares a {@link DecisionResult} with expected values and describes each mismatch.
@@ -67,6 +69,35 @@ final class Expectations {
     /** Checks the ids of the nodes visited, in order; for a decision table, its single step is the decision id. */
     static Optional<String> path(DecisionResult result, List<String> expected) {
         return list("path", expected, result.record().path().stream().map(PathStep::node).toList());
+    }
+
+    /**
+     * Checks the explanation of the result in the expected locale: its reason codes, each of which
+     * must have a message, and its messages.
+     */
+    static List<String> explanation(RuleStoneEngine engine, DecisionResult result,
+                                    StoneTestCase.ExplanationExpectation expected) {
+        Explanation explanation;
+        try {
+            explanation = engine.explain(result.record(), expected.locale());
+        } catch (UnsupportedOperationException e) {
+            return List.of("explanation: the engine has no reason-code catalog; build it with "
+                    + "RuleStone.builder().reasonCodeCatalog(...)");
+        } catch (IllegalArgumentException e) {
+            return List.of("explanation: " + e.getMessage());
+        }
+        List<String> problems = new ArrayList<>();
+        expected.reasons().ifPresent(codes -> {
+            list("explanation reasons", codes, explanation.reasonCodes()).ifPresent(problems::add);
+            explanation.reasons().stream().filter(r -> r.message().isEmpty()).forEach(r -> problems.add(
+                    "explanation: reason code " + r.code() + " has no message in " + expected.locale()));
+        });
+        expected.messages().ifPresent(messages -> {
+            List<String> actual = explanation.reasons().stream()
+                    .map(r -> r.message().orElse("(no message for " + r.code() + ")")).toList();
+            list("explanation messages (" + expected.locale() + ")", messages, actual).ifPresent(problems::add);
+        });
+        return problems;
     }
 
     /**

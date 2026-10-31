@@ -21,7 +21,14 @@
         ],
         "requestedLimit": "50000000 VND"
       },
-      "expect": { "output": { "decision": "REJECT" }, "reasonCodes": ["DTI_HIGH"], "matchedRules": ["DTI_HIGH"] }
+      "expect": {
+        "output": { "decision": "REJECT" }, "reasonCodes": ["DTI_HIGH"], "matchedRules": ["DTI_HIGH"],
+        "explanation": {
+          "locale": "vi",
+          "reasons": ["DTI_HIGH"],
+          "messages": ["Tổng số tiền trả nợ hằng tháng của quý khách quá cao so với thu nhập."]
+        }
+      }
     },
     {
       "name": "unsecured debt above a year of income is referred",

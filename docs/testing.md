@@ -155,7 +155,7 @@ As for decision tables, unknown and duplicate keys are errors, so that a misspel
 
 ```
 invalid test file loan_eligibility.v3.stone-test.json (1 problem):
-  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)
+  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, explanation, matchedRules, output, path, reasonCodes, ruleVersion)
 ```
 
 ## Running test files with JUnit 5

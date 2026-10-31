@@ -1,0 +1,239 @@
+{
+  "version": "1",
+  "description": "Messages for the reason codes of the examples. Credit messages are written for adverse-action notices to the customer; fraud, AML and model-failure messages are for staff only, as disclosing an alert to the customer can amount to tipping off.",
+  "locales": ["en", "vi"],
+  "codes": {
+    "ADDRESS_MISMATCH": {
+      "en": "Staff: the address on the application does not match the address on record.",
+      "vi": "Nội bộ: địa chỉ trên hồ sơ không khớp với địa chỉ đã lưu."
+    },
+    "AGE_OUT_OF_RANGE": {
+      "en": "Your age is outside the range this loan product is offered for.",
+      "vi": "Độ tuổi của quý khách nằm ngoài độ tuổi áp dụng cho sản phẩm vay này."
+    },
+    "AMOUNT_ABOVE_LIMIT": {
+      "en": "The amount you requested is above the maximum we can offer based on your income.",
+      "vi": "Số tiền quý khách đề nghị vượt mức tối đa ngân hàng có thể cấp dựa trên thu nhập của quý khách."
+    },
+    "AMOUNT_SPIKE": {
+      "en": "Staff: the amount is far above the card's usual spending.",
+      "vi": "Nội bộ: số tiền giao dịch cao hơn nhiều so với mức chi tiêu thông thường của thẻ."
+    },
+    "BAD_DEBT_HISTORY": {
+      "en": "Your credit report shows bad debt in the last five years.",
+      "vi": "Báo cáo tín dụng của quý khách có nợ xấu trong năm năm gần đây."
+    },
+    "BLACKLISTED": {
+      "en": "We are unable to offer this product to you under our credit policy.",
+      "vi": "Theo chính sách tín dụng, ngân hàng chưa thể cung cấp sản phẩm này cho quý khách."
+    },
+    "CREDIT_SCORE_MARGINAL": {
+      "en": "Your credit score is below the level for automatic approval, so your application needs further review.",
+      "vi": "Điểm tín dụng của quý khách thấp hơn mức được duyệt tự động, nên hồ sơ cần được xem xét thêm."
+    },
+    "CREDIT_SCORE_TOO_LOW": {
+      "en": "Your credit score is below the minimum for this loan.",
+      "vi": "Điểm tín dụng của quý khách thấp hơn mức tối thiểu của khoản vay này."
+    },
+    "DORMANT_ACCOUNT_REACTIVATED": {
+      "en": "Staff: a large inflow reached an account that had been dormant for a year or more.",
+      "vi": "Nội bộ: tài khoản ngủ đông từ một năm trở lên nhận một khoản tiền lớn."
+    },
+    "DTI_ELEVATED": {
+      "en": "Your monthly debt payments, including this loan, are high compared with your income, so your application needs further review.",
+      "vi": "Tổng số tiền trả nợ hằng tháng, kể cả khoản vay này, cao so với thu nhập của quý khách, nên hồ sơ cần được xem xét thêm."
+    },
+    "DTI_HIGH": {
+      "en": "Your monthly debt payments are too high compared with your income.",
+      "vi": "Tổng số tiền trả nợ hằng tháng của quý khách quá cao so với thu nhập."
+    },
+    "DTI_TOO_HIGH": {
+      "en": "Your monthly debt payments, including this loan, would be too high compared with your income.",
+      "vi": "Tổng số tiền trả nợ hằng tháng, kể cả khoản vay này, sẽ quá cao so với thu nhập của quý khách."
+    },
+    "EMPLOYMENT_HISTORY_SHORT": {
+      "en": "You have been in your current job or business for a short time, so your application needs further review.",
+      "vi": "Thời gian quý khách làm công việc hoặc kinh doanh hiện tại còn ngắn, nên hồ sơ cần được xem xét thêm."
+    },
+    "FOREIGN_COUNTRY": {
+      "en": "Staff: the merchant is outside the cardholder's home country.",
+      "vi": "Nội bộ: đơn vị chấp nhận thẻ ở ngoài quốc gia cư trú của chủ thẻ."
+    },
+    "FOREIGN_CURRENCY": {
+      "en": "Staff: the transaction is in a foreign currency.",
+      "vi": "Nội bộ: giao dịch bằng ngoại tệ."
+    },
+    "FRAUD_SCORE_UNAVAILABLE": {
+      "en": "Staff: the fraud score was not available, so the application was referred for manual review.",
+      "vi": "Nội bộ: không có điểm gian lận, nên hồ sơ được chuyển xem xét thủ công."
+    },
+    "HIGH_RISK_JURISDICTION": {
+      "en": "Staff: the counterparty is in a high-risk jurisdiction.",
+      "vi": "Nội bộ: đối tác giao dịch ở khu vực pháp lý có rủi ro cao."
+    },
+    "HIGH_RISK_MCC": {
+      "en": "Staff: the merchant category is high risk, such as gambling, money transfer or crypto.",
+      "vi": "Nội bộ: ngành hàng của đơn vị chấp nhận thẻ có rủi ro cao, như cờ bạc, chuyển tiền hoặc tiền mã hoá."
+    },
+    "HIGH_UTILISATION": {
+      "en": "Your credit utilisation is high compared with your limits.",
+      "vi": "Mức sử dụng hạn mức tín dụng của quý khách đang cao so với hạn mức được cấp."
+    },
+    "HIGH_VELOCITY": {
+      "en": "Staff: the card made many transactions in the last hour.",
+      "vi": "Nội bộ: thẻ có nhiều giao dịch trong một giờ qua."
+    },
+    "INCOME_BELOW_MINIMUM": {
+      "en": "Your income is below the minimum for this loan.",
+      "vi": "Thu nhập của quý khách thấp hơn mức tối thiểu của khoản vay này."
+    },
+    "KEYED_POS": {
+      "en": "Staff: the card details were keyed in at the point of sale without the card present.",
+      "vi": "Nội bộ: thông tin thẻ được nhập tay tại điểm bán mà không có thẻ."
+    },
+    "LARGE_AMOUNT_WITH_RISK": {
+      "en": "Staff: a large online payment with some fraud risk needs extra verification.",
+      "vi": "Nội bộ: thanh toán trực tuyến giá trị lớn có rủi ro gian lận, cần xác thực thêm."
+    },
+    "LARGE_CASH_REPORTABLE": {
+      "en": "Staff: the large cash transaction must be reported.",
+      "vi": "Nội bộ: giao dịch tiền mặt lớn phải được báo cáo."
+    },
+    "LARGE_CASH_TRANSACTION": {
+      "en": "Staff: a cash transaction at or above the reporting threshold.",
+      "vi": "Nội bộ: giao dịch tiền mặt bằng hoặc vượt ngưỡng phải báo cáo."
+    },
+    "LIMIT_REDUCED": {
+      "en": "We can offer a lower limit than you requested, based on your income and existing debts.",
+      "vi": "Dựa trên thu nhập và các khoản nợ hiện có, ngân hàng có thể cấp hạn mức thấp hơn mức quý khách đề nghị."
+    },
+    "LTV_ELEVATED": {
+      "en": "The loan amount is high compared with the value of your collateral, so your application needs further review.",
+      "vi": "Số tiền vay cao so với giá trị tài sản bảo đảm, nên hồ sơ cần được xem xét thêm."
+    },
+    "LTV_TOO_HIGH": {
+      "en": "The loan amount is too high compared with the value of your collateral.",
+      "vi": "Số tiền vay quá cao so với giá trị tài sản bảo đảm của quý khách."
+    },
+    "MISSED_PAYMENTS": {
+      "en": "You have missed payments in the last 12 months.",
+      "vi": "Quý khách có kỳ thanh toán bị chậm hoặc bỏ lỡ trong 12 tháng gần đây."
+    },
+    "MODEL_UNAVAILABLE": {
+      "en": "Staff: the risk model was not available, so the application was referred for manual review.",
+      "vi": "Nội bộ: không có kết quả từ mô hình rủi ro, nên hồ sơ được chuyển xem xét thủ công."
+    },
+    "MULTI_COUNTRY_24H": {
+      "en": "Staff: the card was used in three or more countries within 24 hours.",
+      "vi": "Nội bộ: thẻ được dùng ở ba quốc gia trở lên trong vòng 24 giờ."
+    },
+    "NAME_MISSING": {
+      "en": "Staff: the customer's name is missing, so it cannot be screened.",
+      "vi": "Nội bộ: thiếu tên khách hàng, nên không thể sàng lọc."
+    },
+    "NEW_ACCOUNT": {
+      "en": "Staff: the card account was opened less than 30 days ago.",
+      "vi": "Nội bộ: tài khoản thẻ mới mở chưa đến 30 ngày."
+    },
+    "NEW_ACCOUNT_LARGE_TRANSFER": {
+      "en": "Staff: a large transfer on an account opened less than 30 days ago.",
+      "vi": "Nội bộ: chuyển khoản lớn trên tài khoản mới mở chưa đến 30 ngày."
+    },
+    "NEW_DEVICE": {
+      "en": "Staff: the application was made from a device seen only recently.",
+      "vi": "Nội bộ: hồ sơ được gửi từ một thiết bị mới xuất hiện gần đây."
+    },
+    "NEW_DEVICE_ECOM": {
+      "en": "Staff: an online payment from a device not seen before on this card.",
+      "vi": "Nội bộ: thanh toán trực tuyến từ một thiết bị chưa từng dùng với thẻ này."
+    },
+    "NIGHT_ECOM": {
+      "en": "Staff: an online payment made late at night, cardholder's local time.",
+      "vi": "Nội bộ: thanh toán trực tuyến vào đêm khuya theo giờ địa phương của chủ thẻ."
+    },
+    "PD_HIGH": {
+      "en": "Our assessment of your credit risk is above the level we can approve.",
+      "vi": "Kết quả đánh giá rủi ro tín dụng của quý khách cao hơn mức ngân hàng có thể phê duyệt."
+    },
+    "PEP_LARGE_TRANSACTION": {
+      "en": "Staff: a large transaction by a politically exposed customer.",
+      "vi": "Nội bộ: giao dịch lớn của khách hàng là người có ảnh hưởng chính trị."
+    },
+    "PEP_MATCH": {
+      "en": "Staff: the name matches a politically exposed person and needs enhanced due diligence.",
+      "vi": "Nội bộ: tên trùng với người có ảnh hưởng chính trị, cần thẩm định tăng cường."
+    },
+    "POSSIBLE_STRUCTURING": {
+      "en": "Staff: several cash deposits just below the reporting threshold within seven days.",
+      "vi": "Nội bộ: nhiều lần nộp tiền mặt sát dưới ngưỡng báo cáo trong bảy ngày."
+    },
+    "PURPOSE_NOT_STANDARD": {
+      "en": "The purpose of the loan is not one we approve automatically, so your application needs further review.",
+      "vi": "Mục đích vay không thuộc nhóm được duyệt tự động, nên hồ sơ cần được xem xét thêm."
+    },
+    "RAPID_MOVEMENT_OF_FUNDS": {
+      "en": "Staff: most of the money received was moved out within 24 hours.",
+      "vi": "Nội bộ: phần lớn số tiền nhận được đã được chuyển đi trong vòng 24 giờ."
+    },
+    "RECENT_DELINQUENCY": {
+      "en": "Your credit report shows recent late payments.",
+      "vi": "Báo cáo tín dụng của quý khách có các kỳ thanh toán trễ hạn gần đây."
+    },
+    "RISK_SCORE_HIGH": {
+      "en": "Staff: the fraud risk score is high, so the payment needs extra verification.",
+      "vi": "Nội bộ: điểm rủi ro gian lận cao, nên giao dịch cần xác thực thêm."
+    },
+    "RISK_SCORE_VERY_HIGH": {
+      "en": "Staff: the fraud risk score is very high, so the payment was declined.",
+      "vi": "Nội bộ: điểm rủi ro gian lận rất cao, nên giao dịch bị từ chối."
+    },
+    "SANCTIONS_MATCH": {
+      "en": "Staff: the name and date of birth match a sanctions list entry.",
+      "vi": "Nội bộ: tên và ngày sinh trùng với một mục trong danh sách cấm vận."
+    },
+    "SANCTIONS_POSSIBLE_MATCH": {
+      "en": "Staff: the name closely matches a sanctions list entry, but the date of birth could not be confirmed.",
+      "vi": "Nội bộ: tên gần trùng với một mục trong danh sách cấm vận, nhưng chưa xác nhận được ngày sinh."
+    },
+    "SANCTIONS_WEAK_MATCH": {
+      "en": "Staff: the name partly matches a sanctions list entry and should be reviewed.",
+      "vi": "Nội bộ: tên trùng một phần với một mục trong danh sách cấm vận, cần xem xét."
+    },
+    "SEGMENT_BLOCKED": {
+      "en": "This product is not available for your customer segment under our credit policy.",
+      "vi": "Theo chính sách tín dụng, sản phẩm này chưa áp dụng cho nhóm khách hàng của quý khách."
+    },
+    "STEP_UP_UNAVAILABLE": {
+      "en": "Staff: the payment was declined because extra verification is not possible on this channel.",
+      "vi": "Nội bộ: giao dịch bị từ chối vì kênh này không hỗ trợ xác thực bổ sung."
+    },
+    "SUSPICION_SCORE_ELEVATED": {
+      "en": "Staff: the suspicion score needs review by an AML analyst.",
+      "vi": "Nội bộ: điểm nghi ngờ cần chuyên viên phòng, chống rửa tiền xem xét."
+    },
+    "SUSPICION_SCORE_HIGH": {
+      "en": "Staff: the suspicion score is high; prepare a suspicious transaction report.",
+      "vi": "Nội bộ: điểm nghi ngờ cao; cần lập báo cáo giao dịch đáng ngờ."
+    },
+    "TERM_OUT_OF_RANGE": {
+      "en": "The loan term you requested is outside the terms this product is offered for.",
+      "vi": "Thời hạn vay quý khách đề nghị nằm ngoài thời hạn áp dụng cho sản phẩm này."
+    },
+    "THIN_CREDIT_FILE": {
+      "en": "Your credit history is too short for us to assess fully.",
+      "vi": "Lịch sử tín dụng của quý khách còn quá ngắn để ngân hàng đánh giá đầy đủ."
+    },
+    "UNDERAGE": {
+      "en": "You are below the minimum age for this product.",
+      "vi": "Quý khách chưa đủ độ tuổi tối thiểu để sử dụng sản phẩm này."
+    },
+    "UNSECURED_DEBT_HIGH": {
+      "en": "Your unsecured debt is high compared with your annual income, so your application needs further review.",
+      "vi": "Dư nợ tín chấp của quý khách cao so với thu nhập hằng năm, nên hồ sơ cần được xem xét thêm."
+    },
+    "UNSECURED_GRADE_D": {
+      "en": "At your credit score, this loan can only be offered with collateral, so your application needs further review.",
+      "vi": "Với điểm tín dụng hiện tại, khoản vay này chỉ có thể được cấp khi có tài sản bảo đảm, nên hồ sơ cần được xem xét thêm."
+    }
+  }
+}

@@ -166,7 +166,7 @@ class StoneTestJsonTest {
                 "$.decisions: unknown field (allowed: cases, decision, description)",
                 "$.cases[0].fact: unknown field (allowed: asOf, description, expect, facts, models, name, params, version)",
                 "$.cases[0].expect.matchedRule: unknown field"
-                        + " (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)");
+                        + " (allowed: error, exactOutput, explanation, matchedRules, output, path, reasonCodes, ruleVersion)");
     }
 
     @Test
@@ -347,5 +347,50 @@ class StoneTestJsonTest {
                 .containsEntry("amount", Money.of("10000000", "VND"))
                 .containsEntry("valueDate", LocalDate.of(2026, 11, 2));
         assertThat(cases).filteredOn(c -> !c.expectsError()).allSatisfy(c -> assertThat(c.check(engine)).isPresent());
+    }
+
+    private static StoneTestCase loanCase(String explanation) {
+        List<StoneTestCase> cases = StoneTestJson.read("""
+                { "decision": "credit_limit_increase", "cases": [ { "name": "dti",
+                  "facts": { "applicant": { "monthlyIncome": "30000000 VND", "missedPayments12m": 0 },
+                             "loans": [ { "type": "CAR", "monthlyPayment": "16000000 VND", "outstanding": "1000000 VND" } ],
+                             "requestedLimit": "50000000 VND" },
+                  "expect": { "explanation": %s } } ] }""".formatted(explanation), "t.json",
+                ExamplesStoneTest.allExampleTables());
+        return cases.get(0);
+    }
+
+    @Test
+    void checksTheExplanation() {
+        assertThat(loanCase("""
+                { "locale": "en", "reasons": ["DTI_HIGH"],
+                  "messages": ["Your monthly debt payments are too high compared with your income."] }""")
+                .check(engine)).isPresent();
+        assertThatThrownBy(() -> loanCase("""
+                { "locale": "vi", "reasons": ["UNDERAGE"], "messages": ["x"] }""").check(engine))
+                .isInstanceOf(AssertionError.class)
+                .hasMessageContaining("explanation reasons: expected [UNDERAGE] but was [DTI_HIGH]")
+                .hasMessageContaining("explanation messages (vi): expected [x] but was "
+                        + "[Tổng số tiền trả nợ hằng tháng của quý khách quá cao so với thu nhập.]");
+        assertThatThrownBy(() -> loanCase("{ \"locale\": \"fr\", \"reasons\": [] }").check(engine))
+                .hasMessageContaining("explanation: locale 'fr' is not in the reason-code catalog, which has en, vi");
+        RuleStoneEngine withoutCatalog = RuleStone.builder().decisions(ExamplesStoneTest.allExampleTables())
+                .paramSets(ExamplesStoneTest.exampleParamSets()).build();
+        assertThatThrownBy(() -> loanCase("{ \"locale\": \"en\", \"reasons\": [] }").check(withoutCatalog))
+                .hasMessageContaining("explanation: the engine has no reason-code catalog");
+    }
+
+    @Test
+    void reportsInvalidExplanationExpectations() {
+        assertThat(problems("""
+                { "decision": "d", "cases": [
+                  { "name": "a", "facts": {}, "expect": { "explanation": { "reasons": ["X"], "extra": 1 } } },
+                  { "name": "b", "facts": {}, "expect": { "explanation": { "locale": "en" } } },
+                  { "name": "c", "facts": {}, "expect": { "explanation": "en" } } ] }"""))
+                .containsExactly(
+                        "$.cases[0].expect.explanation.extra: unknown field (allowed: locale, messages, reasons)",
+                        "$.cases[0].expect.explanation.locale: required non-empty string",
+                        "$.cases[1].expect.explanation: expected \"reasons\", \"messages\" or both",
+                        "$.cases[2].expect.explanation: expected an object { \"locale\", \"reasons\", \"messages\" }");
     }
 }
