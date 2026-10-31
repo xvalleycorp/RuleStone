@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: 0db1f366d7a98b42df18610d186d711728d3a4d160f4e15ab6eb73b32718f1c1
+sourceHash: 1e8b2bcdd365e6632c16496a31dc23acf2b770103013b0c60f155508dd339958
 ---
 
 # SDK trình soạn thảo
@@ -468,16 +468,16 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@rulestone/editor` (mọi phần tử) | 283.3 KiB, 83.3 KiB khi nén gzip | 193.7 KiB, 54.0 KiB khi nén gzip |
-| `./table-editor` | 235.5 KiB, 69.9 KiB khi nén gzip | 145.9 KiB, 40.6 KiB khi nén gzip |
-| `./rules-grid` | 154.5 KiB, 47.7 KiB khi nén gzip | 98.8 KiB, 28.3 KiB khi nén gzip |
-| `./condition-builder` | 134.9 KiB, 42.6 KiB khi nén gzip | 78.9 KiB, 23.2 KiB khi nén gzip |
-| `./schema-designer` | 111.7 KiB, 36.8 KiB khi nén gzip | 55.7 KiB, 17.5 KiB khi nén gzip |
-| `./flow-canvas` | 97.7 KiB, 30.1 KiB khi nén gzip | 82.7 KiB, 24.5 KiB khi nén gzip |
-| `./try-it` | 142.5 KiB, 45.8 KiB khi nén gzip | 53.3 KiB, 16.3 KiB khi nén gzip |
-| `./cel-input` | 103.2 KiB, 34.3 KiB khi nén gzip | 47.7 KiB, 15.0 KiB khi nén gzip |
+| `@rulestone/editor` (mọi phần tử) | 296.3 KiB, 86.8 KiB khi nén gzip | 199.7 KiB, 55.3 KiB khi nén gzip |
+| `./table-editor` | 248.4 KiB, 73.3 KiB khi nén gzip | 151.8 KiB, 42.0 KiB khi nén gzip |
+| `./rules-grid` | 171.8 KiB, 52.8 KiB khi nén gzip | 100.8 KiB, 28.9 KiB khi nén gzip |
+| `./condition-builder` | 151.6 KiB, 47.5 KiB khi nén gzip | 80.4 KiB, 23.6 KiB khi nén gzip |
+| `./schema-designer` | 128.7 KiB, 41.7 KiB khi nén gzip | 57.6 KiB, 18.0 KiB khi nén gzip |
+| `./flow-canvas` | 98.8 KiB, 30.4 KiB khi nén gzip | 83.8 KiB, 24.8 KiB khi nén gzip |
+| `./try-it` | 150.2 KiB, 48.1 KiB khi nén gzip | 54.6 KiB, 16.6 KiB khi nén gzip |
+| `./cel-input` | 106.6 KiB, 35.2 KiB khi nén gzip | 48.8 KiB, 15.3 KiB khi nén gzip |
 
-Riêng `@rulestone/engine` là 86.2 KiB, 28.1 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
+Riêng `@rulestone/engine` là 93.1 KiB, 30.3 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
 
 ## Bộ máy luật trên trình duyệt và bộ máy luật Java
 
