@@ -2577,6 +2577,189 @@
     },
     {
       "expr": "[0, 1, 2, 3].map(x, x != 0, x == 0 ? 1/x : [1, 2].map(y, y)[0])"
+    },
+    {
+      "expr": "[1, 2, 3].sum()"
+    },
+    {
+      "expr": "[decimal('1.50'), decimal('2.5')].sum()"
+    },
+    {
+      "expr": "[m, money('0.50', 'VND')].sum()"
+    },
+    {
+      "expr": "[1, 2].sum(0)"
+    },
+    {
+      "expr": "[d, d].sum(decimal('0'))"
+    },
+    {
+      "expr": "[m].sum(money(0, 'VND'))"
+    },
+    {
+      "expr": "[1, 2].filter(x, x > 5).sum()"
+    },
+    {
+      "expr": "[d].filter(x, false).sum()"
+    },
+    {
+      "expr": "[m].filter(x, false).sum()"
+    },
+    {
+      "expr": "[m].filter(x, false).sum(money(0, 'USD'))"
+    },
+    {
+      "expr": "[1].filter(x, false).sum(7)"
+    },
+    {
+      "expr": "[money(1, 'USD')].sum(money(0, 'VND'))"
+    },
+    {
+      "expr": "[m, money(1, 'USD')].sum()"
+    },
+    {
+      "expr": "[m, money(1, 'USD')].min()"
+    },
+    {
+      "expr": "[m, money(1, 'USD')].max()"
+    },
+    {
+      "expr": "[m, money(1, 'USD')].avg()"
+    },
+    {
+      "expr": "[big, 1].sum()"
+    },
+    {
+      "expr": "[-big, -2].sum()"
+    },
+    {
+      "expr": "[big, 1, -1].sum()"
+    },
+    {
+      "expr": "[big, big].avg()"
+    },
+    {
+      "expr": "[1, 2, 3, 4, 5].sum()"
+    },
+    {
+      "expr": "[1, 2, 3, 4, 5, 6].sum()"
+    },
+    {
+      "expr": "[1, 2, 3].map(x, x).sum()"
+    },
+    {
+      "expr": "[[1], [2]].map(x, x.sum())"
+    },
+    {
+      "expr": "[[1], [2]].map(x, x.sum()).sum()"
+    },
+    {
+      "expr": "[3, 1, 2].min()"
+    },
+    {
+      "expr": "[3, 1, 2].max()"
+    },
+    {
+      "expr": "[3, 1, 2].avg()"
+    },
+    {
+      "expr": "[1, 1, 2].avg()"
+    },
+    {
+      "expr": "[1, 2].avg()"
+    },
+    {
+      "expr": "[decimal('1.0'), decimal('1.00')].max()"
+    },
+    {
+      "expr": "[decimal('1.0'), decimal('1.00')].min()"
+    },
+    {
+      "expr": "[d, decimal('0.25')].min()"
+    },
+    {
+      "expr": "[d, decimal('3')].avg()"
+    },
+    {
+      "expr": "[m, money(1000000, 'VND'), money(1, 'VND')].avg()"
+    },
+    {
+      "expr": "[m, money(2, 'VND')].max()"
+    },
+    {
+      "expr": "[1].filter(x, false).min()"
+    },
+    {
+      "expr": "[d].filter(x, false).max()"
+    },
+    {
+      "expr": "[m].filter(x, false).avg()"
+    },
+    {
+      "expr": "[0].map(x, 1/x).sum()"
+    },
+    {
+      "expr": "[1, 2].sum() + d"
+    },
+    {
+      "expr": "min(d, decimal('2'))"
+    },
+    {
+      "expr": "max(m, money(1, 'VND'))"
+    },
+    {
+      "expr": "names.sum()"
+    },
+    {
+      "expr": "i.sum()"
+    },
+    {
+      "expr": "[1].sum(d)"
+    },
+    {
+      "expr": "[1].sum(0, 1)"
+    },
+    {
+      "expr": "[true].min()"
+    },
+    {
+      "expr": "d.max()"
+    },
+    {
+      "expr": "[1].avg() == 1"
+    },
+    {
+      "expr": "sum([1, 2])"
+    },
+    {
+      "expr": "[].sum()"
+    },
+    {
+      "expr": "[].sum(0)"
+    },
+    {
+      "expr": "[].max()"
+    },
+    {
+      "expr": "dyn([1, 2]).sum()"
+    },
+    {
+      "expr": "[x].sum()"
+    },
+    {
+      "expr": "i.sum(x)"
+    },
+    {
+      "expr": "[m, money(2, 'VND')].min()"
+    },
+    {
+      "expr": "[money(2, 'VND'), m, money('1500000.0', 'VND')].max()"
+    },
+    {
+      "expr": "[2, 5, 5, 1].max()"
+    },
+    {
+      "expr": "[decimal('2'), decimal('-1.0'), decimal('-1')].min()"
     }
   ]
 }

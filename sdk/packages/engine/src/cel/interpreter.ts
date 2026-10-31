@@ -14,7 +14,8 @@ import { EvalError, type EvalContext, type Overload } from './functions.js'
 import type { CelType } from './types.js'
 
 export interface Activation extends EvalContext {
-  readonly variables: ReadonlyMap<string, Value>
+  /** Resolves a declared variable; may compute it (a local value) and throw its EvalError. */
+  readonly variables: { get(name: string): Value | undefined }
   readonly maxIterations: number
 }
 
@@ -95,8 +96,22 @@ class Interpreter {
       }
     }
     const args: Value[] = []
-    if (node.target) args.push(this.eval(node.target, frame))
+    if (node.aggregate) {
+      // As cel-java's expansion: iterate over the target, counting every element, then call.
+      const range = this.eval(node.target!, frame)
+      if (!Array.isArray(range)) throw nativeAt('expected a list to iterate over', node.pos)
+      for (let k = 0; k < range.length; k++) this.tick(node)
+      args.push(range)
+    } else if (node.target) args.push(this.eval(node.target, frame))
     for (const arg of node.args) args.push(this.eval(arg, frame))
+    if (node.aggregate) {
+      // cel-java tells overloads apart by the Java class of the arguments, and every list is a List.
+      const candidates = node.overloads!.filter((o) => o.params.length === args.length)
+      if (candidates.length > 1) {
+        const ids = candidates.map((o) => o.id).join(', ')
+        throw new EvalError(`evaluation error: Ambiguous overloads for function '${node.fn}'. Matching candidates: ${ids}`, false)
+      }
+    }
     const overload = node.overloads!.find((o) => o.params.every((p, k) => matches(args[k]!, p)))
     if (!overload) throw this.noOverload(node)
     return this.invoke(overload, args, node.pos)
@@ -116,7 +131,7 @@ class Interpreter {
     return nativeAt(`No matching overload for function '${node.fn}'. Overload candidates: ${candidates}`, node.pos)
   }
 
-  private tick(node: Comprehension): void {
+  private tick(node: Comprehension | Call): void {
     if (++this.iterations > this.activation.maxIterations) {
       throw nativeAt(`Iteration budget exceeded: ${this.activation.maxIterations}`, node.pos)
     }

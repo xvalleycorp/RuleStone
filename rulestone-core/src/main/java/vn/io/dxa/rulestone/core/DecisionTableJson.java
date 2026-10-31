@@ -56,7 +56,7 @@ public final class DecisionTableJson {
             .build();
 
     private static final Set<String> TABLE_FIELDS = Set.of(
-            "id", "version", "description", "effectiveFrom", "effectiveTo", "hitPolicy", "inputs", "outputs", "rules");
+            "id", "version", "description", "effectiveFrom", "effectiveTo", "hitPolicy", "inputs", "outputs", "let", "rules");
     private static final Set<String> RULE_FIELDS = Set.of("id", "description", "when", "then", "reasonCode");
 
     private DecisionTableJson() {}
@@ -108,6 +108,10 @@ public final class DecisionTableJson {
         json.put("hitPolicy", table.hitPolicy().name());
         json.put("inputs", typesJson(table.inputs()));
         json.put("outputs", typesJson(table.outputs()));
+        // Omitted when empty, so that tables without local values keep their hash.
+        if (!table.let().isEmpty()) {
+            json.put("let", new TreeMap<>(table.let()));
+        }
         List<Object> rules = new ArrayList<>();
         for (Rule rule : table.rules()) {
             Map<String, Object> r = new TreeMap<>();
@@ -175,11 +179,32 @@ public final class DecisionTableJson {
             HitPolicy hitPolicy = hitPolicy(root);
             Map<String, ValueType> inputs = typeMap(root, "inputs");
             Map<String, ValueType> outputs = typeMap(root, "outputs");
+            Map<String, String> let = localValues(root);
             List<Rule> rules = rules(root);
             if (!problems.isEmpty()) {
                 throw new InvalidDecisionException(problems);
             }
-            return new DecisionTable(id, version, description, from, to, hitPolicy, inputs, outputs, rules);
+            return new DecisionTable(id, version, description, from, to, hitPolicy, inputs, outputs, let, rules);
+        }
+
+        private Map<String, String> localValues(JsonNode root) {
+            JsonNode node = root.get("let");
+            Map<String, String> let = new LinkedHashMap<>();
+            if (node == null || node.isNull()) {
+                return let;
+            }
+            if (!node.isObject()) {
+                problem("$.let", "expected an object of name to CEL expression");
+                return let;
+            }
+            node.properties().forEach(e -> {
+                if (e.getValue().isTextual()) {
+                    let.put(e.getKey(), e.getValue().asText());
+                } else {
+                    problem("$.let." + e.getKey(), "expected a CEL expression string");
+                }
+            });
+            return let;
         }
 
         private List<Rule> rules(JsonNode root) {

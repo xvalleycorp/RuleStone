@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
-import { HIT_POLICIES, cloneJson, normalizeTable, tableText, updateTable, type TableJson } from '../model/table.js'
-import { sortProblems, validateTable, type Problem, type ProblemTarget, type ValidationResult } from '../model/validate.js'
+import {
+  HIT_POLICIES, cloneJson, deleteLocal, newLocalName, normalizeTable, setLocal, tableText, updateTable, type TableJson,
+} from '../model/table.js'
+import { tableVariables } from '../model/schema.js'
+import { localsOf, sortProblems, validateTable, type Problem, type ProblemTarget, type ValidationResult } from '../model/validate.js'
+import './cel-input.js'
 import { RulestoneElement, define } from './base.js'
 import './rules-grid.js'
 import './schema-designer.js'
@@ -35,7 +39,7 @@ export interface TableChangeDetail {
   readonly valid: boolean
 }
 
-type Tab = 'rules' | 'schema' | 'json'
+type Tab = 'rules' | 'schema' | 'let' | 'json'
 
 /**
  * `<rulestone-table-editor>`: the complete decision table editor: metadata, the schema
@@ -86,6 +90,35 @@ export class RulestoneTableEditor extends RulestoneElement {
     css`
       :host {
         container-type: inline-size;
+      }
+      .local-list {
+        list-style: none;
+        margin: 0 0 8px;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .local-list li {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 8px;
+        align-items: start;
+      }
+      .local-list label {
+        display: flex;
+        flex-direction: column;
+      }
+      .local-list input.local-name {
+        width: 10em;
+      }
+      .local-list rs-cel-input {
+        flex: 1 1 18em;
+        min-width: 0;
+      }
+      .local-problem {
+        flex-basis: 100%;
+        margin: 0;
       }
       .meta {
         display: flex;
@@ -395,6 +428,7 @@ export class RulestoneTableEditor extends RulestoneElement {
     const tabs: [Tab, string][] = [
       ['rules', this.t('table.tabRules')],
       ['schema', this.t('table.tabSchema')],
+      ['let', this.t('table.tabLet')],
       ['json', this.t('table.tabJson')],
     ]
     return html`<div part="tabs" role="tablist" aria-label=${this.t('table.label')} @keydown=${(e: KeyboardEvent) => {
@@ -437,6 +471,8 @@ export class RulestoneTableEditor extends RulestoneElement {
               this.edit(e.detail.table)
             }}
           ></rulestone-rules-grid>`
+        : this._tab === 'let'
+          ? this.renderLocals(problems)
         : this._tab === 'schema'
           ? html`<rulestone-schema-designer
               .table=${this.table}
@@ -458,8 +494,62 @@ export class RulestoneTableEditor extends RulestoneElement {
     </div>`
   }
 
+  /** The local values (let) as a list of names and expressions. */
+  private renderLocals(problems: readonly Problem[]): TemplateResult {
+    const locals = Object.entries(localsOf(this.table))
+    const variables = tableVariables(this.table.inputs, localsOf(this.table))
+    return html`<section class="locals" aria-label=${this.t('table.tabLet')}>
+      <p class="muted">${this.t('table.letHelp')}</p>
+      ${locals.length === 0
+        ? html`<p class="muted">${this.t('table.letNone')}</p>`
+        : html`<ul class="local-list">
+            ${locals.map(([name, source]) => {
+              const scope = new Map(variables)
+              scope.delete(name)
+              const issues = problems.filter((p) => p.target.kind === 'let' && p.target.name === name)
+              return html`<li data-local=${name}>
+                <label>${this.t('table.letName')}
+                  <input
+                    class="local-name"
+                    .value=${name}
+                    ?readonly=${this.readonly}
+                    spellcheck="false"
+                    @change=${(e: Event) => {
+                      const next = (e.target as HTMLInputElement).value.trim()
+                      if (next !== '' && next !== name) this.edit(setLocal(this.table, name, next, source))
+                    }}
+                  />
+                </label>
+                <rs-cel-input
+                  class="local-expression"
+                  .value=${source}
+                  .variables=${scope}
+                  .label=${this.t('table.letExpression', { name })}
+                  .locale=${this.effectiveLocale}
+                  .messages=${this.messages}
+                  ?readonly=${this.readonly}
+                  @rulestone-commit=${(e: CustomEvent<{ value: string }>) => {
+                    if (e.detail.value !== source) this.edit(setLocal(this.table, name, name, e.detail.value))
+                  }}
+                ></rs-cel-input>
+                ${this.readonly
+                  ? nothing
+                  : html`<button type="button" aria-label=${this.t('table.letDelete', { name })} @click=${() => this.edit(deleteLocal(this.table, name))}>✕</button>`}
+                ${issues.map((p) => html`<p class="sev-error local-problem">${p.message.split('\n')[0]}</p>`)}
+              </li>`
+            })}
+          </ul>`}
+      ${this.readonly
+        ? nothing
+        : html`<button type="button" class="add-local" @click=${() => this.edit(setLocal(this.table, undefined, newLocalName(this.table), 'true'))}>${this.t('table.letAdd')}</button>
+            <p class="muted">${this.t('table.letRenameNote')}</p>`}
+    </section>`
+  }
+
   private where(target: ProblemTarget): string {
     switch (target.kind) {
+      case 'let':
+        return target.name ? `${this.t('problems.let')} · ${target.name}` : this.t('problems.let')
       case 'table':
         return target.field ? `${this.t('problems.table')} · ${target.field}` : this.t('problems.table')
       case 'schema':
@@ -500,6 +590,11 @@ export class RulestoneTableEditor extends RulestoneElement {
       if (!grid) return
       await grid.updateComplete
       grid.focusCell(target.rule, target.field, target.output, problem.issue?.index)
+    } else if (target.kind === 'let') {
+      this._tab = 'let'
+      await this.updateComplete
+      const item = target.name === undefined ? undefined : this.renderRoot.querySelector<HTMLElement>(`li[data-local="${CSS.escape(target.name)}"] rs-cel-input`)
+      ;(item ?? this.renderRoot.querySelector<HTMLElement>('.add-local'))?.focus()
     } else if (target.kind === 'schema') {
       this._tab = 'schema'
       await this.updateComplete

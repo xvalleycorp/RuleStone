@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   BUSINESS_DATE, InvalidDecisionError, analyzeExpression, codePointIndex, createEngine, formatCelType, functionCatalog,
-  inputStructName, parseDecisionTable, type Expr, type ValueType,
+  inputStructName, localValueTypes, parseDecisionTable, type DecisionTable, type Expr, type ValueType,
 } from '../src/index.js'
 import { exampleTables } from './helpers.js'
 
@@ -40,26 +40,26 @@ function slice(source: string, node: Expr): string {
   return source.slice(codePointIndex(source, node.start), codePointIndex(source, node.end))
 }
 
-function variables(inputs: ReadonlyMap<string, ValueType>): Map<string, ValueType> {
-  return new Map([...inputs, [BUSINESS_DATE, 'date' as ValueType]])
+function variables(table: DecisionTable): Map<string, ValueType> {
+  return new Map([...table.inputs, [BUSINESS_DATE, 'date' as ValueType], ...localValueTypes(table.inputs, table.let ?? new Map())])
 }
 
 describe('source spans', () => {
   const expressions = exampleTables().flatMap((table) =>
-    table.rules.flatMap((rule) => [rule.when, ...rule.then.values()].map((source) => ({ table, source }))),
+    [...(table.let?.values() ?? []), ...table.rules.flatMap((rule) => [rule.when, ...rule.then.values()])].map((source) => ({ table, source })),
   )
 
   it('cover the whole expression and re-parse to the same node, for every node of every example expression', () => {
     let nodes = 0
     for (const { table, source } of expressions) {
-      const { ast, issues } = analyzeExpression(source, { variables: variables(table.inputs) })
+      const { ast, issues } = analyzeExpression(source, { variables: variables(table) })
       expect(issues).toEqual([])
       expect(slice(source, ast!)).toBe(source)
       const visit = (node: Expr): void => {
         nodes++
         const text = slice(source, node)
         // has(x.y) is a select node whose span is the whole macro call.
-        const reparsed = analyzeExpression(text, { variables: variables(table.inputs) }).ast
+        const reparsed = analyzeExpression(text, { variables: variables(table) }).ast
         if (reparsed && !(node.kind === 'select' && node.test === false && text.startsWith('has('))) {
           expect(shape(reparsed), text).toEqual(shape(node))
         }
@@ -108,7 +108,7 @@ describe('analyzeExpression', () => {
       rules: [{ id: 'R1', when: 'applicant.agee > 1 && amount > 0.5', then: { limit: "'x'" } }],
     })
     const table = parseDecisionTable(text)
-    const vars = variables(table.inputs)
+    const vars = variables(table)
     const when = analyzeExpression(table.rules[0]!.when, { variables: vars, expected: 'bool' })
     expect(when.issues.map((i) => [i.kind, i.pos, i.line, i.column, i.message])).toEqual([
       ['type', 9, 1, 10, "undefined field 'agee'"],

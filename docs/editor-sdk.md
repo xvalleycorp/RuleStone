@@ -190,7 +190,9 @@ Events are `CustomEvent`s that bubble and cross shadow roots (`composed`). Prope
 
 ### Table editor
 
-`<rulestone-table-editor>` is the complete decision table editor: the table's metadata, the rules grid, the schema designer, a JSON view, the problems panel and the Try it panel.
+`<rulestone-table-editor>` is the complete decision table editor: the table's metadata, the rules grid, the schema designer, the [local values](decision-tables.md#local-values) (`let`), a JSON view, the problems panel and the Try it panel.
+
+The **Local values** tab lists each local value as a name and a CEL expression, type-checked as you type against the inputs and the other local values. Add, rename and delete them there; renaming a local value does not change the rules that read it, which then report the old name.
 
 | Member | Kind | Description |
 |---|---|---|
@@ -233,11 +235,12 @@ Rules can be added, duplicated, deleted and reordered by drag and drop or with t
 |---|---|---|
 | `value` | property / attribute | The condition as CEL. |
 | `inputs` | property | The table's inputs, as in `.stone.json`, for the field picker. |
+| `locals` | property | The table's local values (`let`), name to CEL expression. They are offered in the field picker with their inferred types. |
 | `mode` | property / attribute | `blocks` or `cel`. |
 | `label` | property / attribute | The builder's accessible name. |
 | `rulestone-change` | event | `detail`: `{ value }`, the new CEL. |
 
-The field picker lists the inputs and the fields of structs. Lists are tested with `exists`, `all` and `exists_one` blocks, whose items have their own fields. The operators depend on the type: comparisons for `int`, `decimal`, `money` and `date`; `in`; `startsWith`, `endsWith`, `contains` and `matches` for strings; `is set` (`has()`) for struct fields; `includes` for lists. Values are typed (money with a currency, dates, decimals, lists), and the ƒx button turns a value into an expression.
+The field picker lists the inputs, the local values and the fields of structs. Lists are tested with `exists`, `all` and `exists_one` blocks, whose items have their own fields. The operators depend on the type: comparisons for `int`, `decimal`, `money` and `date`; `in`; `startsWith`, `endsWith`, `contains` and `matches` for strings; `is set` (`has()`) for struct fields; `includes` for lists. Values are typed (money with a currency, dates, decimals, lists), and the ƒx button turns a value into an expression.
 
 CEL that is not edited comes back exactly as it was written, including spacing and comments. Edited parts are printed as canonical CEL with only the parentheses that precedence needs. CEL that blocks cannot show (a calculation on the left of a comparison, `filter` or `map`, the conditional operator, a syntax error) stays as text in a CEL block, with the reason. It is never rewritten.
 
@@ -322,6 +325,7 @@ interface HostProblem {
 type ProblemTarget =
   | { kind: 'table'; field?: string }
   | { kind: 'schema'; side: 'inputs' | 'outputs'; name?: string }
+  | { kind: 'let'; name?: string }
   | { kind: 'rule'; rule: number; field: 'id' | 'when' | 'then' | 'reasonCode' | 'description' | 'rule'; output?: string }
 ```
 

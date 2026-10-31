@@ -1,8 +1,8 @@
 # Parameters, aggregates and local values
 
-> Status: **design proposal** · Last updated: 2026-10-30
+> Status: **A and C available, B design proposal** · Last updated: 2026-10-31
 >
-> Nothing on this page is implemented yet. It is a proposal for review and will change before it ships.
+> Aggregate functions (A) and local values in tables (C) are available: their reference is in [Aggregate functions](expressions.md#aggregate-functions) and [Local values](decision-tables.md#local-values). Parameter sets (B) are not implemented yet; that part is a proposal for review and will change before it ships.
 
 Rules often need values that are not part of their logic: a debt-to-income limit, a cash reporting threshold, a minimum age. They also need totals over lists, and intermediate results that several rules share. This page proposes three additions:
 
@@ -22,6 +22,8 @@ What is already possible, and what stays out of scope, is summarised [at the end
 4. **Both engines agree.** The Java engine and the browser engine implement every addition identically, checked by the conformance suite.
 
 ## A. Aggregate functions
+
+> Available. Reference: [Aggregate functions](expressions.md#aggregate-functions).
 
 Lists passed as inputs can already be counted and tested (`filter`, `exists`, `all`, `size()`), but not summed. Four functions are added on lists of `int`, `decimal` and `money`:
 
@@ -120,6 +122,8 @@ Engines are immutable. New parameter versions take effect when the application b
 
 ## C. Local values in tables
 
+> Available. Reference: [Local values](decision-tables.md#local-values). Until parameter sets exist, `params` is a reserved name and examples that read `params.x` do not load yet.
+
 A table can name intermediate results in `let`, and every rule can read them:
 
 ```json
@@ -147,9 +151,9 @@ In a flow, `derive` nodes already do this between nodes; `let` is for calculatio
 | Need | How |
 |---|---|
 | Values that change on every request | Inputs (facts), passed to every evaluation. |
-| Calculations | CEL arithmetic in any expression; `let` in tables (proposed); `derive` nodes in [flows](flows.md). |
+| Calculations | CEL arithmetic in any expression; `let` in tables; `derive` nodes in [flows](flows.md). |
 | Counting and testing list elements | `size()`, `filter`, `exists`, `all`, `exists_one`. |
-| Totals, minimum, maximum and mean of a list | Aggregate functions (proposed). |
+| Totals, minimum, maximum and mean of a list | Aggregate functions. |
 | Policy thresholds and limits | Parameter sets (proposed). |
 | Data looked up during evaluation, such as a balance from core banking | Planned as `FactResolver`, together with replay, because every value fetched must be recorded to reproduce the decision. Until then, the caller fetches it and passes it as an input. |
 | Aggregates over time windows, such as the total of transactions in 24 hours | **Out of scope.** RuleStone keeps no state between evaluations. Compute them in a stream processor or a store such as Flink or Valkey, and pass the result as an input. |
@@ -158,6 +162,6 @@ In a flow, `derive` nodes already do this between nodes; `let` is for calculatio
 
 Each step is a separate change, implemented in both engines with conformance fixtures, documentation in English and Vietnamese, and tests.
 
-1. **Aggregate functions.**
-2. **Local values in tables**, including the browser editor's grid and condition builder, which must show `let` names.
+1. **Aggregate functions.** Available.
+2. **Local values in tables**, including the browser editor's grid and condition builder, which must show `let` names. Available.
 3. **Parameter sets**: the file format, selection, load-time checks, the record's `params` field, `rulestone-test` support (test cases can name a parameter set version), and the editor SDK (a parameter set editor, and `params.` suggestions in the condition builder).

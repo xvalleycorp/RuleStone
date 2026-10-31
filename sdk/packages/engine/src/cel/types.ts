@@ -55,6 +55,35 @@ export function celTypeOf(type: ValueType, structName: string): CelType {
   return { k: 'struct', name: structName, fields }
 }
 
+/**
+ * The value type of a checked type, or undefined if it has none (dyn, double, ...). Structs must
+ * come from the declared inputs. The inverse of celTypeOf, used for the type of local values.
+ */
+export function valueTypeOf(type: CelType): ValueType | undefined {
+  switch (type.k) {
+    case 'prim':
+      return type.name === 'bool' || type.name === 'int' || type.name === 'string' ? type.name : undefined
+    case 'opaque':
+      return type.name
+    case 'list': {
+      const element = valueTypeOf(type.elem)
+      return element === undefined ? undefined : { kind: 'list', element }
+    }
+    case 'struct': {
+      if (!type.name.startsWith('rulestone.input.')) return undefined
+      const fields = new Map<string, ValueType>()
+      for (const [name, field] of type.fields) {
+        const fieldType = valueTypeOf(field)
+        if (fieldType === undefined) return undefined
+        fields.set(name, fieldType)
+      }
+      return { kind: 'struct', fields }
+    }
+    default:
+      return undefined
+  }
+}
+
 /** Type variable bindings. */
 export class Substitution {
   constructor(readonly bindings: Map<number, CelType> = new Map()) {}

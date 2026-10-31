@@ -1,6 +1,6 @@
 ---
 source: examples.md
-sourceHash: fe2fe83c220f2a893a60d34028d233857b599b3d497e9bcd4bbc4c9cfe25bf21
+sourceHash: 88ee04aff9c8a88fd0f6fcefbe7e665a5f0d3ac578b46e7ec6d51ee82228c1dd
 ---
 
 # Ví dụ
@@ -14,6 +14,7 @@ Thư mục [`examples/`](../../examples/) chứa các bảng quyết định ho�
 | [`transfer_fees.stone.json`](../../examples/transfer_fees.stone.json) | Phí chuyển tiền | `COLLECT`, `max`, làm tròn phí tính theo phần trăm |
 | [`card_fraud_signals.stone.json`](../../examples/card_fraud_signals.stone.json), [`card_fraud_action.stone.json`](../../examples/card_fraud_action.stone.json) | Sàng lọc gian lận thẻ | `COLLECT` cho các tín hiệu rủi ro và `FIRST` cho hành động, do ứng dụng nối tiếp; danh sách với `in` |
 | [`consumer_loan_underwriting.stone.json`](../../examples/consumer_loan_underwriting.stone.json), [`consumer_loan_conditions.stone.json`](../../examples/consumer_loan_conditions.stone.json) | Thẩm định tín dụng khoản vay tiêu dùng | `FIRST` với từ chối, chuyển xem xét và hạng rủi ro; trường tuỳ chọn với `has()`; `min`, các chế độ làm tròn; `COLLECT` cho điều kiện phê duyệt |
+| [`credit_limit_increase.stone.json`](../../examples/credit_limit_increase.stone.json) | Nâng hạn mức thẻ tín dụng | [Giá trị cục bộ](decision-tables.md#giá-trị-cục-bộ) (`let`) dùng chung cho các luật, chỉ được tính khi được đọc; `sum`, `filter` và `map` trên các khoản vay của khách hàng |
 | [`aml_name_screening.stone.json`](../../examples/aml_name_screening.stone.json), [`aml_transaction_monitoring.stone.json`](../../examples/aml_transaction_monitoring.stone.json), [`aml_alert_action.stone.json`](../../examples/aml_alert_action.stone.json) | Phòng, chống rửa tiền: sàng lọc danh sách theo dõi và giám sát giao dịch | So khớp tên gần đúng với bí danh và ngày sinh; số học và so sánh với `money`; các hàm ngày và `businessDate`; cảnh báo `COLLECT` nối tiếp tới hành động `FIRST` |
 | [`flows/card_origination.flow.json`](../../examples/flows/card_origination.flow.json) và các bảng trong [`flows/`](../../examples/flows/) | Phát hành thẻ tín dụng | Một [luồng quyết định](flows.md): luật loại trừ (knock-out) của chính sách, phân khúc bằng `switch`, một nút `derive`, hai bảng xếp hạng dùng chung một tên, và một phép chia champion/challenger bằng `split` |
 | [`flows/card_origination_scored.flow.json`](../../examples/flows/card_origination_scored.flow.json) | Phát hành thẻ tín dụng có dùng mô hình | Một luồng có [nút mô hình](flows.md#nút-mô-hình): một điểm gian lận do bên gọi cung cấp, hai mô hình PD được engine gọi và dùng chung một tên, và việc chuyển người xét duyệt hễ một mô hình lỗi |

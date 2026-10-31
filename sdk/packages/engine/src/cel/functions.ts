@@ -482,3 +482,95 @@ global('levenshtein', 'rulestone_levenshtein_string_string', [STRING, STRING], I
 global('maxNameSimilarity', 'rulestone_max_name_similarity_string_list', [STRING, list(STRING)], DECIMAL, ([a, b]) =>
   limited(() => fuzzy.maxNameSimilarity(s(a!), lst(b!) as readonly string[])),
 )
+
+// --- aggregates --------------------------------------------------------------------------------
+
+// list.sum(), list.sum(zero), list.min(), list.max() and list.avg(). The parser marks these calls
+// as aggregates, and the interpreter counts every element towards the iteration budget first.
+
+function nonEmpty(items: readonly Value[], fn: string): void {
+  if (items.length === 0) throw libraryError(`${fn}() of an empty list`)
+}
+
+function exactSum(items: readonly Value[]): bigint {
+  return items.reduce<bigint>((t, v) => t + i(v), 0n)
+}
+
+/** The exact total; fails only if the total itself is beyond 64 bits. */
+function sumInt(items: readonly Value[]): bigint {
+  const total = exactSum(items)
+  if (total < INT64_MIN || total > INT64_MAX) throw libraryError('sum() result is out of int range')
+  return total
+}
+
+function sumDecimal(items: readonly Value[]): Decimal {
+  let total = dec(items[0]!)
+  for (let k = 1; k < items.length; k++) total = total.add(dec(items[k]!))
+  return total
+}
+
+/** Sums the amounts, requiring every element to have the currency of `reference`. */
+function sumMoney(items: readonly Value[], reference: Money): Money {
+  let total: Decimal | undefined
+  for (const item of items) {
+    sameCurrency(reference, mon(item))
+    total = total === undefined ? mon(item).amount : total.add(mon(item).amount)
+  }
+  return Money.of(total!, reference.currency)
+}
+
+/** The smallest (min) or largest element; the first of equal ones. */
+function extreme(items: readonly Value[], fn: 'min' | 'max'): Value {
+  nonEmpty(items, fn)
+  let best = items[0]!
+  for (let k = 1; k < items.length; k++) {
+    const item = items[k]!
+    let c: number
+    if (typeof item === 'bigint') c = cmp(item, i(best))
+    else if (item instanceof Decimal) c = item.compareTo(dec(best))
+    else c = sameCurrency(mon(best), mon(item)).amount.compareTo(mon(best).amount)
+    if (fn === 'min' ? c < 0 : c > 0) best = item
+  }
+  return best
+}
+
+const count = (items: readonly Value[]): Decimal => Decimal.fromBigInt(BigInt(items.length))
+const EMPTY_MONEY_SUM = "sum() of an empty money list has no currency; give the result for an empty list, e.g. sum(money(0, 'VND'))"
+
+member('sum', 'rulestone_sum_list_int', [list(INT)], INT, ([a]) => sumInt(lst(a!)))
+member('sum', 'rulestone_sum_list_decimal', [list(DECIMAL)], DECIMAL, ([a]) =>
+  lst(a!).length === 0 ? Decimal.ZERO : sumDecimal(lst(a!)),
+)
+member('sum', 'rulestone_sum_list_money', [list(MONEY)], MONEY, ([a]) => {
+  const items = lst(a!)
+  if (items.length === 0) throw libraryError(EMPTY_MONEY_SUM)
+  return sumMoney(items, mon(items[0]!))
+})
+member('sum', 'rulestone_sum_list_int_int', [list(INT), INT], INT, ([a, z]) => (lst(a!).length === 0 ? z! : sumInt(lst(a!))))
+member('sum', 'rulestone_sum_list_decimal_decimal', [list(DECIMAL), DECIMAL], DECIMAL, ([a, z]) =>
+  lst(a!).length === 0 ? z! : sumDecimal(lst(a!)),
+)
+member('sum', 'rulestone_sum_list_money_money', [list(MONEY), MONEY], MONEY, ([a, z]) =>
+  lst(a!).length === 0 ? z! : sumMoney(lst(a!), mon(z!)),
+)
+for (const fn of ['min', 'max'] as const) {
+  member(fn, `rulestone_${fn}_list_int`, [list(INT)], INT, ([a]) => extreme(lst(a!), fn))
+  member(fn, `rulestone_${fn}_list_decimal`, [list(DECIMAL)], DECIMAL, ([a]) => extreme(lst(a!), fn))
+  member(fn, `rulestone_${fn}_list_money`, [list(MONEY)], MONEY, ([a]) => extreme(lst(a!), fn))
+}
+member('avg', 'rulestone_avg_list_int', [list(INT)], DECIMAL, ([a]) => {
+  const items = lst(a!)
+  nonEmpty(items, 'avg')
+  return Decimal.fromBigInt(exactSum(items)).divide(count(items))
+})
+member('avg', 'rulestone_avg_list_decimal', [list(DECIMAL)], DECIMAL, ([a]) => {
+  const items = lst(a!)
+  nonEmpty(items, 'avg')
+  return sumDecimal(items).divide(count(items))
+})
+member('avg', 'rulestone_avg_list_money', [list(MONEY)], MONEY, ([a]) => {
+  const items = lst(a!)
+  nonEmpty(items, 'avg')
+  const total = sumMoney(items, mon(items[0]!))
+  return Money.of(total.amount.divide(count(items)), total.currency)
+})

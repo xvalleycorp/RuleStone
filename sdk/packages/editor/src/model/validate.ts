@@ -15,6 +15,8 @@ import type { TableJson } from './table.js'
 export type ProblemTarget =
   | { readonly kind: 'table'; readonly field?: string }
   | { readonly kind: 'schema'; readonly side: 'inputs' | 'outputs'; readonly name?: string }
+  /** A local value (let), or the let object itself without a name. */
+  | { readonly kind: 'let'; readonly name?: string }
   | {
       readonly kind: 'rule'
       readonly rule: number
@@ -72,8 +74,23 @@ export function expressionCells(table: TableJson): ExpressionCell[] {
  * run on every keystroke.
  */
 export function expressionProblems(table: TableJson): Problem[] {
-  const variables = tableVariables(table.inputs)
+  const locals = localsOf(table)
+  const variables = tableVariables(table.inputs, locals)
   const problems: Problem[] = []
+  for (const [name, source] of Object.entries(locals)) {
+    // The other local values are in scope with their inferred types; this one is not.
+    const scope = new Map(variables)
+    scope.delete(name)
+    for (const issue of analyzeExpression(source, { variables: scope }).issues) {
+      problems.push({
+        severity: 'error',
+        message: issue.message,
+        target: { kind: 'let', name },
+        issue: { pos: issue.pos, index: issue.index, line: issue.line, column: issue.column },
+        source: 'expression',
+      })
+    }
+  }
   for (const cell of expressionCells(table)) {
     const analysis = analyzeExpression(cell.source, cell.expected === undefined ? { variables } : { variables, expected: cell.expected })
     const target: ProblemTarget = cell.output === undefined ? { kind: 'rule', rule: cell.rule, field: cell.field } : { kind: 'rule', rule: cell.rule, field: cell.field, output: cell.output }
@@ -88,6 +105,13 @@ export function expressionProblems(table: TableJson): Problem[] {
     }
   }
   return problems
+}
+
+/** The table's local values with string expressions; anything else is left to the strict reader. */
+export function localsOf(table: TableJson): Record<string, string> {
+  const value = table.let
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return {}
+  return Object.fromEntries(Object.entries(value).filter((e): e is [string, string] => typeof e[1] === 'string'))
 }
 
 /** Rules that can never match: under FIRST, the rules after one whose condition is `true`. */
@@ -117,6 +141,8 @@ function place(table: TableJson, location: string, readerPath: boolean): Problem
     const known = ['id', 'when', 'then', 'reasonCode', 'description'].includes(field) ? field : 'rule'
     return rule[3] !== undefined && known === 'then' ? { kind: 'rule', rule: index, field: 'then', output: rule[3] } : { kind: 'rule', rule: index, field: known }
   }
+  const local = (readerPath ? /^\$\.let(?:\.(\w+))?/ : /^let(?:\.(\w+))?/).exec(location)
+  if (local) return local[1] !== undefined ? { kind: 'let', name: local[1] } : { kind: 'let' }
   const schema = (readerPath ? /^\$\.(inputs|outputs)(?:\.(\w+))?/ : /^(inputs|outputs)(?:\.(\w+))?/).exec(location)
   if (schema) return schema[2] !== undefined ? { kind: 'schema', side: schema[1] as 'inputs', name: schema[2] } : { kind: 'schema', side: schema[1] as 'inputs' }
   const field = (readerPath ? /^\$\.(\w+)/ : /^(\w+)/).exec(location)
@@ -124,6 +150,7 @@ function place(table: TableJson, location: string, readerPath: boolean): Problem
 }
 
 function sameCell(a: ProblemTarget, b: ProblemTarget): boolean {
+  if (a.kind === 'let' && b.kind === 'let') return a.name === b.name
   return a.kind === 'rule' && b.kind === 'rule' && a.rule === b.rule && a.field === b.field && a.output === b.output
 }
 
@@ -183,6 +210,7 @@ export async function validateTable(table: TableJson): Promise<ValidationResult>
 
 /** Orders problems as the grid shows them: table, schema, then rules in order. */
 export function sortProblems(problems: readonly Problem[]): Problem[] {
-  const rank = (p: Problem) => (p.target.kind === 'table' ? -2 : p.target.kind === 'schema' ? -1 : p.target.rule)
+  const rank = (p: Problem) =>
+    p.target.kind === 'table' ? -3 : p.target.kind === 'schema' ? -2 : p.target.kind === 'let' ? -1 : p.target.rule
   return [...problems].sort((a, b) => rank(a) - rank(b) || (a.issue?.pos ?? 0) - (b.issue?.pos ?? 0))
 }

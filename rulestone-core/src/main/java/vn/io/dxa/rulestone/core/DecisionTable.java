@@ -22,6 +22,10 @@ import vn.io.dxa.rulestone.cel.ValueType;
  * {@code effectiveTo}, a version stays in force until the next version of the same decision
  * takes effect; see {@link DecisionVersions}. This is only the definition: structural and
  * type errors are reported when the table is registered with an engine.
+ *
+ * <p>{@code let} names local values: CEL expressions over the inputs (and other local values)
+ * that every rule can read by name. Each is computed when a rule first reads it, at most once per
+ * evaluation, and is not recorded.
  */
 public record DecisionTable(
         String id,
@@ -32,7 +36,15 @@ public record DecisionTable(
         HitPolicy hitPolicy,
         Map<String, ValueType> inputs,
         Map<String, ValueType> outputs,
+        Map<String, String> let,
         List<Rule> rules) implements VersionedDefinition {
+
+    /** A table without local values. */
+    public DecisionTable(String id, String version, Optional<String> description, Optional<LocalDate> effectiveFrom,
+                         Optional<LocalDate> effectiveTo, HitPolicy hitPolicy, Map<String, ValueType> inputs,
+                         Map<String, ValueType> outputs, List<Rule> rules) {
+        this(id, version, description, effectiveFrom, effectiveTo, hitPolicy, inputs, outputs, Map.of(), rules);
+    }
 
     public DecisionTable {
         Objects.requireNonNull(id, "id");
@@ -43,6 +55,7 @@ public record DecisionTable(
         Objects.requireNonNull(hitPolicy, "hitPolicy");
         inputs = Collections.unmodifiableMap(new LinkedHashMap<>(inputs));
         outputs = Collections.unmodifiableMap(new LinkedHashMap<>(outputs));
+        let = Collections.unmodifiableMap(new LinkedHashMap<>(let));
         rules = List.copyOf(rules);
     }
 

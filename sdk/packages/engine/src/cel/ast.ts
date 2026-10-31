@@ -59,6 +59,12 @@ export interface Call extends Node {
   readonly fn: string
   readonly target: Expr | undefined
   readonly args: readonly Expr[]
+  /**
+   * An aggregate function: target.sum(), target.sum(zero), target.min(), target.max() or
+   * target.avg(). cel-java expands it, as a macro, to a comprehension over the target, so the
+   * target is type-checked as a range and every element counts towards the iteration budget.
+   */
+  readonly aggregate?: boolean
   /** Set by the type checker: the overloads that may apply. */
   overloads?: readonly import('./functions.js').Overload[]
 }

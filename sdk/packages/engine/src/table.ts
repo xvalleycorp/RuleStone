@@ -37,6 +37,11 @@ export interface DecisionTable {
   readonly hitPolicy: HitPolicy
   readonly inputs: ReadonlyMap<string, ValueType>
   readonly outputs: ReadonlyMap<string, ValueType>
+  /**
+   * Local values: name to CEL expression, in file order. Every rule can read them by name; each is
+   * computed when first read, at most once per evaluation. Absent or empty when there are none.
+   */
+  readonly let?: ReadonlyMap<string, string>
   readonly rules: readonly Rule[]
 }
 
@@ -57,7 +62,7 @@ export function tableRef(table: DecisionTable): string {
   return `${table.id}@${table.version}`
 }
 
-const TABLE_FIELDS = ['id', 'version', 'description', 'effectiveFrom', 'effectiveTo', 'hitPolicy', 'inputs', 'outputs', 'rules']
+const TABLE_FIELDS = ['id', 'version', 'description', 'effectiveFrom', 'effectiveTo', 'hitPolicy', 'inputs', 'outputs', 'let', 'rules']
 const RULE_FIELDS = ['id', 'description', 'when', 'then', 'reasonCode']
 const HIT_POLICIES: readonly HitPolicy[] = ['UNIQUE', 'FIRST', 'COLLECT']
 
@@ -99,6 +104,7 @@ class TableReader {
     const hitPolicy = this.hitPolicy(root)
     const inputs = this.typeMap(root, 'inputs')
     const outputs = this.typeMap(root, 'outputs')
+    const locals = this.localValues(root)
     const rules = this.rules(root)
     if (this.problems.length > 0) throw new InvalidDecisionError(this.problems)
     return {
@@ -110,8 +116,24 @@ class TableReader {
       hitPolicy,
       inputs,
       outputs,
+      ...(locals.size > 0 ? { let: locals } : {}),
       rules,
     }
+  }
+
+  private localValues(root: JsonNode & { type: 'object' }): Map<string, string> {
+    const node = root.entries.get('let')
+    const locals = new Map<string, string>()
+    if (!node || node.type === 'null') return locals
+    if (node.type !== 'object') {
+      this.problem('$.let', 'expected an object of name to CEL expression')
+      return locals
+    }
+    for (const [name, value] of node.entries) {
+      if (value.type === 'string') locals.set(name, value.value)
+      else this.problem(`$.let.${name}`, 'expected a CEL expression string')
+    }
+    return locals
   }
 
   private rules(root: JsonNode & { type: 'object' }): Rule[] {
@@ -281,6 +303,8 @@ export function writeDecisionTable(table: DecisionTable): string {
   json.set('hitPolicy', table.hitPolicy)
   json.set('inputs', typesJson(table.inputs))
   json.set('outputs', typesJson(table.outputs))
+  // Omitted when empty, so that tables without local values keep their hash.
+  if (table.let && table.let.size > 0) json.set('let', sortedMap(table.let))
   json.set(
     'rules',
     table.rules.map((rule) => {

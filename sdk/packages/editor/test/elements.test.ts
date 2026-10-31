@@ -236,7 +236,7 @@ describe('<rulestone-table-editor>', () => {
   it('is read-only on request and speaks Vietnamese', async () => {
     const el = await mount<RulestoneTableEditor>('rulestone-table-editor', { table: exampleTable('deposit_rate.stone.json'), readonly: true, locale: 'vi' })
     expect(($(el, 'input[data-field="id"]') as HTMLInputElement).readOnly).toBe(true)
-    expect($$(el, '[role="tab"]').map((t) => t.textContent!.trim())).toEqual(['Luật', 'Đầu vào và đầu ra', 'JSON'])
+    expect($$(el, '[role="tab"]').map((t) => t.textContent!.trim())).toEqual(['Luật', 'Đầu vào và đầu ra', 'Giá trị cục bộ', 'JSON'])
     expect($(el, '.toolbar button.primary')).toBeNull()
   })
 

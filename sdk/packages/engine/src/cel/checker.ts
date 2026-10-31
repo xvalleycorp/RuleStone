@@ -149,25 +149,39 @@ class Checker {
     trial.bindings.forEach((v, k) => this.subst.bindings.set(k, v))
   }
 
-  private comprehension(node: Comprehension, scope: Scope): CelType {
-    const range = this.resolved(this.visit(node.range, scope))
-    let elem: CelType
+  /** The element type of a comprehension's range; reports a range that is not a list. */
+  private rangeElement(rangeNode: Expr, scope: Scope): CelType {
+    const range = this.resolved(this.visit(rangeNode, scope))
     switch (range.k) {
       case 'list':
-        elem = range.elem
-        break
+        return range.elem
       case 'dyn':
       case 'error':
       case 'var':
-        elem = DYN
-        break
+        return DYN
       default:
         this.report(
-          node.range.pos,
+          rangeNode.pos,
           `expression of type '${formatType(this.subst.apply(range))}' cannot be range of a comprehension (must be list, map, or dynamic)`,
         )
-        elem = ERROR
+        return ERROR
     }
+  }
+
+  /**
+   * An aggregate function, checked as cel-java checks its expansion: the target as the range of
+   * a comprehension that collects the elements, then the function called on the collected list.
+   */
+  private aggregate(node: Call, scope: Scope): CelType {
+    const elem = this.rangeElement(node.target!, scope)
+    const argTypes = node.args.map((a) => this.visit(a, scope))
+    if (elem.k === 'error') return ERROR
+    const candidates = overloadsOf(node.fn)!.filter((o) => o.member)
+    return this.resolveOverload(node, node.fn, true, [list(elem), ...argTypes], candidates)
+  }
+
+  private comprehension(node: Comprehension, scope: Scope): CelType {
+    const elem = this.rangeElement(node.range, scope)
     const inner: Scope = [...scope, { name: node.variable, type: elem }]
     const requireBool = (e: Expr | undefined, op: string, describe: (t: CelType) => string): void => {
       if (!e) return
@@ -209,6 +223,7 @@ class Checker {
       const A: CelType = { k: 'var', id: -1 }
       return this.resolveOverload(node, fn, false, types, [{ params: [BOOL, A, A], result: A }])
     }
+    if (node.aggregate) return this.aggregate(node, scope)
     const target = node.target ? this.visit(node.target, scope) : undefined
     const argTypes = node.args.map((a) => this.visit(a, scope))
     if (UNSUPPORTED_FUNCTIONS.has(fn)) return this.report(node.pos, `function '${fn}' is not supported by the browser engine`)
@@ -232,7 +247,8 @@ class Checker {
     const matches: { overload: Pick<Overload, 'params' | 'result'>; subst: Substitution; result: CelType }[] = []
     for (const overload of candidates) {
       if (overload.params.length !== argTypes.length) continue
-      const trial = this.subst.copy()
+      // As in cel-java, a match binds type variables for the overloads tried after it: [].sum() is an int.
+      const trial = (matches.length > 0 ? matches[matches.length - 1]!.subst : this.subst).copy()
       const instance = new Map<number, CelType>()
       const inst = (t: CelType): CelType => {
         if (t.k === 'var' && t.id < 0) {
