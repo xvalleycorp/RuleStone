@@ -24,7 +24,10 @@ export type { DecisionRecord, PathStep, ReasonCode } from './record.js'
 export { parseStoneTests, checkStoneTestCase, StoneTestFailure, InvalidStoneTestError } from './stone-test.js'
 export type { StoneTestCase, StoneTestOutcome } from './stone-test.js'
 
-export { ExpressionEnvironment, CompiledExpression, Bindings, DEFAULT_MAX_ITERATIONS } from './cel/environment.js'
+export {
+  ExpressionEnvironment, CompiledExpression, Bindings, DEFAULT_MAX_ITERATIONS, LocalValueError, isValidName,
+} from './cel/environment.js'
+export { localValueTypes } from './locals.js'
 export type { EnvironmentOptions } from './cel/environment.js'
 
 export {

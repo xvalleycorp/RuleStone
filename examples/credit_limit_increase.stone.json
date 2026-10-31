@@ -1,0 +1,28 @@
+{
+  "id": "credit_limit_increase",
+  "version": "1",
+  "description": "Credit card limit increase: debt-to-income from existing loans, computed once in let and shared by the rules",
+  "hitPolicy": "FIRST",
+  "inputs": {
+    "applicant": { "monthlyIncome": "money", "missedPayments12m": "int" },
+    "loans": [ { "type": "string", "monthlyPayment": "money", "outstanding": "money" } ],
+    "requestedLimit": "money"
+  },
+  "outputs": {
+    "decision": "string",
+    "maxLimit": "money"
+  },
+  "let": {
+    "monthlyDebt": "loans.map(l, l.monthlyPayment).sum(money(0, 'VND'))",
+    "dti": "monthlyDebt.amount() / applicant.monthlyIncome.amount()",
+    "affordableLimit": "(applicant.monthlyIncome * 3 - monthlyDebt).round()",
+    "unsecured": "loans.filter(l, l.type != 'MORTGAGE').map(l, l.outstanding).sum(money(0, 'VND'))"
+  },
+  "rules": [
+    { "id": "MISSED_PAYMENTS", "when": "applicant.missedPayments12m > 0", "then": { "decision": "'REJECT'" }, "reasonCode": "MISSED_PAYMENTS" },
+    { "id": "DTI_HIGH", "when": "dti > decimal('0.5')", "then": { "decision": "'REJECT'" }, "reasonCode": "DTI_HIGH" },
+    { "id": "UNSECURED_HIGH", "when": "unsecured > applicant.monthlyIncome * 12", "then": { "decision": "'REFER'" }, "reasonCode": "UNSECURED_DEBT_HIGH" },
+    { "id": "WITHIN_LIMIT", "when": "requestedLimit <= affordableLimit", "then": { "decision": "'APPROVE'", "maxLimit": "requestedLimit" } },
+    { "id": "ABOVE_LIMIT", "when": "true", "then": { "decision": "'COUNTER_OFFER'", "maxLimit": "affordableLimit" }, "reasonCode": "LIMIT_REDUCED" }
+  ]
+}

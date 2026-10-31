@@ -27,6 +27,8 @@ export interface TableJson {
   hitPolicy: string
   inputs: Record<string, TypeSpec>
   outputs: Record<string, TypeSpec>
+  /** Local values: name to CEL expression, read by the rules by name. */
+  let?: Record<string, string>
   rules: RuleJson[]
   [key: string]: unknown
 }
@@ -35,7 +37,7 @@ export const HIT_POLICIES = ['FIRST', 'UNIQUE', 'COLLECT'] as const
 export const PRIMITIVES = ['bool', 'int', 'string', 'decimal', 'money', 'date'] as const
 export type Primitive = (typeof PRIMITIVES)[number]
 
-const TABLE_ORDER = ['id', 'version', 'description', 'effectiveFrom', 'effectiveTo', 'hitPolicy', 'inputs', 'outputs', 'rules']
+const TABLE_ORDER = ['id', 'version', 'description', 'effectiveFrom', 'effectiveTo', 'hitPolicy', 'inputs', 'outputs', 'let', 'rules']
 const RULE_ORDER = ['id', 'description', 'when', 'then', 'reasonCode']
 
 /** A new, empty table: one catch-all rule, so that it is valid as soon as it has an id. */
@@ -80,6 +82,7 @@ function ordered<T extends Record<string, unknown>>(value: T, order: readonly st
 /** The table with its keys in the order of the file format, for saving and display. */
 export function orderTable(table: TableJson): TableJson {
   const out = ordered(table, TABLE_ORDER)
+  if (out.let !== undefined && out.let !== null && typeof out.let === 'object' && Object.keys(out.let).length === 0) delete out.let
   out.rules = table.rules.map((rule) => {
     const r = ordered(rule, RULE_ORDER)
     if (r.then !== undefined && Object.keys(r.then).length === 0) delete r.then
@@ -178,6 +181,30 @@ export function setOutput(table: TableJson, index: number, output: string, expre
   const rules = [...table.rules]
   rules[index] = next
   return withRules(table, rules)
+}
+
+/** A local value name not used in the table: value1, value2, … */
+export function newLocalName(table: TableJson): string {
+  const used = new Set([...Object.keys(table.let ?? {}), ...Object.keys(table.inputs)])
+  for (let n = 1; ; n++) if (!used.has(`value${n}`)) return `value${n}`
+}
+
+/**
+ * Adds, renames or changes a local value (let). With `name` undefined, adds one at the end.
+ * Renaming keeps the entry's position; it does not change the expressions that read it.
+ */
+export function setLocal(table: TableJson, name: string | undefined, newName: string, expression: string): TableJson {
+  const entries = Object.entries(table.let ?? {})
+  const index = name === undefined ? -1 : entries.findIndex(([n]) => n === name)
+  if (index < 0) entries.push([newName, expression])
+  else entries[index] = [newName, expression]
+  return orderTable({ ...table, let: Object.fromEntries(entries) })
+}
+
+/** Removes a local value. */
+export function deleteLocal(table: TableJson, name: string): TableJson {
+  const locals = Object.fromEntries(Object.entries(table.let ?? {}).filter(([n]) => n !== name))
+  return orderTable({ ...table, let: locals })
 }
 
 /** Sets a table-level field; an empty optional field is removed. */

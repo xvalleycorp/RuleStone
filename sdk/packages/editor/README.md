@@ -75,10 +75,11 @@ Columns: result, rule id, condition, one per output, reason code, description, a
 |---|---|---|
 | `value` | property / attribute | The condition as CEL. |
 | `inputs` | property | The table's inputs, as in `.stone.json`, for the field picker. |
+| `locals` | property | The table's local values (`let`), name to CEL expression, offered in the field picker with their inferred types. |
 | `mode` | property / attribute | `blocks` or `cel`. |
 | `rulestone-change` | event | `detail`: `{ value }`. |
 
-The field picker lists inputs and nested struct fields. Lists are tested with blocks for `exists`, `all` and `exists_one`, whose items have their own fields. Operators depend on the type: comparisons for `int`, `decimal`, `money` and `date`; `in`; `startsWith`, `endsWith`, `contains` and `matches` for strings; `is set` (`has()`) for struct fields; `includes` for lists. Values are typed: money with a currency, dates, decimals, lists; the ƒx button switches a value to an expression.
+The field picker lists inputs, local values and nested struct fields. Lists are tested with blocks for `exists`, `all` and `exists_one`, whose items have their own fields. Operators depend on the type: comparisons for `int`, `decimal`, `money` and `date`; `in`; `startsWith`, `endsWith`, `contains` and `matches` for strings; `is set` (`has()`) for struct fields; `includes` for lists. Values are typed: money with a currency, dates, decimals, lists; the ƒx button switches a value to an expression.
 
 **Round trip.** Unedited CEL comes back exactly as it was written, including spacing and comments. Edited parts are printed as canonical CEL with only the parentheses precedence needs. CEL that blocks cannot show (a calculation on the left of a comparison, `filter` or `map`, the conditional operator, a syntax error) stays as text in a CEL block, with the reason; it is never rewritten. The tests check every condition in `examples/`.
 

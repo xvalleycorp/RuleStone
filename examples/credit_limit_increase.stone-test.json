@@ -1,0 +1,76 @@
+{
+  "decision": "credit_limit_increase",
+  "description": "Limit increase: every rule, local values shared by rules, and a local value that only fails when a rule reads it",
+  "cases": [
+    {
+      "name": "missed payments reject before the debt-to-income ratio is computed, even without income",
+      "facts": {
+        "applicant": { "monthlyIncome": "0 VND", "missedPayments12m": 1 },
+        "loans": [],
+        "requestedLimit": "50000000 VND"
+      },
+      "expect": { "output": { "decision": "REJECT" }, "reasonCodes": ["MISSED_PAYMENTS"], "matchedRules": ["MISSED_PAYMENTS"] }
+    },
+    {
+      "name": "monthly payments above half of the income reject",
+      "facts": {
+        "applicant": { "monthlyIncome": "30000000 VND", "missedPayments12m": 0 },
+        "loans": [
+          { "type": "MORTGAGE", "monthlyPayment": "12000000 VND", "outstanding": "1500000000 VND" },
+          { "type": "CAR", "monthlyPayment": "4000000 VND", "outstanding": "200000000 VND" }
+        ],
+        "requestedLimit": "50000000 VND"
+      },
+      "expect": { "output": { "decision": "REJECT" }, "reasonCodes": ["DTI_HIGH"], "matchedRules": ["DTI_HIGH"] }
+    },
+    {
+      "name": "unsecured debt above a year of income is referred",
+      "facts": {
+        "applicant": { "monthlyIncome": "30000000 VND", "missedPayments12m": 0 },
+        "loans": [
+          { "type": "CARD", "monthlyPayment": "2000000 VND", "outstanding": "400000000 VND" }
+        ],
+        "requestedLimit": "50000000 VND"
+      },
+      "expect": { "output": { "decision": "REFER" }, "reasonCodes": ["UNSECURED_DEBT_HIGH"], "matchedRules": ["UNSECURED_HIGH"] }
+    },
+    {
+      "name": "a request within three months of income is approved",
+      "facts": {
+        "applicant": { "monthlyIncome": "30000000 VND", "missedPayments12m": 0 },
+        "loans": [],
+        "requestedLimit": "90000000 VND"
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "maxLimit": "90000000 VND" },
+        "exactOutput": true,
+        "reasonCodes": [],
+        "matchedRules": ["WITHIN_LIMIT"]
+      }
+    },
+    {
+      "name": "a request above the affordable limit gets a counter-offer without the mortgage in unsecured debt",
+      "facts": {
+        "applicant": { "monthlyIncome": "30000000 VND", "missedPayments12m": 0 },
+        "loans": [
+          { "type": "MORTGAGE", "monthlyPayment": "10000000 VND", "outstanding": "2000000000 VND" }
+        ],
+        "requestedLimit": "100000000 VND"
+      },
+      "expect": {
+        "output": { "decision": "COUNTER_OFFER", "maxLimit": "80000000 VND" },
+        "reasonCodes": ["LIMIT_REDUCED"],
+        "matchedRules": ["ABOVE_LIMIT"]
+      }
+    },
+    {
+      "name": "without income, the rule that reads the ratio fails and names the local value",
+      "facts": {
+        "applicant": { "monthlyIncome": "0 VND", "missedPayments12m": 0 },
+        "loans": [],
+        "requestedLimit": "50000000 VND"
+      },
+      "expect": { "error": "local value dti failed: decimal division by zero" }
+    }
+  ]
+}

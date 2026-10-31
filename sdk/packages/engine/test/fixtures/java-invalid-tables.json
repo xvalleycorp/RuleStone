@@ -1,6 +1,6 @@
 [ {
   "name" : "unknown, misspelt and missing fields",
-  "read" : [ [ "$.efectiveFrom: unknown field (allowed: description, effectiveFrom, effectiveTo, hitPolicy, id, inputs, outputs, rules, version)", "$.rules[0].reason: unknown field (allowed: description, id, reasonCode, then, when)" ] ],
+  "read" : [ [ "$.efectiveFrom: unknown field (allowed: description, effectiveFrom, effectiveTo, hitPolicy, id, inputs, let, outputs, rules, version)", "$.rules[0].reason: unknown field (allowed: description, id, reasonCode, then, when)" ] ],
   "build" : [ ]
 }, {
   "name" : "duplicate key",
@@ -81,5 +81,33 @@
 }, {
   "name" : "versions: an earlier effectiveTo leaves a gap",
   "read" : [ null, null ],
+  "build" : [ ]
+}, {
+  "name" : "let: not an object",
+  "read" : [ [ "$.let: expected an object of name to CEL expression" ] ],
+  "build" : [ ]
+}, {
+  "name" : "let: an expression that is not a string",
+  "read" : [ [ "$.let.a: expected a CEL expression string" ] ],
+  "build" : [ ]
+}, {
+  "name" : "let: names that are not identifiers, reserved or clash with an input",
+  "read" : [ null ],
+  "build" : [ "t@1 let.2a: must be an identifier (a letter or '_', then letters, digits or '_') and not a reserved word", "t@1 let.businessDate: reserved name; every decision receives businessDate implicitly", "t@1 let.in: must be an identifier (a letter or '_', then letters, digits or '_') and not a reserved word", "t@1 let.params: reserved name for parameter sets", "t@1 let.x: an input has the same name" ]
+}, {
+  "name" : "let: cycles",
+  "read" : [ null ],
+  "build" : [ "t@1 let.a: cycle: a -> b -> c -> a", "t@1 let.d: cycle: d -> d" ]
+}, {
+  "name" : "let: type errors and unknown names",
+  "read" : [ null ],
+  "build" : [ "t@1 let.a: ERROR: <input>:1:3: found no matching overload for '_+_' applied to '(int, string)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(list(%A0), list(%A0)),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(google.protobuf.Timestamp, google.protobuf.Duration),(google.protobuf.Duration, google.protobuf.Timestamp),(int, int),(uint, uint))\n | x + 's'\n | ..^", "t@1 let.c: ERROR: <input>:1:1: undeclared reference to 'y' (in container '')\n | y\n | ^", "t@1 let.d: a local value must produce bool, int, string, decimal, money, date, a list or a struct but produces double: 0.5", "t@1 let.f: a local value must produce bool, int, string, decimal, money, date, a list or a struct but produces dyn: dyn(1)", "t@1 rules[T].when: ERROR: <input>:1:1: undeclared reference to 'z' (in container '')\n | z > 1\n | ^", "t@1 rules[U].when: ERROR: <input>:1:3: found no matching overload for '_>_' applied to '(int, string)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(bool, bool),(date, date),(google.protobuf.Timestamp, google.protobuf.Timestamp),(int, int),(uint, uint))\n | x > 'a'\n | ..^" ]
+}, {
+  "name" : "let: a local value of the wrong type in a rule",
+  "read" : [ null ],
+  "build" : [ "t@1 rules[R].when: ERROR: <input>:1:3: found no matching overload for '_==_' applied to '(int, string)' (candidates: (%A0, %A0))\n | n == 'a'\n | ..^", "t@1 rules[S].when: ERROR: <input>:1:14: found no matching overload for '_>_' applied to '(money, decimal)' (candidates: (bytes, bytes),(google.protobuf.Duration, google.protobuf.Duration),(double, double),(string, string),(decimal, int),(money, money),(decimal, decimal),(int, decimal),(bool, bool),(date, date),(google.protobuf.Timestamp, google.protobuf.Timestamp),(int, int),(uint, uint))\n | first.amount > decimal(1)\n | .............^", "t@1 rules[T].then.total: expression must produce decimal but produces money: total" ]
+}, {
+  "name" : "let: macro variables are not local values",
+  "read" : [ null ],
   "build" : [ ]
 } ]

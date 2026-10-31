@@ -5,6 +5,7 @@ A decision table turns typed inputs into typed outputs using an ordered list of 
 - [File format](#file-format)
 - [Types](#types)
 - [Rules](#rules)
+- [Local values](#local-values)
 - [Hit policies](#hit-policies)
 - [Versions and effective dates](#versions-and-effective-dates)
 - [Validation](#validation)
@@ -39,6 +40,7 @@ A table is a JSON object. Files conventionally end in `.stone.json`.
 | `hitPolicy` | yes | `FIRST`, `UNIQUE` or `COLLECT`. See [Hit policies](#hit-policies). |
 | `inputs` | yes | Object mapping each input name to its [type](#types). May be empty. |
 | `outputs` | yes | Object mapping each output name to its [type](#types). May be empty, e.g. for a table that only produces reason codes. |
+| `let` | no | Object mapping names to expressions that every rule can read by name. See [Local values](#local-values). |
 | `rules` | yes | Non-empty array of [rules](#rules), in evaluation order. |
 
 Reading is **strict**:
@@ -114,6 +116,30 @@ Besides its declared inputs, every rule can read `businessDate`, the date the de
 ```
 
 Reason codes are the stable vocabulary you show customers and auditors ("why was I declined?"). Keep them stable across versions and document them for your organization.
+
+## Local values
+
+`let` names intermediate results that several rules share, so that a calculation is written once:
+
+```json
+"let": {
+  "monthlyDebt": "loans.map(l, l.monthlyPayment).sum(money(0, 'VND'))",
+  "dti": "monthlyDebt.amount() / applicant.monthlyIncome.amount()"
+},
+"rules": [
+  { "id": "DTI_HIGH", "when": "dti > decimal('0.5')", "then": { "decision": "'REJECT'" } },
+  { "id": "LOW_DEBT", "when": "monthlyDebt < money(5000000, 'VND')", "then": { "decision": "'APPROVE'" } }
+]
+```
+
+- **Types are inferred** from the expressions, which are type-checked when the table is loaded. A local value can be a `bool`, `int`, `string`, `decimal`, `money`, `date`, a list or a struct, for example `loans[0]`.
+- **A local value can read inputs, `businessDate` and other local values.** The order in the file does not matter; a local value that reads itself, directly or through others, is rejected.
+- **Values are computed when first read**, at most once per evaluation. A local value that no evaluated rule reads is never computed, so it cannot fail the evaluation. In [credit_limit_increase](../examples/credit_limit_increase.stone.json), `dti` divides by the income, but a customer with missed payments is rejected by the first rule before `dti` is read, even without income.
+- **Errors behave as if the expression were written in the rule.** `||` and `&&` absorb them as usual. When a rule fails because of a local value, the message names it: `rule DTI_HIGH condition failed: local value dti failed: decimal division by zero in: …`. Each local value has its own [iteration limit](expressions.md#limits).
+- **Names** are identifiers that do not clash with an input, `businessDate` or `params` (reserved for parameter sets). An output may have the same name as a local value.
+- Local values are not recorded: they follow from the inputs and the rule version. The [content hash](#content-hash) covers `let`; a table without `let`, or with an empty one, has the hash it had before `let` existed.
+
+In a [flow](flows.md), `derive` nodes compute values between nodes; `let` is for calculations shared by the rules of one table.
 
 ## Hit policies
 
@@ -213,6 +239,7 @@ The checks are:
 |---|---|
 | File | Invalid JSON, unknown fields, duplicate keys, missing required fields, wrong JSON types, unknown types, unknown hit policy, invalid dates. |
 | Table | Invalid `id` or `version`; `effectiveTo` not after `effectiveFrom`; no rules; struct-typed outputs; invalid input or field names; an input named `businessDate`. |
+| Local values | A `let` that is not an object of expressions; names that are not identifiers or that clash with an input, `businessDate` or `params`; cycles, reported once as `let.a: cycle: a -> b -> a`; expressions with syntax or type errors, or whose type is not a RuleStone type (such as `double`). A rule that reads a rejected local value is not checked again. |
 | Rules | Duplicate rule ids; reason codes that are not `UPPER_SNAKE_CASE`; `then` setting an undeclared output. |
 | Expressions | Syntax errors; unknown variables or fields; type errors, including any mix of `decimal` and floating point, or of `money` and plain numbers; `when` not producing `bool`; `then` not producing the output's type. |
 | Versions | The same `id@version` registered twice; two versions taking effect on the same day, or both without `effectiveFrom`; an `effectiveTo` after the next version's `effectiveFrom`. |

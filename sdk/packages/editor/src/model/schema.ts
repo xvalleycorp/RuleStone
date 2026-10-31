@@ -5,7 +5,7 @@
 // expression that reads it. Renaming works on the type-checked syntax tree, never on the text.
 
 import {
-  BUSINESS_DATE, analyzeExpression, codePointIndex, inputStructName, typeFromSpec,
+  BUSINESS_DATE, analyzeExpression, codePointIndex, inputStructName, localValueTypes, typeFromSpec, typeToSpec,
   type Expr, type TypeSpec as EngineTypeSpec, type ValueType,
 } from '@rulestone/engine'
 import { PRIMITIVES, orderTable, type RuleJson, type TableJson, type TypeSpec } from './table.js'
@@ -64,16 +64,35 @@ export function valueTypeOf(spec: TypeSpec): ValueType | undefined {
   }
 }
 
-/** The typed variables of a table's expressions: its valid inputs and businessDate. */
-export function tableVariables(inputs: Record<string, TypeSpec>): Map<string, ValueType> {
+/**
+ * The typed variables of a table's expressions: its valid inputs, businessDate and, when given,
+ * the local values (let) that compile, with their inferred types.
+ */
+export function tableVariables(inputs: Record<string, TypeSpec>, locals?: Record<string, string>): Map<string, ValueType> {
   const variables = new Map<string, ValueType>()
   for (const [name, spec] of Object.entries(inputs)) {
     if (name === BUSINESS_DATE) continue
     const type = valueTypeOf(spec)
     if (type) variables.set(name, type)
   }
+  if (locals && Object.keys(locals).length > 0) {
+    const inputTypes = new Map(variables)
+    for (const [name, type] of localValueTypes(inputTypes, new Map(Object.entries(locals)))) variables.set(name, type)
+  }
   variables.set(BUSINESS_DATE, 'date')
   return variables
+}
+
+/** The local values (let) that compile, with their inferred types as type specs, for field pickers. */
+export function localSpecs(inputs: Record<string, TypeSpec>, locals: Record<string, string> | undefined): Map<string, TypeSpec> {
+  const specs = new Map<string, TypeSpec>()
+  if (!locals) return specs
+  const variables = tableVariables(inputs, locals)
+  for (const name of Object.keys(locals)) {
+    const type = variables.get(name)
+    if (type !== undefined && !(name in inputs)) specs.set(name, typeToSpec(type) as TypeSpec)
+  }
+  return specs
 }
 
 /** The spec at a path, or undefined. */
@@ -179,9 +198,11 @@ export function fieldsOf(roots: ReadonlyMap<string, TypeSpec> | Record<string, T
 
 /** One expression the rename changed. */
 export interface RenameChange {
+  /** The rule's index, or -1 for a local value. */
   readonly rule: number
+  /** The rule's id, or '' for a local value. */
   readonly ruleId: string
-  /** 'when', or 'then.<output>'. */
+  /** 'when', 'then.<output>', or 'let.<name>' for a local value. */
   readonly cell: string
   readonly before: string
   readonly after: string
@@ -294,15 +315,37 @@ function rename(table: TableJson, path: FieldPath, newName: string): RenameResul
   if (newName === oldName) return { ok: true, table, changes: [], skipped: [] }
   const parent = path.length === 1 ? table.inputs : specAt(table.inputs, path.slice(0, -1))
   const siblings = parent && typeof parent === 'object' && !Array.isArray(parent) ? Object.keys(parent) : []
-  const problem = nameProblem(newName, siblings, path.length === 1)
+  // An input and a local value cannot share a name.
+  const names = path.length === 1 ? [...siblings, ...Object.keys(table.let ?? {})] : siblings
+  const problem = nameProblem(newName, names, path.length === 1)
   if (problem) return { ok: false, reason: problem }
 
-  const variables = tableVariables(table.inputs)
+  const locals = table.let
+  const variables = tableVariables(table.inputs, locals)
   const renamedInputs = renameKey(table.inputs, path, newName)
-  const newVariables = tableVariables(renamedInputs)
   const changes: RenameChange[] = []
   const skipped: RenameSkip[] = []
   const word = new RegExp(`(^|[^A-Za-z0-9_])${oldName}([^A-Za-z0-9_]|$)`)
+  // Local values first: rules are checked against the renamed local values.
+  let renamedLocals = locals
+  if (locals) {
+    renamedLocals = { ...locals }
+    for (const [name, source] of Object.entries(locals)) {
+      const cell = `let.${name}`
+      const analysis = analyzeExpression(source, { variables })
+      if (!analysis.ast) {
+        if (word.test(source)) skipped.push({ rule: -1, ruleId: '', cell, reason: 'syntax' })
+        continue
+      }
+      const found = occurrences(analysis.ast, path)
+      if (found.edits.length === 0) continue
+      if (path.length === 1 && found.captured(newName)) throw new CaptureError(`let.${name}`)
+      const after = applyEdits(source, found.edits, newName)
+      changes.push({ rule: -1, ruleId: '', cell, before: source, after, occurrences: found.edits.length })
+      renamedLocals[name] = after
+    }
+  }
+  const newVariables = tableVariables(renamedInputs, renamedLocals)
   const rules = table.rules.map((rule, index) => {
     let updated: RuleJson = rule
     for (const [cell, source] of cells(rule)) {
@@ -323,7 +366,9 @@ function rename(table: TableJson, path: FieldPath, newName: string): RenameResul
     }
     return updated
   })
-  return { ok: true, table: orderTable({ ...table, inputs: renamedInputs, rules }), changes, skipped }
+  const renamed: TableJson = { ...table, inputs: renamedInputs, rules }
+  if (renamedLocals) renamed.let = renamedLocals
+  return { ok: true, table: orderTable(renamed), changes, skipped }
 }
 
 class CaptureError extends Error {

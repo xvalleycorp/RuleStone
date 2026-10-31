@@ -4243,6 +4243,128 @@
       "trace" : [ [ "DECLINE_AGE", false ], [ "DECLINE_BAD_DEBT", false ], [ "DECLINE_SCORE", false ], [ "DECLINE_INCOME", false ], [ "DECLINE_TERM", false ], [ "DECLINE_DTI", false ], [ "DECLINE_LTV", false ], [ "REFER_DTI", false ], [ "REFER_LTV", false ], [ "REFER_EMPLOYMENT", false ], [ "REFER_PURPOSE", false ], [ "APPROVE_A", false ], [ "APPROVE_B", true ] ]
     }
   },
+  "credit_limit_increase.stone-test.json" : {
+    "missed payments reject before the debt-to-income ratio is computed, even without income" : {
+      "decision" : "credit_limit_increase",
+      "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:3bea69c87f60f1fe30baa5b30f218e39f2d4cd8ea04f466fac0257044aa99489",
+      "output" : {
+        "decision" : "REJECT"
+      },
+      "reasonCodes" : [ {
+        "code" : "MISSED_PAYMENTS",
+        "source" : "credit_limit_increase"
+      } ],
+      "path" : [ {
+        "node" : "credit_limit_increase",
+        "type" : "table",
+        "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+        "matchedRules" : [ "MISSED_PAYMENTS" ]
+      } ],
+      "trace" : [ [ "MISSED_PAYMENTS", true ] ]
+    },
+    "monthly payments above half of the income reject" : {
+      "decision" : "credit_limit_increase",
+      "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:9197ae7bee437046550191cf283b471e31164428453f0f988617816e15cdd221",
+      "output" : {
+        "decision" : "REJECT"
+      },
+      "reasonCodes" : [ {
+        "code" : "DTI_HIGH",
+        "source" : "credit_limit_increase"
+      } ],
+      "path" : [ {
+        "node" : "credit_limit_increase",
+        "type" : "table",
+        "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+        "matchedRules" : [ "DTI_HIGH" ]
+      } ],
+      "trace" : [ [ "MISSED_PAYMENTS", false ], [ "DTI_HIGH", true ] ]
+    },
+    "unsecured debt above a year of income is referred" : {
+      "decision" : "credit_limit_increase",
+      "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:84eae8f77d12e20bf6dcdc8c3041d5ee687dd3b1bf6d26527fc8cc8cb5fc7511",
+      "output" : {
+        "decision" : "REFER"
+      },
+      "reasonCodes" : [ {
+        "code" : "UNSECURED_DEBT_HIGH",
+        "source" : "credit_limit_increase"
+      } ],
+      "path" : [ {
+        "node" : "credit_limit_increase",
+        "type" : "table",
+        "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+        "matchedRules" : [ "UNSECURED_HIGH" ]
+      } ],
+      "trace" : [ [ "MISSED_PAYMENTS", false ], [ "DTI_HIGH", false ], [ "UNSECURED_HIGH", true ] ]
+    },
+    "a request within three months of income is approved" : {
+      "decision" : "credit_limit_increase",
+      "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:f0b13c8f6ede71d9f35e8d117d22938937e4456bae0d36b58a4ed66f8ac58d30",
+      "output" : {
+        "decision" : "APPROVE",
+        "maxLimit" : "90000000 VND"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "credit_limit_increase",
+        "type" : "table",
+        "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+        "matchedRules" : [ "WITHIN_LIMIT" ]
+      } ],
+      "trace" : [ [ "MISSED_PAYMENTS", false ], [ "DTI_HIGH", false ], [ "UNSECURED_HIGH", false ], [ "WITHIN_LIMIT", true ] ]
+    },
+    "a request above the affordable limit gets a counter-offer without the mortgage in unsecured debt" : {
+      "decision" : "credit_limit_increase",
+      "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:1812712e7878a27a8a0df70b00afcb1e1e0edea6d1725fb121268a213edd5da1",
+      "output" : {
+        "decision" : "COUNTER_OFFER",
+        "maxLimit" : "80000000 VND"
+      },
+      "reasonCodes" : [ {
+        "code" : "LIMIT_REDUCED",
+        "source" : "credit_limit_increase"
+      } ],
+      "path" : [ {
+        "node" : "credit_limit_increase",
+        "type" : "table",
+        "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+        "matchedRules" : [ "ABOVE_LIMIT" ]
+      } ],
+      "trace" : [ [ "MISSED_PAYMENTS", false ], [ "DTI_HIGH", false ], [ "UNSECURED_HIGH", false ], [ "WITHIN_LIMIT", false ], [ "ABOVE_LIMIT", true ] ]
+    },
+    "without income, the rule that reads the ratio fails and names the local value" : {
+      "decision" : "credit_limit_increase",
+      "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+      "businessDate" : "2026-12-01",
+      "status" : "ERROR",
+      "factsHash" : "sha256:543ec1919873e3e717885a53ecc4862628295b28673bd9f4aa636b28d5b4edb0",
+      "output" : { },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "credit_limit_increase",
+        "type" : "table",
+        "version" : "1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444",
+        "matchedRules" : [ ]
+      } ],
+      "error" : "credit_limit_increase@1@sha256:192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444: rule DTI_HIGH condition failed: local value dti failed: decimal division by zero in: monthlyDebt.amount() / applicant.monthlyIncome.amount()"
+    }
+  },
   "deposit_rate.stone-test.json" : {
     "3 months earns the short-term rate" : {
       "decision" : "deposit_rate",

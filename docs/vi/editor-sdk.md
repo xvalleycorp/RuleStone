@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: b65106555d46bd52b475414b6eb3aa9ecedd7ab1a50a78d7ae3c8c7f5eb4099a
+sourceHash: 0db1f366d7a98b42df18610d186d711728d3a4d160f4e15ab6eb73b32718f1c1
 ---
 
 # SDK trình soạn thảo
@@ -195,7 +195,9 @@ Sự kiện là các `CustomEvent` nổi bọt (bubble) và đi xuyên shadow ro
 
 ### Trình soạn thảo bảng
 
-`<rulestone-table-editor>` là trình soạn thảo bảng quyết định đầy đủ: thông tin chung của bảng, lưới luật, trình thiết kế đầu vào và đầu ra, chế độ xem JSON, bảng các lỗi và bảng Chạy thử.
+`<rulestone-table-editor>` là trình soạn thảo bảng quyết định đầy đủ: thông tin chung của bảng, lưới luật, trình thiết kế đầu vào và đầu ra, các [giá trị cục bộ](decision-tables.md#giá-trị-cục-bộ) (`let`), chế độ xem JSON, bảng các lỗi và bảng Chạy thử.
+
+Thẻ **Giá trị cục bộ** liệt kê mỗi giá trị cục bộ dưới dạng một tên và một biểu thức CEL, được kiểm tra kiểu ngay khi gõ theo các đầu vào và các giá trị cục bộ khác. Bạn thêm, đổi tên và xoá chúng tại đây; đổi tên một giá trị cục bộ không sửa các luật đang đọc nó, nên các luật đó sẽ báo lỗi tên cũ.
 
 | Thành phần | Loại | Mô tả |
 |---|---|---|
@@ -238,11 +240,12 @@ Có thể thêm, nhân bản, xoá và sắp xếp lại các luật bằng kéo
 |---|---|---|
 | `value` | thuộc tính / attribute | Điều kiện dưới dạng CEL. |
 | `inputs` | thuộc tính | Các đầu vào của bảng, như trong `.stone.json`, cho bộ chọn trường. |
+| `locals` | thuộc tính | Các giá trị cục bộ (`let`) của bảng, ánh xạ tên tới biểu thức CEL. Chúng xuất hiện trong bộ chọn trường cùng kiểu được suy ra. |
 | `mode` | thuộc tính / attribute | `blocks` hoặc `cel`. |
 | `label` | thuộc tính / attribute | Tên truy cập (accessible name) của trình tạo điều kiện. |
 | `rulestone-change` | sự kiện | `detail`: `{ value }`, đoạn CEL mới. |
 
-Bộ chọn trường liệt kê các đầu vào và các trường của struct. Danh sách được kiểm tra bằng các khối `exists`, `all` và `exists_one`, với các trường riêng của phần tử trong danh sách. Toán tử tuỳ theo kiểu: so sánh cho `int`, `decimal`, `money` và `date`; `in`; `startsWith`, `endsWith`, `contains` và `matches` cho chuỗi; `is set` (`has()`) cho trường của struct; `includes` cho danh sách. Giá trị có kiểu (tiền kèm đơn vị tiền tệ, ngày, số thập phân, danh sách), và nút ƒx biến một giá trị thành biểu thức.
+Bộ chọn trường liệt kê các đầu vào, các giá trị cục bộ và các trường của struct. Danh sách được kiểm tra bằng các khối `exists`, `all` và `exists_one`, với các trường riêng của phần tử trong danh sách. Toán tử tuỳ theo kiểu: so sánh cho `int`, `decimal`, `money` và `date`; `in`; `startsWith`, `endsWith`, `contains` và `matches` cho chuỗi; `is set` (`has()`) cho trường của struct; `includes` cho danh sách. Giá trị có kiểu (tiền kèm đơn vị tiền tệ, ngày, số thập phân, danh sách), và nút ƒx biến một giá trị thành biểu thức.
 
 Đoạn CEL không bị sửa được giữ nguyên đúng như khi viết, kể cả khoảng trắng và chú thích. Những phần đã sửa được in ra dưới dạng CEL chuẩn tắc, chỉ với các dấu ngoặc mà thứ tự ưu tiên đòi hỏi. Đoạn CEL mà các khối không thể hiện được (một phép tính ở vế trái của phép so sánh, `filter` hoặc `map`, toán tử điều kiện, một lỗi cú pháp) được giữ dưới dạng văn bản trong một khối CEL, kèm lý do. Nó không bao giờ bị viết lại.
 
@@ -327,6 +330,7 @@ interface HostProblem {
 type ProblemTarget =
   | { kind: 'table'; field?: string }
   | { kind: 'schema'; side: 'inputs' | 'outputs'; name?: string }
+  | { kind: 'let'; name?: string }
   | { kind: 'rule'; rule: number; field: 'id' | 'when' | 'then' | 'reasonCode' | 'description' | 'rule'; output?: string }
 ```
 

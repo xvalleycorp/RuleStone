@@ -1,6 +1,6 @@
 ---
 source: decision-tables.md
-sourceHash: c4f957d3deb6af1f913d00e49591e589cbdf74105fe87efbb06e43dc642b0898
+sourceHash: d50c42c54be2924af9a8cf9aa611a46585acfdce88a46e5c71f14add700151d4
 ---
 
 # Bảng quyết định
@@ -10,6 +10,7 @@ Bảng quyết định biến các đầu vào có kiểu thành các đầu ra 
 - [Định dạng tệp](#định-dạng-tệp)
 - [Kiểu dữ liệu](#kiểu-dữ-liệu)
 - [Luật](#luật)
+- [Giá trị cục bộ](#giá-trị-cục-bộ)
 - [Hit policy](#hit-policy)
 - [Phiên bản và ngày hiệu lực](#phiên-bản-và-ngày-hiệu-lực)
 - [Kiểm tra hợp lệ](#kiểm-tra-hợp-lệ)
@@ -44,6 +45,7 @@ Một bảng là một đối tượng JSON. Theo quy ước, tên tệp kết t
 | `hitPolicy` | có | `FIRST`, `UNIQUE` hoặc `COLLECT`. Xem [Hit policy](#hit-policy). |
 | `inputs` | có | Đối tượng ánh xạ tên mỗi đầu vào tới [kiểu](#kiểu-dữ-liệu) của nó. Có thể rỗng. |
 | `outputs` | có | Đối tượng ánh xạ tên mỗi đầu ra tới [kiểu](#kiểu-dữ-liệu) của nó. Có thể rỗng, ví dụ với một bảng chỉ trả về mã lý do. |
+| `let` | không | Đối tượng ánh xạ tên tới biểu thức mà mọi luật đều đọc được theo tên. Xem [Giá trị cục bộ](#giá-trị-cục-bộ). |
 | `rules` | có | Mảng [luật](#luật) không rỗng, theo thứ tự đánh giá. |
 
 Việc đọc tệp là **chặt chẽ**:
@@ -119,6 +121,30 @@ Giá trị trong `then` là biểu thức, không phải hằng giá trị. Văn
 ```
 
 Mã lý do là bộ từ vựng ổn định mà bạn đưa cho khách hàng và kiểm toán viên ("vì sao tôi bị từ chối?"). Hãy giữ chúng ổn định qua các phiên bản và lập tài liệu cho tổ chức của bạn.
+
+## Giá trị cục bộ
+
+`let` đặt tên cho các kết quả trung gian mà nhiều luật dùng chung, để một phép tính chỉ phải viết một lần:
+
+```json
+"let": {
+  "monthlyDebt": "loans.map(l, l.monthlyPayment).sum(money(0, 'VND'))",
+  "dti": "monthlyDebt.amount() / applicant.monthlyIncome.amount()"
+},
+"rules": [
+  { "id": "DTI_HIGH", "when": "dti > decimal('0.5')", "then": { "decision": "'REJECT'" } },
+  { "id": "LOW_DEBT", "when": "monthlyDebt < money(5000000, 'VND')", "then": { "decision": "'APPROVE'" } }
+]
+```
+
+- **Kiểu được suy ra** từ biểu thức, và biểu thức được kiểm tra kiểu khi nạp bảng. Một giá trị cục bộ có thể là `bool`, `int`, `string`, `decimal`, `money`, `date`, một danh sách hoặc một struct, ví dụ `loans[0]`.
+- **Một giá trị cục bộ có thể đọc đầu vào, `businessDate` và các giá trị cục bộ khác.** Thứ tự trong tệp không quan trọng; giá trị cục bộ nào đọc chính nó, trực tiếp hay qua giá trị khác, đều bị từ chối.
+- **Giá trị được tính khi được đọc lần đầu**, tối đa một lần cho mỗi lần đánh giá. Giá trị cục bộ mà không luật nào được đánh giá đọc tới thì không bao giờ được tính, nên không thể làm việc đánh giá thất bại. Trong [credit_limit_increase](../../examples/credit_limit_increase.stone.json), `dti` chia cho thu nhập, nhưng khách hàng có kỳ trả nợ bị lỡ đã bị luật đầu tiên từ chối trước khi `dti` được đọc, kể cả khi không có thu nhập.
+- **Lỗi xử lý như thể biểu thức được viết ngay trong luật.** `||` và `&&` vẫn hấp thụ lỗi như thường lệ. Khi một luật thất bại vì một giá trị cục bộ, thông báo lỗi nêu tên giá trị đó: `rule DTI_HIGH condition failed: local value dti failed: decimal division by zero in: …`. Mỗi giá trị cục bộ có [giới hạn số vòng lặp](expressions.md#giới-hạn) riêng.
+- **Tên** là định danh, không được trùng với một đầu vào, `businessDate` hoặc `params` (dành cho bộ tham số). Một đầu ra có thể trùng tên với một giá trị cục bộ.
+- Giá trị cục bộ không được ghi vào bản ghi quyết định: chúng suy ra được từ đầu vào và phiên bản luật. [Mã băm nội dung](#mã-băm-nội-dung) bao gồm `let`; bảng không có `let`, hoặc có `let` rỗng, giữ nguyên mã băm như trước khi có `let`.
+
+Trong một [luồng](flows.md), nút `derive` tính giá trị giữa các nút; còn `let` dành cho các phép tính dùng chung bởi các luật của một bảng.
 
 ## Hit policy
 
@@ -218,6 +244,7 @@ Các bước kiểm tra gồm:
 |---|---|
 | Tệp | JSON không hợp lệ, trường không xác định, khoá trùng lặp, thiếu trường bắt buộc, sai kiểu JSON, kiểu không xác định, hit policy không xác định, ngày không hợp lệ. |
 | Bảng | `id` hoặc `version` không hợp lệ; `effectiveTo` không sau `effectiveFrom`; không có luật nào; đầu ra có kiểu struct; tên đầu vào hoặc tên trường không hợp lệ; một đầu vào tên là `businessDate`. |
+| Giá trị cục bộ | `let` không phải là đối tượng chứa các biểu thức; tên không phải định danh hoặc trùng với một đầu vào, `businessDate` hay `params`; vòng phụ thuộc, được báo một lần dạng `let.a: cycle: a -> b -> a`; biểu thức có lỗi cú pháp hoặc lỗi kiểu, hoặc có kiểu không phải kiểu của RuleStone (như `double`). Luật đọc một giá trị cục bộ bị từ chối không bị kiểm tra lại. |
 | Luật | Trùng id luật; mã lý do không theo dạng `UPPER_SNAKE_CASE`; `then` đặt một đầu ra chưa khai báo. |
 | Biểu thức | Lỗi cú pháp; biến hoặc trường không xác định; lỗi kiểu, kể cả mọi sự trộn lẫn giữa `decimal` và số dấu phẩy động, hoặc giữa `money` và số thông thường; `when` không trả về `bool`; `then` không trả về đúng kiểu của đầu ra. |
 | Phiên bản | Cùng một `id@version` được đăng ký hai lần; hai phiên bản có hiệu lực cùng một ngày, hoặc cả hai đều không có `effectiveFrom`; một `effectiveTo` nằm sau `effectiveFrom` của phiên bản kế tiếp. |

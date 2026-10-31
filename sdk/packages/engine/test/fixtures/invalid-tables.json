@@ -91,5 +91,33 @@
   {
     "name": "versions: an earlier effectiveTo leaves a gap",
     "tables": ["{ \"id\": \"consent_request\", \"version\": \"1\", \"effectiveFrom\": \"2026-01-01\", \"effectiveTo\": \"2026-07-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V1'\" } } ] }", "{ \"id\": \"consent_request\", \"version\": \"2\", \"effectiveFrom\": \"2026-09-01\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": { \"decision\": \"string\" }, \"rules\": [ { \"id\": \"ALL\", \"when\": \"true\", \"then\": { \"decision\": \"'V2'\" } } ] }"]
+  },
+  {
+    "name": "let: not an object",
+    "tables": ["{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\", \"xs\": [\"int\"], \"loans\": [{\"amount\": \"money\"}]}, \"outputs\": {}, \"let\": [], \"rules\": [{\"id\": \"R\", \"when\": \"true\"}]}"]
+  },
+  {
+    "name": "let: an expression that is not a string",
+    "tables": ["{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\", \"xs\": [\"int\"], \"loans\": [{\"amount\": \"money\"}]}, \"outputs\": {}, \"let\": {\"a\": 1, \"b\": \"1\"}, \"rules\": [{\"id\": \"R\", \"when\": \"true\"}]}"]
+  },
+  {
+    "name": "let: names that are not identifiers, reserved or clash with an input",
+    "tables": ["{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\", \"xs\": [\"int\"], \"loans\": [{\"amount\": \"money\"}]}, \"outputs\": {}, \"let\": {\"x\": \"1\", \"params\": \"1\", \"businessDate\": \"1\", \"in\": \"1\", \"2a\": \"1\", \"ok\": \"x + 1\"}, \"rules\": [{\"id\": \"R\", \"when\": \"ok > 1\"}]}"]
+  },
+  {
+    "name": "let: cycles",
+    "tables": ["{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\", \"xs\": [\"int\"], \"loans\": [{\"amount\": \"money\"}]}, \"outputs\": {}, \"let\": {\"a\": \"b + 1\", \"b\": \"c + 1\", \"c\": \"a + 1\", \"d\": \"d\", \"e\": \"a\", \"f\": \"x\"}, \"rules\": [{\"id\": \"R\", \"when\": \"e > 0\"}, {\"id\": \"S\", \"when\": \"f > 0\"}]}"]
+  },
+  {
+    "name": "let: type errors and unknown names",
+    "tables": ["{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\", \"xs\": [\"int\"], \"loans\": [{\"amount\": \"money\"}]}, \"outputs\": {}, \"let\": {\"a\": \"x + 's'\", \"b\": \"a * 2\", \"c\": \"y\", \"d\": \"0.5\", \"f\": \"dyn(1)\"}, \"rules\": [{\"id\": \"R\", \"when\": \"b > 0\"}, {\"id\": \"S\", \"when\": \"c\"}, {\"id\": \"T\", \"when\": \"z > 1\"}, {\"id\": \"U\", \"when\": \"x > 'a'\"}]}"]
+  },
+  {
+    "name": "let: a local value of the wrong type in a rule",
+    "tables": ["{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\", \"xs\": [\"int\"], \"loans\": [{\"amount\": \"money\"}]}, \"outputs\": {\"total\": \"decimal\"}, \"let\": {\"n\": \"xs.size()\", \"total\": \"loans.map(l, l.amount).sum(money(0, 'VND'))\", \"first\": \"loans[0]\"}, \"rules\": [{\"id\": \"R\", \"when\": \"n == 'a'\"}, {\"id\": \"S\", \"when\": \"first.amount > decimal(1)\"}, {\"id\": \"T\", \"when\": \"true\", \"then\": {\"total\": \"total\"}}]}"]
+  },
+  {
+    "name": "let: macro variables are not local values",
+    "tables": ["{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\", \"xs\": [\"int\"], \"loans\": [{\"amount\": \"money\"}]}, \"outputs\": {}, \"let\": {\"x2\": \"xs.map(a, a * 2)\", \"a\": \"x2.size()\"}, \"rules\": [{\"id\": \"R\", \"when\": \"a > 0 && xs.all(x2, x2 > 0)\"}]}"]
   }
 ]

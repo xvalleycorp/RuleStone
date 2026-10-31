@@ -13,6 +13,7 @@ import {
 import { readFacts, writeValues, type JsonInput } from './facts.js'
 import type { DecisionRecord, PathStep, ReasonCode } from './record.js'
 import { ruleVersionOf, sha256Hex, tableRef, type DecisionTable } from './table.js'
+import { compileLocals } from './locals.js'
 import { selectVersion, versionProblems } from './versions.js'
 import { containsStruct, type ValueType } from './types.js'
 import type { Value } from './values.js'
@@ -150,16 +151,30 @@ async function compile(
     )
   }
   let environment: ExpressionEnvironment
+  const variables = new Map<string, ValueType>(inputs)
+  variables.set(BUSINESS_DATE, 'date')
+  const options = { variables, maxIterations, currencyScales: scales }
   try {
-    const variables = new Map<string, ValueType>(inputs)
-    variables.set(BUSINESS_DATE, 'date')
-    environment = new ExpressionEnvironment({ variables, maxIterations, currencyScales: scales })
+    environment = new ExpressionEnvironment(options)
   } catch (e) {
     if (e instanceof RangeError) {
       problems.push(`${at}inputs: ${e.message}`)
       return undefined
     }
     throw e
+  }
+  const failedLocals = new Set<string>()
+  if (table.let && table.let.size > 0) environment = compileLocals(table, environment, options, at, problems, failedLocals)
+  const compileExpression = (source: string, type: ValueType, where: string): CompiledExpression | undefined => {
+    if (failedLocals.size > 0) {
+      try {
+        // A rule that reads a local value that could not be compiled: that problem is reported.
+        if (environment.references(source).some((n) => failedLocals.has(n))) return undefined
+      } catch (e) {
+        if (!(e instanceof ExpressionError)) throw e
+      }
+    }
+    return compileChecked(environment, source, type, where, problems)
   }
 
   const rules: CompiledRule[] = []
@@ -171,14 +186,14 @@ async function compile(
     if (rule.reasonCode !== undefined && !REASON_CODE.test(rule.reasonCode)) {
       problems.push(`${ruleAt}.reasonCode: must be UPPER_SNAKE_CASE, e.g. DTI_HIGH`)
     }
-    const when = compileExpression(environment, rule.when, 'bool', `${ruleAt}.when`, problems)
+    const when = compileExpression(rule.when, 'bool', `${ruleAt}.when`)
     const then = new Map<string, CompiledExpression>()
     for (const [output, source] of rule.then) {
       const type = table.outputs.get(output)
       if (type === undefined) {
         problems.push(`${ruleAt}.then.${output}: undeclared output (declared: [${[...table.outputs.keys()].join(', ')}])`)
       } else if (!containsStruct(type)) {
-        const expression = compileExpression(environment, source, type, `${ruleAt}.then.${output}`, problems)
+        const expression = compileExpression(source, type, `${ruleAt}.then.${output}`)
         if (expression) then.set(output, expression)
       }
     }
@@ -188,7 +203,7 @@ async function compile(
   return { table, ruleVersion: await ruleVersionOf(table), environment, rules }
 }
 
-function compileExpression(
+function compileChecked(
   environment: ExpressionEnvironment,
   source: string,
   type: ValueType,

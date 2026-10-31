@@ -17,7 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.HexFormat;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
 import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
@@ -121,21 +123,29 @@ final class CompiledDecision implements Executable {
                     + BUSINESS_DATE + " implicitly (DecisionRef.asOf, else the engine clock)");
         }
 
-        ExpressionEnvironment environment;
-        try {
+        Supplier<ExpressionEnvironment.Builder> base = () -> {
             ExpressionEnvironment.Builder builder = ExpressionEnvironment.builder()
                     .variables(inputs)
                     .variable(BUSINESS_DATE, ValueType.DATE)
                     .maxIterations(maxIterations);
             currencyScales.forEach(builder::currencyScale);
-            environment = builder.build();
+            return builder;
+        };
+        ExpressionEnvironment environment;
+        try {
+            environment = base.get().build();
         } catch (IllegalArgumentException e) {
             problems.add(at + "inputs: " + e.getMessage());
             return Optional.empty();
         }
+        Set<String> failedLocals = new TreeSet<>();
+        if (!table.let().isEmpty()) {
+            environment = new LocalValues(table, environment, base, at, problems).compile(failedLocals);
+        }
 
         List<CompiledRule> rules = new ArrayList<>();
         Set<String> ids = new HashSet<>();
+        ExpressionEnvironment rulesEnvironment = environment;
         for (Rule rule : table.rules()) {
             String ruleAt = at + "rules[" + rule.id() + "]";
             if (!ids.add(rule.id())) {
@@ -146,14 +156,16 @@ final class CompiledDecision implements Executable {
                     problems.add(ruleAt + ".reasonCode: must be UPPER_SNAKE_CASE, e.g. DTI_HIGH");
                 }
             });
-            CelExpression when = compile(environment, rule.when(), ValueType.BOOL, ruleAt + ".when", problems);
+            CelExpression when = compile(rulesEnvironment, rule.when(), ValueType.BOOL, ruleAt + ".when", problems,
+                    failedLocals);
             Map<String, CelExpression> then = new LinkedHashMap<>();
             rule.then().forEach((output, source) -> {
                 ValueType type = table.outputs().get(output);
                 if (type == null) {
                     problems.add(ruleAt + ".then." + output + ": undeclared output (declared: " + table.outputs().keySet() + ")");
                 } else if (!containsStruct(type)) {
-                    then.put(output, compile(environment, source, type, ruleAt + ".then." + output, problems));
+                    then.put(output, compile(rulesEnvironment, source, type, ruleAt + ".then." + output, problems,
+                            failedLocals));
                 }
             });
             rules.add(new CompiledRule(rule.id(), when, then, rule.reasonCode()));
@@ -290,7 +302,16 @@ final class CompiledDecision implements Executable {
     }
 
     private static CelExpression compile(ExpressionEnvironment environment, String source, ValueType type,
-                                         String at, List<String> problems) {
+                                         String at, List<String> problems, Set<String> failedLocals) {
+        if (!failedLocals.isEmpty()) {
+            try {
+                if (environment.references(source).stream().anyMatch(failedLocals::contains)) {
+                    return null; // the local value's own problem is reported
+                }
+            } catch (ExpressionException e) {
+                // reported by compile below
+            }
+        }
         try {
             return environment.compile(source, type);
         } catch (ExpressionException e) {

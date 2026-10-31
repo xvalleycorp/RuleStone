@@ -8,7 +8,7 @@ import {
   newRaw, numberValue, operatorsFor, outdent, parseCondition, printCondition, printValue, removeNode, takesValue, updateNode,
   type CondNode, type Group, type Leaf, type Operator, type Quantifier, type Raw, type ValueNode,
 } from '../model/condition.js'
-import { describeType, fieldsOf, tableVariables, valueTypeOf } from '../model/schema.js'
+import { describeType, fieldsOf, localSpecs, tableVariables, valueTypeOf } from '../model/schema.js'
 import type { TypeSpec } from '../model/table.js'
 import { RulestoneElement, define } from './base.js'
 import './cel-input.js'
@@ -39,6 +39,7 @@ export class RulestoneConditionBuilder extends RulestoneElement {
     ...RulestoneElement.properties,
     value: { type: String },
     inputs: { attribute: false },
+    locals: { attribute: false },
     mode: { type: String, reflect: true },
     label: { type: String },
     _model: { state: true },
@@ -50,6 +51,8 @@ export class RulestoneConditionBuilder extends RulestoneElement {
   declare value: string
   /** The table's inputs, as in .stone.json. */
   declare inputs: Record<string, TypeSpec>
+  /** The table's local values (let), name to CEL expression: offered as fields with their inferred types. */
+  declare locals: Record<string, string> | undefined
   /** 'blocks' or 'cel'. */
   declare mode: 'blocks' | 'cel'
   /** The accessible name of the builder. */
@@ -217,11 +220,15 @@ export class RulestoneConditionBuilder extends RulestoneElement {
   }
 
   private rootScope(): Map<string, TypeSpec> {
-    return new Map<string, TypeSpec>([...Object.entries(this.inputs), ['businessDate', 'date']])
+    return new Map<string, TypeSpec>([
+      ...Object.entries(this.inputs),
+      ...localSpecs(this.inputs, this.locals),
+      ['businessDate', 'date'],
+    ])
   }
 
   private variablesOf(scope: Scope): Map<string, ValueType> {
-    const variables = tableVariables(this.inputs)
+    const variables = tableVariables(this.inputs, this.locals)
     for (const [name, spec] of scope) {
       if (!variables.has(name)) {
         const type = valueTypeOf(spec)

@@ -12,6 +12,7 @@ Complete decision tables, and a decision flow, for common banking problems. They
 | `card_fraud_action.stone.json` | `FIRST` | Card authorization action (approve, challenge, decline) from the risk score |
 | `consumer_loan_underwriting.stone.json` | `FIRST` | Consumer loan decision, risk grade, interest rate and maximum amount |
 | `consumer_loan_conditions.stone.json` | `COLLECT` | Conditions attached to an approved consumer loan |
+| `credit_limit_increase.stone.json` | `FIRST` | Credit card limit increase from the debt-to-income ratio, with local values (`let`) |
 | `aml_name_screening.stone.json` | `FIRST` | AML screening of a customer against a sanctions and PEP watchlist |
 | `aml_transaction_monitoring.stone.json` | `COLLECT` | AML alerts and their scores for a transaction and the account's recent activity |
 | `aml_alert_action.stone.json` | `FIRST` | AML action (suspicious transaction report, analyst review, large cash report) from the alert score |

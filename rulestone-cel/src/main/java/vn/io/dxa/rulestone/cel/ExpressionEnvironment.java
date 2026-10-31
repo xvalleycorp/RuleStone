@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableSet;
 import dev.cel.common.CelAbstractSyntaxTree;
 import dev.cel.common.CelOptions;
 import dev.cel.common.CelValidationException;
+import dev.cel.common.ast.CelExpr;
 import dev.cel.common.types.CelType;
 import dev.cel.common.types.CelTypeProvider;
 import dev.cel.common.types.ListType;
@@ -25,11 +26,13 @@ import dev.cel.runtime.CelRuntime;
 import dev.cel.runtime.CelRuntimeFactory;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 /**
@@ -60,12 +63,15 @@ public final class ExpressionEnvironment {
 
     private final Map<String, ValueType> variables;
     private final Map<String, Integer> currencyScales;
+    private final int maxIterations;
+    private final Map<String, CelExpression> locals;
     private final CelCompiler compiler;
     private final CelRuntime runtime;
 
     private ExpressionEnvironment(Builder builder) {
         this.variables = Collections.unmodifiableMap(new LinkedHashMap<>(builder.variables));
         this.currencyScales = Map.copyOf(builder.currencyScales);
+        this.maxIterations = builder.maxIterations;
         CelOptions options = CelOptions.current()
                 .comprehensionMaxIterations(builder.maxIterations)
                 .build();
@@ -81,6 +87,8 @@ public final class ExpressionEnvironment {
                 .addFunctionDeclarations(FuzzyLibrary.declarations())
                 .addFunctionDeclarations(AggregateLibrary.declarations());
         variables.forEach((name, type) -> compilerBuilder.addVar(name, celType(type, "rulestone.input." + name, structs)));
+        this.locals = Collections.unmodifiableMap(new LinkedHashMap<>(builder.locals));
+        locals.forEach((name, expression) -> compilerBuilder.addVar(name, expression.celType()));
         this.compiler = compilerBuilder.setTypeProvider(new StructTypeProvider(structs)).build();
         this.runtime = CelRuntimeFactory.standardCelRuntimeBuilder()
                 .setOptions(options)
@@ -120,23 +128,159 @@ public final class ExpressionEnvironment {
         if (expected instanceof ValueType.Struct) {
             throw new IllegalArgumentException("expressions cannot be required to produce a struct");
         }
-        CelAbstractSyntaxTree ast;
-        try {
-            ast = compiler.compile(source).getAst();
-        } catch (CelValidationException e) {
-            throw new ExpressionException(e.getMessage(), e);
-        }
+        CelAbstractSyntaxTree ast = check(source);
         CelType actual = ast.getResultType();
         CelType wanted = celType(expected, "", new HashMap<>());
         if (!actual.equals(SimpleType.DYN) && !wanted.isAssignableFrom(actual)) {
             throw new ExpressionException(
                     "expression must produce " + expected + " but produces " + actual.name() + ": " + source, null);
         }
+        return program(source, expected, actual, ast);
+    }
+
+    /**
+     * Parses and type-checks the expression of a local value, inferring its type, which must be
+     * one of {@link ValueType}: a {@code bool}, {@code int}, {@code string}, {@code decimal},
+     * {@code money}, {@code date}, a list or a struct.
+     *
+     * @return an expression to declare with {@link Builder#local} in an environment with the same
+     *         variables, local values, iteration limit and currency scales as this one, or more
+     *         variables and local values
+     * @throws ExpressionException if the expression is malformed, ill-typed, or of another type
+     */
+    public CelExpression compileLocal(String source) {
+        Objects.requireNonNull(source, "source");
+        CelAbstractSyntaxTree ast = check(source);
+        CelType actual = ast.getResultType();
+        ValueType type = valueType(actual);
+        if (type == null) {
+            throw new ExpressionException("a local value must produce bool, int, string, decimal, money, date, "
+                    + "a list or a struct but produces " + actual.name() + ": " + source, null);
+        }
+        return program(source, type, actual, ast);
+    }
+
+    /**
+     * The names an expression reads from its environment: inputs and local values, but not the
+     * variables of list functions such as {@code x} in {@code xs.all(x, x > 0)}. The expression
+     * is parsed but not type-checked, so names that are not declared are included.
+     *
+     * @throws ExpressionException if the expression is malformed
+     */
+    public Set<String> references(String source) {
+        Objects.requireNonNull(source, "source");
+        CelExpr root;
         try {
-            return new CelExpression(this, source, expected, runtime.createProgram(ast));
+            root = compiler.parse(source).getAst().getExpr();
+        } catch (CelValidationException e) {
+            throw new ExpressionException(e.getMessage(), e);
+        }
+        Set<String> names = new TreeSet<>();
+        collectReferences(root, Set.of(), names);
+        return Collections.unmodifiableSet(names);
+    }
+
+    private static void collectReferences(CelExpr expr, Set<String> bound, Set<String> names) {
+        switch (expr.exprKind().getKind()) {
+            case IDENT -> {
+                if (!bound.contains(expr.ident().name())) {
+                    names.add(expr.ident().name());
+                }
+            }
+            case SELECT -> collectReferences(expr.select().operand(), bound, names);
+            case CALL -> {
+                expr.call().target().ifPresent(t -> collectReferences(t, bound, names));
+                expr.call().args().forEach(a -> collectReferences(a, bound, names));
+            }
+            case LIST -> expr.list().elements().forEach(e -> collectReferences(e, bound, names));
+            case MAP -> expr.map().entries().forEach(e -> {
+                collectReferences(e.key(), bound, names);
+                collectReferences(e.value(), bound, names);
+            });
+            case STRUCT -> expr.struct().entries().forEach(e -> collectReferences(e.value(), bound, names));
+            case COMPREHENSION -> {
+                CelExpr.CelComprehension c = expr.comprehension();
+                collectReferences(c.iterRange(), bound, names);
+                collectReferences(c.accuInit(), bound, names);
+                Set<String> accu = new HashSet<>(bound);
+                accu.add(c.accuVar());
+                Set<String> loop = new HashSet<>(accu);
+                loop.add(c.iterVar());
+                if (!c.iterVar2().isEmpty()) {
+                    loop.add(c.iterVar2());
+                }
+                collectReferences(c.loopCondition(), loop, names);
+                collectReferences(c.loopStep(), loop, names);
+                collectReferences(c.result(), accu, names);
+            }
+            default -> {
+                // constants
+            }
+        }
+    }
+
+    /** Whether {@code name} can name a variable or local value: an identifier that is not a reserved word. */
+    public static boolean isValidName(String name) {
+        return IDENTIFIER.matcher(name).matches() && !RESERVED.contains(name);
+    }
+
+    /** The local values declared with {@link Builder#local}, by name. */
+    public Map<String, CelExpression> locals() {
+        return locals;
+    }
+
+    private CelAbstractSyntaxTree check(String source) {
+        try {
+            return compiler.compile(source).getAst();
+        } catch (CelValidationException e) {
+            throw new ExpressionException(e.getMessage(), e);
+        }
+    }
+
+    private CelExpression program(String source, ValueType type, CelType celType, CelAbstractSyntaxTree ast) {
+        try {
+            return new CelExpression(this, source, type, celType, runtime.createProgram(ast));
         } catch (CelEvaluationException e) {
             throw new ExpressionException("cannot prepare expression: " + source, e);
         }
+    }
+
+    /** The {@link ValueType} of a checked type, or null if it has none (dyn, double, maps, …). */
+    private static ValueType valueType(CelType type) {
+        if (type.equals(SimpleType.BOOL)) {
+            return ValueType.BOOL;
+        }
+        if (type.equals(SimpleType.INT)) {
+            return ValueType.INT;
+        }
+        if (type.equals(SimpleType.STRING)) {
+            return ValueType.STRING;
+        }
+        if (type.equals(DecimalLibrary.TYPE)) {
+            return ValueType.DECIMAL;
+        }
+        if (type.equals(MoneyLibrary.TYPE)) {
+            return ValueType.MONEY;
+        }
+        if (type.equals(DateLibrary.TYPE)) {
+            return ValueType.DATE;
+        }
+        if (type instanceof ListType list) {
+            ValueType element = valueType(list.elemType());
+            return element == null ? null : ValueType.listOf(element);
+        }
+        if (type instanceof StructType struct && struct.name().startsWith("rulestone.input.")) {
+            Map<String, ValueType> fields = new LinkedHashMap<>();
+            for (String field : struct.fieldNames()) {
+                ValueType fieldType = valueType(struct.findField(field).orElseThrow().type());
+                if (fieldType == null) {
+                    return null;
+                }
+                fields.put(field, fieldType);
+            }
+            return ValueType.struct(fields);
+        }
+        return null;
     }
 
     /**
@@ -194,6 +338,7 @@ public final class ExpressionEnvironment {
 
         private final Map<String, ValueType> variables = new LinkedHashMap<>();
         private final Map<String, Integer> currencyScales = new HashMap<>();
+        private final Map<String, CelExpression> locals = new LinkedHashMap<>();
         private int maxIterations = DEFAULT_MAX_ITERATIONS;
 
         private Builder() {}
@@ -201,9 +346,40 @@ public final class ExpressionEnvironment {
         public Builder variable(String name, ValueType type) {
             Objects.requireNonNull(type, "type");
             requireIdentifier(name, "variable");
-            if (variables.putIfAbsent(name, type) != null) {
+            if (locals.containsKey(name) || variables.putIfAbsent(name, type) != null) {
                 throw new IllegalArgumentException("duplicate variable: " + name);
             }
+            return this;
+        }
+
+        /**
+         * Declares a local value: a variable whose value is computed from {@code expression} when an
+         * expression first reads it, at most once per {@link Bindings}. A local value that no
+         * expression reads is never computed, and its failure fails only expressions that read it,
+         * as if its expression were written in their place (so {@code ||} and {@code &&} can
+         * absorb it). Its type is the inferred type of {@code expression}.
+         *
+         * @param expression compiled with {@link ExpressionEnvironment#compileLocal} by an
+         *                   environment whose variables and local values this builder also declares,
+         *                   with the same iteration limit and currency scales
+         * @throws IllegalArgumentException for an invalid or duplicate name, or an expression from
+         *                                  an incompatible environment
+         */
+        public Builder local(String name, CelExpression expression) {
+            Objects.requireNonNull(expression, "expression");
+            requireIdentifier(name, "local value");
+            if (variables.containsKey(name) || locals.containsKey(name)) {
+                throw new IllegalArgumentException("duplicate variable: " + name);
+            }
+            ExpressionEnvironment from = expression.environment();
+            boolean compatible = from.maxIterations == maxIterations && from.currencyScales.equals(currencyScales)
+                    && from.variables.entrySet().stream().allMatch(v -> v.getValue().equals(variables.get(v.getKey())))
+                    && from.locals.entrySet().stream().allMatch(l -> l.getValue() == locals.get(l.getKey()));
+            if (!compatible) {
+                throw new IllegalArgumentException("local value " + name
+                        + " was compiled in an environment with other variables, local values or settings");
+            }
+            locals.put(name, expression);
             return this;
         }
 

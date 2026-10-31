@@ -14,7 +14,8 @@ import { EvalError, type EvalContext, type Overload } from './functions.js'
 import type { CelType } from './types.js'
 
 export interface Activation extends EvalContext {
-  readonly variables: ReadonlyMap<string, Value>
+  /** Resolves a declared variable; may compute it (a local value) and throw its EvalError. */
+  readonly variables: { get(name: string): Value | undefined }
   readonly maxIterations: number
 }
 
