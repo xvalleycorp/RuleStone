@@ -27,9 +27,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
@@ -37,6 +39,7 @@ import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionResult;
+import vn.io.dxa.rulestone.api.Explanation;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.api.RuleStoneException;
@@ -51,6 +54,9 @@ import vn.io.dxa.rulestone.core.FactsJson;
 import vn.io.dxa.rulestone.core.InvalidDecisionException;
 import vn.io.dxa.rulestone.core.ParameterSet;
 import vn.io.dxa.rulestone.core.ParameterSetJson;
+import vn.io.dxa.rulestone.core.Explanations;
+import vn.io.dxa.rulestone.core.ReasonCodeCatalog;
+import vn.io.dxa.rulestone.core.ReasonCodeCatalogJson;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 /**
@@ -64,8 +70,11 @@ import vn.io.dxa.rulestone.core.RuleStone;
  *       example test file;</li>
  *   <li>{@code java-probes.json}: the result, or the error, of every expression in
  *       {@code probes.json};</li>
- *   <li>{@code java-invalid-tables.json}: the problems reported for every table, and parameter
- *       set, in {@code invalid-tables.json}.</li>
+ *   <li>{@code java-invalid-tables.json}: the problems reported for every table, parameter
+ *       set and reason-code catalog in {@code invalid-tables.json};</li>
+ *   <li>{@code java-explanations.json}: the explanation, in English and Vietnamese, of the record
+ *       of every case of every example flow test file, with the record, and of two cases of every
+ *       example table test file: the first with reason codes and the first without.</li>
  * </ul>
  *
  * <p>After changing the engine, the examples or the probes, regenerate them with
@@ -218,14 +227,93 @@ class SdkFixturesTest {
                     }
                 }
             }
+            RuleStone.Builder builder = RuleStone.builder().paramSets(sets).decisions(tables);
+            if (testCase.has("reasonCodes")) {
+                try {
+                    builder.reasonCodeCatalog(ReasonCodeCatalogJson.read(testCase.get("reasonCodes").textValue()));
+                    entry.putNull("readReasonCodes");
+                } catch (InvalidDecisionException e) {
+                    ArrayNode problems = entry.putArray("readReasonCodes");
+                    e.problems().forEach(problems::add);
+                }
+            }
+            if (testCase.path("requireReasonCodes").asBoolean(false)) {
+                builder.requireReasonCodeCatalog();
+            }
             ArrayNode build = entry.putArray("build");
             try {
-                RuleStone.builder().paramSets(sets).decisions(tables).build();
+                builder.build();
             } catch (InvalidDecisionException e) {
                 e.problems().forEach(build::add);
             }
         }
         check("java-invalid-tables.json", out);
+    }
+
+    /**
+     * The explanation, in every locale of the examples' catalog, of the records of the example test
+     * files: every case of a flow, with its record, since the browser engine runs no flows; and two
+     * cases of each table, which the browser engine evaluates itself.
+     */
+    @Test
+    void explanations() throws IOException {
+        ReasonCodeCatalog catalog = ExamplesStoneTest.exampleCatalog();
+        List<DecisionRecord> records = new ArrayList<>();
+        RuleStoneEngine engine = RuleStone.builder()
+                .clock(CLOCK)
+                .decisions(ExamplesStoneTest.allExampleTables())
+                .flows(ExamplesStoneTest.exampleFlows())
+                .paramSets(ExamplesStoneTest.exampleParamSets())
+                .suppliedModelsOnly()
+                .reasonCodeCatalog(catalog)
+                .requireReasonCodeCatalog()
+                .recordIds(() -> "fixture")
+                .auditSink(records::add)
+                .build();
+        ObjectNode json = NODES.objectNode();
+        json.putObject("catalog")
+                .put("file", ReasonCodeCatalogJson.FILE_NAME)
+                .put("version", ReasonCodeCatalogJson.exactVersion(catalog))
+                .put("canonical", ReasonCodeCatalogJson.write(catalog));
+        ObjectNode byFile = json.putObject("files");
+        List<Path> testFiles = new ArrayList<>();
+        for (Path dir : List.of(ExamplesStoneTest.EXAMPLES, ExamplesStoneTest.FLOWS)) {
+            try (Stream<Path> files = Files.list(dir)) {
+                files.filter(f -> f.toString().endsWith(StoneTestJson.FILE_SUFFIX)).sorted().forEach(testFiles::add);
+            }
+        }
+        for (Path file : testFiles) {
+            String name = ExamplesStoneTest.EXAMPLES.relativize(file).toString().replace('\\', '/');
+            ObjectNode cases = byFile.putObject(name);
+            Set<String> kinds = new HashSet<>();
+            for (StoneTestCase testCase : StoneTestJson.read(file, ExamplesStoneTest.allExampleTables(),
+                    ExamplesStoneTest.exampleFlows())) {
+                try {
+                    engine.evaluate(testCase.ref(), testCase.facts());
+                } catch (RuleStoneException e) {
+                    // the record is written all the same
+                }
+                DecisionRecord record = records.get(records.size() - 1);
+                // Every case of a flow; of a table, the first case with reasons and the first without,
+                // which the browser engine re-evaluates, so that the fixture stays small.
+                boolean flow = file.startsWith(ExamplesStoneTest.FLOWS);
+                String kind = record.reasonCodes().isEmpty() ? "without" : "with";
+                if (!flow && !kinds.add(kind)) {
+                    continue;
+                }
+                ObjectNode entry = cases.putObject(testCase.name());
+                if (flow) {
+                    entry.set("record", DecisionRecordJson.toJson(record));
+                }
+                for (String locale : catalog.locales()) {
+                    Explanation explanation = engine.explain(record, locale);
+                    entry.putObject(locale)
+                            .put("json", Explanations.write(explanation))
+                            .put("text", Explanations.text(explanation));
+                }
+            }
+        }
+        check("java-explanations.json", json);
     }
 
     @Test

@@ -169,5 +169,53 @@
       "{\"id\": \"empty\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"set\": \"s\", \"values\": {}}, \"rules\": [{\"id\": \"R\", \"when\": \"params.a > 1\"}]}",
       "{\"id\": \"wrong_types\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"params\": {\"set\": \"s\", \"values\": {\"a\": \"int\", \"b\": \"int\"}}, \"rules\": [{\"id\": \"R\", \"when\": \"params.a + 1\"}]}"
     ]
+  },
+  {
+    "name": "reason codes: reading a catalog reports every problem",
+    "tables": [],
+    "reasonCodes": "{\"version\": \"1 2\", \"locales\": [\"en\", \"EN\", \"en\"], \"extra\": 1, \"codes\": {\"dti_high\": {\"en\": \"x\"}, \"A\": {\"en\": \" padded\", \"fr\": \"y\"}, \"B\": {\"en\": \"{amount} is too high\"}, \"C\": {\"en\": \"two\\nlines\"}, \"D\": \"text\", \"E\": {\"en\": 3}, \"F\": {\"en\": \"   \"}, \"G\": {\"en\": \"Tab\\there\"}}}"
+  },
+  {
+    "name": "reason codes: missing locales and fields",
+    "tables": [],
+    "reasonCodes": "{\"version\": \"1\", \"locales\": [\"en\", \"vi\"], \"codes\": {\"A\": {\"en\": \"a\"}, \"B\": {\"vi\": \"b\"}}}"
+  },
+  {
+    "name": "reason codes: no locales and no codes",
+    "tables": [],
+    "reasonCodes": "{\"version\": \"\", \"codes\": []}"
+  },
+  {
+    "name": "reason codes: invalid JSON",
+    "tables": [],
+    "reasonCodes": "{\"version\": \"1\", \"locales\": [\"en\"],"
+  },
+  {
+    "name": "reason codes: duplicate keys",
+    "tables": [],
+    "reasonCodes": "{\"version\": \"1\", \"locales\": [\"en\"], \"codes\": {\"A\": {\"en\": \"a\", \"en\": \"b\"}}}"
+  },
+  {
+    "name": "reason codes: every reason code of every table needs a message",
+    "tables": [
+      "{\"id\": \"t\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {\"x\": \"int\"}, \"outputs\": {}, \"rules\": [{\"id\": \"R1\", \"when\": \"x > 1\", \"reasonCode\": \"KNOWN\"}, {\"id\": \"R2\", \"when\": \"x > 2\", \"reasonCode\": \"UNKNOWN\"}, {\"id\": \"R3\", \"when\": \"true\"}]}",
+      "{\"id\": \"u\", \"version\": \"2\", \"hitPolicy\": \"COLLECT\", \"inputs\": {}, \"outputs\": {}, \"rules\": [{\"id\": \"A\", \"when\": \"true\", \"reasonCode\": \"ALSO_UNKNOWN\"}]}"
+    ],
+    "reasonCodes": "{\"version\": \"3\", \"description\": \"d\", \"locales\": [\"en\", \"vi\"], \"codes\": {\"KNOWN\": {\"en\": \"Known.\", \"vi\": \"\u0110\u00e3 bi\u1ebft.\"}}}"
+  },
+  {
+    "name": "reason codes: a required catalog must be registered",
+    "tables": [
+      "{\"id\": \"u\", \"version\": \"2\", \"hitPolicy\": \"COLLECT\", \"inputs\": {}, \"outputs\": {}, \"rules\": [{\"id\": \"A\", \"when\": \"true\", \"reasonCode\": \"ALSO_UNKNOWN\"}]}"
+    ],
+    "requireReasonCodes": true
+  },
+  {
+    "name": "reason codes: a registered catalog satisfies the requirement",
+    "tables": [
+      "{\"id\": \"v\", \"version\": \"1\", \"hitPolicy\": \"FIRST\", \"inputs\": {}, \"outputs\": {}, \"rules\": [{\"id\": \"R\", \"when\": \"true\", \"reasonCode\": \"KNOWN\"}]}"
+    ],
+    "reasonCodes": "{\"version\": \"3\", \"description\": \"d\", \"locales\": [\"en\", \"vi\"], \"codes\": {\"KNOWN\": {\"en\": \"Known.\", \"vi\": \"\u0110\u00e3 bi\u1ebft.\"}}}",
+    "requireReasonCodes": true
   }
 ]
