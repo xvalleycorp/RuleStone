@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: 1e8b2bcdd365e6632c16496a31dc23acf2b770103013b0c60f155508dd339958
+sourceHash: b67ec3382b5aedae4d7a188d8344d2df2b09bf023639182266de60f09c0ba08c
 ---
 
 # SDK trình soạn thảo
@@ -195,13 +195,16 @@ Sự kiện là các `CustomEvent` nổi bọt (bubble) và đi xuyên shadow ro
 
 ### Trình soạn thảo bảng
 
-`<rulestone-table-editor>` là trình soạn thảo bảng quyết định đầy đủ: thông tin chung của bảng, lưới luật, trình thiết kế đầu vào và đầu ra, các [giá trị cục bộ](decision-tables.md#giá-trị-cục-bộ) (`let`), chế độ xem JSON, bảng các lỗi và bảng Chạy thử.
+`<rulestone-table-editor>` là trình soạn thảo bảng quyết định đầy đủ: thông tin chung của bảng, lưới luật, trình thiết kế đầu vào và đầu ra, các [tham số](decision-tables.md#tham-số) (`params`), các [giá trị cục bộ](decision-tables.md#giá-trị-cục-bộ) (`let`), chế độ xem JSON, bảng các lỗi và bảng Chạy thử.
+
+Thẻ **Tham số** chỉnh sửa phần khai báo `params` của bảng: bộ tham số, một phiên bản cố định tuỳ chọn, và mỗi tham số mà các luật đọc cùng kiểu của nó (một kiểu cơ bản hoặc danh sách của một kiểu cơ bản). Cạnh mỗi tham số, thẻ hiển thị giá trị của nó trong mọi phiên bản của bộ tham số được truyền vào `paramSets`. Luật đọc các tham số bằng `params.<tên>`, mà lưới luật và trình dựng điều kiện đều gợi ý.
 
 Thẻ **Giá trị cục bộ** liệt kê mỗi giá trị cục bộ dưới dạng một tên và một biểu thức CEL, được kiểm tra kiểu ngay khi gõ theo các đầu vào và các giá trị cục bộ khác. Bạn thêm, đổi tên và xoá chúng tại đây; đổi tên một giá trị cục bộ không sửa các luật đang đọc nó, nên các luật đó sẽ báo lỗi tên cũ.
 
 | Thành phần | Loại | Mô tả |
 |---|---|---|
 | `table` | thuộc tính | Bảng dưới dạng `.stone.json` đã phân tích, một đối tượng thuần. Trình soạn thảo làm việc trên một bản sao và không bao giờ thay đổi đối tượng của ứng dụng chủ. |
+| `paramSets` | thuộc tính | Các bộ tham số mà bảng có thể đọc: mọi phiên bản của mỗi bộ, dạng văn bản `.params.json` hoặc JSON đã phân tích. `params` của bảng được kiểm tra với chúng như engine kiểm tra, thẻ Tham số hiển thị giá trị của chúng, và Chạy thử dùng phiên bản có hiệu lực vào ngày của nó. Nếu không có, một bảng khai báo `params` sẽ báo bộ tham số của nó chưa được đăng ký. |
 | `validator` | thuộc tính | Hàm tuỳ chọn `async (table, localResult) => HostProblem[]` cho các bước kiểm tra phía máy chủ. Xem [hook validator](#kiểm-tra-phía-máy-chủ-hook-validator). |
 | `asOf` / `as-of` | thuộc tính / attribute | Ngày nghiệp vụ mà bảng Chạy thử bắt đầu (`yyyy-MM-dd`). Mặc định: hôm nay. |
 | `facts` | thuộc tính / attribute | Dữ liệu đầu vào cho bảng Chạy thử dưới dạng văn bản JSON, theo các dạng của một ca kiểm thử `.stone-test.json`. |
@@ -241,11 +244,12 @@ Có thể thêm, nhân bản, xoá và sắp xếp lại các luật bằng kéo
 | `value` | thuộc tính / attribute | Điều kiện dưới dạng CEL. |
 | `inputs` | thuộc tính | Các đầu vào của bảng, như trong `.stone.json`, cho bộ chọn trường. |
 | `locals` | thuộc tính | Các giá trị cục bộ (`let`) của bảng, ánh xạ tên tới biểu thức CEL. Chúng xuất hiện trong bộ chọn trường cùng kiểu được suy ra. |
+| `params` | thuộc tính | Các tham số mà bảng khai báo (`params.values`), ánh xạ tên tới kiểu. Chúng xuất hiện trong bộ chọn trường như các trường của `params`. |
 | `mode` | thuộc tính / attribute | `blocks` hoặc `cel`. |
 | `label` | thuộc tính / attribute | Tên truy cập (accessible name) của trình tạo điều kiện. |
 | `rulestone-change` | sự kiện | `detail`: `{ value }`, đoạn CEL mới. |
 
-Bộ chọn trường liệt kê các đầu vào, các giá trị cục bộ và các trường của struct. Danh sách được kiểm tra bằng các khối `exists`, `all` và `exists_one`, với các trường riêng của phần tử trong danh sách. Toán tử tuỳ theo kiểu: so sánh cho `int`, `decimal`, `money` và `date`; `in`; `startsWith`, `endsWith`, `contains` và `matches` cho chuỗi; `is set` (`has()`) cho trường của struct; `includes` cho danh sách. Giá trị có kiểu (tiền kèm đơn vị tiền tệ, ngày, số thập phân, danh sách), và nút ƒx biến một giá trị thành biểu thức.
+Bộ chọn trường liệt kê các đầu vào, các giá trị cục bộ, các tham số đã khai báo (dưới `params`) và các trường của struct. Danh sách được kiểm tra bằng các khối `exists`, `all` và `exists_one`, với các trường riêng của phần tử trong danh sách. Toán tử tuỳ theo kiểu: so sánh cho `int`, `decimal`, `money` và `date`; `in`; `startsWith`, `endsWith`, `contains` và `matches` cho chuỗi; `is set` (`has()`) cho trường của struct; `includes` cho danh sách. Giá trị có kiểu (tiền kèm đơn vị tiền tệ, ngày, số thập phân, danh sách), và nút ƒx biến một giá trị thành biểu thức.
 
 Đoạn CEL không bị sửa được giữ nguyên đúng như khi viết, kể cả khoảng trắng và chú thích. Những phần đã sửa được in ra dưới dạng CEL chuẩn tắc, chỉ với các dấu ngoặc mà thứ tự ưu tiên đòi hỏi. Đoạn CEL mà các khối không thể hiện được (một phép tính ở vế trái của phép so sánh, `filter` hoặc `map`, toán tử điều kiện, một lỗi cú pháp) được giữ dưới dạng văn bản trong một khối CEL, kèm lý do. Nó không bao giờ bị viết lại.
 
@@ -267,6 +271,7 @@ Bộ chọn trường liệt kê các đầu vào, các giá trị cục bộ v�
 | Thành phần | Loại | Mô tả |
 |---|---|---|
 | `table` | thuộc tính | Bảng cần chạy. |
+| `paramSets` | thuộc tính | Các bộ tham số mà bảng đọc, dạng văn bản `.params.json` hoặc JSON đã phân tích; phiên bản có hiệu lực vào `asOf` được dùng, và bản ghi liệt kê nó. |
 | `asOf` / `as-of` | thuộc tính / attribute | Ngày nghiệp vụ. Mặc định: hôm nay, theo múi giờ của trình duyệt. |
 | `facts` | thuộc tính / attribute | Dữ liệu đầu vào ban đầu dưới dạng văn bản JSON. |
 | `factsText` | thuộc tính (chỉ đọc) | Dữ liệu đầu vào sẽ được chạy, dưới dạng văn bản JSON. |
@@ -487,10 +492,10 @@ Một bộ kiểm thử tương thích trong `sdk/packages/engine/test/` so sán
 
 | Fixture | Nội dung được kiểm tra |
 |---|---|
-| `java-hashes.json` | Dạng chuẩn tắc và phiên bản luật của mọi bảng trong `examples/` và trong các bảng kiểm thử. |
+| `java-hashes.json` | Dạng chuẩn tắc và phiên bản luật của mọi bảng trong `examples/` và trong các bảng kiểm thử, cùng dạng chuẩn tắc và phiên bản của mọi bộ tham số. |
 | `java-records.json` | Bản ghi quyết định và vết thực thi của mọi ca trong mọi tệp `examples/*.stone-test.json`. |
 | `java-probes.json` | Kiểu và giá trị kết quả, hoặc chính xác lỗi, của mọi biểu thức trong `probes.json`: toán tử, macro, giới hạn số lần lặp, vị trí lỗi, số học thập phân, tiền, ngày và so khớp gần đúng. |
-| `java-invalid-tables.json` | Các lỗi được báo cho mọi bảng không hợp lệ trong `invalid-tables.json`. |
+| `java-invalid-tables.json` | Các lỗi được báo cho mọi bảng và bộ tham số không hợp lệ trong `invalid-tables.json`. |
 
 Bộ kiểm thử còn kiểm tra mọi ví dụ `biểu thức` → kết quả trong [Ngôn ngữ biểu thức](expressions.md) và các ví dụ minh hoạ trong [So khớp gần đúng](fuzzy-matching.md). Số thập phân là chính xác: `Decimal` lưu một `BigInt` và một scale, và tuân theo các quy tắc của `BigDecimal` về scale, làm tròn và phép chia.
 

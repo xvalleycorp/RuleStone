@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: 5d860f0a12285c9dcc30a73e74302c38fe12a38542fe057da34a3909724a39a6
+sourceHash: ba621c54abda243f413bb2c543c23348d4f5be3397146b637db139b6c60084e2
 ---
 
 # Java API
@@ -62,6 +62,7 @@ RuleStoneEngine engine = RuleStone.builder()
 | `clock(Clock)` | Xác định "hôm nay" khi yêu cầu không có ngày `asOf`. Mặc định dùng múi giờ mặc định của JVM; **hãy đặt tường minh** theo múi giờ nghiệp vụ của ngân hàng bạn. |
 | `decision(DecisionTable)` / `decisions(Collection)` | Đăng ký bảng quyết định. Hãy đăng ký mọi phiên bản của một quyết định; engine chọn một phiên bản cho mỗi yêu cầu. |
 | `flow(DecisionFlow)` / `flows(Collection)` | Đăng ký [luồng quyết định](flows.md), đọc bằng `DecisionFlowJson.read(...)`. Hãy đăng ký các bảng mà luồng dùng với cùng builder. |
+| `paramSet(ParameterSet)` / `paramSets(Collection)` | Đăng ký [bộ tham số](decision-tables.md#tham-số), đọc bằng `ParameterSetJson.read(...)`. Hãy đăng ký mọi phiên bản; bảng và luồng khai báo `params` đọc phiên bản có hiệu lực vào ngày nghiệp vụ. Xem [Bộ tham số](#bộ-tham-số). |
 | `maxIterations(int)` | Giới hạn trên của số vòng lặp trong mọi hàm trên danh sách, ở mọi luật. Mặc định 10.000. |
 | `currencyScale(String, int)` | Số chữ số sau dấu thập phân mà `money.round()` dùng cho một loại tiền tệ, ghi đè ISO 4217. Bắt buộc với các mã không có đơn vị nhỏ nhất trong ISO 4217, như `XAU`. Ném `IllegalArgumentException` nếu mã không phải mã ISO 4217 viết hoa, hoặc số chữ số nằm ngoài khoảng 0 đến 18. |
 | `auditSink(AuditSink)` | Nhận `DecisionRecord` của mọi lần đánh giá, dù thành công hay thất bại. Có thể gọi nhiều lần; các sink chạy theo thứ tự. Xem [Bản ghi quyết định và kiểm toán](#bản-ghi-quyết-định-và-kiểm-toán). |
@@ -106,6 +107,7 @@ DecisionResult result = engine.evaluate(
 | `DecisionRef.of("loan_eligibility").version("2")` | Đúng phiên bản `2`, bất kể ngày: kể cả một phiên bản chỉ có hiệu lực về sau, hoặc đã hết hiệu lực. Dùng để chạy lại, điều tra, và thử một phiên bản trước ngày hiệu lực của nó. |
 | `….correlationId("LOAN-2026-000123")` | Ghi mã giao dịch nghiệp vụ của bạn (mã tương quan) vào bản ghi quyết định, để có thể đối chiếu với dữ liệu của bạn. Mã này không được chứa dữ liệu cá nhân. Dùng kết hợp được với mọi dòng ở trên. |
 | `….timeout(Duration.ofMillis(2))` | Làm việc đánh giá thất bại với `DecisionTimeoutException` nếu nó kéo dài hơn mức này; xem [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa). Dùng kết hợp được với mọi dòng ở trên. |
+| `….params("retail_credit", "7")` | Dùng đúng phiên bản `7` của bộ tham số `retail_credit`, bất kể ngày, để chạy lại một quyết định với các phiên bản mà bản ghi của nó liệt kê; xem [Bộ tham số](#bộ-tham-số). Dùng kết hợp được với mọi dòng ở trên. |
 
 Hãy dùng ngày nghiệp vụ của giao dịch cho `asOf`: ngày nộp hồ sơ với khoản vay, ngày giá trị với khoản thanh toán. Khi đó đánh giá lại cùng một hồ sơ về sau vẫn cho cùng câu trả lời. Ngày này cũng được chuyển tới các luật qua đầu vào ngầm định `businessDate`; nếu không có `asOf`, đó là ngày hôm nay theo đồng hồ của engine, kể cả khi bạn chỉ định phiên bản.
 
@@ -287,6 +289,7 @@ DecisionResult result = engine.evaluate(
 | `recordId` | Id duy nhất, là UUID ngẫu nhiên nếu bạn không đặt `recordIds`. |
 | `correlationId` | Mã giao dịch nghiệp vụ của bạn, lấy từ `DecisionRef.correlationId`. Bị bỏ qua nếu bạn không truyền. |
 | `decision`, `version` | Quyết định được yêu cầu và phiên bản chính xác đã dùng. `version` bị bỏ qua nếu không tìm thấy phiên bản nào. |
+| `params` | Mỗi phiên bản [bộ tham số](#bộ-tham-số) đã dùng, một lần, dạng `{ "set": "retail_credit", "version": "7@sha256:…" }`, sắp theo bộ tham số. Bị bỏ qua khi quyết định không đọc tham số nào. Giá trị không bao giờ được ghi lại. |
 | `businessDate`, `evaluatedAt` | Ngày mà quyết định được đưa ra cho, và thời điểm bắt đầu đánh giá, đều lấy từ đồng hồ của engine, trừ khi `asOf` đã cho ngày. |
 | `engine` | Phiên bản RuleStone, lấy từ manifest của jar; là `rulestone dev` khi chạy từ các lớp chưa đóng gói. |
 | `status` | `OK`; `ERROR` nếu bên gọi nhận về một exception; `TIMEOUT` nếu việc đánh giá hết thời gian (xem [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa)). Một quyết định không khớp luật nào vẫn là `OK`, không có reason code. |
@@ -402,6 +405,30 @@ Một luồng quyết định có thể dùng mô hình học máy qua [nút mô
 | `DecisionRecord.ModelStep` | Phần mô hình của một bước trên đường đi trong bản ghi: mô hình đã được hỏi gì và đã trả lời gì, không có giá trị đặc trưng hay mức đóng góp. |
 
 `toString()` của `ModelCall` và `ModelResult` nêu tên đặc trưng và đầu ra nhưng không bao giờ hiển thị giá trị. Xem [Nút mô hình](flows.md#nút-mô-hình) để biết hợp đồng mà một kết quả phải đáp ứng, đường xử lý lỗi và các mã lý do.
+
+## Bộ tham số
+
+Bảng và luồng khai báo [`params`](decision-tables.md#tham-số) đọc các giá trị nghiệp vụ, như hạn mức, từ một bộ tham số. Hãy đăng ký mọi phiên bản của mỗi bộ tham số với engine:
+
+```java
+RuleStoneEngine engine = RuleStone.builder()
+        .decision(DecisionTableJson.read(Path.of("rules/loan_eligibility.v4.stone.json")))
+        .paramSet(ParameterSetJson.read(Path.of("rules/retail_credit.v1.params.json")))
+        .paramSet(ParameterSetJson.read(Path.of("rules/retail_credit.v2.params.json")))
+        .build();
+
+DecisionResult result = engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2027, 7, 1)), facts);
+List<ParamSetVersion> used = result.record().params();   // retail_credit, 2@sha256:…
+
+// Replaying the decision later with the versions its record names:
+DecisionResult replay = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
+        .asOf(LocalDate.of(2027, 7, 1)).params("retail_credit", "2"), facts);
+```
+
+- `build()` kiểm tra mọi khai báo với mọi phiên bản đã đăng ký của bộ tham số (hoặc phiên bản được cố định), để một lần triển khai mà lẽ ra sẽ thất bại vào một ngày nghiệp vụ nào đó thì thất bại ngay khi khởi động. Lỗi của một bộ tham số có tiền tố `parameter set id@version`.
+- Phiên bản có hiệu lực vào ngày nghiệp vụ được gắn vào `params`. Nó không bao giờ là một phần của fact: một fact tên `params` làm việc đánh giá thất bại, và `factsHash` không bao gồm các tham số.
+- Không có phiên bản nào có hiệu lực vào ngày nghiệp vụ, hoặc phiên bản bị ép mà bộ tham số không có, làm việc đánh giá thất bại với `DecisionNotFoundException`, ví dụ `parameter set 'retail_credit' has no version '9'`. Một bảng cố định phiên bản thì giữ phiên bản đó, kể cả khi yêu cầu ép một phiên bản khác.
+- `ParameterSetJson.write(set)` cho dạng chuẩn mà mã băm của bộ tham số được tính trên đó. `ParameterSet` và `ParamsDeclaration` cũng có thể được tạo trong Java; giá trị là các giá trị mà `FactsJson` đọc ra: `BigDecimal`, `Money`, `Long`, `LocalDate`, `String`, `Boolean` và danh sách của chúng.
 
 ## Lỗi
 

@@ -1,6 +1,6 @@
 ---
 source: testing.md
-sourceHash: 1004ee8edf4b4dd27faa035af7f0c0a1c445220c7b25b44205f17790325f3aca
+sourceHash: aeaf927daa6569d67a0545a58e828e894b2541ad45008849272501fd02cacd6f
 ---
 
 # Kiểm thử bảng quyết định
@@ -93,9 +93,12 @@ Mỗi ca kiểm thử đánh giá quyết định một lần với các `facts`
 | `description` | không | Mô tả tự do, ví dụ điều khoản chính sách hoặc ticket mà ca kiểm thử này kiểm tra. |
 | `asOf` | không | Ngày theo ISO (`yyyy-MM-dd`) dùng để chọn phiên bản có hiệu lực, như `DecisionRef.asOf`. **Hãy đặt giá trị này cho mọi quyết định có ngày hiệu lực**; nếu không, đồng hồ của engine sẽ quyết định và kết quả phụ thuộc vào ngày chạy kiểm thử. |
 | `version` | không | Đánh giá đúng phiên bản này, bất kể ngày, như `DecisionRef.version`. |
+| `params` | không | Ép dùng các phiên bản của [bộ tham số](decision-tables.md#tham-số), dạng đối tượng ánh xạ id bộ tham số tới nhãn phiên bản, ví dụ `{ "retail_credit": "1" }`, như `DecisionRef.params` khi chạy lại. Nếu không có, các phiên bản có hiệu lực vào `asOf` được dùng. |
 | `facts` | có | Đối tượng ánh xạ tên đầu vào tới giá trị, như với `Facts`. Đối tượng trở thành `Map` và mảng trở thành `List`. Không được dùng `null`: hãy bỏ trường đó đi để kiểm thử trường hợp thiếu giá trị. |
 | `models` | không | Với một luồng có [nút mô hình](flows.md#nút-mô-hình): kết quả mô hình theo id nút, hoặc một lỗi như `{ "failure": "TIMEOUT" }`. Xem [Luồng có nút mô hình](#luồng-có-nút-mô-hình). |
 | `expect` | có | Đối tượng chứa các kỳ vọng dưới đây. `{}` chỉ kiểm tra rằng việc đánh giá thành công. |
+
+Một bảng đọc tham số được kiểm thử với các bộ tham số mà engine được tạo cùng: hãy đăng ký chúng bằng `RuleStone.builder().paramSets(...)`, như trong môi trường thật. Khi đó một ca kiểm thử chỉ cần ngày của nó để cho thấy tác động của một thay đổi tham số: trong [loan_eligibility.v4.stone-test.json](../../examples/loan_eligibility.v4.stone-test.json), cùng các fact được chấp thuận vào `2027-06-30` và bị từ chối vào `2027-07-01`, khi phiên bản 2 của `retail_credit` hạ `maxDti`.
 
 ### Kỳ vọng
 

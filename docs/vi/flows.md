@@ -1,6 +1,6 @@
 ---
 source: flows.md
-sourceHash: a17f39ecbc9948ddc7e26250c54523f093ac22eb18fbe0db2391537aa0182c5c
+sourceHash: 9a9f50d1e288e87312489aac66befa39142b126193e3b3b969704fc12fe1c8ad
 ---
 
 # Luồng quyết định
@@ -130,6 +130,7 @@ Một luồng là một đối tượng JSON. Tên tệp kết thúc bằng `.fl
 | `id`, `version`, `description`, `effectiveFrom`, `effectiveTo` | như với [bảng quyết định](decision-tables.md#định-dạng-tệp) | Cùng quy tắc và ý nghĩa. Các phiên bản của một luồng được chọn giống như các phiên bản của một bảng; xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực). |
 | `inputs` | có | Đối tượng ánh xạ tên mỗi đầu vào tới [kiểu](decision-tables.md#kiểu-dữ-liệu) của nó, như với bảng. Giống bảng, luồng cũng nhận `businessDate` một cách ngầm định. |
 | `outputs` | có | Đối tượng ánh xạ tên mỗi đầu ra tới kiểu của nó. Mọi nút `end` đặt tất cả các đầu ra này. Như với bảng, đầu ra không thể là struct. |
+| `params` | không | Bộ tham số mà các biểu thức của luồng đọc giá trị nghiệp vụ từ đó, như với [bảng](decision-tables.md#tham-số). Xem [Tham số](#parameters). |
 | `start` | có | Id của nút đầu tiên. |
 | `nodes` | có | Đối tượng ánh xạ id của mỗi nút tới nút đó. Id của nút là tên dùng để đọc giá trị của nút trong biểu thức, nên phải là một định danh (chữ cái, chữ số và `_`, không bắt đầu bằng chữ số) và khác mọi tên đầu vào. |
 
@@ -212,13 +213,16 @@ Nhóm chỉ phụ thuộc vào salt và khoá: 64 bit đầu của SHA-256 của
 Biểu thức trong một nút có thể đọc:
 
 - các đầu vào của luồng và `businessDate`, theo tên;
-- các giá trị của những nút đứng trước nó, dưới id của nút hoặc tên `as` của nút: `policy.decision`, `affordability.annualIncome`, `segment.taken`.
+- các giá trị của những nút đứng trước nó, dưới id của nút hoặc tên `as` của nút: `policy.decision`, `affordability.annualIncome`, `segment.taken`;
+- các tham số của luồng, dạng `params.<tên>`, khi luồng khai báo chúng (xem [Tham số](#parameters)).
 
 **Chỉ những giá trị được đặt trên mọi đường đi.** Một nút chỉ đọc được một giá trị nếu mọi đường đi từ `start` tới nút đó đều qua một nút đặt giá trị ấy. Trong ví dụ, `referred` đọc được `grade.riskGrade` vì cả hai đường đi tới nó đều qua một nút công bố `grade`; nó sẽ không đọc được `affordability.annualIncome` nếu có đường đi nào tới nó bỏ qua `affordability`. Điều này được kiểm tra khi engine được tạo, nên luồng không bao giờ đọc một giá trị có thể không tồn tại.
 
 **Tên dùng chung.** Các nút trên các nhánh thay thế nhau có thể công bố dưới cùng một tên `as` nếu chúng công bố cùng các giá trị với cùng kiểu, như `grade_existing` và `grade_new`. Hai nút trên cùng một đường đi không thể dùng chung một tên.
 
 **Fact cho một bảng.** Một nút `table` truyền cho mỗi đầu vào của bảng giá trị cùng tên của luồng, giá trị này phải có cùng kiểu, hoặc, với một struct, có ít nhất các trường mà bảng khai báo. Hãy liệt kê đầu vào trong `facts` để truyền một giá trị khác. Đầu vào kiểu struct chỉ có thể được truyền một giá trị theo tên, ví dụ `"customer": "applicant"`. Trong ví dụ, `limit` truyền `grade.riskGrade` làm đầu vào `riskGrade` của bảng và nhóm đã chọn làm đầu vào `strategy`.
+
+<a id="parameters"></a>**Tham số.** Một luồng có thể khai báo `params` như một bảng, `"params": { "set": "retail_credit", "values": { "maxExposure": "money" } }`, và mọi biểu thức trong các nút của nó đều đọc được chúng: điều kiện `when`, giá trị của `derive` và `end`, `facts` của nút bảng và `features` của nút mô hình. Phiên bản của bộ tham số có hiệu lực vào ngày nghiệp vụ được dùng, hoặc `version` được cố định. Một nút `table` không truyền tham số của luồng cho bảng của nó: một bảng khai báo `params` đọc tham số của chính nó, từ phiên bản có hiệu lực vào cùng ngày nghiệp vụ. Bản ghi liệt kê mọi phiên bản bộ tham số mà luồng và các bảng của nó đã dùng, mỗi phiên bản một lần. `params` không thể là id nút hay tên `as`, và một luồng khai báo tham số không thể có đầu vào tên `params`.
 
 **Đầu ra không luật nào đặt.** Khi không luật nào của bảng khớp, hoặc luật đã khớp không đặt một đầu ra, đầu ra đó vắng mặt. Đọc nó sẽ làm việc đánh giá thất bại; hãy kiểm tra bằng `has()`, như trong luật của bảng: `has(policy.decision) && policy.decision == 'REJECT'`.
 
@@ -500,7 +504,8 @@ Dạng chuẩn tắc viết một `next` duy nhất, không điều kiện, thà
 - một nút `end` không đặt mọi đầu ra, hoặc đặt một đầu ra chưa được khai báo;
 - một nút `model` không ghim đúng một phiên bản mô hình; thiếu `features` hoặc `timeoutMs` ở chế độ `invoke`, hoặc có chúng ở chế độ `supplied`; có một đặc trưng hoặc điều kiện `valid` không qua được kiểm tra kiểu, một đầu ra có trường con, một `minConfidence` nằm ngoài khoảng 0 tới 1, hoặc một mã lý do không viết dạng `UPPER_SNAKE_CASE`; hoặc ở chế độ `invoke` mà chưa có invoker nào được đăng ký cho mô hình của nó (trừ khi engine được tạo với `suppliedModelsOnly()`). `onFailure` là bắt buộc ngay khi đọc tệp;
 - một `split` có tên nhóm trùng nhau, hoặc có tỷ lệ phần trăm không có tổng bằng 100;
-- một id nút hoặc tên `as` không phải định danh, hoặc trùng tên một đầu vào;
+- một id nút hoặc tên `as` không phải định danh, trùng tên một đầu vào, hoặc là `params`;
+- `params` của luồng không qua được các bước kiểm tra như `params` của bảng (xem [Kiểm tra hợp lệ](decision-tables.md#kiểm-tra-hợp-lệ)), hoặc một biểu thức đọc một tham số không được khai báo;
 - `id` của luồng cũng là id của một bảng, hoặc hai phiên bản mâu thuẫn nhau, như với bảng.
 
 Ví dụ, nếu `referred` cũng đọc `limit.limit`, giá trị chỉ được đặt trên đường phê duyệt, engine sẽ từ chối được tạo với:
