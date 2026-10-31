@@ -9,7 +9,7 @@ The Java engine remains the engine of record. Use this package for instant feedb
 - No runtime dependencies. Numbers use the native `BigInt`.
 - ESM, TypeScript types included, and safe to tree-shake (`sideEffects: false`).
 - Runs in current browsers and in Node.js 22 or later. Hashing uses WebCrypto (`crypto.subtle`), which browsers provide only on secure (HTTPS or localhost) pages.
-- **Size:** 93.1 KiB minified, 30.3 KiB minified and gzipped, for the whole package (`npm run size`).
+- **Size:** 101.1 KiB minified, 32.5 KiB minified and gzipped, for the whole package (`npm run size`).
 
 ## Usage
 

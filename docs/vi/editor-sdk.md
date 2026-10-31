@@ -468,16 +468,16 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@rulestone/editor` (mọi phần tử) | 296.3 KiB, 86.8 KiB khi nén gzip | 199.7 KiB, 55.3 KiB khi nén gzip |
-| `./table-editor` | 248.4 KiB, 73.3 KiB khi nén gzip | 151.8 KiB, 42.0 KiB khi nén gzip |
-| `./rules-grid` | 171.8 KiB, 52.8 KiB khi nén gzip | 100.8 KiB, 28.9 KiB khi nén gzip |
-| `./condition-builder` | 151.6 KiB, 47.5 KiB khi nén gzip | 80.4 KiB, 23.6 KiB khi nén gzip |
-| `./schema-designer` | 128.7 KiB, 41.7 KiB khi nén gzip | 57.6 KiB, 18.0 KiB khi nén gzip |
-| `./flow-canvas` | 98.8 KiB, 30.4 KiB khi nén gzip | 83.8 KiB, 24.8 KiB khi nén gzip |
-| `./try-it` | 150.2 KiB, 48.1 KiB khi nén gzip | 54.6 KiB, 16.6 KiB khi nén gzip |
-| `./cel-input` | 106.6 KiB, 35.2 KiB khi nén gzip | 48.8 KiB, 15.3 KiB khi nén gzip |
+| `@rulestone/editor` (mọi phần tử) | 312.5 KiB, 91.1 KiB khi nén gzip | 208.1 KiB, 57.6 KiB khi nén gzip |
+| `./table-editor` | 264.5 KiB, 77.5 KiB khi nén gzip | 160.1 KiB, 44.0 KiB khi nén gzip |
+| `./rules-grid` | 175.6 KiB, 53.8 KiB khi nén gzip | 103.7 KiB, 29.7 KiB khi nén gzip |
+| `./condition-builder` | 155.1 KiB, 48.5 KiB khi nén gzip | 83.0 KiB, 24.3 KiB khi nén gzip |
+| `./schema-designer` | 131.9 KiB, 42.6 KiB khi nén gzip | 60.0 KiB, 18.7 KiB khi nén gzip |
+| `./flow-canvas` | 100.9 KiB, 30.9 KiB khi nén gzip | 85.9 KiB, 25.3 KiB khi nén gzip |
+| `./try-it` | 160.7 KiB, 51.0 KiB khi nén gzip | 57.4 KiB, 17.4 KiB khi nén gzip |
+| `./cel-input` | 108.7 KiB, 35.8 KiB khi nén gzip | 50.9 KiB, 15.9 KiB khi nén gzip |
 
-Riêng `@rulestone/engine` là 93.1 KiB, 30.3 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
+Riêng `@rulestone/engine` là 101.1 KiB, 32.5 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
 
 ## Bộ máy luật trên trình duyệt và bộ máy luật Java
 
