@@ -31,6 +31,7 @@ import vn.io.dxa.rulestone.cel.ValueType;
  * @param effectiveTo   first day this version is no longer in force (exclusive)
  * @param inputs        the facts the flow reads, by name, as for a table
  * @param outputs       the values every {@code end} node sets, by name, as for a table
+ * @param params        the parameters its expressions read as {@code params.<name>}, as for a table
  * @param start         the id of the first node
  * @param nodes         the nodes by id, in file order
  */
@@ -42,10 +43,19 @@ public record DecisionFlow(
         Optional<LocalDate> effectiveTo,
         Map<String, ValueType> inputs,
         Map<String, ValueType> outputs,
+        Optional<ParamsDeclaration> params,
         String start,
         Map<String, FlowNode> nodes) implements VersionedDefinition {
 
+    /** A flow without parameters. */
+    public DecisionFlow(String id, String version, Optional<String> description, Optional<LocalDate> effectiveFrom,
+                        Optional<LocalDate> effectiveTo, Map<String, ValueType> inputs, Map<String, ValueType> outputs,
+                        String start, Map<String, FlowNode> nodes) {
+        this(id, version, description, effectiveFrom, effectiveTo, inputs, outputs, Optional.empty(), start, nodes);
+    }
+
     public DecisionFlow {
+        Objects.requireNonNull(params, "params");
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(version, "version");
         Objects.requireNonNull(description, "description");

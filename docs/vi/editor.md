@@ -1,6 +1,6 @@
 ---
 source: editor.md
-sourceHash: 68af41baf8ce9f65ad058ad42fd4bbc224bd886c4cde481553ef3059d69101cc
+sourceHash: b7534d328698f3b4de41491ed6e21190ab572e3d4b792f656f52ed50e7e3afba
 ---
 
 # Trình soạn thảo web
@@ -36,7 +36,7 @@ và mở `http://127.0.0.1:8080/`.
 
 | Tuỳ chọn | Mặc định | Ý nghĩa |
 |---|---|---|
-| `--rules-dir <dir>` | bắt buộc | Thư mục chứa các tệp `.stone.json`, được tìm đệ quy. Các thư mục ẩn như `.git` được bỏ qua. |
+| `--rules-dir <dir>` | bắt buộc | Thư mục chứa các tệp `.stone.json`, được tìm đệ quy. Các thư mục ẩn như `.git` được bỏ qua. Các [bộ tham số](decision-tables.md#tham-số) (tệp `.params.json`) trong thư mục được đăng ký mỗi khi trình soạn thảo kiểm tra hoặc chạy một bảng, nên các bảng đọc tham số được kiểm tra và chạy được; trình soạn thảo không chỉnh sửa chúng. |
 | `--port <n>` | `8080` | Cổng lắng nghe; `0` chọn một cổng còn trống. |
 | `--host <address>` | `127.0.0.1` | Địa chỉ lắng nghe. Hãy đọc [Mô hình bảo mật](#mô-hình-bảo-mật) trước khi thay đổi. |
 | `--allowed-host <name>` | không có | Một header `Host` khác được chấp nhận, như tên của reverse proxy, ví dụ `rules.bank.example`. Có thể lặp lại. |

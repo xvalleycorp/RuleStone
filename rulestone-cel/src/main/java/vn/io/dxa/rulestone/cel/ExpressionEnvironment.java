@@ -180,6 +180,76 @@ public final class ExpressionEnvironment {
         return Collections.unmodifiableSet(names);
     }
 
+    /**
+     * The fields an expression selects directly on variable {@code variable}, such as {@code maxDti}
+     * in {@code dti > params.maxDti}, also inside {@code has()}; not those of a list function's
+     * variable of the same name. The expression is parsed but not type-checked.
+     *
+     * @throws ExpressionException if the expression is malformed
+     */
+    public Set<String> selectedFields(String source, String variable) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(variable, "variable");
+        CelExpr root;
+        try {
+            root = compiler.parse(source).getAst().getExpr();
+        } catch (CelValidationException e) {
+            throw new ExpressionException(e.getMessage(), e);
+        }
+        Set<String> fields = new TreeSet<>();
+        collectSelections(root, variable, false, fields);
+        return Collections.unmodifiableSet(fields);
+    }
+
+    private static void collectSelections(CelExpr expr, String variable, boolean shadowed, Set<String> fields) {
+        switch (expr.exprKind().getKind()) {
+            case SELECT -> {
+                CelExpr operand = expr.select().operand();
+                if (!shadowed && operand.exprKind().getKind() == CelExpr.ExprKind.Kind.IDENT
+                        && operand.ident().name().equals(variable)) {
+                    fields.add(expr.select().field());
+                } else {
+                    collectSelections(operand, variable, shadowed, fields);
+                }
+            }
+            case CALL -> {
+                expr.call().target().ifPresent(t -> collectSelections(t, variable, shadowed, fields));
+                expr.call().args().forEach(a -> collectSelections(a, variable, shadowed, fields));
+            }
+            case LIST -> expr.list().elements().forEach(e -> collectSelections(e, variable, shadowed, fields));
+            case MAP -> expr.map().entries().forEach(e -> {
+                collectSelections(e.key(), variable, shadowed, fields);
+                collectSelections(e.value(), variable, shadowed, fields);
+            });
+            case STRUCT -> expr.struct().entries().forEach(e -> collectSelections(e.value(), variable, shadowed, fields));
+            case COMPREHENSION -> {
+                CelExpr.CelComprehension c = expr.comprehension();
+                collectSelections(c.iterRange(), variable, shadowed, fields);
+                collectSelections(c.accuInit(), variable, shadowed, fields);
+                boolean accu = shadowed || c.accuVar().equals(variable);
+                boolean loop = accu || c.iterVar().equals(variable) || c.iterVar2().equals(variable);
+                collectSelections(c.loopCondition(), variable, loop, fields);
+                collectSelections(c.loopStep(), variable, loop, fields);
+                collectSelections(c.result(), variable, accu, fields);
+            }
+            default -> {
+                // identifiers and constants
+            }
+        }
+    }
+
+    /**
+     * Checks that a Java value can be bound to a variable of type {@code type}, as {@link #bind}
+     * would convert it.
+     *
+     * @param path names the value in messages, e.g. {@code values.maxDti}
+     * @throws InvalidValueException if it cannot
+     */
+    public static void checkValue(Object value, ValueType type, String path) {
+        Objects.requireNonNull(type, "type");
+        Values.toCel(value, type, path);
+    }
+
     private static void collectReferences(CelExpr expr, Set<String> bound, Set<String> names) {
         switch (expr.exprKind().getKind()) {
             case IDENT -> {

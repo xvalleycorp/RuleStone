@@ -3,12 +3,13 @@
 
 import {
   InvalidDecisionError, InvalidFactsError, JsonSyntaxError, LocalDate, RuleStoneError, createEngine, currencyTable,
-  decisionRecordToJson, isEffectiveOn, parseDecisionTable, valueToJson, writeDecisionTable, writeJson,
+  decisionRecordToJson, isEffectiveOn, parseDecisionTable, valueToJson, writeDecisionTable, writeJson, writeParameterSet,
   type DecisionRecord, type DecisionResult, type RuleStoneEngine, type Writable,
 } from '@rulestone/engine'
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
 import { emptyForm, factsJson, formFromJson, formValueAt, reconcileForm, setFormValue, type FormValue, type FormValues } from '../model/facts.js'
 import { describeType } from '../model/schema.js'
+import { readParamSets } from '../model/validate.js'
 import { normalizeTable, type TableJson, type TypeSpec } from '../model/table.js'
 import { RulestoneElement, define, today } from './base.js'
 
@@ -54,6 +55,7 @@ export class RulestoneTryIt extends RulestoneElement {
   static override properties: PropertyDeclarations = {
     ...RulestoneElement.properties,
     table: { attribute: false },
+    paramSets: { attribute: false },
     asOf: { type: String, attribute: 'as-of' },
     facts: { type: String },
     _form: { state: true },
@@ -66,6 +68,11 @@ export class RulestoneTryIt extends RulestoneElement {
   }
 
   declare table: TableJson
+  /**
+   * The parameter sets the table reads, as .params.json text or parsed JSON: every version, so
+   * that the business date selects one as the engine does.
+   */
+  declare paramSets: readonly (string | object)[] | undefined
   /** The business date, yyyy-MM-dd; default today. */
   declare asOf: string
   /** Initial facts as JSON text, e.g. from a .stone-test.json case. */
@@ -200,6 +207,7 @@ export class RulestoneTryIt extends RulestoneElement {
   constructor() {
     super()
     this.table = normalizeTable({})
+    this.paramSets = undefined
     this.asOf = today()
     this.facts = undefined
     this._form = {}
@@ -261,10 +269,20 @@ export class RulestoneTryIt extends RulestoneElement {
       }
       throw e
     }
-    const key = writeDecisionTable(parsed)
+    let paramSets
+    try {
+      paramSets = readParamSets(this.paramSets)
+    } catch (e) {
+      if (e instanceof InvalidDecisionError) {
+        this._tableProblems = e.problems
+        return undefined
+      }
+      throw e
+    }
+    const key = [writeDecisionTable(parsed), ...paramSets.map(writeParameterSet)].join('\n')
     if (this.engine?.key === key) return this.engine.engine
     try {
-      const engine = await createEngine({ tables: [parsed] })
+      const engine = await createEngine({ tables: [parsed], paramSets })
       this.engine = { key, engine }
       this._tableProblems = []
       return engine

@@ -15,6 +15,13 @@ export interface ReasonCode {
   readonly source: string
 }
 
+/** A parameter set version that an evaluation used. */
+export interface ParamSetVersion {
+  readonly set: string
+  /** The exact version, e.g. 7@sha256:… */
+  readonly version: string
+}
+
 /** One node visited during the evaluation: today, the decision table. */
 export interface PathStep {
   readonly node: string
@@ -31,6 +38,11 @@ export interface DecisionRecord {
   readonly decision: string
   /** The exact version used, e.g. 3@sha256:…; absent if no version was found. */
   readonly version?: string
+  /**
+   * Every parameter set version used, each once, sorted by set and version; absent if none. The
+   * values are not recorded: the version identifies them.
+   */
+  readonly params?: readonly ParamSetVersion[]
   readonly businessDate: LocalDate
   /** When the evaluation started. */
   readonly evaluatedAt: Date
@@ -54,6 +66,9 @@ export function decisionRecordToJson(record: DecisionRecord): Map<string, Writab
   if (record.correlationId !== undefined) json.set('correlationId', record.correlationId)
   json.set('decision', record.decision)
   if (record.version !== undefined) json.set('version', record.version)
+  if (record.params && record.params.length > 0) {
+    json.set('params', record.params.map((p) => new Map<string, Writable>([['set', p.set], ['version', p.version]])))
+  }
   json.set('businessDate', record.businessDate.toString())
   json.set('evaluatedAt', instantToString(record.evaluatedAt))
   json.set('engine', record.engine)

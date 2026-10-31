@@ -6,6 +6,7 @@ Complete decision tables, and decision flows, for common banking problems. They 
 |---|---|---|
 | `loan_eligibility.v2.stone.json` | `FIRST` | Loan eligibility, policy until 31 October 2026 |
 | `loan_eligibility.v3.stone.json` | `FIRST` | Loan eligibility, policy from 1 November 2026 |
+| `loan_eligibility.v4.stone.json` | `FIRST` | Loan eligibility from 1 January 2027, with its limits in the parameter set `retail_credit` (`retail_credit.v1.params.json`, `retail_credit.v2.params.json`, in force from 2027-01-01 and 2027-07-01) |
 | `deposit_rate.stone.json` | `UNIQUE` | Term deposit rate grid |
 | `transfer_fees.stone.json` | `COLLECT` | Fees on a money transfer |
 | `card_fraud_signals.stone.json` | `COLLECT` | Card fraud risk signals and their points |

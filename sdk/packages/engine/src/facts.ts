@@ -81,6 +81,17 @@ export function readValue(json: JsonInput, type: ValueType): Value {
   return value!
 }
 
+/**
+ * @internal Reads one value of a declared type located at `path`, adding every problem to
+ * `problems`, as FactsJson.readValue with a problem list; for readers of other files.
+ */
+export function readValueAt(node: JsonNode, type: ValueType, path: string, problems: string[]): Value | undefined {
+  const reader = new Reader()
+  const value = reader.value(node, type, path)
+  problems.push(...reader.problems)
+  return reader.problems.length === 0 ? value : undefined
+}
+
 /** The types of a result's outputs: the declared outputs, each a list under COLLECT. */
 export function resultTypes(table: DecisionTable): Map<string, ValueType> {
   const types = new Map<string, ValueType>()
@@ -89,7 +100,7 @@ export function resultTypes(table: DecisionTable): Map<string, ValueType> {
 }
 
 class Reader {
-  private readonly problems: string[] = []
+  readonly problems: string[] = []
 
   problem(path: string, message: string): void {
     this.problems.push(`${path}: ${message}`)

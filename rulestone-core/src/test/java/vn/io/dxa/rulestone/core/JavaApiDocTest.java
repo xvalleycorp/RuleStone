@@ -266,4 +266,29 @@ class JavaApiDocTest {
                 .hasSize(1_000)
                 .allSatisfy(r -> assertThat(r.output()).containsEntry("action", "BLOCK"));
     }
+
+    @Test
+    void parameterSets() throws IOException {
+        // As in the page, with the examples directory in place of "rules".
+        assertThat(Files.readString(Path.of("..", "docs", "java-api.md")))
+                .contains(".paramSet(ParameterSetJson.read(Path.of(\"rules/retail_credit.v2.params.json\")))")
+                .contains(".asOf(LocalDate.of(2027, 7, 1)).params(\"retail_credit\", \"2\"), facts);");
+        RuleStoneEngine engine = RuleStone.builder()
+                .decision(DecisionTableJson.read(Path.of("../examples/loan_eligibility.v4.stone.json")))
+                .paramSet(ParameterSetJson.read(Path.of("../examples/retail_credit.v1.params.json")))
+                .paramSet(ParameterSetJson.read(Path.of("../examples/retail_credit.v2.params.json")))
+                .build();
+        Facts facts = Facts.of("applicant", Map.of("age", 30, "monthlyIncome", new java.math.BigDecimal("20000000"),
+                        "monthlyDebt", new java.math.BigDecimal("9600000"), "segment", "RETAIL", "blacklisted", false),
+                "amount", new java.math.BigDecimal("200000000"));
+
+        DecisionResult result = engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2027, 7, 1)), facts);
+        List<DecisionRecord.ParamSetVersion> used = result.record().params();
+        DecisionResult replay = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
+                .asOf(LocalDate.of(2027, 7, 1)).params("retail_credit", "2"), facts);
+
+        assertThat(used).singleElement().satisfies(p -> assertThat(p.version()).startsWith("2@sha256:"));
+        assertThat(replay.output()).isEqualTo(result.output()).containsEntry("decision", "REJECT");
+        assertThat(replay.record().params()).isEqualTo(used);
+    }
 }

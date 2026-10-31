@@ -9,7 +9,7 @@ The Java engine remains the engine of record. Use this package for instant feedb
 - No runtime dependencies. Numbers use the native `BigInt`.
 - ESM, TypeScript types included, and safe to tree-shake (`sideEffects: false`).
 - Runs in current browsers and in Node.js 22 or later. Hashing uses WebCrypto (`crypto.subtle`), which browsers provide only on secure (HTTPS or localhost) pages.
-- **Size:** 93.1 KiB minified, 30.3 KiB minified and gzipped, for the whole package (`npm run size`).
+- **Size:** 101.1 KiB minified, 32.5 KiB minified and gzipped, for the whole package (`npm run size`).
 
 ## Usage
 
@@ -41,8 +41,9 @@ writeDecisionRecord(result.record)   // one line of JSON, as DecisionRecordJson.
 |---|---|
 | `parseDecisionTable(text)` | Strict `.stone.json` reader, as `DecisionTableJson.read`. Unknown and duplicate keys are errors, and every problem is reported with its JSON path. |
 | `writeDecisionTable(table)`, `ruleVersionOf(table)` | The canonical form, and the rule version `<version>@sha256:<hex>` computed over it, as in Java. |
-| `createEngine(options)` | Compiles every table and checks versions for duplicates and contradictory dates (a version without `effectiveTo` is superseded by the next one). Options: `tables`, `maxIterations`, `currencyScales`, `clock`, `timeZone`, `recordIds`, `auditSinks`. |
-| `engine.evaluate(ref, facts)` | Evaluates a decision with JavaScript values (see below). `ref` is a decision id or `{ id, version?, asOf?, correlationId? }`. |
+| `createEngine(options)` | Compiles every table and checks versions for duplicates and contradictory dates (a version without `effectiveTo` is superseded by the next one). Options: `tables`, `paramSets`, `maxIterations`, `currencyScales`, `clock`, `timeZone`, `recordIds`, `auditSinks`. |
+| `parseParameterSet(text)`, `writeParameterSet(set)`, `parameterSetVersionOf(set)` | The strict `.params.json` reader, the canonical form and the version `<version>@sha256:<hex>` of a [parameter set](../../../docs/decision-tables.md#parameters), as `ParameterSetJson` in Java. Pass every version to `createEngine` as `paramSets`: tables that declare `params` are checked against them with Java's messages and read the version in force on the business date as `params`; the record lists it in `params`. |
+| `engine.evaluate(ref, facts)` | Evaluates a decision with JavaScript values (see below). `ref` is a decision id or `{ id, version?, asOf?, correlationId?, params? }`; `params` forces parameter set versions, e.g. `{ retail_credit: '1' }`, for replays. |
 | `engine.evaluateJson(ref, json)` | The same, with facts in their JSON forms, read with the inputs of the selected version (`FactsJson`). |
 | `DecisionResult` | `output` (a `Map` in declaration order), `reasonCodes`, `trace`, `matched`, `matchedRules`, `ruleVersion`, `decisionId`, `record`. |
 | `DecisionRecord`, `decisionRecordToJson`, `writeDecisionRecord` | The record of every evaluation, successful or not, in the JSON shape of Java's `DecisionRecordJson`. A failed evaluation's error carries its record as `error.record`. |
@@ -51,7 +52,7 @@ writeDecisionRecord(result.record)   // one line of JSON, as DecisionRecordJson.
 | `parseStoneTests`, `checkStoneTestCase` | Reads `.stone-test.json` files and checks their cases, as `StoneTestJson` and `StoneTestCase.check` do. |
 | `ExpressionEnvironment` | Compiles and evaluates single expressions, as the Java class of that name. |
 | `analyzeExpression(source, { variables, expected? })` | For editors: parses and type-checks an expression without throwing, and returns the typed syntax tree, every problem with its position (in code points and as a UTF-16 index, line and column) and the engine's message. Every node has its source span (`start`, `end`, including enclosing parentheses); selections also give `fieldPos`. `compile` uses the same analysis. |
-| `localValueTypes(inputs, locals)` | For editors: the inferred types of a table's local values (`let`) that compile, to pass to `analyzeExpression` with the inputs. |
+| `localValueTypes(inputs, locals, params?)` | For editors: the inferred types of a table's local values (`let`) that compile, to pass to `analyzeExpression` with the inputs; `params` are the declared parameters, which local values read as `params.<name>`. |
 | `functionCatalog()`, `inputStructName(path)`, `codePointIndex(source, pos)` | The functions and methods rules can call, for autocomplete; the type name the checker gives a struct among the inputs (to tell which declared field a selection reads); converting code-point offsets to string indexes. |
 | `Decimal`, `Money`, `LocalDate` | Exact values: `Decimal` keeps its scale like `BigDecimal`, `Money` is an amount and an ISO 4217 code, and `LocalDate` is a calendar date with no time zone. |
 | `RuleStoneError` and its subclasses | `InvalidDecisionError`, `InvalidFactsError`, `DecisionNotFoundError`, `DecisionEvaluationError`, `AuditError`. `ExpressionError` and `InvalidValueError` come from `ExpressionEnvironment`. |

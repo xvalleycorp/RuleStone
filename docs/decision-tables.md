@@ -6,6 +6,7 @@ A decision table turns typed inputs into typed outputs using an ordered list of 
 - [Types](#types)
 - [Rules](#rules)
 - [Local values](#local-values)
+- [Parameters](#parameters)
 - [Hit policies](#hit-policies)
 - [Versions and effective dates](#versions-and-effective-dates)
 - [Validation](#validation)
@@ -40,6 +41,7 @@ A table is a JSON object. Files conventionally end in `.stone.json`.
 | `hitPolicy` | yes | `FIRST`, `UNIQUE` or `COLLECT`. See [Hit policies](#hit-policies). |
 | `inputs` | yes | Object mapping each input name to its [type](#types). May be empty. |
 | `outputs` | yes | Object mapping each output name to its [type](#types). May be empty, e.g. for a table that only produces reason codes. |
+| `params` | no | The parameter set the rules read business values from, and the parameters they read with their types. See [Parameters](#parameters). |
 | `let` | no | Object mapping names to expressions that every rule can read by name. See [Local values](#local-values). |
 | `rules` | yes | Non-empty array of [rules](#rules), in evaluation order. |
 
@@ -141,6 +143,66 @@ Reason codes are the stable vocabulary you show customers and auditors ("why was
 
 In a [flow](flows.md), `derive` nodes compute values between nodes; `let` is for calculations shared by the rules of one table.
 
+## Parameters
+
+Values that the bank's policy fixes, such as a debt-to-income limit or a minimum age, belong in a **parameter set**: a separate `.params.json` file, reviewed and versioned like the rules, that the rules read as `params.<name>`. The caller never passes them; the version of the set in force on the business date is used. The design and its reasons are in [Parameters, aggregates and local values](parameters.md#b-parameter-sets).
+
+A table declares the set and the parameters it reads, with their types, as it declares inputs:
+
+```json
+"params": {
+  "set": "retail_credit",
+  "values": { "minAge": "int", "maxDti": "decimal", "incomeMultiple": "int", "blockedSegments": ["string"] }
+},
+"let": {
+  "dti": "applicant.monthlyDebt / applicant.monthlyIncome",
+  "maxAmount": "applicant.monthlyIncome * params.incomeMultiple"
+},
+"rules": [
+  { "id": "R1", "when": "applicant.age < params.minAge", "then": { "decision": "'REJECT'" } },
+  { "id": "R4", "when": "dti > params.maxDti", "then": { "decision": "'REJECT'" } }
+]
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `set` | yes | The id of the parameter set. |
+| `version` | no | A version of the set to use whatever the business date, for special cases. Without it, the version in force on the business date is used. |
+| `values` | yes | Object mapping each parameter the table reads to its type: `bool`, `int`, `string`, `decimal`, `money`, `date` or a list of them. At least one. |
+
+Rules and local values read `params.<name>`; reading a parameter that `values` does not declare is an error. The [content hash](#content-hash) covers the declaration, not the values: a new version of the set changes no rule version. A table without `params` has the hash it had before parameter sets existed.
+
+### Parameter set files
+
+A parameter set is a `.params.json` file, one per version:
+
+```json
+{
+  "id": "retail_credit",
+  "version": "2",
+  "description": "Tighter debt-to-income limit and lower income multiple, approved by the Credit Committee on 2027-06-10",
+  "effectiveFrom": "2027-07-01",
+  "values": {
+    "minAge": { "type": "int", "value": 18 },
+    "maxDti": { "type": "decimal", "value": "0.45" },
+    "incomeMultiple": { "type": "int", "value": 10 },
+    "blockedSegments": { "type": ["string"], "value": ["DORMANT", "SANCTIONED"] }
+  }
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | yes | The set's id, shared by all its versions. Parameter set ids are a namespace of their own: a set may have the id of a decision. |
+| `version` | yes | Version label, as for tables. |
+| `description` | no | Free text, e.g. who approved the values. |
+| `effectiveFrom`, `effectiveTo` | no | As for tables: a version stays in force until the next version takes effect. See [Versions and effective dates](#versions-and-effective-dates). |
+| `values` | yes | Object mapping each parameter name to `{ "type": …, "value": … }`. Types are written as for inputs; parameters have no fields, so struct types are not allowed. Values use the JSON forms of facts: money as `"500000000 VND"`, decimals as strings or numbers, read exactly, dates as `"yyyy-MM-dd"`. |
+
+Reading is strict, as for tables: unknown fields, duplicate keys and values that do not match their type are errors, each reported with its JSON path, e.g. `$.values.maxDti.value`. Each version has its own content hash, `2@sha256:…`, computed in the same canonical form as a table's.
+
+To change a limit from a date, add a version of the set with a later `effectiveFrom`: the table does not change. Register every version with `RuleStone.builder().paramSet(...)` (see [Java API](java-api.md#parameter-sets)); each decision record lists the set versions used, and `DecisionRef.params(set, version)` replays with them.
+
 ## Hit policies
 
 The hit policy decides how matching rules combine. The names follow [DMN](https://www.omg.org/dmn/).
@@ -239,6 +301,8 @@ The checks are:
 |---|---|
 | File | Invalid JSON, unknown fields, duplicate keys, missing required fields, wrong JSON types, unknown types, unknown hit policy, invalid dates. |
 | Table | Invalid `id` or `version`; `effectiveTo` not after `effectiveFrom`; no rules; struct-typed outputs; invalid input or field names; an input named `businessDate`. |
+| Parameters | A `params` that is not an object with `set` and `values`; an unregistered set, or a pinned version it does not have; a declared parameter that some version the table may use (every registered version, or the pinned one) does not have, or has with another type; parameter names that are not identifiers; struct types; an input named `params`; an expression that reads `params.x` when `x` is not declared, or reads `params` in a table that declares no parameters. |
+| Parameter sets | Every problem of a `.params.json` file, as for tables; invalid `id` or `version`; values that do not match their types; versions of one set that are registered twice, take effect on the same day or overlap, as for tables. Prefixed with `parameter set id@version`. |
 | Local values | A `let` that is not an object of expressions; names that are not identifiers or that clash with an input, `businessDate` or `params`; cycles, reported once as `let.a: cycle: a -> b -> a`; expressions with syntax or type errors, or whose type is not a RuleStone type (such as `double`). A rule that reads a rejected local value is not checked again. |
 | Rules | Duplicate rule ids; reason codes that are not `UPPER_SNAKE_CASE`; `then` setting an undeclared output. |
 | Expressions | Syntax errors; unknown variables or fields; type errors, including any mix of `decimal` and floating point, or of `money` and plain numbers; `when` not producing `bool`; `then` not producing the output's type. |

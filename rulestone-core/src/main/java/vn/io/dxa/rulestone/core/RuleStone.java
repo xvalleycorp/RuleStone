@@ -54,6 +54,7 @@ public final class RuleStone {
 
         private final List<DecisionTable> tables = new ArrayList<>();
         private final List<DecisionFlow> flows = new ArrayList<>();
+        private final List<ParameterSet> paramSets = new ArrayList<>();
         private Clock clock = Clock.systemDefaultZone();
         private int maxIterations = ExpressionEnvironment.DEFAULT_MAX_ITERATIONS;
         private final Map<String, Integer> currencyScales = new HashMap<>();
@@ -103,6 +104,22 @@ public final class RuleStone {
 
         public Builder flows(Collection<DecisionFlow> flows) {
             flows.forEach(this::flow);
+            return this;
+        }
+
+        /**
+         * Registers a version of a parameter set, whose values tables and flows read as
+         * {@code params.<name>} when they declare them in {@code params}. Parameter sets are
+         * versioned and effective-dated as tables are; the engine binds the version in force on
+         * the business date. Their ids are a namespace of their own, apart from decision ids.
+         */
+        public Builder paramSet(ParameterSet set) {
+            paramSets.add(Objects.requireNonNull(set, "set"));
+            return this;
+        }
+
+        public Builder paramSets(Collection<ParameterSet> sets) {
+            sets.forEach(this::paramSet);
             return this;
         }
 
@@ -270,17 +287,19 @@ public final class RuleStone {
         }
 
         /**
-         * @throws InvalidDecisionException listing every problem in every registered table and
-         *         flow, including inconsistent versions (see {@link DecisionVersions#problems}) and
-         *         canaries or shadows of unknown versions
+         * @throws InvalidDecisionException listing every problem in every registered parameter set,
+         *         table and flow, including inconsistent versions (see {@link DecisionVersions#problems}),
+         *         parameters that some version of their set does not declare alike, and canaries or
+         *         shadows of unknown versions
          */
         public RuleStoneEngine build() {
             List<String> problems = new ArrayList<>();
+            Parameters.Registry parameterSets = Parameters.Registry.compile(paramSets, problems);
             Map<String, List<CompiledDecision>> compiledTables = new LinkedHashMap<>();
             Map<String, List<DecisionTable>> registered = new LinkedHashMap<>();
             for (DecisionTable table : tables) {
                 registered.computeIfAbsent(table.id(), id -> new ArrayList<>()).add(table);
-                CompiledDecision.compile(table, maxIterations, currencyScales, problems)
+                CompiledDecision.compile(table, maxIterations, currencyScales, parameterSets, problems)
                         .ifPresent(d -> compiledTables.computeIfAbsent(table.id(), id -> new ArrayList<>()).add(d));
             }
             compiledTables.values().forEach(versions -> problems.addAll(
@@ -294,7 +313,7 @@ public final class RuleStone {
             for (DecisionFlow flow : flows) {
                 flowVersions.computeIfAbsent(flow.id(), id -> new ArrayList<>()).add(flow);
                 CompiledFlow.compile(flow, compiledTables, registered, flowIds, maxIterations, currencyScales, models,
-                                problems)
+                                parameterSets, problems)
                         .ifPresent(f -> byId.computeIfAbsent(flow.id(), id -> new ArrayList<>()).add(f));
             }
             flowVersions.values().forEach(versions -> problems.addAll(DecisionVersions.problems(versions)));

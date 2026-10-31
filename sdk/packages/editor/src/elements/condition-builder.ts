@@ -8,7 +8,7 @@ import {
   newRaw, numberValue, operatorsFor, outdent, parseCondition, printCondition, printValue, removeNode, takesValue, updateNode,
   type CondNode, type Group, type Leaf, type Operator, type Quantifier, type Raw, type ValueNode,
 } from '../model/condition.js'
-import { describeType, fieldsOf, localSpecs, tableVariables, valueTypeOf } from '../model/schema.js'
+import { describeType, fieldsOf, localSpecs, paramTypes, tableVariables, valueTypeOf } from '../model/schema.js'
 import type { TypeSpec } from '../model/table.js'
 import { RulestoneElement, define } from './base.js'
 import './cel-input.js'
@@ -40,6 +40,7 @@ export class RulestoneConditionBuilder extends RulestoneElement {
     value: { type: String },
     inputs: { attribute: false },
     locals: { attribute: false },
+    params: { attribute: false },
     mode: { type: String, reflect: true },
     label: { type: String },
     _model: { state: true },
@@ -53,6 +54,8 @@ export class RulestoneConditionBuilder extends RulestoneElement {
   declare inputs: Record<string, TypeSpec>
   /** The table's local values (let), name to CEL expression: offered as fields with their inferred types. */
   declare locals: Record<string, string> | undefined
+  /** The parameters the table declares, name to type: offered as fields of params. */
+  declare params: Record<string, TypeSpec> | undefined
   /** 'blocks' or 'cel'. */
   declare mode: 'blocks' | 'cel'
   /** The accessible name of the builder. */
@@ -220,15 +223,21 @@ export class RulestoneConditionBuilder extends RulestoneElement {
   }
 
   private rootScope(): Map<string, TypeSpec> {
-    return new Map<string, TypeSpec>([
+    const scope = new Map<string, TypeSpec>([
       ...Object.entries(this.inputs),
-      ...localSpecs(this.inputs, this.locals),
+      ...localSpecs(this.inputs, this.locals, this.params),
       ['businessDate', 'date'],
     ])
+    if (this.params !== undefined) {
+      scope.delete('params')
+      const declared = Object.fromEntries([...paramTypes(this.params).keys()].map((name) => [name, this.params![name]!]))
+      if (Object.keys(declared).length > 0) scope.set('params', declared)
+    }
+    return scope
   }
 
   private variablesOf(scope: Scope): Map<string, ValueType> {
-    const variables = tableVariables(this.inputs, this.locals)
+    const variables = tableVariables(this.inputs, this.locals, this.params)
     for (const [name, spec] of scope) {
       if (!variables.has(name)) {
         const type = valueTypeOf(spec)

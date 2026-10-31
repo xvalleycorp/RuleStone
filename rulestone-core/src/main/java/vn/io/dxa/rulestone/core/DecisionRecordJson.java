@@ -25,7 +25,8 @@ import vn.io.dxa.rulestone.api.DecisionRecord.ModelStep;
  * steps of the path: a {@code switch} step, for example, has {@code taken} but no
  * {@code version} or {@code matchedRules}, and a {@code model} step has the model's id and
  * version, mode, status and, when it succeeded, its outputs and ranked attributions. Output
- * values use the {@link FactsJson} forms, e.g. {@code "25000 VND"} for money.
+ * values use the {@link FactsJson} forms, e.g. {@code "25000 VND"} for money. {@code params}, which
+ * lists the parameter set versions used, is left out when there are none.
  */
 public final class DecisionRecordJson {
 
@@ -41,6 +42,11 @@ public final class DecisionRecordJson {
         record.correlationId().ifPresent(id -> json.put("correlationId", id));
         json.put("decision", record.decision());
         record.version().ifPresent(version -> json.put("version", version));
+        // Left out when no parameter set was used, as in records written before parameter sets existed.
+        if (!record.params().isEmpty()) {
+            ArrayNode params = json.putArray("params");
+            record.params().forEach(p -> params.addObject().put("set", p.set()).put("version", p.version()));
+        }
         json.put("businessDate", record.businessDate().toString());
         json.put("evaluatedAt", record.evaluatedAt().toString());
         json.put("engine", record.engine());

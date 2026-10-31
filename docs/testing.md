@@ -88,9 +88,12 @@ Each case evaluates the decision once with its `facts` and compares the result w
 | `description` | no | Free text, e.g. the policy clause or ticket the case checks. |
 | `asOf` | no | ISO date (`yyyy-MM-dd`) that selects the version in force, as in `DecisionRef.asOf`. **Set it for every decision with effective dates**; without it, the engine's clock decides and the result depends on the day the test runs. |
 | `version` | no | Evaluates exactly this version, regardless of dates, as in `DecisionRef.version`. |
+| `params` | no | Forces versions of [parameter sets](decision-tables.md#parameters), as an object of set id to version label, e.g. `{ "retail_credit": "1" }`, as `DecisionRef.params` does for replays. Without it, the versions in force on `asOf` are used. |
 | `facts` | yes | Object of input names to values, as for `Facts`. Objects become `Map`s and arrays `List`s. `null` is not allowed: leave a field out to test a missing value. |
 | `models` | no | For a flow with [model nodes](flows.md#model-nodes): the model results by node id, or a failure such as `{ "failure": "TIMEOUT" }`. See [Flows with model nodes](#flows-with-model-nodes). |
 | `expect` | yes | Object with the expectations below. `{}` only checks that the evaluation succeeds. |
+
+A table that reads parameters is tested against the parameter sets the engine is built with: register them with `RuleStone.builder().paramSets(...)`, as in production. A case then shows the effect of a parameter change by its date alone: in [loan_eligibility.v4.stone-test.json](../examples/loan_eligibility.v4.stone-test.json), the same facts are approved on `2027-06-30` and rejected on `2027-07-01`, when version 2 of `retail_credit` lowers `maxDti`.
 
 ### Expectations
 

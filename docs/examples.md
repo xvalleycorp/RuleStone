@@ -42,6 +42,18 @@ engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2026, 11, 1
 // version 3: {decision=APPROVE, limit=360000000}
 ```
 
+Version 4, in force from 1 January 2027, keeps the rules of version 3 but reads its limits from the parameter set `retail_credit` (see [Parameters](decision-tables.md#parameters)): the minimum age, the debt-to-income limit, the income multiple and the segments it does not lend to. Version 1 of the set applies from 2027-01-01, and version 2 tightens the limits from 2027-07-01 without any change to the table:
+
+| `retail_credit` | Version 1 | Version 2 |
+|---|---|---|
+| In force | from 2027-01-01 | from 2027-07-01 |
+| `minAge` | 18 | 18 |
+| `maxDti` | 0.50 | 0.45 |
+| `incomeMultiple` | 12 | 10 |
+| `blockedSegments` | `DORMANT` | `DORMANT`, `SANCTIONED` |
+
+In [loan_eligibility.v4.stone-test.json](../examples/loan_eligibility.v4.stone-test.json), an applicant with debt of 48% of income is approved on 2027-06-30 and rejected with `DTI_HIGH` on 2027-07-01; the record of each names the parameter set version used, and a case with `"params": { "retail_credit": "1" }` replays version 1 after it was superseded.
+
 Note that `R3` divides by `monthlyIncome`. An applicant with zero income makes that division fail, and with it the whole decision. To decline such applicants with a reason instead, add a rule before `R3`:
 
 ```json

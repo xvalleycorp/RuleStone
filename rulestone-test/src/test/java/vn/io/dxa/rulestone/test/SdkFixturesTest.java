@@ -20,11 +20,14 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -46,6 +49,8 @@ import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
 import vn.io.dxa.rulestone.core.FactsJson;
 import vn.io.dxa.rulestone.core.InvalidDecisionException;
+import vn.io.dxa.rulestone.core.ParameterSet;
+import vn.io.dxa.rulestone.core.ParameterSetJson;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 /**
@@ -54,13 +59,13 @@ import vn.io.dxa.rulestone.core.RuleStone;
  *
  * <ul>
  *   <li>{@code java-hashes.json}: the rule version and canonical form of every example table
- *       and of the SDK's extra test tables;</li>
+ *       and of the SDK's extra test tables, followed by those of every parameter set;</li>
  *   <li>{@code java-records.json}: the decision record and trace of every case of every
  *       example test file;</li>
  *   <li>{@code java-probes.json}: the result, or the error, of every expression in
  *       {@code probes.json};</li>
- *   <li>{@code java-invalid-tables.json}: the problems reported for every table in
- *       {@code invalid-tables.json}.</li>
+ *   <li>{@code java-invalid-tables.json}: the problems reported for every table, and parameter
+ *       set, in {@code invalid-tables.json}.</li>
  * </ul>
  *
  * <p>After changing the engine, the examples or the probes, regenerate them with
@@ -90,6 +95,13 @@ class SdkFixturesTest {
                     .put("ruleVersion", ruleVersion(table))
                     .put("canonical", DecisionTableJson.write(table));
         }
+        for (Path file : files(ParameterSetJson.FILE_SUFFIX)) {
+            ParameterSet set = ParameterSetJson.read(file);
+            String canonical = ParameterSetJson.write(set);
+            json.putObject(file.getFileName().toString())
+                    .put("ruleVersion", set.version() + "@sha256:" + sha256(canonical))
+                    .put("canonical", canonical);
+        }
         check("java-hashes.json", json);
     }
 
@@ -100,6 +112,7 @@ class SdkFixturesTest {
         RuleStoneEngine engine = RuleStone.builder()
                 .clock(CLOCK)
                 .decisions(tables)
+                .paramSets(ExamplesStoneTest.exampleParamSets())
                 .recordIds(() -> "fixture")
                 .auditSink(records::add)
                 .build();
@@ -192,9 +205,22 @@ class SdkFixturesTest {
                     e.problems().forEach(problems::add);
                 }
             }
+            List<ParameterSet> sets = new ArrayList<>();
+            if (testCase.has("paramSets")) {
+                ArrayNode readParams = entry.putArray("readParams");
+                for (JsonNode text : testCase.get("paramSets")) {
+                    try {
+                        sets.add(ParameterSetJson.read(text.textValue()));
+                        readParams.addNull();
+                    } catch (InvalidDecisionException e) {
+                        ArrayNode problems = readParams.addArray();
+                        e.problems().forEach(problems::add);
+                    }
+                }
+            }
             ArrayNode build = entry.putArray("build");
             try {
-                RuleStone.builder().decisions(tables).build();
+                RuleStone.builder().paramSets(sets).decisions(tables).build();
             } catch (InvalidDecisionException e) {
                 e.problems().forEach(build::add);
             }
@@ -246,20 +272,36 @@ class SdkFixturesTest {
 
     /** The rule version the engine reports for a table, read from a result or a failure. */
     private static String ruleVersion(DecisionTable table) {
-        RuleStoneEngine engine = RuleStone.builder().clock(CLOCK).decision(table).build();
+        RuleStoneEngine engine = RuleStone.builder().clock(CLOCK).decision(table)
+                .paramSets(ExamplesStoneTest.exampleParamSets()).build();
         try {
-            return engine.evaluate(DecisionRef.of(table.id()).version(table.version()),
-                    Facts.empty()).ruleVersion();
+            // On its first day, so that a parameter set version is in force too.
+            DecisionRef ref = DecisionRef.of(table.id()).version(table.version());
+            return engine.evaluate(table.effectiveFrom().map(ref::asOf).orElse(ref), Facts.empty()).ruleVersion();
         } catch (DecisionEvaluationException e) {
             return e.ruleVersion();
         }
     }
 
     private static List<Path> tableFiles() {
+        return files(".stone.json");
+    }
+
+    private static String sha256(String text) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** The files with {@code suffix} in examples/, then in the fixtures' tables/, each sorted. */
+    private static List<Path> files(String suffix) {
         List<Path> files = new ArrayList<>();
         for (Path dir : List.of(ExamplesStoneTest.EXAMPLES, FIXTURES.resolve("tables"))) {
             try (Stream<Path> list = Files.list(dir)) {
-                list.filter(f -> f.getFileName().toString().endsWith(".stone.json")).sorted().forEach(files::add);
+                list.filter(f -> f.getFileName().toString().endsWith(suffix)).sorted().forEach(files::add);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

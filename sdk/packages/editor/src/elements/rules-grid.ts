@@ -6,7 +6,7 @@ import { tableVariables, valueTypeOf } from '../model/schema.js'
 import {
   addRule, deleteRule, duplicateRule, moveRule, normalizeTable, setOutput, updateRule, type TableJson,
 } from '../model/table.js'
-import { expressionProblems, localsOf, type Problem } from '../model/validate.js'
+import { expressionProblems, localsOf, paramsOf, type Problem } from '../model/validate.js'
 import { RulestoneElement, breakAtUnderscores, define, highlight } from './base.js'
 import './cel-input.js'
 import './condition-builder.js'
@@ -380,6 +380,7 @@ export class RulestoneRulesGrid extends RulestoneElement {
             .value=${rule.when}
             .inputs=${this.table.inputs}
             .locals=${localsOf(this.table)}
+            .params=${paramsOf(this.table)}
             .locale=${this.effectiveLocale}
             .messages=${this.messages}
             ?readonly=${this.readonly}
@@ -509,7 +510,7 @@ export class RulestoneRulesGrid extends RulestoneElement {
       return html`<rs-cel-input
         multiline
         .value=${current}
-        .variables=${tableVariables(this.table.inputs, localsOf(this.table))}
+        .variables=${tableVariables(this.table.inputs, localsOf(this.table), paramsOf(this.table))}
         .expected=${column.key === 'when' ? 'bool' : type}
         .label=${label}
         .locale=${this.effectiveLocale}

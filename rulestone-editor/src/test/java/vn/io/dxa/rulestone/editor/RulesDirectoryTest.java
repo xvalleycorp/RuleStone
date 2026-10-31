@@ -49,6 +49,18 @@ class RulesDirectoryTest {
     }
 
     @Test
+    void readsTheParameterSetsItCanRead() throws IOException {
+        Files.createDirectories(dir.resolve("limits"));
+        Files.writeString(dir.resolve("limits/retail.params.json"),
+                "{ \"id\": \"retail\", \"version\": \"1\", \"values\": { \"maxDti\": { \"type\": \"decimal\", \"value\": \"0.45\" } } }");
+        Files.writeString(dir.resolve("broken.params.json"), "{}");
+
+        assertThat(new RulesDirectory(dir).paramSets()).extracting(s -> s.id() + "@" + s.version())
+                .containsExactly("retail@1");
+        assertThat(new RulesDirectory(dir).list()).isEmpty();
+    }
+
+    @Test
     void writesAtomicallyAndChecksTheEtag() throws IOException {
         RulesDirectory rules = new RulesDirectory(dir);
         String etag = rules.write("a.stone.json", "one\n", null, true);

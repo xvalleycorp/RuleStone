@@ -26,6 +26,9 @@ import vn.io.dxa.rulestone.cel.ValueType;
  * <p>{@code let} names local values: CEL expressions over the inputs (and other local values)
  * that every rule can read by name. Each is computed when a rule first reads it, at most once per
  * evaluation, and is not recorded.
+ *
+ * <p>{@code params} declares the parameters the rules and local values read as
+ * {@code params.<name>}, from the version of a {@link ParameterSet} in force on the business date.
  */
 public record DecisionTable(
         String id,
@@ -36,14 +39,23 @@ public record DecisionTable(
         HitPolicy hitPolicy,
         Map<String, ValueType> inputs,
         Map<String, ValueType> outputs,
+        Optional<ParamsDeclaration> params,
         Map<String, String> let,
         List<Rule> rules) implements VersionedDefinition {
 
-    /** A table without local values. */
+    /** A table without local values or parameters. */
     public DecisionTable(String id, String version, Optional<String> description, Optional<LocalDate> effectiveFrom,
                          Optional<LocalDate> effectiveTo, HitPolicy hitPolicy, Map<String, ValueType> inputs,
                          Map<String, ValueType> outputs, List<Rule> rules) {
         this(id, version, description, effectiveFrom, effectiveTo, hitPolicy, inputs, outputs, Map.of(), rules);
+    }
+
+    /** A table without parameters. */
+    public DecisionTable(String id, String version, Optional<String> description, Optional<LocalDate> effectiveFrom,
+                         Optional<LocalDate> effectiveTo, HitPolicy hitPolicy, Map<String, ValueType> inputs,
+                         Map<String, ValueType> outputs, Map<String, String> let, List<Rule> rules) {
+        this(id, version, description, effectiveFrom, effectiveTo, hitPolicy, inputs, outputs, Optional.empty(), let,
+                rules);
     }
 
     public DecisionTable {
@@ -53,6 +65,7 @@ public record DecisionTable(
         Objects.requireNonNull(effectiveFrom, "effectiveFrom");
         Objects.requireNonNull(effectiveTo, "effectiveTo");
         Objects.requireNonNull(hitPolicy, "hitPolicy");
+        Objects.requireNonNull(params, "params");
         inputs = Collections.unmodifiableMap(new LinkedHashMap<>(inputs));
         outputs = Collections.unmodifiableMap(new LinkedHashMap<>(outputs));
         let = Collections.unmodifiableMap(new LinkedHashMap<>(let));

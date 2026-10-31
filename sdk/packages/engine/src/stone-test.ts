@@ -17,7 +17,7 @@ import { typesEqual, type ValueType } from './types.js'
 import type { Value } from './values.js'
 
 const FILE_FIELDS = ['decision', 'description', 'cases']
-const CASE_FIELDS = ['name', 'description', 'version', 'asOf', 'facts', 'expect']
+const CASE_FIELDS = ['name', 'description', 'version', 'asOf', 'params', 'facts', 'expect']
 const EXPECT_FIELDS = ['output', 'exactOutput', 'reasonCodes', 'matchedRules', 'ruleVersion', 'error']
 
 /** One test case: a request and the expected outcome. Absent expectations are not checked. */
@@ -28,6 +28,8 @@ export interface StoneTestCase {
   readonly description?: string
   readonly version?: string
   readonly asOf?: LocalDate
+  /** Parameter set versions the case forces, by set id; empty when the case uses the date. */
+  readonly params: ReadonlyMap<string, string>
   readonly facts: ReadonlyMap<string, Value>
   /** Expected outputs; null means the output must be absent. */
   readonly output: ReadonlyMap<string, Value | null>
@@ -136,6 +138,18 @@ class Reader {
       asOf = LocalDate.parse(asOfText)
       if (!asOf) this.problem(`${path}.asOf`, `expected an ISO date (yyyy-MM-dd) but got '${asOfText}'`)
     }
+    const params = new Map<string, string>()
+    const paramsNode = node.entries.get('params')
+    if (paramsNode !== undefined) {
+      if (paramsNode.type !== 'object') {
+        this.problem(`${path}.params`, 'expected an object of parameter set id to version, e.g. { "retail_credit": "1" }')
+      } else {
+        for (const [set, value] of paramsNode.entries) {
+          if (value.type === 'string' && !javaIsBlank(value.value)) params.set(set, value.value)
+          else this.problem(`${path}.params.${set}`, 'expected a version label, e.g. "1"')
+        }
+      }
+    }
     const schema = this.schema(decision, version, asOf, path)
     const facts = this.facts(node.entries.get('facts'), `${path}.facts`, schema)
 
@@ -178,6 +192,7 @@ class Reader {
       ...(description !== undefined ? { description } : {}),
       ...(version !== undefined ? { version } : {}),
       ...(asOf ? { asOf } : {}),
+      params,
       facts,
       output,
       exactOutput,
@@ -363,6 +378,7 @@ export async function checkStoneTestCase(engine: RuleStoneEngine, testCase: Ston
         id: testCase.decision,
         ...(testCase.version !== undefined ? { version: testCase.version } : {}),
         ...(testCase.asOf ? { asOf: testCase.asOf } : {}),
+        ...(testCase.params.size > 0 ? { params: testCase.params } : {}),
       },
       testCase.facts,
     )

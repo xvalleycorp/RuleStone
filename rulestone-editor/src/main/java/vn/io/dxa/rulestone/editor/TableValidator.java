@@ -21,6 +21,7 @@ import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
 import vn.io.dxa.rulestone.core.DecisionVersions;
 import vn.io.dxa.rulestone.core.InvalidDecisionException;
+import vn.io.dxa.rulestone.core.ParameterSet;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 /**
@@ -72,7 +73,7 @@ final class TableValidator {
             raw.addAll(e.problems());
         }
         if (table != null) {
-            raw.addAll(compileProblems(table));
+            raw.addAll(compileProblems(table, directory.paramSets()));
         }
         List<Problem> problems = new ArrayList<>(new ProblemParser(tree).parseAll(raw));
         String ruleVersion = table != null && problems.isEmpty() ? ruleVersion(table) : null;
@@ -84,8 +85,13 @@ final class TableValidator {
 
     /** Problems the engine reports when building with this table alone. */
     static List<String> compileProblems(DecisionTable table) {
+        return compileProblems(table, List.of());
+    }
+
+    /** Problems the engine reports when building with this table and the parameter sets alone. */
+    static List<String> compileProblems(DecisionTable table, List<ParameterSet> paramSets) {
         try {
-            RuleStone.builder().decision(table).build();
+            RuleStone.builder().paramSets(paramSets).decision(table).build();
             return List.of();
         } catch (InvalidDecisionException e) {
             return e.problems();

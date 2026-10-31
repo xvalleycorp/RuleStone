@@ -190,13 +190,16 @@ Events are `CustomEvent`s that bubble and cross shadow roots (`composed`). Prope
 
 ### Table editor
 
-`<rulestone-table-editor>` is the complete decision table editor: the table's metadata, the rules grid, the schema designer, the [local values](decision-tables.md#local-values) (`let`), a JSON view, the problems panel and the Try it panel.
+`<rulestone-table-editor>` is the complete decision table editor: the table's metadata, the rules grid, the schema designer, the [parameters](decision-tables.md#parameters) (`params`), the [local values](decision-tables.md#local-values) (`let`), a JSON view, the problems panel and the Try it panel.
+
+The **Parameters** tab edits the table's `params` declaration: the parameter set, an optional pinned version, and each parameter the rules read with its type (a primitive or a list of one). Next to each parameter it shows the value in every version of the set given in `paramSets`. Rules read the parameters as `params.<name>`, which the rules grid and the condition builder offer.
 
 The **Local values** tab lists each local value as a name and a CEL expression, type-checked as you type against the inputs and the other local values. Add, rename and delete them there; renaming a local value does not change the rules that read it, which then report the old name.
 
 | Member | Kind | Description |
 |---|---|---|
 | `table` | property | The table as parsed `.stone.json`, a plain object. The editor works on a copy and never changes the host's object. |
+| `paramSets` | property | The parameter sets the table may read: every version of each, as `.params.json` text or parsed JSON. The table's `params` are checked against them as the engine checks them, the Parameters tab shows their values, and Try it uses the version in force on its date. Without them, a table that declares `params` reports its set as not registered. |
 | `validator` | property | Optional `async (table, localResult) => HostProblem[]` for server-side checks. See [the validator hook](#server-side-checks-the-validator-hook). |
 | `asOf` / `as-of` | property / attribute | The business date the Try it panel starts with (`yyyy-MM-dd`). Default: today. |
 | `facts` | property / attribute | Facts for the Try it panel as JSON text, in the forms of a `.stone-test.json` case. |
@@ -236,11 +239,12 @@ Rules can be added, duplicated, deleted and reordered by drag and drop or with t
 | `value` | property / attribute | The condition as CEL. |
 | `inputs` | property | The table's inputs, as in `.stone.json`, for the field picker. |
 | `locals` | property | The table's local values (`let`), name to CEL expression. They are offered in the field picker with their inferred types. |
+| `params` | property | The parameters the table declares (`params.values`), name to type. They are offered in the field picker as fields of `params`. |
 | `mode` | property / attribute | `blocks` or `cel`. |
 | `label` | property / attribute | The builder's accessible name. |
 | `rulestone-change` | event | `detail`: `{ value }`, the new CEL. |
 
-The field picker lists the inputs, the local values and the fields of structs. Lists are tested with `exists`, `all` and `exists_one` blocks, whose items have their own fields. The operators depend on the type: comparisons for `int`, `decimal`, `money` and `date`; `in`; `startsWith`, `endsWith`, `contains` and `matches` for strings; `is set` (`has()`) for struct fields; `includes` for lists. Values are typed (money with a currency, dates, decimals, lists), and the ƒx button turns a value into an expression.
+The field picker lists the inputs, the local values, the declared parameters (under `params`) and the fields of structs. Lists are tested with `exists`, `all` and `exists_one` blocks, whose items have their own fields. The operators depend on the type: comparisons for `int`, `decimal`, `money` and `date`; `in`; `startsWith`, `endsWith`, `contains` and `matches` for strings; `is set` (`has()`) for struct fields; `includes` for lists. Values are typed (money with a currency, dates, decimals, lists), and the ƒx button turns a value into an expression.
 
 CEL that is not edited comes back exactly as it was written, including spacing and comments. Edited parts are printed as canonical CEL with only the parentheses that precedence needs. CEL that blocks cannot show (a calculation on the left of a comparison, `filter` or `map`, the conditional operator, a syntax error) stays as text in a CEL block, with the reason. It is never rewritten.
 
@@ -262,6 +266,7 @@ Renaming a field updates every rule expression that uses it through the type-che
 | Member | Kind | Description |
 |---|---|---|
 | `table` | property | The table to run. |
+| `paramSets` | property | The parameter sets the table reads, as `.params.json` text or parsed JSON; the version in force on `asOf` is used, and the record lists it. |
 | `asOf` / `as-of` | property / attribute | The business date. Default: today, in the browser's time zone. |
 | `facts` | property / attribute | Initial facts as JSON text. |
 | `factsText` | property (read only) | The facts as they would be run, as JSON text. |
@@ -463,16 +468,16 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 296.3 KiB, 86.8 KiB gzipped | 199.7 KiB, 55.3 KiB gzipped |
-| `./table-editor` | 248.4 KiB, 73.3 KiB gzipped | 151.8 KiB, 42.0 KiB gzipped |
-| `./rules-grid` | 171.8 KiB, 52.8 KiB gzipped | 100.8 KiB, 28.9 KiB gzipped |
-| `./condition-builder` | 151.6 KiB, 47.5 KiB gzipped | 80.4 KiB, 23.6 KiB gzipped |
-| `./schema-designer` | 128.7 KiB, 41.7 KiB gzipped | 57.6 KiB, 18.0 KiB gzipped |
-| `./flow-canvas` | 98.8 KiB, 30.4 KiB gzipped | 83.8 KiB, 24.8 KiB gzipped |
-| `./try-it` | 150.2 KiB, 48.1 KiB gzipped | 54.6 KiB, 16.6 KiB gzipped |
-| `./cel-input` | 106.6 KiB, 35.2 KiB gzipped | 48.8 KiB, 15.3 KiB gzipped |
+| `@rulestone/editor` (all elements) | 312.5 KiB, 91.1 KiB gzipped | 208.1 KiB, 57.6 KiB gzipped |
+| `./table-editor` | 264.5 KiB, 77.5 KiB gzipped | 160.1 KiB, 44.0 KiB gzipped |
+| `./rules-grid` | 175.6 KiB, 53.8 KiB gzipped | 103.7 KiB, 29.7 KiB gzipped |
+| `./condition-builder` | 155.1 KiB, 48.5 KiB gzipped | 83.0 KiB, 24.3 KiB gzipped |
+| `./schema-designer` | 131.9 KiB, 42.6 KiB gzipped | 60.0 KiB, 18.7 KiB gzipped |
+| `./flow-canvas` | 100.9 KiB, 30.9 KiB gzipped | 85.9 KiB, 25.3 KiB gzipped |
+| `./try-it` | 160.7 KiB, 51.0 KiB gzipped | 57.4 KiB, 17.4 KiB gzipped |
+| `./cel-input` | 108.7 KiB, 35.8 KiB gzipped | 50.9 KiB, 15.9 KiB gzipped |
 
-`@rulestone/engine` alone is 93.1 KiB, 30.3 KiB gzipped. The flow canvas does not load the engine. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
+`@rulestone/engine` alone is 101.1 KiB, 32.5 KiB gzipped. The flow canvas does not load the engine. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
 
 ## The browser engine and the Java engine
 
@@ -482,10 +487,10 @@ A conformance suite in `sdk/packages/engine/test/` compares the two. Its fixture
 
 | Fixture | Checked |
 |---|---|
-| `java-hashes.json` | The canonical form and rule version of every table in `examples/` and in the test tables. |
+| `java-hashes.json` | The canonical form and rule version of every table in `examples/` and in the test tables, and the canonical form and version of every parameter set. |
 | `java-records.json` | The decision record and trace of every case of every `examples/*.stone-test.json` file. |
 | `java-probes.json` | The result type and value, or the exact error, of every expression in `probes.json`: operators, macros, iteration limits, error positions, decimal arithmetic, money, dates and fuzzy matching. |
-| `java-invalid-tables.json` | The problems reported for every invalid table in `invalid-tables.json`. |
+| `java-invalid-tables.json` | The problems reported for every invalid table and parameter set in `invalid-tables.json`. |
 
 The suite also checks every `expression` → result example in [Expression language](expressions.md) and the worked examples in [Fuzzy matching](fuzzy-matching.md). Decimals are exact: `Decimal` keeps a `BigInt` and a scale, and implements `BigDecimal`'s rules for scale, rounding and division.
 

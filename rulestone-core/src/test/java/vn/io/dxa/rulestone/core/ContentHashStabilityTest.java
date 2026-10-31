@@ -22,7 +22,8 @@ import vn.io.dxa.rulestone.api.RuleStoneEngine;
 /**
  * The content hash of a table or flow is part of its rule version, and of every decision record
  * written with it. Adding a feature must not change the hash of any existing file: the hashes
- * below were computed before model nodes were added (hybrid AI step 3), and must never change.
+ * below were computed before model nodes were added (hybrid AI step 3), and must never change. The tables and flows added since are pinned too, and tables and flows without
+ * parameters hash as they did before parameter sets existed.
  */
 class ContentHashStabilityTest {
 
@@ -37,6 +38,11 @@ class ContentHashStabilityTest {
             Map.entry("card_fraud_signals.stone.json", "ec29a1c2aeade1d0e2c4ad452ed55e9ad5cfb6301fd3071fc7090ab67e01e011"),
             Map.entry("consumer_loan_conditions.stone.json", "aca0c378f39ebcd88f90b3c25d08d2226cfbedcc0d694c4b472cdc5ecd92f091"),
             Map.entry("consumer_loan_underwriting.stone.json", "c094463aa4f7bbd7722cf39015653faf64bdcad719f0133634e2081bd2a60f6a"),
+            // Added with local values (let), before parameter sets existed:
+            Map.entry("credit_limit_increase.stone.json", "192cf62ada772414ce5857bc657ca2a61f2587650f45a7ac0007808f32054444"),
+            // Added with model nodes, before parameter sets existed:
+            Map.entry("flows/card_origination_scored.flow.json", "d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376"),
+            Map.entry("flows/card_pd_grade.stone.json", "d75a53905d69fe66e7dd6614ce492e6c1b5ba7ef89fb756573fe48da455271ee"),
             Map.entry("deposit_rate.stone.json", "7be00bd2fd120c8f5d5a8dfde9dab63d2a912820a77f5384b525b3ead14fed70"),
             Map.entry("flows/card_grade_existing.stone.json", "63cd7b62f4208a03bfd914f30d0ee45e4dcfcce038dccfb0e62964dc1af6fa7b"),
             Map.entry("flows/card_grade_new.stone.json", "59b18f7e770f4ff0fa64395b47eb80eebb4151e657ebb11b36703871f92225da"),

@@ -56,8 +56,9 @@ public final class DecisionTableJson {
             .build();
 
     private static final Set<String> TABLE_FIELDS = Set.of(
-            "id", "version", "description", "effectiveFrom", "effectiveTo", "hitPolicy", "inputs", "outputs", "let", "rules");
+            "id", "version", "description", "effectiveFrom", "effectiveTo", "hitPolicy", "inputs", "outputs", "params", "let", "rules");
     private static final Set<String> RULE_FIELDS = Set.of("id", "description", "when", "then", "reasonCode");
+    private static final Set<String> PARAMS_FIELDS = Set.of("set", "version", "values");
 
     private DecisionTableJson() {}
 
@@ -108,6 +109,8 @@ public final class DecisionTableJson {
         json.put("hitPolicy", table.hitPolicy().name());
         json.put("inputs", typesJson(table.inputs()));
         json.put("outputs", typesJson(table.outputs()));
+        // Omitted when absent, so that tables without parameters keep their hash.
+        table.params().ifPresent(p -> json.put("params", paramsJson(p)));
         // Omitted when empty, so that tables without local values keep their hash.
         if (!table.let().isEmpty()) {
             json.put("let", new TreeMap<>(table.let()));
@@ -130,13 +133,22 @@ public final class DecisionTableJson {
         }
     }
 
+    /** The canonical form of a {@code params} declaration, as tables and flows write it. */
+    static Map<String, Object> paramsJson(ParamsDeclaration params) {
+        Map<String, Object> json = new TreeMap<>();
+        json.put("set", params.set());
+        params.version().ifPresent(v -> json.put("version", v));
+        json.put("values", typesJson(params.values()));
+        return json;
+    }
+
     static Map<String, Object> typesJson(Map<String, ValueType> types) {
         Map<String, Object> json = new TreeMap<>();
         types.forEach((name, type) -> json.put(name, typeJson(type)));
         return json;
     }
 
-    private static Object typeJson(ValueType type) {
+    static Object typeJson(ValueType type) {
         if (type instanceof ValueType.Primitive primitive) {
             return primitive.typeName();
         }
@@ -179,12 +191,39 @@ public final class DecisionTableJson {
             HitPolicy hitPolicy = hitPolicy(root);
             Map<String, ValueType> inputs = typeMap(root, "inputs");
             Map<String, ValueType> outputs = typeMap(root, "outputs");
+            Optional<ParamsDeclaration> params = params(root);
             Map<String, String> let = localValues(root);
             List<Rule> rules = rules(root);
             if (!problems.isEmpty()) {
                 throw new InvalidDecisionException(problems);
             }
-            return new DecisionTable(id, version, description, from, to, hitPolicy, inputs, outputs, let, rules);
+            return new DecisionTable(id, version, description, from, to, hitPolicy, inputs, outputs, params, let,
+                    rules);
+        }
+
+        /** The {@code params} declaration of a table or flow, if any. */
+        Optional<ParamsDeclaration> params(JsonNode root) {
+            JsonNode node = root.get("params");
+            if (node == null || node.isNull()) {
+                return Optional.empty();
+            }
+            if (!node.isObject()) {
+                problem("$.params", "expected an object with \"set\", \"values\" and optionally \"version\"");
+                return Optional.empty();
+            }
+            unknownFields(node, PARAMS_FIELDS, "$.params");
+            String set = requiredText(node, "set", "$.params");
+            Optional<String> version = Optional.empty();
+            JsonNode versionNode = node.get("version");
+            if (versionNode != null && !versionNode.isNull()) {
+                if (!versionNode.isTextual() || versionNode.asText().isBlank()) {
+                    problem("$.params.version", "expected a non-empty string");
+                } else {
+                    version = Optional.of(versionNode.asText());
+                }
+            }
+            Map<String, ValueType> values = typeMap(node, "values", "$.params");
+            return Optional.of(new ParamsDeclaration(set, version, values));
         }
 
         private Map<String, String> localValues(JsonNode root) {
@@ -278,7 +317,7 @@ public final class DecisionTableJson {
             return types;
         }
 
-        private ValueType type(JsonNode node, String path) {
+        ValueType type(JsonNode node, String path) {
             if (node.isTextual()) {
                 String name = node.asText();
                 for (ValueType.Primitive primitive : ValueType.Primitive.values()) {

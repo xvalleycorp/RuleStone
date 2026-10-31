@@ -39,7 +39,7 @@ Add the module. The Temporal SDK has `provided` scope: the module works with the
 </dependency>
 ```
 
-Register both styles on a worker. Build one engine from every rule version that running workflows may still replay, and give the activity the same tables:
+Register both styles on a worker. Build one engine from every rule version that running workflows may still replay, and give the activity the same tables. Tables that read [parameters](decision-tables.md#parameters) need their parameter sets too: add `.paramSets(...)` to the builder, with every version that running workflows may replay. The in-workflow style pins the business date and the rule version, not yet the parameter set versions: a parameter set version added later that takes effect on a past business date would change a replay, so add new versions only with future dates.
 
 ```java
 RuleStoneEngine engine = RuleStone.builder()

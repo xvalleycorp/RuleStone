@@ -28,17 +28,23 @@ Add the module, and the Camunda Java client your application already uses. The c
 </dependency>
 ```
 
-Register a worker. It needs the engine and the decision tables you built it from: the tables' input types say how to read process variables.
+Register a worker. It needs the engine and the decision tables you built it from: the tables' input types say how to read process variables. The parameter sets in the same directory are registered too, for tables that read [parameters](decision-tables.md#parameters).
 
 ```java
 List<DecisionTable> tables;
+List<ParameterSet> paramSets;
 try (Stream<Path> files = Files.list(rulesDirectory)) {
     tables = files.filter(f -> f.toString().endsWith(".stone.json"))
             .map(DecisionTableJson::read)
             .toList();
 }
+try (Stream<Path> files = Files.list(rulesDirectory)) {
+    paramSets = files.filter(f -> f.toString().endsWith(ParameterSetJson.FILE_SUFFIX))
+            .map(ParameterSetJson::read)
+            .toList();
+}
 Clock clock = Clock.system(ZoneId.of("Asia/Ho_Chi_Minh"));
-RuleStoneEngine engine = RuleStone.builder().clock(clock).decisions(tables).build();
+RuleStoneEngine engine = RuleStone.builder().clock(clock).decisions(tables).paramSets(paramSets).build();
 
 return RuleStoneJobWorker.register(client, engine, tables,
         RuleStoneWorkerOptions.builder().clock(clock).build());

@@ -1,15 +1,15 @@
 ---
 source: parameters.md
-sourceHash: 1e4ea2678c359102843c51ab35172dcd5aac89def50d4440aa5353f8d3a2b813
+sourceHash: 89bea269d971e3d5e071c5ac92db3a214bd04e0e5979836de7021758420a02bc
 ---
 
 # Tham số, hàm tổng hợp và giá trị cục bộ
 
-> Trạng thái: **A và C đã có, B là đề xuất thiết kế** · Cập nhật lần cuối: 2026-10-31
+> Trạng thái: **đã có** · Cập nhật lần cuối: 2026-10-31
 >
-> Hàm tổng hợp (A) và giá trị cục bộ trong bảng (C) đã có: tài liệu tham chiếu nằm ở [Hàm tổng hợp](expressions.md#hàm-tổng-hợp) và [Giá trị cục bộ](decision-tables.md#giá-trị-cục-bộ). Bộ tham số (B) chưa được triển khai; phần đó là đề xuất để xem xét và sẽ thay đổi trước khi phát hành.
+> Cả ba bổ sung đã có trong cả hai bộ máy luật. Tài liệu tham chiếu nằm ở [Hàm tổng hợp](expressions.md#hàm-tổng-hợp), [Tham số](decision-tables.md#tham-số) và [Giá trị cục bộ](decision-tables.md#giá-trị-cục-bộ). Trang này giữ lại thiết kế và lý do của nó.
 
-Luật thường cần những giá trị không thuộc về logic của chúng: hạn mức tỷ lệ nợ trên thu nhập, ngưỡng báo cáo giao dịch tiền mặt, tuổi tối thiểu. Luật cũng cần tính tổng trên danh sách, và cần các kết quả trung gian dùng chung cho nhiều luật. Trang này đề xuất ba bổ sung:
+Luật thường cần những giá trị không thuộc về logic của chúng: hạn mức tỷ lệ nợ trên thu nhập, ngưỡng báo cáo giao dịch tiền mặt, tuổi tối thiểu. Luật cũng cần tính tổng trên danh sách, và cần các kết quả trung gian dùng chung cho nhiều luật. Trang này mô tả ba bổ sung:
 
 | | Bổ sung | Ví dụ |
 |---|---|---|
@@ -57,6 +57,8 @@ Quy tắc:
 
 ## B. Bộ tham số
 
+> Đã có. Tài liệu tham chiếu: [Tham số](decision-tables.md#tham-số); Java API: [Bộ tham số](java-api.md#bộ-tham-số).
+
 Một bộ tham số là một file riêng, `<id>.params.json`, chứa các giá trị nghiệp vụ có tên và có kiểu:
 
 ```json
@@ -69,7 +71,7 @@ Một bộ tham số là một file riêng, `<id>.params.json`, chứa các giá
     "maxDti": { "type": "decimal", "value": "0.45" },
     "minAge": { "type": "int", "value": 18 },
     "maxUnsecured": { "type": "money", "value": "500000000 VND" },
-    "blockedSegments": { "type": "list<string>", "value": ["SANCTIONED", "DORMANT"] }
+    "blockedSegments": { "type": ["string"], "value": ["SANCTIONED", "DORMANT"] }
   }
 }
 ```
@@ -94,14 +96,18 @@ Bộ tham số có phiên bản và ngày hiệu lực đúng như bảng, và �
 
 Một bảng có thể ghim một phiên bản cho các trường hợp đặc biệt: `"params": { "set": "retail_credit", "version": "7", … }`.
 
+Kiểu được viết như với đầu vào của bảng, nên danh sách chuỗi là `["string"]`. Tham số không có trường con: không cho phép kiểu struct. Id bộ tham số là một không gian tên riêng, tách khỏi id của quyết định.
+
 ### Kiểm tra khi nạp
 
 `build()` thất bại nếu:
 
 - bộ tham số chưa được đăng ký, hoặc có phiên bản của nó không khai báo một tham số mà bảng đọc, với cùng kiểu;
 - một giá trị không khớp với kiểu đã khai báo, ví dụ `"0.45"` khai báo là `int`, hoặc một loại tiền không tồn tại;
-- bảng đọc `params.x` mà không khai báo `x`;
+- bảng đọc `params.x` mà không khai báo `x`, hoặc đọc `params` mà không khai báo tham số nào;
 - bảng có đầu vào tên `params` và đồng thời khai báo tham số.
+
+Một phiên bản bộ tham số bị từ chối, như một bảng, nếu tệp của nó sai định dạng, giá trị không khớp kiểu, hoặc ngày của nó mâu thuẫn với một phiên bản khác của cùng bộ tham số.
 
 Việc kiểm tra áp dụng cho **mọi phiên bản đã đăng ký** của bộ tham số, như với các nút bảng không ghim phiên bản trong luồng quyết định. Vì vậy một lần triển khai mà lẽ ra sẽ thất bại vào một ngày nghiệp vụ nào đó thì thất bại ngay khi khởi động.
 
@@ -115,11 +121,11 @@ Việc kiểm tra áp dụng cho **mọi phiên bản đã đăng ký** của b�
 "params": [ { "set": "retail_credit", "version": "7@sha256:<64 hex digits>" } ]
 ```
 
-Để tái tạo một quyết định, lần replay nêu tên cả phiên bản luật lẫn phiên bản bộ tham số lấy từ bản ghi. Giá trị tham số không bao giờ xuất hiện trong bản ghi; phiên bản là đủ để xác định chúng.
+Để tái tạo một quyết định, lần replay nêu tên cả phiên bản luật lẫn phiên bản bộ tham số lấy từ bản ghi: `DecisionRef.of(id).version("4").params("retail_credit", "7")`. Một bảng ghim phiên bản của bộ tham số thì giữ phiên bản đó. Giá trị tham số không bao giờ xuất hiện trong bản ghi, cũng không có trong `factsHash`; phiên bản là đủ để xác định chúng. Bản ghi bỏ trường `params` khi không dùng bộ tham số nào, nên bản ghi của các bảng không có tham số không thay đổi.
 
 ### Luồng quyết định
 
-Một luồng có thể khai báo `params` theo cùng cách; khi đó các biểu thức của luồng (`when`, `derive`, `facts`, `end`) đọc được `params.x`. Một nút bảng trong luồng dùng các tham số mà bảng đó khai báo, lấy từ phiên bản có hiệu lực vào cùng ngày nghiệp vụ. Bản ghi liệt kê mỗi bộ tham số mà luồng và các bảng của nó đã dùng, mỗi bộ một lần.
+Một luồng có thể khai báo `params` theo cùng cách; khi đó các biểu thức của luồng (`when`, `derive`, `facts`, `end` và `features` của nút mô hình) đọc được `params.x`. Một nút bảng trong luồng dùng các tham số mà bảng đó khai báo, lấy từ phiên bản có hiệu lực vào cùng ngày nghiệp vụ. Bản ghi liệt kê mỗi bộ tham số mà luồng và các bảng của nó đã dùng, mỗi bộ một lần.
 
 ### Thay đổi giá trị khi đang vận hành
 
@@ -127,7 +133,7 @@ Bộ máy luật là bất biến. Phiên bản tham số mới có hiệu lực
 
 ## C. Giá trị cục bộ trong bảng
 
-> Đã có. Tài liệu tham chiếu: [Giá trị cục bộ](decision-tables.md#giá-trị-cục-bộ). Cho đến khi có bộ tham số, `params` là tên dành riêng, và các ví dụ đọc `params.x` chưa nạp được.
+> Đã có. Tài liệu tham chiếu: [Giá trị cục bộ](decision-tables.md#giá-trị-cục-bộ).
 
 Một bảng có thể đặt tên cho các kết quả trung gian trong `let`, và mọi luật đều đọc được chúng:
 
@@ -159,7 +165,7 @@ Trong một luồng, các nút `derive` đã làm việc này giữa các nút; 
 | Phép tính | Phép tính CEL trong mọi biểu thức; `let` trong bảng; nút `derive` trong [luồng quyết định](flows.md). |
 | Đếm và kiểm tra phần tử danh sách | `size()`, `filter`, `exists`, `all`, `exists_one`. |
 | Tổng, nhỏ nhất, lớn nhất và trung bình của danh sách | Hàm tổng hợp. |
-| Ngưỡng và hạn mức của chính sách | Bộ tham số (đề xuất). |
+| Ngưỡng và hạn mức của chính sách | Bộ tham số. |
 | Dữ liệu tra cứu trong lúc đánh giá, như số dư lấy từ core banking | Dự kiến làm dưới dạng `FactResolver`, cùng với replay, vì mọi giá trị lấy về phải được ghi lại để tái tạo quyết định. Trong lúc chờ, bên gọi tự lấy dữ liệu và truyền vào làm đầu vào. |
 | Tổng hợp theo cửa sổ thời gian, như tổng giao dịch trong 24 giờ | **Nằm ngoài phạm vi.** RuleStone không giữ trạng thái giữa các lần đánh giá. Hãy tính chúng trong một hệ thống xử lý luồng dữ liệu hoặc một kho dữ liệu như Flink hay Valkey, rồi truyền kết quả vào làm đầu vào. |
 
@@ -169,4 +175,4 @@ Mỗi bước là một thay đổi riêng, được triển khai trong cả hai
 
 1. **Hàm tổng hợp.** Đã có.
 2. **Giá trị cục bộ trong bảng**, gồm cả lưới luật và trình dựng điều kiện của trình soạn thảo trên trình duyệt, vốn phải hiển thị các tên trong `let`. Đã có.
-3. **Bộ tham số**: định dạng file, cách chọn phiên bản, kiểm tra khi nạp, trường `params` của bản ghi, hỗ trợ trong `rulestone-test` (ca kiểm thử có thể nêu tên một phiên bản bộ tham số), và SDK trình soạn thảo (một trình soạn thảo bộ tham số, và gợi ý `params.` trong trình dựng điều kiện).
+3. **Bộ tham số**: định dạng file, cách chọn phiên bản, kiểm tra khi nạp, trường `params` của bản ghi, hỗ trợ trong `rulestone-test` (ca kiểm thử có thể nêu tên một phiên bản bộ tham số), và SDK trình soạn thảo (thẻ Tham số trong trình soạn thảo bảng, và gợi ý `params.` trong trình dựng điều kiện). Đã có; xem ví dụ [loan_eligibility v4](examples.md#xét-điều-kiện-vay-thứ-tự-ưu-tiên-và-phiên-bản).

@@ -1,6 +1,6 @@
 ---
 source: temporal.md
-sourceHash: 7ebe14c77a952ebffb4c3f351416d633b94970fbad316d60855a4ec9ea85267e
+sourceHash: b073628313d3c24b80189e6d1b257ea733a8d72e75576ddcdf137b4b9efaa7ec
 ---
 
 # Tích hợp Temporal
@@ -44,7 +44,7 @@ Thêm mô-đun. Temporal SDK có scope `provided`: mô-đun dùng phiên bản `
 </dependency>
 ```
 
-Đăng ký cả hai cách dùng trên một worker. Hãy tạo một engine từ mọi phiên bản luật mà các workflow đang chạy có thể còn replay, và đưa cho activity cùng các bảng đó:
+Đăng ký cả hai cách dùng trên một worker. Hãy tạo một engine từ mọi phiên bản luật mà các workflow đang chạy có thể còn replay, và đưa cho activity cùng các bảng đó. Các bảng đọc [tham số](decision-tables.md#tham-số) cũng cần bộ tham số của chúng: thêm `.paramSets(...)` vào builder, với mọi phiên bản mà các workflow đang chạy có thể replay. Cách dùng trong workflow cố định ngày nghiệp vụ và phiên bản luật, nhưng chưa cố định phiên bản bộ tham số: một phiên bản bộ tham số thêm về sau có hiệu lực từ một ngày nghiệp vụ trong quá khứ sẽ làm thay đổi một lần replay, nên chỉ thêm phiên bản mới với ngày trong tương lai.
 
 ```java
 RuleStoneEngine engine = RuleStone.builder()

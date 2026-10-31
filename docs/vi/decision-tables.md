@@ -1,6 +1,6 @@
 ---
 source: decision-tables.md
-sourceHash: d50c42c54be2924af9a8cf9aa611a46585acfdce88a46e5c71f14add700151d4
+sourceHash: 19d8383a39049d23a65bf54cc0fe2a068e6e5864b77dceb069d881f0222865f4
 ---
 
 # Bảng quyết định
@@ -11,6 +11,7 @@ Bảng quyết định biến các đầu vào có kiểu thành các đầu ra 
 - [Kiểu dữ liệu](#kiểu-dữ-liệu)
 - [Luật](#luật)
 - [Giá trị cục bộ](#giá-trị-cục-bộ)
+- [Tham số](#tham-số)
 - [Hit policy](#hit-policy)
 - [Phiên bản và ngày hiệu lực](#phiên-bản-và-ngày-hiệu-lực)
 - [Kiểm tra hợp lệ](#kiểm-tra-hợp-lệ)
@@ -45,6 +46,7 @@ Một bảng là một đối tượng JSON. Theo quy ước, tên tệp kết t
 | `hitPolicy` | có | `FIRST`, `UNIQUE` hoặc `COLLECT`. Xem [Hit policy](#hit-policy). |
 | `inputs` | có | Đối tượng ánh xạ tên mỗi đầu vào tới [kiểu](#kiểu-dữ-liệu) của nó. Có thể rỗng. |
 | `outputs` | có | Đối tượng ánh xạ tên mỗi đầu ra tới [kiểu](#kiểu-dữ-liệu) của nó. Có thể rỗng, ví dụ với một bảng chỉ trả về mã lý do. |
+| `params` | không | Bộ tham số mà các luật đọc giá trị nghiệp vụ từ đó, cùng các tham số được đọc và kiểu của chúng. Xem [Tham số](#tham-số). |
 | `let` | không | Đối tượng ánh xạ tên tới biểu thức mà mọi luật đều đọc được theo tên. Xem [Giá trị cục bộ](#giá-trị-cục-bộ). |
 | `rules` | có | Mảng [luật](#luật) không rỗng, theo thứ tự đánh giá. |
 
@@ -146,6 +148,66 @@ Mã lý do là bộ từ vựng ổn định mà bạn đưa cho khách hàng v�
 
 Trong một [luồng](flows.md), nút `derive` tính giá trị giữa các nút; còn `let` dành cho các phép tính dùng chung bởi các luật của một bảng.
 
+## Tham số
+
+Những giá trị do chính sách của ngân hàng ấn định, như hạn mức tỷ lệ nợ trên thu nhập hay tuổi tối thiểu, thuộc về một **bộ tham số**: một tệp `.params.json` riêng, được rà soát và quản lý phiên bản như luật, mà các luật đọc bằng `params.<tên>`. Bên gọi không bao giờ truyền chúng vào; phiên bản của bộ tham số có hiệu lực vào ngày nghiệp vụ được dùng. Thiết kế và lý do nằm ở [Tham số, hàm tổng hợp và giá trị cục bộ](parameters.md#b-bộ-tham-số).
+
+Bảng khai báo bộ tham số và các tham số nó đọc, cùng kiểu của chúng, giống như khai báo đầu vào:
+
+```json
+"params": {
+  "set": "retail_credit",
+  "values": { "minAge": "int", "maxDti": "decimal", "incomeMultiple": "int", "blockedSegments": ["string"] }
+},
+"let": {
+  "dti": "applicant.monthlyDebt / applicant.monthlyIncome",
+  "maxAmount": "applicant.monthlyIncome * params.incomeMultiple"
+},
+"rules": [
+  { "id": "R1", "when": "applicant.age < params.minAge", "then": { "decision": "'REJECT'" } },
+  { "id": "R4", "when": "dti > params.maxDti", "then": { "decision": "'REJECT'" } }
+]
+```
+
+| Trường | Bắt buộc | Mô tả |
+|---|---|---|
+| `set` | có | Id của bộ tham số. |
+| `version` | không | Một phiên bản của bộ tham số dùng bất kể ngày nghiệp vụ, cho các trường hợp đặc biệt. Nếu không có, phiên bản có hiệu lực vào ngày nghiệp vụ được dùng. |
+| `values` | có | Đối tượng ánh xạ mỗi tham số mà bảng đọc tới kiểu của nó: `bool`, `int`, `string`, `decimal`, `money`, `date` hoặc danh sách của chúng. Ít nhất một tham số. |
+
+Luật và giá trị cục bộ đọc `params.<tên>`; đọc một tham số mà `values` không khai báo là lỗi. [Mã băm nội dung](#mã-băm-nội-dung) bao gồm phần khai báo, không bao gồm giá trị: một phiên bản mới của bộ tham số không làm thay đổi phiên bản luật nào. Bảng không có `params` giữ nguyên mã băm như trước khi có bộ tham số.
+
+### Tệp bộ tham số
+
+Một bộ tham số là một tệp `.params.json`, mỗi phiên bản một tệp:
+
+```json
+{
+  "id": "retail_credit",
+  "version": "2",
+  "description": "Tighter debt-to-income limit and lower income multiple, approved by the Credit Committee on 2027-06-10",
+  "effectiveFrom": "2027-07-01",
+  "values": {
+    "minAge": { "type": "int", "value": 18 },
+    "maxDti": { "type": "decimal", "value": "0.45" },
+    "incomeMultiple": { "type": "int", "value": 10 },
+    "blockedSegments": { "type": ["string"], "value": ["DORMANT", "SANCTIONED"] }
+  }
+}
+```
+
+| Trường | Bắt buộc | Mô tả |
+|---|---|---|
+| `id` | có | Id của bộ tham số, dùng chung cho mọi phiên bản. Id bộ tham số là một không gian tên riêng: một bộ tham số có thể trùng id với một quyết định. |
+| `version` | có | Nhãn phiên bản, như với bảng. |
+| `description` | không | Văn bản tự do, ví dụ ai đã phê duyệt các giá trị. |
+| `effectiveFrom`, `effectiveTo` | không | Như với bảng: một phiên bản có hiệu lực cho tới khi phiên bản kế tiếp có hiệu lực. Xem [Phiên bản và ngày hiệu lực](#phiên-bản-và-ngày-hiệu-lực). |
+| `values` | có | Đối tượng ánh xạ mỗi tên tham số tới `{ "type": …, "value": … }`. Kiểu được viết như với đầu vào; tham số không có trường con, nên không cho phép kiểu struct. Giá trị dùng các dạng JSON của fact: tiền là `"500000000 VND"`, số thập phân là chuỗi hoặc số, được đọc chính xác, ngày là `"yyyy-MM-dd"`. |
+
+Việc đọc là chặt chẽ, như với bảng: trường không xác định, khoá trùng lặp và giá trị không khớp kiểu đều là lỗi, mỗi lỗi kèm đường dẫn JSON, ví dụ `$.values.maxDti.value`. Mỗi phiên bản có mã băm nội dung riêng, `2@sha256:…`, tính trên cùng dạng chuẩn như của bảng.
+
+Để thay đổi một hạn mức từ một ngày, hãy thêm một phiên bản của bộ tham số với `effectiveFrom` muộn hơn: bảng không thay đổi. Đăng ký mọi phiên bản bằng `RuleStone.builder().paramSet(...)` (xem [Java API](java-api.md#bộ-tham-số)); mỗi bản ghi quyết định liệt kê các phiên bản bộ tham số đã dùng, và `DecisionRef.params(set, version)` chạy lại với chúng.
+
 ## Hit policy
 
 Hit policy (chính sách khớp luật) quyết định cách kết hợp các luật cùng khớp. Tên gọi theo chuẩn [DMN](https://www.omg.org/dmn/).
@@ -244,6 +306,8 @@ Các bước kiểm tra gồm:
 |---|---|
 | Tệp | JSON không hợp lệ, trường không xác định, khoá trùng lặp, thiếu trường bắt buộc, sai kiểu JSON, kiểu không xác định, hit policy không xác định, ngày không hợp lệ. |
 | Bảng | `id` hoặc `version` không hợp lệ; `effectiveTo` không sau `effectiveFrom`; không có luật nào; đầu ra có kiểu struct; tên đầu vào hoặc tên trường không hợp lệ; một đầu vào tên là `businessDate`. |
+| Tham số | `params` không phải là đối tượng có `set` và `values`; bộ tham số chưa được đăng ký, hoặc không có phiên bản được cố định; một tham số được khai báo mà một phiên bản bảng có thể dùng (mọi phiên bản đã đăng ký, hoặc phiên bản được cố định) không có, hoặc có với kiểu khác; tên tham số không phải định danh; kiểu struct; một đầu vào tên là `params`; biểu thức đọc `params.x` khi `x` không được khai báo, hoặc đọc `params` trong một bảng không khai báo tham số nào. |
+| Bộ tham số | Mọi lỗi của một tệp `.params.json`, như với bảng; `id` hoặc `version` không hợp lệ; giá trị không khớp kiểu; các phiên bản của một bộ tham số được đăng ký hai lần, có hiệu lực cùng một ngày hoặc chồng lấn, như với bảng. Có tiền tố `parameter set id@version`. |
 | Giá trị cục bộ | `let` không phải là đối tượng chứa các biểu thức; tên không phải định danh hoặc trùng với một đầu vào, `businessDate` hay `params`; vòng phụ thuộc, được báo một lần dạng `let.a: cycle: a -> b -> a`; biểu thức có lỗi cú pháp hoặc lỗi kiểu, hoặc có kiểu không phải kiểu của RuleStone (như `double`). Luật đọc một giá trị cục bộ bị từ chối không bị kiểm tra lại. |
 | Luật | Trùng id luật; mã lý do không theo dạng `UPPER_SNAKE_CASE`; `then` đặt một đầu ra chưa khai báo. |
 | Biểu thức | Lỗi cú pháp; biến hoặc trường không xác định; lỗi kiểu, kể cả mọi sự trộn lẫn giữa `decimal` và số dấu phẩy động, hoặc giữa `money` và số thông thường; `when` không trả về `bool`; `then` không trả về đúng kiểu của đầu ra. |

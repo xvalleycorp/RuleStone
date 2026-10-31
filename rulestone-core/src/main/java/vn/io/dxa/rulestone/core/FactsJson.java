@@ -191,6 +191,19 @@ public final class FactsJson {
     }
 
     /**
+     * Reads one value of a declared type located at {@code path}, adding every problem to
+     * {@code problems} instead of throwing; for readers of other files, such as parameter sets.
+     *
+     * @return the value, or null if there was a problem
+     */
+    static Object readValue(JsonNode json, ValueType type, String path, List<String> problems) {
+        Reader reader = new Reader();
+        Object value = reader.value(json, type, path);
+        problems.addAll(reader.problems);
+        return reader.problems.isEmpty() ? value : null;
+    }
+
+    /**
      * Reads the model results that a caller supplies for the {@code model} nodes of a decision
      * flow: a JSON object of node id to either a result or a failure.
      *

@@ -11,8 +11,9 @@ import { ExpressionError } from './errors.js'
 import { compareJavaStrings } from './json.js'
 import type { DecisionTable } from './table.js'
 import type { ValueType } from './types.js'
+import { paramsType } from './params.js'
 
-/** Reserved for parameter sets, which tables will read as params.x. */
+/** Reserved for parameter sets, which tables read as params.x. */
 export const PARAMS = 'params'
 
 const BUSINESS_DATE = 'businessDate'
@@ -22,7 +23,8 @@ const BUSINESS_DATE = 'businessDate'
  * @param inputs an environment with the inputs and businessDate, used to parse
  * @param options the options of `inputs`, to which the local values are added
  * @param failed receives the local values that could not be compiled, also because one they read could not
- * @returns an environment with the inputs, businessDate and every local value compiled
+ * @param undeclaredParams why an expression cannot read what it reads from params, or undefined
+ * @returns an environment with the inputs, businessDate, parameters and every local value compiled
  */
 export function compileLocals(
   table: DecisionTable,
@@ -31,6 +33,7 @@ export function compileLocals(
   at: string,
   problems: string[],
   failed: Set<string>,
+  undeclaredParams: (source: string) => string | undefined = () => undefined,
 ): ExpressionEnvironment {
   const sources = new Map([...(table.let ?? new Map<string, string>())].sort((a, b) => compareJavaStrings(a[0], b[0])))
   const reads = new Map<string, string[]>()
@@ -96,6 +99,12 @@ export function compileLocals(
         return false
       }
     }
+    const paramsProblem = undeclaredParams(sources.get(name)!)
+    if (paramsProblem !== undefined) {
+      problem(name, paramsProblem)
+      failed.add(name)
+      return false
+    }
     try {
       compiled.set(name, environment().compileLocal(sources.get(name)!))
       return true
@@ -113,15 +122,22 @@ export function compileLocals(
 /**
  * The inferred types of a table's local values, for editors: the local values that compile, by
  * name, in sorted order. Those with a problem (a bad name, a cycle, an error, or reading one
- * that has a problem) are left out; createEngine reports them.
+ * that has a problem) are left out; createEngine reports them. `params` are the parameters the
+ * table declares, by name, which local values read as params.<name>.
  */
 export function localValueTypes(
   inputs: ReadonlyMap<string, ValueType>,
   locals: ReadonlyMap<string, string>,
+  params?: ReadonlyMap<string, ValueType>,
 ): ReadonlyMap<string, ValueType> {
   const variables = new Map(inputs)
   variables.delete(BUSINESS_DATE)
   variables.set(BUSINESS_DATE, 'date')
+  if (params) {
+    variables.delete(PARAMS)
+    const type = paramsType({ set: '', values: params })
+    if (type) variables.set(PARAMS, type)
+  }
   let base: ExpressionEnvironment
   try {
     base = new ExpressionEnvironment({ variables })

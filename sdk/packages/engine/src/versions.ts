@@ -1,7 +1,8 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Which version of a decision is in force on a date, as DecisionVersions in Java.
+// Which version of a decision, or of a parameter set, is in force on a date, as DecisionVersions
+// in Java.
 //
 // Versions of one decision are ordered by effectiveFrom; a version without one starts at the
 // beginning of time. A version stays in force until the earlier of its own effectiveTo, if it
@@ -10,10 +11,23 @@
 
 import type { LocalDate } from './date.js'
 import { DecisionNotFoundError } from './errors.js'
-import { tableRef, type DecisionTable } from './table.js'
+
+/** A versioned, effective-dated definition: a decision table or a parameter set. */
+export interface Versioned {
+  readonly id: string
+  readonly version: string
+  /** First day in force, inclusive. */
+  readonly effectiveFrom?: LocalDate
+  /** First day no longer in force, exclusive. */
+  readonly effectiveTo?: LocalDate
+}
+
+function tableRef(v: Versioned): string {
+  return `${v.id}@${v.version}`
+}
 
 /** Sorted by effective start, a version without effectiveFrom first; stable, as Java's List.sort. */
-function sorted(versions: readonly DecisionTable[]): DecisionTable[] {
+function sorted<T extends Versioned>(versions: readonly T[]): T[] {
   return [...versions].sort((a, b) => {
     if (a.effectiveFrom === undefined) return b.effectiveFrom === undefined ? 0 : -1
     if (b.effectiveFrom === undefined) return 1
@@ -26,7 +40,7 @@ function sorted(versions: readonly DecisionTable[]): DecisionTable[] {
  * duplicate versions, two versions taking effect on the same day (or both without
  * effectiveFrom), and an effectiveTo after the next version's effectiveFrom.
  */
-export function versionProblems(versions: readonly DecisionTable[]): string[] {
+export function versionProblems(versions: readonly Versioned[]): string[] {
   const all = sorted(versions)
   const problems: string[] = []
   for (let i = 0; i < all.length; i++) {
@@ -64,9 +78,9 @@ export function versionProblems(versions: readonly DecisionTable[]): string[] {
  * The version in force on date: the one with the latest effectiveFrom on or before date,
  * unless its own effectiveTo has passed.
  */
-export function versionInForce<T extends DecisionTable>(versions: readonly T[], date: LocalDate): T | undefined {
+export function versionInForce<T extends Versioned>(versions: readonly T[], date: LocalDate): T | undefined {
   let candidate: T | undefined
-  for (const table of sorted(versions) as T[]) {
+  for (const table of sorted(versions)) {
     if (table.effectiveFrom !== undefined && table.effectiveFrom.compareTo(date) > 0) break
     candidate = table
   }
@@ -78,20 +92,21 @@ export function versionInForce<T extends DecisionTable>(versions: readonly T[], 
 
 /**
  * The version an evaluation uses: `version` if given, else the version in force on date.
- * Throws DecisionNotFoundError with Java's messages.
+ * Throws DecisionNotFoundError with Java's messages; `kind` names what id names in them.
  */
-export function selectVersion<T extends DecisionTable>(
+export function selectVersion<T extends Versioned>(
   id: string,
   versions: readonly T[],
   version: string | undefined,
   date: LocalDate,
+  kind: 'decision' | 'parameter set' = 'decision',
 ): T {
   if (version !== undefined) {
     const found = versions.find((t) => t.version === version)
-    if (!found) throw new DecisionNotFoundError(`decision '${id}' has no version '${version}'`)
+    if (!found) throw new DecisionNotFoundError(`${kind} '${id}' has no version '${version}'`)
     return found
   }
   const found = versionInForce(versions, date)
-  if (!found) throw new DecisionNotFoundError(`no version of decision '${id}' is effective on ${date.toString()}`)
+  if (!found) throw new DecisionNotFoundError(`no version of ${kind} '${id}' is effective on ${date.toString()}`)
   return found
 }

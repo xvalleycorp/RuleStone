@@ -86,14 +86,17 @@ final class CompiledFlow implements Executable {
     private final ExpressionEnvironment inputs;
     private final Map<String, Node> nodes;
     private final Models models;
+    /** The parameters the flow's own expressions read, or null if it declares none. */
+    private final Parameters.Binding params;
 
     private CompiledFlow(DecisionFlow flow, String ruleVersion, ExpressionEnvironment inputs, Map<String, Node> nodes,
-                         Models models) {
+                         Models models, Parameters.Binding params) {
         this.flow = flow;
         this.ruleVersion = ruleVersion;
         this.inputs = inputs;
         this.nodes = Map.copyOf(nodes);
         this.models = models;
+        this.params = params;
     }
 
     @Override
@@ -115,15 +118,16 @@ final class CompiledFlow implements Executable {
      * @param registered every registered decision table, by id, including tables that failed to compile
      * @param flowIds    the ids of every registered flow
      * @param models     how model nodes obtain their results
+     * @param parameterSets every registered parameter set, which the flow's {@code params} are checked against
      * @param problems receives every problem found, prefixed with the flow and location
      * @return the compiled flow, or empty if any problem was found
      */
     static Optional<CompiledFlow> compile(DecisionFlow flow, Map<String, List<CompiledDecision>> tables,
                                           Map<String, List<DecisionTable>> registered, Set<String> flowIds,
                                           int maxIterations, Map<String, Integer> currencyScales, Models models,
-                                          List<String> problems) {
-        return new Compiler(flow, tables, registered, flowIds, maxIterations, currencyScales, models, problems)
-                .compile();
+                                          Parameters.Registry parameterSets, List<String> problems) {
+        return new Compiler(flow, tables, registered, flowIds, maxIterations, currencyScales, models, parameterSets,
+                problems).compile();
     }
 
     /** Compiles one flow, collecting every problem instead of stopping at the first. */
@@ -136,6 +140,7 @@ final class CompiledFlow implements Executable {
         private final int maxIterations;
         private final Map<String, Integer> currencyScales;
         private final Models models;
+        private final Parameters.Registry parameterSets;
         private final List<String> problems;
         private final String at;
         private final Map<Map<String, ValueType>, ExpressionEnvironment> environments = new HashMap<>();
@@ -150,9 +155,11 @@ final class CompiledFlow implements Executable {
 
         Compiler(DecisionFlow flow, Map<String, List<CompiledDecision>> tables,
                  Map<String, List<DecisionTable>> registered, Set<String> flowIds, int maxIterations,
-                 Map<String, Integer> currencyScales, Models models, List<String> problems) {
+                 Map<String, Integer> currencyScales, Models models, Parameters.Registry parameterSets,
+                 List<String> problems) {
             this.flow = flow;
             this.models = models;
+            this.parameterSets = parameterSets;
             this.tables = tables;
             this.registered = registered;
             this.flowIds = flowIds;
@@ -175,6 +182,18 @@ final class CompiledFlow implements Executable {
             if (inputEnvironment == null) {
                 return Optional.empty();
             }
+            // Every node may read the parameters, which are not inputs: they are not part of the facts hash.
+            Parameters.Binding params = null;
+            Map<String, ValueType> startTypes = inputTypes;
+            if (flow.params().isPresent()) {
+                params = Parameters.check(at, flow.params().get(), flow.inputs(), parameterSets, problems).orElse(null);
+                startTypes = new LinkedHashMap<>(inputTypes);
+                startTypes.remove(Parameters.PARAMS);
+                ValueType paramsType = Parameters.type(flow.params().get());
+                if (paramsType != null) {
+                    startTypes.put(Parameters.PARAMS, paramsType);
+                }
+            }
             names();
             graph();
             structure();
@@ -194,7 +213,7 @@ final class CompiledFlow implements Executable {
             if (problems.size() > before) {
                 return Optional.empty();
             }
-            Map<String, Map<String, ValueType>> scopes = scopes(order, inputTypes);
+            Map<String, Map<String, ValueType>> scopes = scopes(order, startTypes);
             Map<String, Node> compiled = new HashMap<>();
             for (String id : order) {
                 Node node = node(id, flow.nodes().get(id), scopes.get(id));
@@ -206,7 +225,7 @@ final class CompiledFlow implements Executable {
                 return Optional.empty();
             }
             String ruleVersion = flow.version() + "@sha256:" + CompiledDecision.sha256(DecisionFlowJson.write(flow));
-            return Optional.of(new CompiledFlow(flow, ruleVersion, inputEnvironment, compiled, models));
+            return Optional.of(new CompiledFlow(flow, ruleVersion, inputEnvironment, compiled, models, params));
         }
 
         private void header() {
@@ -258,6 +277,9 @@ final class CompiledFlow implements Executable {
             }
             if (name.equals(CompiledDecision.BUSINESS_DATE) || flow.inputs().containsKey(name)) {
                 return "'" + name + "' is already the name of an input";
+            }
+            if (name.equals(Parameters.PARAMS)) {
+                return "'" + name + "' is reserved for parameter sets, which expressions read as params.<name>";
             }
             return null;
         }
@@ -848,6 +870,12 @@ final class CompiledFlow implements Executable {
          */
         private CelExpression expression(ExpressionEnvironment environment, Map<String, ValueType> scope,
                                          String source, ValueType type, String path) {
+            String paramsProblem = Parameters.undeclared(environment, source, flow.params(),
+                    flow.inputs().containsKey(Parameters.PARAMS));
+            if (paramsProblem != null) {
+                problem(path, paramsProblem);
+                return null;
+            }
             try {
                 return type == null ? environment.compile(source) : environment.compile(source, type);
             } catch (ExpressionException e) {
@@ -946,6 +974,10 @@ final class CompiledFlow implements Executable {
             throw failure("invalid input " + CompiledDecision.BUSINESS_DATE + ": reserved name; the business date "
                     + "comes from DecisionRef.asOf or the engine clock and cannot be passed as a fact", null);
         }
+        if (params != null && facts.asMap().containsKey(Parameters.PARAMS)) {
+            throw failure("invalid input " + Parameters.PARAMS + ": reserved name; the parameters come from "
+                    + "parameter set " + params.declaration().set() + " and cannot be passed as a fact", null);
+        }
         // The flow's values by name: the facts as given, then each node's values as it runs.
         Map<String, Object> values = new HashMap<>(facts.asMap());
         values.put(CompiledDecision.BUSINESS_DATE, businessDate);
@@ -953,6 +985,9 @@ final class CompiledFlow implements Executable {
             progress.factsHash(hasher.hash(inputs.bind(values)));
         } catch (InvalidValueException e) {
             throw failure("invalid input " + e.getMessage(), e);
+        }
+        if (params != null) {
+            values.put(Parameters.PARAMS, params.select(businessDate, progress));
         }
         facts.models().keySet().forEach(node -> {
             if (!(nodes.get(node) instanceof ModelNode model)) {
@@ -1014,7 +1049,7 @@ final class CompiledFlow implements Executable {
                 table.mapped().forEach((input, expression) -> facts.put(input, expression.evaluate(bindings)));
             }
             table.byName().forEach((input, name) -> facts.put(input, values.get(name)));
-            CompiledDecision.Outcome outcome = decision.evaluate(decision.bind(Facts.from(facts), businessDate),
+            CompiledDecision.Outcome outcome = decision.evaluate(decision.bind(Facts.from(facts), businessDate, progress),
                     progress.trace, deadline);
             outcome.reasonCodes().forEach(code -> reasons.add(new ReasonCode(code, id)));
             table.publish().ifPresent(name -> values.put(name, outcome.output()));

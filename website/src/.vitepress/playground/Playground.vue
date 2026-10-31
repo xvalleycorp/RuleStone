@@ -97,6 +97,7 @@ async function show(table: unknown, facts: string | undefined, asOf: string | un
   if (!el) return;
   el.facts = undefined;
   el.asOf = asOf;
+  el.paramSets = data.paramSets;
   el.table = table as TableEditor['table'];
   await el.updateComplete;
   el.facts = facts ?? '{}';

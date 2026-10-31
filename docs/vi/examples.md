@@ -1,6 +1,6 @@
 ---
 source: examples.md
-sourceHash: 88ee04aff9c8a88fd0f6fcefbe7e665a5f0d3ac578b46e7ec6d51ee82228c1dd
+sourceHash: 1bdad21dc936d5a0a2575f50757a86927011af1b66d4ddb5b7c2071bb7953f62
 ---
 
 # Ví dụ
@@ -46,6 +46,18 @@ engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2026, 10, 3
 engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2026, 11, 1)), facts);
 // version 3: {decision=APPROVE, limit=360000000}
 ```
+
+Phiên bản 4, có hiệu lực từ 1 tháng 1 năm 2027, giữ các luật của phiên bản 3 nhưng đọc các hạn mức từ bộ tham số `retail_credit` (xem [Tham số](decision-tables.md#tham-số)): tuổi tối thiểu, hạn mức tỷ lệ nợ trên thu nhập, bội số thu nhập và các phân khúc không cho vay. Phiên bản 1 của bộ tham số áp dụng từ 2027-01-01, và phiên bản 2 siết các hạn mức từ 2027-07-01 mà không thay đổi gì ở bảng:
+
+| `retail_credit` | Phiên bản 1 | Phiên bản 2 |
+|---|---|---|
+| Hiệu lực | từ 2027-01-01 | từ 2027-07-01 |
+| `minAge` | 18 | 18 |
+| `maxDti` | 0.50 | 0.45 |
+| `incomeMultiple` | 12 | 10 |
+| `blockedSegments` | `DORMANT` | `DORMANT`, `SANCTIONED` |
+
+Trong [loan_eligibility.v4.stone-test.json](../../examples/loan_eligibility.v4.stone-test.json), một người vay có nợ bằng 48% thu nhập được chấp thuận vào 2027-06-30 và bị từ chối với `DTI_HIGH` vào 2027-07-01; bản ghi của mỗi lần nêu phiên bản bộ tham số đã dùng, và một ca kiểm thử với `"params": { "retail_credit": "1" }` chạy lại phiên bản 1 sau khi nó đã bị thay thế.
 
 Lưu ý rằng `R3` chia cho `monthlyIncome`. Một người vay có thu nhập bằng không sẽ làm phép chia đó thất bại, kéo theo thất bại của toàn bộ quyết định. Để thay vào đó từ chối những người vay như vậy kèm một lý do, hãy thêm một luật trước `R3`:
 

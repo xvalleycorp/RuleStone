@@ -17,6 +17,17 @@ export interface RuleJson {
   [key: string]: unknown
 }
 
+/** The parameters a table reads from a parameter set, as the "params" object of .stone.json. */
+export interface ParamsJson {
+  /** The parameter set id. */
+  set: string
+  /** A version of the set to use whatever the business date. */
+  version?: string
+  /** The parameters read, name to type. */
+  values: Record<string, TypeSpec>
+  [key: string]: unknown
+}
+
 /** A decision table, as in .stone.json. */
 export interface TableJson {
   id: string
@@ -27,6 +38,8 @@ export interface TableJson {
   hitPolicy: string
   inputs: Record<string, TypeSpec>
   outputs: Record<string, TypeSpec>
+  /** The parameters the rules read as params.<name>, from a parameter set. */
+  params?: ParamsJson
   /** Local values: name to CEL expression, read by the rules by name. */
   let?: Record<string, string>
   rules: RuleJson[]
@@ -37,7 +50,7 @@ export const HIT_POLICIES = ['FIRST', 'UNIQUE', 'COLLECT'] as const
 export const PRIMITIVES = ['bool', 'int', 'string', 'decimal', 'money', 'date'] as const
 export type Primitive = (typeof PRIMITIVES)[number]
 
-const TABLE_ORDER = ['id', 'version', 'description', 'effectiveFrom', 'effectiveTo', 'hitPolicy', 'inputs', 'outputs', 'let', 'rules']
+const TABLE_ORDER = ['id', 'version', 'description', 'effectiveFrom', 'effectiveTo', 'hitPolicy', 'inputs', 'outputs', 'params', 'let', 'rules']
 const RULE_ORDER = ['id', 'description', 'when', 'then', 'reasonCode']
 
 /** A new, empty table: one catch-all rule, so that it is valid as soon as it has an id. */
@@ -205,6 +218,24 @@ export function setLocal(table: TableJson, name: string | undefined, newName: st
 export function deleteLocal(table: TableJson, name: string): TableJson {
   const locals = Object.fromEntries(Object.entries(table.let ?? {}).filter(([n]) => n !== name))
   return orderTable({ ...table, let: locals })
+}
+
+/** Sets the table's parameter declaration, or removes it when `params` is undefined. */
+export function setParams(table: TableJson, params: ParamsJson | undefined): TableJson {
+  const next: TableJson = { ...table }
+  if (params === undefined) delete next.params
+  else {
+    // In the order of the file format: set, version, values; unknown keys are kept for the reader.
+    const { set, version, values, ...rest } = params
+    next.params = { set, ...(version !== undefined && version !== '' ? { version } : {}), values, ...rest }
+  }
+  return orderTable(next)
+}
+
+/** A parameter name not declared in the table: param1, param2, … */
+export function newParamName(table: TableJson): string {
+  const used = new Set(Object.keys(table.params?.values ?? {}))
+  for (let n = 1; ; n++) if (!used.has(`param${n}`)) return `param${n}`
 }
 
 /** Sets a table-level field; an empty optional field is removed. */

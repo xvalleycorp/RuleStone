@@ -24,6 +24,9 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | hit policy | hit policy | Giữ nguyên; giải thích là "chính sách khớp luật": cách chọn kết quả khi nhiều luật cùng khớp. |
 | match (a rule matches) | khớp (luật khớp) | |
 | overlap (versions, rows) | chồng lấn | |
+| parameter | tham số | Giá trị nghiệp vụ mà luật đọc bằng `params.<tên>`. |
+| parameter set | bộ tham số | Tệp `.params.json` chứa các tham số, có phiên bản và ngày hiệu lực như bảng. |
+| pin (a version) | cố định (phiên bản) | Một bảng cố định phiên bản bộ tham số bằng `"version"` trong `params`. |
 | reason code | mã lý do | Bản thân mã (`DTI_HIGH`) giữ nguyên. |
 | row (of a decision table) | dòng | |
 | rule | luật | Không dùng "quy tắc" cho rule của bảng quyết định. |

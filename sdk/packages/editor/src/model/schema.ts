@@ -5,7 +5,7 @@
 // expression that reads it. Renaming works on the type-checked syntax tree, never on the text.
 
 import {
-  BUSINESS_DATE, analyzeExpression, codePointIndex, inputStructName, localValueTypes, typeFromSpec, typeToSpec,
+  BUSINESS_DATE, PARAMS, analyzeExpression, codePointIndex, inputStructName, localValueTypes, structOf, typeFromSpec, typeToSpec,
   type Expr, type TypeSpec as EngineTypeSpec, type ValueType,
 } from '@rulestone/engine'
 import { PRIMITIVES, orderTable, type RuleJson, type TableJson, type TypeSpec } from './table.js'
@@ -64,30 +64,54 @@ export function valueTypeOf(spec: TypeSpec): ValueType | undefined {
   }
 }
 
+/** The declared parameters with a valid type, name to type. */
+export function paramTypes(params: Record<string, TypeSpec> | undefined): Map<string, ValueType> {
+  const types = new Map<string, ValueType>()
+  for (const [name, spec] of Object.entries(params ?? {})) {
+    const type = valueTypeOf(spec)
+    if (type && (typeof type === 'string' || type.kind === 'list') && /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) types.set(name, type)
+  }
+  return types
+}
+
 /**
  * The typed variables of a table's expressions: its valid inputs, businessDate and, when given,
- * the local values (let) that compile, with their inferred types.
+ * the declared parameters as `params` and the local values (let) that compile, with their
+ * inferred types.
  */
-export function tableVariables(inputs: Record<string, TypeSpec>, locals?: Record<string, string>): Map<string, ValueType> {
+export function tableVariables(
+  inputs: Record<string, TypeSpec>,
+  locals?: Record<string, string>,
+  params?: Record<string, TypeSpec>,
+): Map<string, ValueType> {
   const variables = new Map<string, ValueType>()
   for (const [name, spec] of Object.entries(inputs)) {
     if (name === BUSINESS_DATE) continue
     const type = valueTypeOf(spec)
     if (type) variables.set(name, type)
   }
+  const declared = paramTypes(params)
+  if (params !== undefined) variables.delete(PARAMS)
+  if (declared.size > 0) variables.set(PARAMS, structOf(declared))
   if (locals && Object.keys(locals).length > 0) {
     const inputTypes = new Map(variables)
-    for (const [name, type] of localValueTypes(inputTypes, new Map(Object.entries(locals)))) variables.set(name, type)
+    inputTypes.delete(PARAMS)
+    const types = localValueTypes(inputTypes, new Map(Object.entries(locals)), params === undefined ? undefined : declared)
+    for (const [name, type] of types) variables.set(name, type)
   }
   variables.set(BUSINESS_DATE, 'date')
   return variables
 }
 
 /** The local values (let) that compile, with their inferred types as type specs, for field pickers. */
-export function localSpecs(inputs: Record<string, TypeSpec>, locals: Record<string, string> | undefined): Map<string, TypeSpec> {
+export function localSpecs(
+  inputs: Record<string, TypeSpec>,
+  locals: Record<string, string> | undefined,
+  params?: Record<string, TypeSpec>,
+): Map<string, TypeSpec> {
   const specs = new Map<string, TypeSpec>()
   if (!locals) return specs
-  const variables = tableVariables(inputs, locals)
+  const variables = tableVariables(inputs, locals, params)
   for (const name of Object.keys(locals)) {
     const type = variables.get(name)
     if (type !== undefined && !(name in inputs)) specs.set(name, typeToSpec(type) as TypeSpec)

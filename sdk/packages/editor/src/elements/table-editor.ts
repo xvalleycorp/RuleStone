@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
+import { InvalidDecisionError, typeToSpec, valueToPlain, type ParameterSet } from '@rulestone/engine'
 import {
-  HIT_POLICIES, cloneJson, deleteLocal, newLocalName, normalizeTable, setLocal, tableText, updateTable, type TableJson,
+  HIT_POLICIES, PRIMITIVES, cloneJson, deleteLocal, newLocalName, newParamName, normalizeTable, setLocal, setParams,
+  tableText, updateTable, type ParamsJson, type TableJson, type TypeSpec,
 } from '../model/table.js'
 import { tableVariables } from '../model/schema.js'
-import { localsOf, sortProblems, validateTable, type Problem, type ProblemTarget, type ValidationResult } from '../model/validate.js'
+import {
+  localsOf, paramsOf, readParamSets, sortProblems, validateTable, type Problem, type ProblemTarget, type ValidationResult,
+} from '../model/validate.js'
 import './cel-input.js'
 import { RulestoneElement, define } from './base.js'
 import './rules-grid.js'
@@ -39,7 +43,10 @@ export interface TableChangeDetail {
   readonly valid: boolean
 }
 
-type Tab = 'rules' | 'schema' | 'let' | 'json'
+type Tab = 'rules' | 'schema' | 'params' | 'let' | 'json'
+
+/** The types a parameter can have, as type specs: the primitives and lists of them. */
+const PARAM_TYPES: readonly TypeSpec[] = [...PRIMITIVES, ...PRIMITIVES.map((p) => [p])]
 
 /**
  * `<rulestone-table-editor>`: the complete decision table editor: metadata, the schema
@@ -58,6 +65,7 @@ export class RulestoneTableEditor extends RulestoneElement {
   static override properties: PropertyDeclarations = {
     ...RulestoneElement.properties,
     table: { attribute: false },
+    paramSets: { attribute: false },
     validator: { attribute: false },
     asOf: { type: String, attribute: 'as-of' },
     facts: { type: String },
@@ -69,6 +77,12 @@ export class RulestoneTableEditor extends RulestoneElement {
 
   /** The table as parsed .stone.json. Setting it replaces the table being edited. */
   declare table: TableJson
+  /**
+   * The parameter sets the table may read, as .params.json text or parsed JSON: every version of
+   * each, as the engine is built with them. The table's "params" are checked against them, the
+   * Parameters tab shows their values, and Try it binds the version in force on its date.
+   */
+  declare paramSets: readonly (string | object)[] | undefined
   /** Optional async server-side validation; see TableValidator. */
   declare validator: TableValidator | undefined
   /** The business date the Try it panel starts with. */
@@ -258,6 +272,7 @@ export class RulestoneTableEditor extends RulestoneElement {
     super()
     this.table = normalizeTable({ id: 'new_decision', version: '1', hitPolicy: 'FIRST', inputs: {}, outputs: {}, rules: [{ id: 'R1', when: 'true' }] })
     this.validator = undefined
+    this.paramSets = undefined
     this.asOf = undefined
     this.facts = undefined
     this._tab = 'rules'
@@ -301,6 +316,8 @@ export class RulestoneTableEditor extends RulestoneElement {
         this.schedule(false)
       }
       this.ownChange = false
+    } else if (changed.has('paramSets')) {
+      this.schedule(false)
     }
   }
 
@@ -324,7 +341,16 @@ export class RulestoneTableEditor extends RulestoneElement {
     const sequence = ++this.sequence
     const table = this.table
     this._validating = true
-    const local = await validateTable(table)
+    let sets: ParameterSet[] = []
+    let setProblems: Problem[] = []
+    try {
+      sets = readParamSets(this.paramSets)
+    } catch (e) {
+      if (!(e instanceof InvalidDecisionError)) throw e
+      setProblems = e.problems.map((message) => ({ severity: 'error', message, target: { kind: 'params' }, source: 'reader' }))
+    }
+    const validated = await validateTable(table, { paramSets: sets })
+    const local = { ...validated, problems: [...setProblems, ...validated.problems], valid: validated.valid && setProblems.length === 0 }
     let problems = [...local.problems]
     if (this.validator) {
       try {
@@ -368,6 +394,7 @@ export class RulestoneTableEditor extends RulestoneElement {
           <h2 id="try-heading">${this.t('tryIt.label')}</h2>
           <rulestone-try-it
             .table=${this.table}
+            .paramSets=${this.paramSets}
             .asOf=${this.asOf ?? ''}
             .facts=${this.facts}
             .locale=${this.effectiveLocale}
@@ -428,6 +455,7 @@ export class RulestoneTableEditor extends RulestoneElement {
     const tabs: [Tab, string][] = [
       ['rules', this.t('table.tabRules')],
       ['schema', this.t('table.tabSchema')],
+      ['params', this.t('table.tabParams')],
       ['let', this.t('table.tabLet')],
       ['json', this.t('table.tabJson')],
     ]
@@ -473,6 +501,8 @@ export class RulestoneTableEditor extends RulestoneElement {
           ></rulestone-rules-grid>`
         : this._tab === 'let'
           ? this.renderLocals(problems)
+        : this._tab === 'params'
+          ? this.renderParams(problems)
         : this._tab === 'schema'
           ? html`<rulestone-schema-designer
               .table=${this.table}
@@ -492,6 +522,80 @@ export class RulestoneTableEditor extends RulestoneElement {
                     <pre class="code" tabindex="0" aria-label=${this.t('table.canonical')}>${this._result.canonical}</pre>`
                 : nothing}`}
     </div>`
+  }
+
+  /** The parameter declaration: the set, an optional pinned version, and the parameters read, with their types. */
+  private renderParams(problems: readonly Problem[]): TemplateResult {
+    const params = this.table.params
+    const declared = Object.entries(paramsOf(this.table) ?? {})
+    const sets = (() => {
+      try {
+        return readParamSets(this.paramSets)
+      } catch {
+        return []
+      }
+    })()
+    const versions = params ? sets.filter((s) => s.id === params.set) : []
+    const edit = (patch: Partial<ParamsJson>) => this.edit(setParams(this.table, { ...(params ?? { set: '', values: {} }), ...patch }))
+    const setValues = (entries: [string, TypeSpec][]) => edit({ values: Object.fromEntries(entries) })
+    const specText = (spec: TypeSpec) => JSON.stringify(spec)
+    const issues = (name?: string) =>
+      problems.filter((p) => p.target.kind === 'params' && p.target.name === name).map((p) => html`<p class="sev-error local-problem">${p.message.split('\n')[0]}</p>`)
+    return html`<section class="params" aria-label=${this.t('table.tabParams')}>
+      <p class="muted">${this.t('table.paramsHelp')}</p>
+      ${!params
+        ? html`<p class="muted">${this.t('table.paramsNone')}</p>
+            ${this.readonly ? nothing : html`<button type="button" class="add-params" @click=${() => this.edit(setParams(this.table, { set: sets[0]?.id ?? 'parameter_set', values: {} }))}>${this.t('table.paramsAdd')}</button>`}`
+        : html`<div class="meta params-meta">
+              <label>${this.t('table.paramsSet')}
+                <input class="params-set" .value=${params.set ?? ''} ?readonly=${this.readonly} spellcheck="false" list="param-set-ids"
+                  @change=${(e: Event) => edit({ set: (e.target as HTMLInputElement).value.trim() })} />
+                <datalist id="param-set-ids">${[...new Set(sets.map((s) => s.id))].map((id) => html`<option value=${id}></option>`)}</datalist>
+              </label>
+              <label title=${this.t('table.paramsVersionHelp')}>${this.t('table.paramsVersion')}
+                <input class="params-version" .value=${typeof params.version === 'string' ? params.version : ''} ?readonly=${this.readonly} spellcheck="false"
+                  placeholder=${this.t('table.paramsInForce')}
+                  @change=${(e: Event) => edit({ version: (e.target as HTMLInputElement).value.trim() })} />
+              </label>
+              ${this.readonly ? nothing : html`<button type="button" @click=${() => this.edit(setParams(this.table, undefined))}>${this.t('table.paramsRemove')}</button>`}
+            </div>
+            ${issues(undefined)}
+            <ul class="local-list">
+              ${declared.map(([name, spec], index) => html`<li data-param=${name}>
+                <label>${this.t('table.letName')}
+                  <input class="local-name" .value=${name} ?readonly=${this.readonly} spellcheck="false"
+                    @change=${(e: Event) => {
+                      const next = (e.target as HTMLInputElement).value.trim()
+                      if (next === '' || next === name) return
+                      const entries = [...declared]
+                      entries[index] = [next, spec]
+                      setValues(entries)
+                    }} />
+                </label>
+                <label>${this.t('table.paramsType')}
+                  <select class="param-type" ?disabled=${this.readonly} @change=${(e: Event) => {
+                    const entries = [...declared]
+                    entries[index] = [name, JSON.parse((e.target as HTMLSelectElement).value) as TypeSpec]
+                    setValues(entries)
+                  }}>
+                    ${PARAM_TYPES.map((t) => html`<option value=${specText(t)} ?selected=${specText(t) === specText(spec)}>${typeof t === 'string' ? t : `list<${String((t as TypeSpec[])[0])}>`}</option>`)}
+                    ${PARAM_TYPES.some((t) => specText(t) === specText(spec)) ? nothing : html`<option selected value=${specText(spec)}>${specText(spec)}</option>`}
+                  </select>
+                </label>
+                <span class="param-values muted">${versions.map((v) => {
+                  const p = v.values.get(name)
+                  return html`<span>${this.t('table.paramsVersionValue', { version: v.version, value: p ? JSON.stringify(valueToPlain(p.value)) : '—' })}</span> `
+                })}</span>
+                ${this.readonly ? nothing : html`<button type="button" aria-label=${this.t('table.letDelete', { name })} @click=${() => setValues(declared.filter(([n]) => n !== name))}>✕</button>`}
+                ${issues(name)}
+              </li>`)}
+            </ul>
+            ${this.readonly ? nothing : html`<button type="button" class="add-param" @click=${() => {
+              const fromSet = versions.at(-1) ? [...versions.at(-1)!.values].find(([n]) => !declared.some(([d]) => d === n)) : undefined
+              setValues([...declared, fromSet ? [fromSet[0], typeToSpec(fromSet[1].type) as TypeSpec] : [newParamName(this.table), 'decimal']])
+            }}>${this.t('table.paramsAddValue')}</button>`}
+            ${params && versions.length === 0 ? html`<p class="muted">${this.t('table.paramsNoSet', { set: params.set })}</p>` : nothing}`}
+    </section>`
   }
 
   /** The local values (let) as a list of names and expressions. */
@@ -548,6 +652,8 @@ export class RulestoneTableEditor extends RulestoneElement {
 
   private where(target: ProblemTarget): string {
     switch (target.kind) {
+      case 'params':
+        return target.name ? `${this.t('problems.params')} · ${target.name}` : this.t('problems.params')
       case 'let':
         return target.name ? `${this.t('problems.let')} · ${target.name}` : this.t('problems.let')
       case 'table':
@@ -595,6 +701,11 @@ export class RulestoneTableEditor extends RulestoneElement {
       await this.updateComplete
       const item = target.name === undefined ? undefined : this.renderRoot.querySelector<HTMLElement>(`li[data-local="${CSS.escape(target.name)}"] rs-cel-input`)
       ;(item ?? this.renderRoot.querySelector<HTMLElement>('.add-local'))?.focus()
+    } else if (target.kind === 'params') {
+      this._tab = 'params'
+      await this.updateComplete
+      const item = target.name === undefined ? undefined : this.renderRoot.querySelector<HTMLElement>(`li[data-param="${CSS.escape(target.name)}"] select`)
+      ;(item ?? this.renderRoot.querySelector<HTMLElement>('.params-set, .add-params'))?.focus()
     } else if (target.kind === 'schema') {
       this._tab = 'schema'
       await this.updateComplete

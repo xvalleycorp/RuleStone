@@ -57,6 +57,7 @@ RuleStoneEngine engine = RuleStone.builder()
 | `clock(Clock)` | Determines "today" when a request has no `asOf` date. Defaults to the JVM's default time zone; **set it explicitly** to your bank's business time zone. |
 | `decision(DecisionTable)` / `decisions(Collection)` | Registers tables. Register every version of a decision; the engine selects one per request. |
 | `flow(DecisionFlow)` / `flows(Collection)` | Registers [decision flows](flows.md), read with `DecisionFlowJson.read(...)`. Register the tables they use with the same builder. |
+| `paramSet(ParameterSet)` / `paramSets(Collection)` | Registers [parameter sets](decision-tables.md#parameters), read with `ParameterSetJson.read(...)`. Register every version; tables and flows that declare `params` read the version in force on the business date. See [Parameter sets](#parameter-sets). |
 | `maxIterations(int)` | Upper bound on iterations of any list function in any rule. Default 10,000. |
 | `currencyScale(String, int)` | Number of digits after the decimal point that `money.round()` uses for a currency, overriding ISO 4217. Required for codes without minor units in ISO 4217, such as `XAU`. Throws `IllegalArgumentException` for a code that is not upper-case ISO 4217 or digits outside 0 to 18. |
 | `auditSink(AuditSink)` | Receives the `DecisionRecord` of every evaluation, successful or not. May be called several times; sinks run in order. See [Decision records and auditing](#decision-records-and-auditing). |
@@ -101,6 +102,7 @@ DecisionResult result = engine.evaluate(
 | `DecisionRef.of("loan_eligibility").version("2")` | Exactly version `2`, regardless of dates: also a version that takes effect only later, or is no longer in force. For replays, investigations and trying a version before its effective date. |
 | `….correlationId("LOAN-2026-000123")` | Adds your id for the business transaction to the decision record, so that it can be joined with your own data. It must not contain personal data. Combines with any of the above. |
 | `….timeout(Duration.ofMillis(2))` | Fails the evaluation with a `DecisionTimeoutException` if it takes longer; see [Timeouts](#timeouts). Combines with any of the above. |
+| `….params("retail_credit", "7")` | Uses exactly version `7` of parameter set `retail_credit`, regardless of dates, to replay a decision with the versions its record lists; see [Parameter sets](#parameter-sets). Combines with any of the above. |
 
 Use the business date of the transaction for `asOf`: the application date for a loan, the value date for a payment. Then re-evaluating the same case later gives the same answer. The same date reaches the rules as their implicit `businessDate` input; without `asOf` it is today according to the engine clock, also when you name a version.
 
@@ -282,6 +284,7 @@ DecisionResult result = engine.evaluate(
 | `recordId` | A unique id, a random UUID unless you set `recordIds`. |
 | `correlationId` | Your id for the business transaction, from `DecisionRef.correlationId`. Left out if you gave none. |
 | `decision`, `version` | The decision requested and the exact version used. `version` is left out if no version was found. |
+| `params` | Each [parameter set](#parameter-sets) version used, once, as `{ "set": "retail_credit", "version": "7@sha256:…" }`, sorted by set. Left out when the decision read no parameters. The values are never recorded. |
 | `businessDate`, `evaluatedAt` | The date the decision was made for, and the instant evaluation started, both from the engine clock unless `asOf` gave the date. |
 | `engine` | The RuleStone version, from the jar's manifest; `rulestone dev` when run from unpackaged classes. |
 | `status` | `OK`; `ERROR` if the caller received an exception; `TIMEOUT` if the evaluation ran out of time (see [Timeouts](#timeouts)). A decision that matched no rule is `OK` with no reason codes. |
@@ -397,6 +400,30 @@ A decision flow can use machine-learning models through [model nodes](flows.md#m
 | `DecisionRecord.ModelStep` | The model part of a record's path step: what the model was asked and answered, without feature values or contributions. |
 
 `toString()` of `ModelCall` and `ModelResult` names features and outputs but never shows values. See [Model nodes](flows.md#model-nodes) for the contract a result must meet, the failure path and the reason codes.
+
+## Parameter sets
+
+Tables and flows that declare [`params`](decision-tables.md#parameters) read business values, such as limits, from a parameter set. Register every version of each set with the engine:
+
+```java
+RuleStoneEngine engine = RuleStone.builder()
+        .decision(DecisionTableJson.read(Path.of("rules/loan_eligibility.v4.stone.json")))
+        .paramSet(ParameterSetJson.read(Path.of("rules/retail_credit.v1.params.json")))
+        .paramSet(ParameterSetJson.read(Path.of("rules/retail_credit.v2.params.json")))
+        .build();
+
+DecisionResult result = engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2027, 7, 1)), facts);
+List<ParamSetVersion> used = result.record().params();   // retail_credit, 2@sha256:…
+
+// Replaying the decision later with the versions its record names:
+DecisionResult replay = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
+        .asOf(LocalDate.of(2027, 7, 1)).params("retail_credit", "2"), facts);
+```
+
+- `build()` checks every declaration against every registered version of its set (or the pinned one), so that a deployment that would fail on some business date fails at start-up. Problems of a set are prefixed with `parameter set id@version`.
+- The version in force on the business date is bound as `params`. It is never part of the facts: a fact named `params` fails the evaluation, and `factsHash` does not cover the parameters.
+- No version in force on the business date, or a forced version that the set does not have, fails the evaluation with a `DecisionNotFoundException`, e.g. `parameter set 'retail_credit' has no version '9'`. A table that pins a version keeps it also when the request forces another.
+- `ParameterSetJson.write(set)` gives the canonical form the set's hash is computed over. `ParameterSet` and `ParamsDeclaration` can also be built in Java; the values are those `FactsJson` reads: `BigDecimal`, `Money`, `Long`, `LocalDate`, `String`, `Boolean` and lists of them.
 
 ## Errors
 

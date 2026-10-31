@@ -52,6 +52,11 @@ import vn.io.dxa.rulestone.core.InvalidFactsException;
  * }
  * }</pre>
  *
+ * <p>A case can force versions of parameter sets with {@code "params"}, an object of parameter set
+ * id to version label, e.g. {@code "params": { "retail_credit": "1" }}, as
+ * {@code DecisionRef.params} does for replays; without it, the engine uses the versions in force on
+ * the case's business date. Build the engine under test with the parameter sets.
+ *
  * <p>A case of a decision flow can also expect the {@code "path"}: the ids of the nodes the
  * evaluation visits, in order, from the start node to the end node. {@code "matchedRules"} then
  * lists the matched rules of every table node, in order.
@@ -94,7 +99,7 @@ public final class StoneTestJson {
 
     private static final Set<String> FILE_FIELDS = Set.of("decision", "description", "cases");
     private static final Set<String> CASE_FIELDS =
-            Set.of("name", "description", "version", "asOf", "facts", "models", "expect");
+            Set.of("name", "description", "version", "asOf", "params", "facts", "models", "expect");
     private static final Set<String> EXPECT_FIELDS =
             Set.of("output", "exactOutput", "reasonCodes", "matchedRules", "path", "ruleVersion", "error");
 
@@ -294,6 +299,7 @@ public final class StoneTestJson {
                     return Optional.empty();
                 }
             });
+            Map<String, String> params = params(node.get("params"), path + ".params");
             Schema schema = schema(decision, version, asOf, path);
             Facts facts = facts(node.get("facts"), path + ".facts", schema);
             JsonNode models = node.get("models");
@@ -354,8 +360,28 @@ public final class StoneTestJson {
             if (problems.size() > before) {
                 return null;
             }
-            return new StoneTestCase(source, decision, name, description, version, asOf, facts,
+            return new StoneTestCase(source, decision, name, description, version, asOf, params, facts,
                     output, exactOutput, reasonCodes, matchedRules, nodes, ruleVersion, error);
+        }
+
+        /** Parameter set id to the version a case forces; empty when the field is absent. */
+        private Map<String, String> params(JsonNode node, String path) {
+            Map<String, String> params = new LinkedHashMap<>();
+            if (node == null) {
+                return params;
+            }
+            if (!node.isObject()) {
+                problem(path, "expected an object of parameter set id to version, e.g. { \"retail_credit\": \"1\" }");
+                return params;
+            }
+            node.properties().forEach(e -> {
+                if (e.getValue().isTextual() && !e.getValue().asText().isBlank()) {
+                    params.put(e.getKey(), e.getValue().asText());
+                } else {
+                    problem(path + "." + e.getKey(), "expected a version label, e.g. \"1\"");
+                }
+            });
+            return params;
         }
 
         /** The declared types for a case, or null to read without types. */

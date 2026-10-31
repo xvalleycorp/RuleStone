@@ -31,7 +31,7 @@ and open `http://127.0.0.1:8080/`.
 
 | Option | Default | Meaning |
 |---|---|---|
-| `--rules-dir <dir>` | required | Directory of `.stone.json` files, searched recursively. Hidden directories such as `.git` are skipped. |
+| `--rules-dir <dir>` | required | Directory of `.stone.json` files, searched recursively. Hidden directories such as `.git` are skipped. The [parameter sets](decision-tables.md#parameters) (`.params.json` files) in it are registered whenever the editor checks or runs a table, so tables that read parameters validate and run; the editor does not edit them. |
 | `--port <n>` | `8080` | Port to listen on; `0` picks a free port. |
 | `--host <address>` | `127.0.0.1` | Address to listen on. Read [Security model](#security-model) before changing it. |
 | `--allowed-host <name>` | none | An additional `Host` header to accept, such as the name of your reverse proxy, e.g. `rules.bank.example`. Repeatable. |

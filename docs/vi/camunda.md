@@ -1,6 +1,6 @@
 ---
 source: camunda.md
-sourceHash: 9a1bf67221a81879d6fb8ef2e610f87f350e2ccf810079222c83e4f596ddb170
+sourceHash: 49f86feac0fe694f5bb4ac6c9b132a9ba4928f9d39dcc139bc086ebacc441783
 ---
 
 # Tích hợp Camunda
@@ -33,17 +33,23 @@ Thêm mô-đun, cùng với Camunda Java client mà ứng dụng của bạn đa
 </dependency>
 ```
 
-Đăng ký một worker. Worker cần engine và các bảng quyết định dùng để tạo engine: kiểu đầu vào của các bảng cho biết cách đọc biến quy trình.
+Đăng ký một worker. Worker cần engine và các bảng quyết định dùng để tạo engine: kiểu đầu vào của các bảng cho biết cách đọc biến quy trình. Các bộ tham số trong cùng thư mục cũng được đăng ký, cho các bảng đọc [tham số](decision-tables.md#tham-số).
 
 ```java
 List<DecisionTable> tables;
+List<ParameterSet> paramSets;
 try (Stream<Path> files = Files.list(rulesDirectory)) {
     tables = files.filter(f -> f.toString().endsWith(".stone.json"))
             .map(DecisionTableJson::read)
             .toList();
 }
+try (Stream<Path> files = Files.list(rulesDirectory)) {
+    paramSets = files.filter(f -> f.toString().endsWith(ParameterSetJson.FILE_SUFFIX))
+            .map(ParameterSetJson::read)
+            .toList();
+}
 Clock clock = Clock.system(ZoneId.of("Asia/Ho_Chi_Minh"));
-RuleStoneEngine engine = RuleStone.builder().clock(clock).decisions(tables).build();
+RuleStoneEngine engine = RuleStone.builder().clock(clock).decisions(tables).paramSets(paramSets).build();
 
 return RuleStoneJobWorker.register(client, engine, tables,
         RuleStoneWorkerOptions.builder().clock(clock).build());

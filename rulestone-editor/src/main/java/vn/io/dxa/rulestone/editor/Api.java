@@ -274,7 +274,7 @@ final class Api {
         }
         RuleStoneEngine engine;
         try {
-            engine = RuleStone.builder().decision(table).build();
+            engine = RuleStone.builder().paramSets(directory.paramSets()).decision(table).build();
         } catch (InvalidDecisionException e) {
             return invalidTable(new ProblemParser(body.get("table")).parseAll(e.problems()));
         }
