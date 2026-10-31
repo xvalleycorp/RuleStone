@@ -188,7 +188,7 @@
   {
     "name": "reason codes: invalid JSON",
     "tables": [],
-    "reasonCodes": "{\"version\": \"1\", \"locales\": [\"en\"],"
+    "reasonCodes": "{\"version\": \"1\", \"locales\": [\"en\"], }"
   },
   {
     "name": "reason codes: duplicate keys",

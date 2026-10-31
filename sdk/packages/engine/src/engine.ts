@@ -20,6 +20,10 @@ import {
   type ParameterSet, type ParamsBinding, type Registry,
 } from './params.js'
 import { selectVersion, versionProblems } from './versions.js'
+import {
+  MISSING_CATALOG, explainRecord, missingReasonCodes, reasonCodeCatalogVersionOf,
+  type ExplainableRecord, type Explanation, type ReasonCodeCatalog,
+} from './explanation.js'
 import { containsStruct, type ValueType } from './types.js'
 import type { Value } from './values.js'
 
@@ -91,6 +95,13 @@ export interface EngineOptions {
   readonly recordIds?: () => string
   /** Called with every record, in order, before evaluate returns or throws. */
   readonly auditSinks?: readonly AuditSink[]
+  /**
+   * The reviewed messages of reason codes, for engine.explain; see parseReasonCodeCatalog. Every
+   * reason code of every table must then have a message.
+   */
+  readonly reasonCodeCatalog?: ReasonCodeCatalog
+  /** Fail unless a reasonCodeCatalog is given. Default false. */
+  readonly requireReasonCodeCatalog?: boolean
 }
 
 /** A compiled decision version. */
@@ -126,7 +137,8 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
   const problems: string[] = []
   const registry = await compileParameterSets(options.paramSets ?? [], problems)
   const byId = new Map<string, Compiled[]>()
-  for (const table of options.tables) {
+  const tables = [...options.tables]
+  for (const table of tables) {
     const compiled = await compile(table, maxIterations, scales, registry, problems)
     if (compiled) {
       let versions = byId.get(table.id)
@@ -135,8 +147,13 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
     }
   }
   for (const versions of byId.values()) checkVersions(versions, problems)
+  if (options.reasonCodeCatalog) problems.push(...missingReasonCodes(tables, options.reasonCodeCatalog))
+  else if (options.requireReasonCodeCatalog) problems.push(MISSING_CATALOG)
   if (problems.length > 0) throw new InvalidDecisionError(problems)
-  return new RuleStoneEngine(byId, options)
+  const catalog = options.reasonCodeCatalog
+    ? { catalog: options.reasonCodeCatalog, version: await reasonCodeCatalogVersionOf(options.reasonCodeCatalog) }
+    : undefined
+  return new RuleStoneEngine(byId, options, catalog)
 }
 
 async function compile(
@@ -282,11 +299,27 @@ export class RuleStoneEngine {
   constructor(
     private readonly byId: ReadonlyMap<string, readonly Compiled[]>,
     options: EngineOptions,
+    private readonly catalog?: { readonly catalog: ReasonCodeCatalog; readonly version: string },
   ) {
     this.clock = options.clock ?? (() => new Date())
     this.timeZone = options.timeZone
     this.recordIds = options.recordIds ?? randomId
     this.sinks = [...(options.auditSinks ?? [])]
+  }
+
+  /**
+   * Explains a decision record in one locale with the engine's reason-code catalog, as
+   * RuleStoneEngine.explain. Pure: the same record and locale always give the same explanation.
+   * @throws RangeError if the catalog has no such locale, or the engine has no catalog
+   */
+  explain(record: ExplainableRecord, locale: string): Explanation {
+    if (!this.catalog) throw new RangeError('this engine has no reason-code catalog; create it with reasonCodeCatalog')
+    return explainRecord(record, this.catalog.catalog, this.catalog.version, locale)
+  }
+
+  /** The exact version of the engine's reason-code catalog, e.g. 3@sha256:…; undefined without one. */
+  get reasonCodeCatalogVersion(): string | undefined {
+    return this.catalog?.version
   }
 
   /** Every compiled version, by decision id, sorted by effectiveFrom. */

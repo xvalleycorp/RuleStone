@@ -18,7 +18,8 @@ import type { Value } from './values.js'
 
 const FILE_FIELDS = ['decision', 'description', 'cases']
 const CASE_FIELDS = ['name', 'description', 'version', 'asOf', 'params', 'facts', 'expect']
-const EXPECT_FIELDS = ['output', 'exactOutput', 'reasonCodes', 'matchedRules', 'ruleVersion', 'error']
+const EXPECT_FIELDS = ['output', 'exactOutput', 'reasonCodes', 'matchedRules', 'ruleVersion', 'explanation', 'error']
+const EXPLANATION_FIELDS = ['locale', 'reasons', 'messages']
 
 /** One test case: a request and the expected outcome. Absent expectations are not checked. */
 export interface StoneTestCase {
@@ -37,6 +38,11 @@ export interface StoneTestCase {
   readonly reasonCodes?: readonly string[]
   readonly matchedRules?: readonly string[]
   readonly ruleVersion?: string
+  /**
+   * The explanation of the record in a locale, with the engine's reason-code catalog: its reason
+   * codes, each of which must have a message, and its messages, in order.
+   */
+  readonly explanation?: { readonly locale: string; readonly reasons?: readonly string[]; readonly messages?: readonly string[] }
   /** Text the failure message must contain. */
   readonly error?: string
 }
@@ -176,6 +182,7 @@ class Reader {
     const reasonCodes = this.stringList(expect, 'reasonCodes', at)
     const matchedRules = this.stringList(expect, 'matchedRules', at)
     const ruleVersion = this.optionalText(expect, 'ruleVersion', at)
+    const explanation = this.explanation(expect.entries.get('explanation'), `${at}.explanation`)
     const error = this.optionalText(expect, 'error', at)
     if (error !== undefined) {
       if (javaIsBlank(error)) this.problem(`${at}.error`, 'required non-empty text that the error message must contain')
@@ -199,8 +206,23 @@ class Reader {
       ...(reasonCodes ? { reasonCodes } : {}),
       ...(matchedRules ? { matchedRules } : {}),
       ...(ruleVersion !== undefined ? { ruleVersion } : {}),
+      ...(explanation ? { explanation } : {}),
       ...(error !== undefined ? { error } : {}),
     }
+  }
+
+  private explanation(node: JsonNode | undefined, path: string): StoneTestCase['explanation'] {
+    if (node === undefined) return undefined
+    if (node.type !== 'object') {
+      this.problem(path, 'expected an object { "locale", "reasons", "messages" }')
+      return undefined
+    }
+    this.unknownFields(node, EXPLANATION_FIELDS, path)
+    const locale = this.requiredText(node, 'locale', path)
+    const reasons = this.stringList(node, 'reasons', path)
+    const messages = this.stringList(node, 'messages', path)
+    if (!reasons && !messages) this.problem(path, 'expected "reasons", "messages" or both')
+    return { locale, ...(reasons ? { reasons } : {}), ...(messages ? { messages } : {}) }
   }
 
   private schema(decision: string, version: string | undefined, asOf: LocalDate | undefined, path: string): Schema | undefined {
@@ -434,6 +456,30 @@ export async function checkStoneTestCase(engine: RuleStoneEngine, testCase: Ston
       ? actual.ruleVersion === testCase.ruleVersion
       : versionLabel(actual.ruleVersion) === testCase.ruleVersion
     if (!ok) problems.push(`rule version: expected ${testCase.ruleVersion} but was ${actual.ruleVersion}`)
+  }
+  const expected = testCase.explanation
+  if (expected) {
+    if (engine.reasonCodeCatalogVersion === undefined) {
+      problems.push('explanation: the engine has no reason-code catalog; create it with reasonCodeCatalog')
+    } else {
+      try {
+        const explanation = engine.explain(actual.record, expected.locale)
+        if (expected.reasons) {
+          list('explanation reasons', expected.reasons, explanation.reasons.map((r) => r.code))
+          for (const r of explanation.reasons) {
+            if (r.message === undefined) problems.push(`explanation: reason code ${r.code} has no message in ${expected.locale}`)
+          }
+        }
+        list(
+          `explanation messages (${expected.locale})`,
+          expected.messages,
+          explanation.reasons.map((r) => r.message ?? `(no message for ${r.code})`),
+        )
+      } catch (e) {
+        if (!(e instanceof RangeError)) throw e
+        problems.push(`explanation: ${e.message}`)
+      }
+    }
   }
   if (problems.length > 0) fail(problems, actual)
   return { result: actual }

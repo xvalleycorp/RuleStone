@@ -147,7 +147,7 @@
 }, {
   "name" : "reason codes: invalid JSON",
   "read" : [ ],
-  "readReasonCodes" : [ "invalid JSON: Unexpected end-of-input within/between Object entries (line 1, column 36)" ],
+  "readReasonCodes" : [ "invalid JSON: Unexpected character ('}' (code 125)): was expecting double-quote to start field name (line 1, column 37)" ],
   "build" : [ ]
 }, {
   "name" : "reason codes: duplicate keys",

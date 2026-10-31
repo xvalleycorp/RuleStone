@@ -5,7 +5,8 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  createEngine, parseDecisionTable, parseParameterSet, type DecisionTable, type ParameterSet, type RuleStoneEngine,
+  createEngine, parseDecisionTable, parseParameterSet, parseReasonCodeCatalog, type DecisionTable, type ParameterSet,
+  type ReasonCodeCatalog, type RuleStoneEngine,
 } from '../src/index.js'
 
 /** The repository root. */
@@ -36,7 +37,12 @@ export function exampleParamSets(): ParameterSet[] {
   return files(EXAMPLES, '.params.json').map((f) => parseParameterSet(read(join(EXAMPLES, f))))
 }
 
-/** The engine of the example tests, with the Java tests' clock: 2026-12-01 in Hanoi. */
+/** The examples' reason-code catalog, examples/reason-codes.json. */
+export function exampleCatalog(): ReasonCodeCatalog {
+  return parseReasonCodeCatalog(read(join(EXAMPLES, 'reason-codes.json')))
+}
+
+/** The engine of the example tests, with the Java tests' clock: 2026-12-01 in Hanoi, and the examples' catalog required. */
 export function exampleEngine(tables = exampleTables()): Promise<RuleStoneEngine> {
   return createEngine({
     tables,
@@ -44,5 +50,7 @@ export function exampleEngine(tables = exampleTables()): Promise<RuleStoneEngine
     clock: () => new Date('2026-12-01T03:00:00Z'),
     timeZone: 'Asia/Ho_Chi_Minh',
     recordIds: () => 'fixture',
+    reasonCodeCatalog: exampleCatalog(),
+    requireReasonCodeCatalog: true,
   })
 }
