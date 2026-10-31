@@ -1,10 +1,10 @@
 # Parameters, aggregates and local values
 
-> Status: **A and C available, B design proposal** · Last updated: 2026-10-31
+> Status: **available** · Last updated: 2026-10-31
 >
-> Aggregate functions (A) and local values in tables (C) are available: their reference is in [Aggregate functions](expressions.md#aggregate-functions) and [Local values](decision-tables.md#local-values). Parameter sets (B) are not implemented yet; that part is a proposal for review and will change before it ships.
+> All three additions are available in both engines. Their reference is in [Aggregate functions](expressions.md#aggregate-functions), [Parameters](decision-tables.md#parameters) and [Local values](decision-tables.md#local-values). This page keeps the design and its reasons.
 
-Rules often need values that are not part of their logic: a debt-to-income limit, a cash reporting threshold, a minimum age. They also need totals over lists, and intermediate results that several rules share. This page proposes three additions:
+Rules often need values that are not part of their logic: a debt-to-income limit, a cash reporting threshold, a minimum age. They also need totals over lists, and intermediate results that several rules share. This page describes three additions:
 
 | | Addition | Example |
 |---|---|---|
@@ -52,6 +52,8 @@ Rules:
 
 ## B. Parameter sets
 
+> Available. Reference: [Parameters](decision-tables.md#parameters); Java API: [Parameter sets](java-api.md#parameter-sets).
+
 A parameter set is a separate file, `<id>.params.json`, holding named, typed business values:
 
 ```json
@@ -64,7 +66,7 @@ A parameter set is a separate file, `<id>.params.json`, holding named, typed bus
     "maxDti": { "type": "decimal", "value": "0.45" },
     "minAge": { "type": "int", "value": 18 },
     "maxUnsecured": { "type": "money", "value": "500000000 VND" },
-    "blockedSegments": { "type": "list<string>", "value": ["SANCTIONED", "DORMANT"] }
+    "blockedSegments": { "type": ["string"], "value": ["SANCTIONED", "DORMANT"] }
   }
 }
 ```
@@ -89,14 +91,18 @@ Parameter sets are versioned and dated exactly as tables are, and use the same s
 
 A table can pin a version for special cases: `"params": { "set": "retail_credit", "version": "7", … }`.
 
+Types are written as for table inputs, so a list of strings is `["string"]`. Parameters have no fields: struct types are not allowed. Parameter set ids are a namespace of their own, apart from decision ids.
+
 ### Checks at load time
 
 `build()` fails if:
 
 - the set is not registered, or no version of it declares a parameter the table reads, with the same type;
 - a value does not match its declared type, such as `"0.45"` declared `int`, or an unknown currency;
-- the table reads `params.x` without declaring `x`;
+- the table reads `params.x` without declaring `x`, or reads `params` without declaring any parameter;
 - the table has an input named `params` and also declares parameters.
+
+A parameter set version is rejected, like a table, if its file is malformed, its values do not match their types, or its dates contradict another version of the same set.
 
 The check covers **every registered version** of the set, as for table nodes in flows that are not pinned. A deployment that would fail on some business date therefore fails at start-up instead.
 
@@ -110,11 +116,11 @@ The check covers **every registered version** of the set, as for table nodes in 
 "params": [ { "set": "retail_credit", "version": "7@sha256:<64 hex digits>" } ]
 ```
 
-To reproduce a decision, the replay names both the rule version and the parameter set version from the record. Parameter values never appear in the record; the version identifies them.
+To reproduce a decision, the replay names both the rule version and the parameter set version from the record: `DecisionRef.of(id).version("4").params("retail_credit", "7")`. A table that pins a version of the set keeps it. Parameter values never appear in the record, nor in `factsHash`; the version identifies them. `params` is left out of the record when no set was used, so records of tables without parameters are unchanged.
 
 ### Flows
 
-A flow can declare `params` in the same way; its expressions (`when`, `derive`, `facts`, `end`) can then read `params.x`. A table node inside a flow uses the parameters that table declares, from the version in force on the same business date. The record lists every set used by the flow and its tables once.
+A flow can declare `params` in the same way; its expressions (`when`, `derive`, `facts`, `end` and model `features`) can then read `params.x`. A table node inside a flow uses the parameters that table declares, from the version in force on the same business date. The record lists every set used by the flow and its tables once.
 
 ### Changing values at run time
 
@@ -122,7 +128,7 @@ Engines are immutable. New parameter versions take effect when the application b
 
 ## C. Local values in tables
 
-> Available. Reference: [Local values](decision-tables.md#local-values). Until parameter sets exist, `params` is a reserved name and examples that read `params.x` do not load yet.
+> Available. Reference: [Local values](decision-tables.md#local-values).
 
 A table can name intermediate results in `let`, and every rule can read them:
 
@@ -154,7 +160,7 @@ In a flow, `derive` nodes already do this between nodes; `let` is for calculatio
 | Calculations | CEL arithmetic in any expression; `let` in tables; `derive` nodes in [flows](flows.md). |
 | Counting and testing list elements | `size()`, `filter`, `exists`, `all`, `exists_one`. |
 | Totals, minimum, maximum and mean of a list | Aggregate functions. |
-| Policy thresholds and limits | Parameter sets (proposed). |
+| Policy thresholds and limits | Parameter sets. |
 | Data looked up during evaluation, such as a balance from core banking | Planned as `FactResolver`, together with replay, because every value fetched must be recorded to reproduce the decision. Until then, the caller fetches it and passes it as an input. |
 | Aggregates over time windows, such as the total of transactions in 24 hours | **Out of scope.** RuleStone keeps no state between evaluations. Compute them in a stream processor or a store such as Flink or Valkey, and pass the result as an input. |
 
@@ -164,4 +170,4 @@ Each step is a separate change, implemented in both engines with conformance fix
 
 1. **Aggregate functions.** Available.
 2. **Local values in tables**, including the browser editor's grid and condition builder, which must show `let` names. Available.
-3. **Parameter sets**: the file format, selection, load-time checks, the record's `params` field, `rulestone-test` support (test cases can name a parameter set version), and the editor SDK (a parameter set editor, and `params.` suggestions in the condition builder).
+3. **Parameter sets**: the file format, selection, load-time checks, the record's `params` field, `rulestone-test` support (test cases can name a parameter set version), and the editor SDK (a Parameters tab in the table editor, and `params.` suggestions in the condition builder). Available; see the example [loan_eligibility v4](examples.md#loan-eligibility-priorities-and-versions).

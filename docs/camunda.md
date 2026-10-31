@@ -28,7 +28,7 @@ Add the module, and the Camunda Java client your application already uses. The c
 </dependency>
 ```
 
-Register a worker. It needs the engine and the decision tables you built it from: the tables' input types say how to read process variables.
+Register a worker. It needs the engine and the decision tables you built it from: the tables' input types say how to read process variables. The parameter sets in the same directory are registered too, for tables that read [parameters](decision-tables.md#parameters).
 
 ```java
 List<DecisionTable> tables;

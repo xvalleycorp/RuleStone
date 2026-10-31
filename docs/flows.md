@@ -125,6 +125,7 @@ A flow is a JSON object. Files end in `.flow.json`. Reading is strict, as for ta
 | `id`, `version`, `description`, `effectiveFrom`, `effectiveTo` | as for a [decision table](decision-tables.md#file-format) | The same rules and meaning. Versions of a flow are selected as versions of a table are; see [Versions and effective dates](decision-tables.md#versions-and-effective-dates). |
 | `inputs` | yes | Object mapping each input name to its [type](decision-tables.md#types), as for a table. Like a table, a flow also receives `businessDate` implicitly. |
 | `outputs` | yes | Object mapping each output name to its type. Every `end` node sets all of them. As for tables, outputs cannot be structs. |
+| `params` | no | The parameter set the flow's expressions read business values from, as for a [table](decision-tables.md#parameters). See [Parameters](#parameters). |
 | `start` | yes | Id of the first node. |
 | `nodes` | yes | Object mapping each node id to a node. A node id names the node's values in expressions, so it must be an identifier (letters, digits and `_`, not starting with a digit) and differ from every input name. |
 
@@ -207,13 +208,16 @@ The bucket depends only on the salt and the key: the first 64 bits of the SHA-25
 Expressions in a node can read:
 
 - the flow's inputs and `businessDate`, by name;
-- the values of the nodes before it, under the node id or its `as` name: `policy.decision`, `affordability.annualIncome`, `segment.taken`.
+- the values of the nodes before it, under the node id or its `as` name: `policy.decision`, `affordability.annualIncome`, `segment.taken`;
+- the flow's parameters, as `params.<name>`, when the flow declares them (see [Parameters](#parameters)).
 
 **Only values set on every path.** A node can read a value only if every path from `start` to the node passes through a node that sets it. In the example, `referred` can read `grade.riskGrade` because both paths to it pass through a node that publishes `grade`; it could not read `affordability.annualIncome` if some path to it skipped `affordability`. This is checked when the engine is built, so a flow never reads a value that might not exist.
 
 **Shared names.** Nodes on alternative branches can publish under the same `as` name if they publish the same values with the same types, as `grade_existing` and `grade_new` do. Two nodes on one path cannot share a name.
 
 **Facts for a table.** A `table` node passes each of the table's inputs the flow value of the same name, which must have the same type, or, for a struct, at least the fields that the table declares. List an input in `facts` to pass it something else. A struct input can only be passed a value by name, for example `"customer": "applicant"`. In the example, `limit` passes `grade.riskGrade` as the table's `riskGrade` input and the chosen bucket as its `strategy`.
+
+<a id="parameters"></a>**Parameters.** A flow can declare `params` as a table does, `"params": { "set": "retail_credit", "values": { "maxExposure": "money" } }`, and every expression of its nodes can read them: `when` conditions, `derive` and `end` values, `facts` of table nodes and `features` of model nodes. The version of the set in force on the business date is used, or the pinned `version`. A `table` node does not pass the flow's parameters to its table: a table that declares `params` reads its own, from the version in force on the same business date. The record lists every set version the flow and its tables used, once each. `params` cannot be a node id or an `as` name, and a flow that declares parameters cannot have an input named `params`.
 
 **Outputs that no rule set.** When no rule of a table matches, or the rule that matched does not set an output, that output is absent. Reading it fails the evaluation; test for it with `has()`, as in a table rule: `has(policy.decision) && policy.decision == 'REJECT'`.
 
@@ -495,7 +499,8 @@ The canonical form writes a single unconditional `next` as the node id, so `"nex
 - an `end` node does not set every output, or sets one that is not declared;
 - a `model` node pins no exact model version; has no `features` or `timeoutMs` in `invoke` mode, or has them in `supplied` mode; has a feature or `valid` condition that does not type-check, an output with fields, a `minConfidence` outside 0 to 1, or a reason code that is not `UPPER_SNAKE_CASE`; or is in `invoke` mode and no invoker is registered for its model (unless the engine is built with `suppliedModelsOnly()`). `onFailure` is required when the file is read;
 - a `split` has duplicate bucket names, or percentages that do not add up to 100;
-- a node id or `as` name is not an identifier, or is the name of an input;
+- a node id or `as` name is not an identifier, is the name of an input, or is `params`;
+- the flow's `params` fail the checks a table's do (see [Validation](decision-tables.md#validation)), or an expression reads a parameter that is not declared;
 - the flow's `id` is also the id of a table, or two versions are inconsistent, as for tables.
 
 For example, if `referred` also read `limit.limit`, which only the approved path sets, the engine would refuse to build with:

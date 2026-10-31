@@ -44,6 +44,7 @@ Events are `CustomEvent`s that bubble and cross shadow roots (`composed`).
 | Member | Kind | Description |
 |---|---|---|
 | `table` | property | The table as parsed `.stone.json` (a plain object). The editor works on a copy and never changes the host's object. |
+| `paramSets` | property | Every version of the parameter sets the table may read, as `.params.json` text or parsed JSON. The table's `params` are checked against them, the Parameters tab shows their values, and Try it binds the version in force. |
 | `validator` | property | Optional `async (table, localResult) => HostProblem[]`, for server-side checks such as calling the bank's Java RuleStone service. A `HostProblem` is `{ message, severity?, target? }`. |
 | `asOf` / `as-of` | property / attribute | The business date the Try it panel starts with. |
 | `facts` | property / attribute | Facts for the Try it panel as JSON text, for example from a `.stone-test.json` case. |
@@ -76,10 +77,11 @@ Columns: result, rule id, condition, one per output, reason code, description, a
 | `value` | property / attribute | The condition as CEL. |
 | `inputs` | property | The table's inputs, as in `.stone.json`, for the field picker. |
 | `locals` | property | The table's local values (`let`), name to CEL expression, offered in the field picker with their inferred types. |
+| `params` | property | The parameters the table declares (`params.values`), name to type, offered in the field picker as fields of `params`. |
 | `mode` | property / attribute | `blocks` or `cel`. |
 | `rulestone-change` | event | `detail`: `{ value }`. |
 
-The field picker lists inputs, local values and nested struct fields. Lists are tested with blocks for `exists`, `all` and `exists_one`, whose items have their own fields. Operators depend on the type: comparisons for `int`, `decimal`, `money` and `date`; `in`; `startsWith`, `endsWith`, `contains` and `matches` for strings; `is set` (`has()`) for struct fields; `includes` for lists. Values are typed: money with a currency, dates, decimals, lists; the ƒx button switches a value to an expression.
+The field picker lists inputs, local values, declared parameters (under `params`) and nested struct fields. Lists are tested with blocks for `exists`, `all` and `exists_one`, whose items have their own fields. Operators depend on the type: comparisons for `int`, `decimal`, `money` and `date`; `in`; `startsWith`, `endsWith`, `contains` and `matches` for strings; `is set` (`has()`) for struct fields; `includes` for lists. Values are typed: money with a currency, dates, decimals, lists; the ƒx button switches a value to an expression.
 
 **Round trip.** Unedited CEL comes back exactly as it was written, including spacing and comments. Edited parts are printed as canonical CEL with only the parentheses precedence needs. CEL that blocks cannot show (a calculation on the left of a comparison, `filter` or `map`, the conditional operator, a syntax error) stays as text in a CEL block, with the reason; it is never rewritten. The tests check every condition in `examples/`.
 
@@ -114,6 +116,7 @@ The palette has the node types `table`, `switch`, `derive`, `model`, `split`, `e
 | Member | Kind | Description |
 |---|---|---|
 | `table` | property | The table to run. |
+| `paramSets` | property | The parameter sets the table reads (`.params.json` text or parsed JSON); the version in force on `asOf` is used. |
 | `asOf` / `as-of` | property / attribute | The business date (default today). |
 | `facts` | property / attribute | Initial facts as JSON text. |
 | `run()` | method | Runs the table; resolves with the event's detail. |
