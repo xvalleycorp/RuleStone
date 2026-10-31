@@ -7,7 +7,8 @@ import {
   moveField, moveRule, normalizeTable, renameInput, renameOutput, setFormValue, setOutput, tableText, tableVariables,
   tokenize, updateRule, validateTable, type TableJson,
 } from '../src/model/index.js'
-import { exampleTable, exampleTables } from './helpers.js'
+import { exampleParamSets, exampleTable, exampleTables } from './helpers.js'
+import { readParamSets } from '../src/model/validate.js'
 
 function table(overrides: Partial<TableJson> = {}): TableJson {
   return {
@@ -141,8 +142,9 @@ describe('table operations', () => {
 
 describe('validation', () => {
   it('accepts every example table and gives the rule version Java gives', async () => {
+    const paramSets = readParamSets(exampleParamSets())
     for (const [, t] of exampleTables()) {
-      const result = await validateTable(t)
+      const result = await validateTable(t, { paramSets })
       expect(result.problems).toEqual([])
       expect(result.ruleVersion).toMatch(new RegExp(`^${t.version}@sha256:[0-9a-f]{64}$`))
     }

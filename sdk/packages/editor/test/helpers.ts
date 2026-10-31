@@ -18,6 +18,11 @@ export function exampleTable(file: string): TableJson {
   return JSON.parse(readFileSync(join(EXAMPLES, file), 'utf8')) as TableJson
 }
 
+/** The text of every .params.json file in examples/. */
+export function exampleParamSets(): string[] {
+  return readdirSync(EXAMPLES).filter((f) => f.endsWith('.params.json')).sort().map((f) => readFileSync(join(EXAMPLES, f), 'utf8'))
+}
+
 export function exampleTables(): [string, TableJson][] {
   return exampleFiles().map((f) => [f, exampleTable(f)])
 }

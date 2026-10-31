@@ -5,11 +5,12 @@
 // belongs to and, for expressions, at the exact position in the text.
 
 import {
-  InvalidDecisionError, analyzeExpression, createEngine, parseDecisionTable, ruleVersionOf, writeDecisionTable,
-  type DecisionTable, type ExpressionIssue, type ValueType,
+  InvalidDecisionError, analyzeExpression, createEngine, parseDecisionTable, parseParameterSet, ruleVersionOf,
+  writeDecisionTable,
+  type DecisionTable, type ExpressionIssue, type ParameterSet, type ValueType,
 } from '@rulestone/engine'
 import { tableVariables, valueTypeOf } from './schema.js'
-import type { TableJson } from './table.js'
+import type { TableJson, TypeSpec } from './table.js'
 
 /** Where a problem is. */
 export type ProblemTarget =
@@ -17,6 +18,8 @@ export type ProblemTarget =
   | { readonly kind: 'schema'; readonly side: 'inputs' | 'outputs'; readonly name?: string }
   /** A local value (let), or the let object itself without a name. */
   | { readonly kind: 'let'; readonly name?: string }
+  /** A declared parameter, or the params declaration itself without a name. */
+  | { readonly kind: 'params'; readonly name?: string }
   | {
       readonly kind: 'rule'
       readonly rule: number
@@ -75,7 +78,7 @@ export function expressionCells(table: TableJson): ExpressionCell[] {
  */
 export function expressionProblems(table: TableJson): Problem[] {
   const locals = localsOf(table)
-  const variables = tableVariables(table.inputs, locals)
+  const variables = tableVariables(table.inputs, locals, paramsOf(table))
   const problems: Problem[] = []
   for (const [name, source] of Object.entries(locals)) {
     // The other local values are in scope with their inferred types; this one is not.
@@ -114,6 +117,45 @@ export function localsOf(table: TableJson): Record<string, string> {
   return Object.fromEntries(Object.entries(value).filter((e): e is [string, string] => typeof e[1] === 'string'))
 }
 
+/** The parameters the table declares, name to type, or undefined if it declares none. */
+export function paramsOf(table: TableJson): Record<string, TypeSpec> | undefined {
+  const params = table.params
+  if (params === null || typeof params !== 'object' || Array.isArray(params)) return undefined
+  const values = params.values
+  if (values === null || typeof values !== 'object' || Array.isArray(values)) return {}
+  return values
+}
+
+/**
+ * Reads parameter sets given as .params.json text or as parsed JSON objects (or already read).
+ * @throws InvalidDecisionError listing the problems of every set that cannot be read, each prefixed
+ *         with the set's position, e.g. `paramSets[1] $.values.maxDti.value: …`
+ */
+export function readParamSets(sets: readonly (string | object)[] | undefined): ParameterSet[] {
+  const read: ParameterSet[] = []
+  const problems: string[] = []
+  ;(sets ?? []).forEach((set, index) => {
+    if (typeof set === 'object' && set !== null && (set as { values?: unknown }).values instanceof Map) {
+      read.push(set as ParameterSet)
+      return
+    }
+    try {
+      read.push(parseParameterSet(typeof set === 'string' ? set : JSON.stringify(set)))
+    } catch (e) {
+      if (!(e instanceof InvalidDecisionError)) throw e
+      problems.push(...e.problems.map((p) => `paramSets[${index}] ${p}`))
+    }
+  })
+  if (problems.length > 0) throw new InvalidDecisionError(problems)
+  return read
+}
+
+/** Options of validateTable. */
+export interface ValidateOptions {
+  /** The parameter sets the table's "params" are checked against, as createEngine checks them. */
+  readonly paramSets?: readonly ParameterSet[]
+}
+
 /** Rules that can never match: under FIRST, the rules after one whose condition is `true`. */
 function unreachableRules(table: TableJson): Problem[] {
   if (table.hitPolicy !== 'FIRST') return []
@@ -141,6 +183,8 @@ function place(table: TableJson, location: string, readerPath: boolean): Problem
     const known = ['id', 'when', 'then', 'reasonCode', 'description'].includes(field) ? field : 'rule'
     return rule[3] !== undefined && known === 'then' ? { kind: 'rule', rule: index, field: 'then', output: rule[3] } : { kind: 'rule', rule: index, field: known }
   }
+  const param = (readerPath ? /^\$\.params(?:\.values\.(\w+))?/ : /^params(?:\.values\.([^.]+))?/).exec(location)
+  if (param) return param[1] !== undefined ? { kind: 'params', name: param[1] } : { kind: 'params' }
   const local = (readerPath ? /^\$\.let(?:\.(\w+))?/ : /^let(?:\.(\w+))?/).exec(location)
   if (local) return local[1] !== undefined ? { kind: 'let', name: local[1] } : { kind: 'let' }
   const schema = (readerPath ? /^\$\.(inputs|outputs)(?:\.(\w+))?/ : /^(inputs|outputs)(?:\.(\w+))?/).exec(location)
@@ -158,7 +202,7 @@ function sameCell(a: ProblemTarget, b: ProblemTarget): boolean {
  * Validates a table exactly as the engine does when it loads it: the strict reader, then
  * compilation. Expression problems come with their positions. Never throws for a bad table.
  */
-export async function validateTable(table: TableJson): Promise<ValidationResult> {
+export async function validateTable(table: TableJson, options: ValidateOptions = {}): Promise<ValidationResult> {
   const problems: Problem[] = []
   const expressions = expressionProblems(table)
   let parsed: DecisionTable | undefined
@@ -178,7 +222,7 @@ export async function validateTable(table: TableJson): Promise<ValidationResult>
     canonical = writeDecisionTable(parsed)
     ruleVersion = await ruleVersionOf(parsed)
     try {
-      await createEngine({ tables: [parsed] })
+      await createEngine({ tables: [parsed], paramSets: options.paramSets ?? [] })
     } catch (e) {
       if (!(e instanceof InvalidDecisionError)) throw e
       const prefix = `${parsed.id}@${parsed.version} `
@@ -211,6 +255,14 @@ export async function validateTable(table: TableJson): Promise<ValidationResult>
 /** Orders problems as the grid shows them: table, schema, then rules in order. */
 export function sortProblems(problems: readonly Problem[]): Problem[] {
   const rank = (p: Problem) =>
-    p.target.kind === 'table' ? -3 : p.target.kind === 'schema' ? -2 : p.target.kind === 'let' ? -1 : p.target.rule
+    p.target.kind === 'table'
+      ? -4
+      : p.target.kind === 'schema'
+        ? -3
+        : p.target.kind === 'params'
+          ? -2
+          : p.target.kind === 'let'
+            ? -1
+            : p.target.rule
   return [...problems].sort((a, b) => rank(a) - rank(b) || (a.issue?.pos ?? 0) - (b.issue?.pos ?? 0))
 }
