@@ -2,7 +2,7 @@
 
 > **Every version set in stone. Every change in seconds.**
 >
-> Status: draft · Last updated: 2026-10-25
+> Status: draft · Last updated: 2026-10-31
 
 This document describes where RuleStone is going, not only what exists today. Each module and capability is marked **available** or **planned**; the [roadmap](#9-roadmap) shows the order of work. For how to use what is available now, see the [guides](README.md).
 
@@ -33,8 +33,8 @@ Out of scope for now: stateful inference (Rete, forward chaining), complex event
 |---|---|---|---|
 | `rulestone-bom` | Version alignment for users | — | available |
 | `rulestone-api` | Public API: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult`; later the SPIs | JDK | available |
-| `rulestone-core` | Decision model, evaluator, trace. Decision tables, decision records, timeouts, and canary and shadow versions are available; decision flows, switches and sub-decisions are planned | `rulestone-api`, `rulestone-cel`, Jackson | available (partial) |
-| `rulestone-cel` | cel-java integration and extensions. `decimal`, `money`, `date` and fuzzy name matching are available; business calendars are planned | cel-java | available (partial) |
+| `rulestone-core` | Decision model, evaluator, trace. Decision tables with local values, parameter sets, decision flows with model nodes, decision records, timeouts, and canary and shadow versions are available; sub-flows are planned | `rulestone-api`, `rulestone-cel`, Jackson | available (partial) |
+| `rulestone-cel` | cel-java integration and extensions. `decimal`, `money`, `date`, aggregate functions on lists and fuzzy name matching are available; business calendars are planned | cel-java | available (partial) |
 | `rulestone-dsl` | `.stone` text syntax ⇄ JSON, formatter | ANTLR runtime | planned |
 | `rulestone-analysis` | Static analysis: overlapping rows, gaps and unreachable rows, using an SMT solver where available | Z3 (optional) | planned |
 | `rulestone-governance` | Maker-checker workflow, hash-chained audit log | `rulestone-api` | planned |
@@ -201,7 +201,7 @@ All problems in a rule definition are already reported together, each with its l
 
 1. **M0 — Specification** *(done for decision tables)*: decision model, CEL extensions (`decimal`, `money`, `date`), decision record format, and a conformance suite that checks the TypeScript engine against the Java engine. Flows follow with M1.
 2. **M1 — Core** *(in progress)*
-   - Done: decision tables with `FIRST`, `UNIQUE` and `COLLECT`; strict `.stone.json` format; content hashes; effective dating in which a new version supersedes the previous one; `decimal`, `money` and `date` types; fuzzy name matching; typed struct and list inputs; traces; decision records with `AuditSink`; timeouts; canary and shadow versions; `rulestone-test`; all definition problems reported together; licensing, SBOM and documentation; decision flows with `table`, `switch`, `derive`, `split` and `end` nodes (step 2 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)).
+   - Done: decision tables with `FIRST`, `UNIQUE` and `COLLECT`; strict `.stone.json` format; content hashes; effective dating in which a new version supersedes the previous one; `decimal`, `money` and `date` types; fuzzy name matching; typed struct and list inputs; traces; decision records with `AuditSink`; timeouts; canary and shadow versions; `rulestone-test`; all definition problems reported together; licensing, SBOM and documentation; decision flows with `table`, `switch`, `derive`, `split` and `end` nodes (step 2 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)); [parameter sets, aggregate functions and local values](parameters.md).
    - Remaining: business calendars.
 3. **M2 — Governance:** maker-checker, hash-chained audit, JDBC repository and JDBC audit sink.
 4. **M3 — Integration** *(started)*: Temporal, Camunda 7 and 8, and the Kafka audit sink are done. Remaining: Spring Boot starter, REST/gRPC server, observability (Micrometer, OpenTelemetry), Kafka processor.

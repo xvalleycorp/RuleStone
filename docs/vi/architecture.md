@@ -1,13 +1,13 @@
 ---
 source: architecture.md
-sourceHash: 27d726e5d3735aad3467f7848628df37e69ae6fff568691a3cbaeb2ceadeb4a1
+sourceHash: 3cfa8365151fe82fb0d3c4e12d9baaa5bc4c9ea731c313b52ae351f3281fb983
 ---
 
 # Kiến trúc RuleStone
 
 > **Mỗi phiên bản khắc vào đá. Mỗi thay đổi chỉ mất vài giây.**
 >
-> Trạng thái: bản thảo · Cập nhật lần cuối: 2026-10-25
+> Trạng thái: bản thảo · Cập nhật lần cuối: 2026-10-31
 
 Tài liệu này mô tả hướng đi của RuleStone, chứ không chỉ những gì đã có hôm nay. Mỗi mô-đun và năng lực được đánh dấu **đã có** hoặc **dự kiến**; phần [lộ trình](#9-lộ-trình) cho biết thứ tự thực hiện. Để biết cách dùng những gì đã có, xem [các hướng dẫn](index.md).
 
@@ -38,8 +38,8 @@ Tạm thời nằm ngoài phạm vi: suy diễn có trạng thái (Rete, suy di�
 |---|---|---|---|
 | `rulestone-bom` | Đồng bộ phiên bản cho người dùng | — | đã có |
 | `rulestone-api` | API công khai: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult`; sau này thêm các SPI | JDK | đã có |
-| `rulestone-core` | Mô hình quyết định, bộ đánh giá, vết thực thi. Đã có bảng quyết định, bản ghi quyết định, thời gian chờ tối đa, phiên bản canary và phiên bản bóng; luồng quyết định, switch và quyết định con đang dự kiến | `rulestone-api`, `rulestone-cel`, Jackson | đã có (một phần) |
-| `rulestone-cel` | Tích hợp cel-java và các phần mở rộng. Đã có `decimal`, `money`, `date` và so khớp tên gần đúng; lịch làm việc đang dự kiến | cel-java | đã có (một phần) |
+| `rulestone-core` | Mô hình quyết định, bộ đánh giá, vết thực thi. Đã có bảng quyết định với giá trị cục bộ, bộ tham số, luồng quyết định với nút mô hình, bản ghi quyết định, thời gian chờ tối đa, phiên bản canary và phiên bản bóng; luồng con đang dự kiến | `rulestone-api`, `rulestone-cel`, Jackson | đã có (một phần) |
+| `rulestone-cel` | Tích hợp cel-java và các phần mở rộng. Đã có `decimal`, `money`, `date`, hàm tổng hợp trên danh sách và so khớp tên gần đúng; lịch làm việc đang dự kiến | cel-java | đã có (một phần) |
 | `rulestone-dsl` | Cú pháp văn bản `.stone` ⇄ JSON, bộ định dạng | ANTLR runtime | dự kiến |
 | `rulestone-analysis` | Phân tích tĩnh: các dòng chồng lấn, khoảng trống và các dòng không bao giờ tới được, dùng SMT solver khi có | Z3 (tuỳ chọn) | dự kiến |
 | `rulestone-governance` | Quy trình maker-checker, nhật ký kiểm toán liên kết bằng chuỗi băm | `rulestone-api` | dự kiến |
@@ -208,7 +208,7 @@ Mọi lỗi trong một định nghĩa luật đã được báo cáo cùng lúc
 
 1. **M0 — Đặc tả** *(đã xong cho bảng quyết định)*: mô hình quyết định, các phần mở rộng CEL (`decimal`, `money`, `date`), định dạng bản ghi quyết định, và bộ kiểm thử tuân thủ đối chiếu engine TypeScript với engine Java. Luồng quyết định sẽ theo cùng M1.
 2. **M1 — Lõi** *(đang thực hiện)*
-   - Đã xong: bảng quyết định với `FIRST`, `UNIQUE` và `COLLECT`; định dạng `.stone.json` chặt chẽ; mã băm nội dung; hiệu lực theo ngày, trong đó phiên bản mới thay thế phiên bản trước; các kiểu `decimal`, `money` và `date`; so khớp tên gần đúng; đầu vào kiểu struct và danh sách có kiểu; vết thực thi; bản ghi quyết định với `AuditSink`; thời gian chờ tối đa; phiên bản canary và phiên bản bóng; `rulestone-test`; báo cáo cùng lúc mọi lỗi trong định nghĩa; cấp phép, SBOM và tài liệu; luồng quyết định với các nút `table`, `switch`, `derive`, `split` và `end` (bước 2 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)).
+   - Đã xong: bảng quyết định với `FIRST`, `UNIQUE` và `COLLECT`; định dạng `.stone.json` chặt chẽ; mã băm nội dung; hiệu lực theo ngày, trong đó phiên bản mới thay thế phiên bản trước; các kiểu `decimal`, `money` và `date`; so khớp tên gần đúng; đầu vào kiểu struct và danh sách có kiểu; vết thực thi; bản ghi quyết định với `AuditSink`; thời gian chờ tối đa; phiên bản canary và phiên bản bóng; `rulestone-test`; báo cáo cùng lúc mọi lỗi trong định nghĩa; cấp phép, SBOM và tài liệu; luồng quyết định với các nút `table`, `switch`, `derive`, `split` và `end` (bước 2 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)); [bộ tham số, hàm tổng hợp và giá trị cục bộ](parameters.md).
    - Còn lại: lịch làm việc.
 3. **M2 — Quản trị:** maker-checker, kiểm toán liên kết bằng chuỗi băm, kho luật JDBC và audit sink JDBC.
 4. **M3 — Tích hợp** *(đã bắt đầu)*: đã xong Temporal, Camunda 7 và 8, và audit sink Kafka. Còn lại: Spring Boot starter, máy chủ REST/gRPC, khả năng quan sát (Micrometer, OpenTelemetry), bộ xử lý Kafka.
