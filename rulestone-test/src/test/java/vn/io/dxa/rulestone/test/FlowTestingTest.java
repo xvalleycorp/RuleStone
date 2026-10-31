@@ -28,6 +28,8 @@ class FlowTestingTest {
 
     private static final List<DecisionTable> TABLES = ExamplesStoneTest.allExampleTables();
     private static final List<DecisionFlow> FLOWS = ExamplesStoneTest.exampleFlows();
+    /** The example flow without model nodes, which the coverage examples of docs/testing.md use. */
+    private static final List<DecisionFlow> ORIGINATION = FLOWS.stream().filter(f -> f.id().equals("card_origination")).toList();
 
     private final RuleStoneEngine engine = ExamplesStoneTest.exampleEngine();
 
@@ -129,6 +131,17 @@ class FlowTestingTest {
     }
 
     @Test
+    void theModelCaseInThePagePassesAndIsInTheExampleFile() throws IOException {
+        String caseJson = docBlocks("json").stream().filter(b -> b.contains("\"models\"")).findFirst().orElseThrow();
+        List<StoneTestCase> cases = StoneTestJson.read("{ \"decision\": \"card_origination_scored\", \"cases\": ["
+                + caseJson + "] }", "testing.md", TABLES, FLOWS);
+
+        assertThat(cases).singleElement().satisfies(c -> assertThat(c.check(engine)).isPresent());
+        assertThat(Files.readString(ExamplesStoneTest.FLOWS.resolve("card_origination_scored.stone-test.json")))
+                .contains(caseJson.strip().indent(4).stripTrailing());
+    }
+
+    @Test
     void theCoverageReportInThePageIsForTheExampleWithoutItsChallengerCase() throws Throwable {
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         com.fasterxml.jackson.databind.node.ObjectNode file = (com.fasterxml.jackson.databind.node.ObjectNode)
@@ -143,7 +156,7 @@ class FlowTestingTest {
         List<DecisionTable> flowTables = ExamplesStoneTest.allExampleTables().stream()
                 .filter(t -> List.of("card_policy", "card_grade_existing", "card_grade_new", "card_limit").contains(t.id()))
                 .toList();
-        List<DynamicTest> tests = StoneTests.dynamicTests(engine, dir, RuleCoverage.of(flowTables, FLOWS)).toList();
+        List<DynamicTest> tests = StoneTests.dynamicTests(engine, dir, RuleCoverage.of(flowTables, ORIGINATION)).toList();
         DynamicTest coverage = tests.get(tests.size() - 1);
 
         assertThat(coverage.getDisplayName()).isEqualTo("rule and node coverage");
@@ -158,7 +171,7 @@ class FlowTestingTest {
                 flowCase("rejected", "C-1010", 17, true, "0.1", "{}"),
                 flowCase("champion A", "C-1002", 35, true, "0.1", "{}"),
                 flowCase("failing", "C-1006", 19, false, "0.1", "{ \"output\": { \"decision\": \"APPROVE\" } }")));
-        RuleCoverage coverage = RuleCoverage.of(TABLES.stream().filter(t -> t.id().startsWith("card_") && !t.id().startsWith("card_fraud")).toList(), FLOWS);
+        RuleCoverage coverage = RuleCoverage.of(TABLES.stream().filter(t -> List.of("card_policy", "card_grade_existing", "card_grade_new", "card_limit").contains(t.id())).toList(), ORIGINATION);
         List<DynamicTest> tests = StoneTests.dynamicTests(engine, dir, coverage).toList();
         DynamicTest last = tests.get(tests.size() - 1);
 
@@ -178,5 +191,90 @@ class FlowTestingTest {
         assertThat(coverage.uncoveredNodes()).containsExactly(Map.entry("card_origination@1", List.of("grade_new", "referred")));
         assertThat(coverage.uncoveredBranches().get("card_origination@1")).contains("limit_strategy[challenger]");
         assertThat(coverage.isComplete()).isFalse();
+    }
+
+    // --- Model nodes ----------------------------------------------------------------------------
+
+    private static final String SCORED_FACTS = """
+            "facts": { "applicant": { "id": "C-1", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+                       "bureau": { "dpd30Count12m": 0, "utilisation": "0.1" } }""";
+
+    private static final String FRAUD = """
+            "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.01" } }""";
+
+    private Path writeScored(String... cases) throws IOException {
+        return Files.writeString(dir.resolve("scored.stone-test.json"),
+                "{ \"decision\": \"card_origination_scored\", \"cases\": [" + String.join(",", cases) + "] }");
+    }
+
+    @Test
+    void casesGiveModelResultsOrFailures() throws IOException {
+        Path file = writeScored("""
+                { "name": "approved", %s,
+                  "models": { %s, "pd_behaviour": { "modelId": "retail_pd_behaviour", "modelVersion": "2.4.0",
+                                                    "outputs": { "pd": 0.0150 } } },
+                  "expect": { "output": { "decision": "APPROVE", "riskGrade": "A" } } }""".formatted(SCORED_FACTS, FRAUD),
+                """
+                { "name": "timeout", %s,
+                  "models": { %s, "pd_behaviour": { "failure": "TIMEOUT" } },
+                  "expect": { "reasonCodes": ["MODEL_UNAVAILABLE"],
+                              "path": ["policy", "fraud", "segment", "pd_behaviour", "referred"] } }"""
+                        .formatted(SCORED_FACTS, FRAUD));
+        List<StoneTestCase> cases = StoneTestJson.read(file, TABLES, FLOWS);
+
+        assertThat(cases.get(0).facts().models()).containsOnlyKeys("fraud", "pd_behaviour");
+        assertThat(cases).allSatisfy(c -> assertThat(c.check(engine)).isPresent());
+        assertThat(cases.get(1).check(engine).orElseThrow().record().path().get(3).model())
+                .hasValueSatisfying(m -> assertThat(m.status()).isEqualTo(vn.io.dxa.rulestone.api.ModelStatus.TIMEOUT));
+    }
+
+    @Test
+    void decisionCheckGivesModelResultsAndFailures() {
+        DecisionCheck.of(engine)
+                .decision("card_origination_scored").asOf(LocalDate.of(2026, 12, 1))
+                .given("applicant", Map.of("id", "C-1", "age", 35, "income", Money.of("1000", "VND"), "existingCustomer", false))
+                .given("bureau", Map.of("dpd30Count12m", 0, "utilisation", java.math.BigDecimal.ONE))
+                .givenModelResult("fraud", vn.io.dxa.rulestone.api.ModelResult.of("card_application_fraud", "1.2.0",
+                        Map.of("score", new java.math.BigDecimal("0.01"))))
+                .givenModelFailure("pd_application", vn.io.dxa.rulestone.api.ModelStatus.ERROR)
+                .expectOutput("decision", "REFER")
+                .expectReasonCodes("MODEL_UNAVAILABLE")
+                .expectPath("policy", "fraud", "segment", "pd_application", "referred");
+    }
+
+    @Test
+    void invalidModelResultsAreReportedWithTheirLocation() {
+        assertThatThrownBy(() -> StoneTestJson.read("{ \"decision\": \"card_origination_scored\", \"cases\": [{ "
+                + "\"name\": \"a\", " + SCORED_FACTS + ", \"models\": { \"fraud\": { \"failure\": \"SLOW\" }, "
+                + "\"pd\": { \"modelId\": \"m\" } }, \"expect\": {} }] }", "f", TABLES, FLOWS))
+                .isInstanceOfSatisfying(InvalidStoneTestException.class, e -> assertThat(e.problems()).containsExactly(
+                        "$.cases[0].models.fraud.failure: expected \"TIMEOUT\" or \"ERROR\"",
+                        "$.cases[0].models.pd.modelVersion: required non-empty string",
+                        "$.cases[0].models.pd.outputs: required object of output names to values"));
+    }
+
+    @Test
+    void coverageCountsTheFailurePathOfEveryModelNode() throws Throwable {
+        writeScored("""
+                { "name": "approved", %s,
+                  "models": { %s, "pd_behaviour": { "modelId": "retail_pd_behaviour", "modelVersion": "2.4.0",
+                                                    "outputs": { "pd": "0.0150" } } },
+                  "expect": {} }""".formatted(SCORED_FACTS, FRAUD),
+                """
+                { "name": "no fraud score", %s, "expect": { "path": ["policy", "fraud", "referred"] } }"""
+                        .formatted(SCORED_FACTS));
+        RuleCoverage coverage = RuleCoverage.of(List.of(),
+                FLOWS.stream().filter(f -> f.id().equals("card_origination_scored")).toList());
+        List<DynamicTest> tests = StoneTests.dynamicTests(engine, dir, coverage).toList();
+        assertThatThrownBy(() -> tests.get(tests.size() - 1).getExecutable().execute())
+                .isInstanceOf(AssertionError.class);
+
+        // The missing fraud score took fraud's failure path, not its conditional next to the same node.
+        assertThat(coverage.uncoveredBranches().get("card_origination_scored@1")).containsExactly(
+                "policy -> rejected", "fraud -> referred", "segment -> pd_application",
+                "pd_behaviour -> referred (onFailure)", "pd_application -> grade",
+                "pd_application -> referred (onFailure)", "grade -> referred");
+        assertThat(coverage.uncoveredNodes().get("card_origination_scored@1"))
+                .containsExactly("pd_application", "rejected");
     }
 }

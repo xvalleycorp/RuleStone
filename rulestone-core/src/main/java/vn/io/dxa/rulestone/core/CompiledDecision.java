@@ -74,11 +74,16 @@ final class CompiledDecision implements Executable {
     }
 
     @Override
-    public Run run(Facts facts, LocalDate businessDate, Deadline deadline, Progress progress, FactsHasher hasher) {
+    public Run run(Facts facts, LocalDate businessDate, Optional<String> correlationId, Deadline deadline,
+                   Progress progress, FactsHasher hasher) {
         // The step shows the rules matched so far, also when the evaluation fails.
         progress.open(() -> new PathStep(table.id(), "table", ruleVersion, progress.matchedSince(0)));
         Bindings bindings = bind(facts, businessDate);
         progress.factsHash(hasher.hash(bindings));
+        if (!facts.models().isEmpty()) {
+            throw new DecisionEvaluationException(table.id(), ruleVersion, "model results supplied for "
+                    + facts.models().keySet() + ", but a decision table has no model nodes", null);
+        }
         Outcome outcome = evaluate(bindings, progress.trace, deadline);
         progress.close();
         return new Run(outcome.output(), outcome.reasonCodes().stream()

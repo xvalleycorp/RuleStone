@@ -1,0 +1,214 @@
+{
+  "decision": "card_origination_scored",
+  "description": "Every path through the scored card origination flow: knock-outs, a high fraud score, both PD models, every grade, and every kind of model failure. Run with an engine built with suppliedModelsOnly(), so that the PD models, which the flow invokes, take their results from the cases.",
+  "cases": [
+    {
+      "name": "an under-age applicant is rejected before any model is used",
+      "facts": {
+        "applicant": { "id": "C-2001", "age": 17, "income": "20000000 VND", "existingCustomer": false },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "REJECT", "riskGrade": "N/A", "limit": "0 VND" },
+        "reasonCodes": ["UNDERAGE"],
+        "path": ["policy", "rejected"]
+      }
+    },
+    {
+      "name": "two recent delinquencies are a knock-out",
+      "facts": {
+        "applicant": { "id": "C-2002", "age": 40, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 2, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "REJECT" },
+        "matchedRules": ["DELINQUENT"],
+        "path": ["policy", "rejected"]
+      }
+    },
+    {
+      "name": "an existing customer with a low PD gets grade A, with the model's reason code",
+      "facts": {
+        "applicant": { "id": "C-2003", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.40" }
+      },
+      "models": {
+        "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+        "pd_behaviour": {
+          "modelId": "retail_pd_behaviour", "modelVersion": "2.4.0",
+          "outputs": { "pd": "0.0150" },
+          "attributionMethod": "SHAP",
+          "attributions": [
+            { "feature": "utilisation", "contribution": "0.0040" },
+            { "feature": "dpd30Count12m", "contribution": "-0.0010" }
+          ]
+        }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "A", "limit": "120000000 VND" },
+        "exactOutput": true,
+        "reasonCodes": ["HIGH_UTILISATION"],
+        "matchedRules": ["PASS", "A", "A"],
+        "path": ["policy", "fraud", "segment", "pd_behaviour", "grade", "limit", "approved"]
+      }
+    },
+    {
+      "name": "a new customer is scored by the application model, which gives one reason code at most",
+      "facts": {
+        "applicant": { "id": "C-2004", "age": 23, "income": "20000000 VND", "existingCustomer": false },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.60" }
+      },
+      "models": {
+        "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+        "pd_application": {
+          "modelId": "retail_pd_application", "modelVersion": "3.1.0",
+          "outputs": { "pd": "0.0400" },
+          "confidence": "0.90",
+          "attributionMethod": "SHAP",
+          "attributions": [
+            { "feature": "age", "contribution": "0.0100" },
+            { "feature": "utilisation", "contribution": "0.0200" }
+          ]
+        }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "B", "limit": "72000000 VND" },
+        "reasonCodes": ["HIGH_UTILISATION"],
+        "path": ["policy", "fraud", "segment", "pd_application", "grade", "limit", "approved"]
+      }
+    },
+    {
+      "name": "a PD from 5% to 10% gives grade C",
+      "facts": {
+        "applicant": { "id": "C-2005", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 1, "utilisation": "0.50" }
+      },
+      "models": {
+        "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+        "pd_behaviour": { "modelId": "retail_pd_behaviour", "modelVersion": "2.4.0", "outputs": { "pd": "0.0700" } }
+      },
+      "expect": {
+        "output": { "decision": "APPROVE", "riskGrade": "C", "limit": "36000000 VND" },
+        "reasonCodes": [],
+        "matchedRules": ["PASS", "C", "C"]
+      }
+    },
+    {
+      "name": "a PD of 10% or more gives grade D, which is referred",
+      "facts": {
+        "applicant": { "id": "C-2006", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 1, "utilisation": "0.90" }
+      },
+      "models": {
+        "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+        "pd_behaviour": { "modelId": "retail_pd_behaviour", "modelVersion": "2.4.0", "outputs": { "pd": "0.1500" } }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "N/A" },
+        "reasonCodes": ["PD_HIGH"],
+        "path": ["policy", "fraud", "segment", "pd_behaviour", "grade", "referred"]
+      }
+    },
+    {
+      "name": "a high fraud score is referred before any credit model is used",
+      "facts": {
+        "applicant": { "id": "C-2007", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "models": {
+        "fraud": {
+          "modelId": "card_application_fraud", "modelVersion": "1.2.0",
+          "outputs": { "score": "0.92" },
+          "attributionMethod": "SHAP",
+          "attributions": [
+            { "feature": "addressMismatch", "contribution": "0.25" },
+            { "feature": "deviceAgeDays", "contribution": "0.40" }
+          ]
+        }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "N/A", "limit": "0 VND" },
+        "reasonCodes": ["NEW_DEVICE", "ADDRESS_MISMATCH"],
+        "path": ["policy", "fraud", "referred"]
+      }
+    },
+    {
+      "name": "without the fraud score the application is referred",
+      "facts": {
+        "applicant": { "id": "C-2008", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "reasonCodes": ["FRAUD_SCORE_UNAVAILABLE"],
+        "path": ["policy", "fraud", "referred"]
+      }
+    },
+    {
+      "name": "a behavioural model timeout is referred, never approved on a guess",
+      "facts": {
+        "applicant": { "id": "C-2009", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "models": {
+        "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+        "pd_behaviour": { "failure": "TIMEOUT" }
+      },
+      "expect": {
+        "output": { "decision": "REFER", "riskGrade": "N/A" },
+        "reasonCodes": ["MODEL_UNAVAILABLE"],
+        "path": ["policy", "fraud", "segment", "pd_behaviour", "referred"]
+      }
+    },
+    {
+      "name": "an application model result below the minimum confidence is referred",
+      "facts": {
+        "applicant": { "id": "C-2010", "age": 30, "income": "20000000 VND", "existingCustomer": false },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "models": {
+        "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+        "pd_application": {
+          "modelId": "retail_pd_application", "modelVersion": "3.1.0",
+          "outputs": { "pd": "0.0100" }, "confidence": "0.50"
+        }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "reasonCodes": ["MODEL_UNAVAILABLE"],
+        "path": ["policy", "fraud", "segment", "pd_application", "referred"]
+      }
+    },
+    {
+      "name": "a PD outside 0 to 1 is invalid and referred",
+      "facts": {
+        "applicant": { "id": "C-2011", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "models": {
+        "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.2.0", "outputs": { "score": "0.05" } },
+        "pd_behaviour": { "modelId": "retail_pd_behaviour", "modelVersion": "2.4.0", "outputs": { "pd": "1.5" } }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "reasonCodes": ["MODEL_UNAVAILABLE"],
+        "path": ["policy", "fraud", "segment", "pd_behaviour", "referred"]
+      }
+    },
+    {
+      "name": "a result from another model version breaks the contract and is referred",
+      "facts": {
+        "applicant": { "id": "C-2012", "age": 35, "income": "20000000 VND", "existingCustomer": true },
+        "bureau": { "dpd30Count12m": 0, "utilisation": "0.10" }
+      },
+      "models": {
+        "fraud": { "modelId": "card_application_fraud", "modelVersion": "1.1.0", "outputs": { "score": "0.05" } }
+      },
+      "expect": {
+        "output": { "decision": "REFER" },
+        "reasonCodes": ["FRAUD_SCORE_UNAVAILABLE"],
+        "path": ["policy", "fraud", "referred"]
+      }
+    }
+  ]
+}

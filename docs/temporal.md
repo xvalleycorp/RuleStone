@@ -158,6 +158,8 @@ public DecisionOutcome decide(LoanApplication application) {
 
 Pass `withAsOf` whenever the case has a business date. Without it, the activity uses today's date from its own clock, passes that date to the engine explicitly, and records it in `DecisionOutcome.businessDate()`. Because the outcome is recorded in history, a replayed workflow gets the original outcome even after the rules change.
 
+**Decision tables only, for now.** The activity evaluates decision tables. [Decision flows](flows.md) cannot be evaluated through it yet. `DecisionRequest.withModels(models)` already carries the results of models that the caller ran itself, in the `models` form of [supplied results](flows.md#supplied-results), for the model nodes of flows. The activity reads them strictly, and reports a malformed one as `INVALID_REQUEST`; until the activity evaluates flows, a decision table rejects them with `DECISION_EVALUATION_FAILED`.
+
 ## Payloads: decimals, money and dates
 
 `DecisionRequest.facts()` and `DecisionOutcome.output()` are JSON objects in the forms of `FactsJson` (see the [Java API](java-api.md)), so they are exact and readable in any language:

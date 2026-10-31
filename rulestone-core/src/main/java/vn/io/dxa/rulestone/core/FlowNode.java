@@ -5,12 +5,14 @@
 
 package vn.io.dxa.rulestone.core;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import vn.io.dxa.rulestone.api.ModelMode;
 import vn.io.dxa.rulestone.cel.ValueType;
 
 /**
@@ -19,7 +21,8 @@ import vn.io.dxa.rulestone.cel.ValueType;
  *
  * <p>A node publishes its values to later nodes under its id, or under {@code as} where the
  * node has one: {@code policy.decision} for a {@code table} node, {@code ratios.dti} for a
- * {@code derive} node, {@code segment.taken} for a {@code switch} or {@code split} node.
+ * {@code derive} node, {@code pd.score} for a {@code model} node, {@code segment.taken} for a
+ * {@code switch} or {@code split} node.
  */
 public sealed interface FlowNode {
 
@@ -117,6 +120,74 @@ public sealed interface FlowNode {
         @Override
         public String type() {
             return "derive";
+        }
+    }
+
+    /**
+     * Obtains a machine-learning model's result and checks it against a typed contract: the model
+     * is called through a {@code ModelInvoker} ({@code invoke} mode), or its result comes with the
+     * facts ({@code supplied} mode). On success the node publishes the model's outputs; on any
+     * failure the flow goes to {@code onFailure} instead, and nothing is published.
+     *
+     * @param mode           how the result is obtained
+     * @param modelId        the model's id
+     * @param modelVersion   the exact model version; a range or {@code latest} is not allowed
+     * @param features       in {@code invoke} mode, feature name to a CEL expression over the flow
+     *                       values: the only values the model receives. Empty in {@code supplied} mode.
+     * @param outputs        output name to type, as for table outputs; the result must have exactly these
+     * @param valid          a CEL condition over the outputs, by name; when it is false the output is invalid
+     * @param minConfidence  the lowest confidence accepted; the result must then report one
+     * @param timeoutMs      in {@code invoke} mode, how long the model may take, in milliseconds
+     * @param reasonCodes    feature name to the reason code emitted when the feature is among the
+     *                       top attributions that increase risk
+     * @param maxReasonCodes how many reason codes the node emits at most; three when empty
+     * @param onFailure      where to go when the model fails, and the reason code to emit
+     * @param as             a name to publish the outputs under instead of the node id
+     * @param next           where to go when the result meets the contract; conditions may read the outputs
+     */
+    record Model(Optional<String> description, ModelMode mode, String modelId, String modelVersion,
+                 Map<String, String> features, Map<String, ValueType> outputs, Optional<String> valid,
+                 Optional<BigDecimal> minConfidence, Optional<Integer> timeoutMs, Map<String, String> reasonCodes,
+                 Optional<Integer> maxReasonCodes, OnFailure onFailure, Optional<String> as,
+                 List<Branch> next) implements FlowNode {
+
+        /** How many reason codes a model node emits when it does not say. */
+        public static final int DEFAULT_MAX_REASON_CODES = 3;
+
+        public Model {
+            Objects.requireNonNull(description, "description");
+            Objects.requireNonNull(mode, "mode");
+            Objects.requireNonNull(modelId, "modelId");
+            Objects.requireNonNull(modelVersion, "modelVersion");
+            Objects.requireNonNull(valid, "valid");
+            Objects.requireNonNull(minConfidence, "minConfidence");
+            Objects.requireNonNull(timeoutMs, "timeoutMs");
+            Objects.requireNonNull(maxReasonCodes, "maxReasonCodes");
+            Objects.requireNonNull(onFailure, "onFailure");
+            Objects.requireNonNull(as, "as");
+            features = Collections.unmodifiableMap(new LinkedHashMap<>(features));
+            outputs = Collections.unmodifiableMap(new LinkedHashMap<>(outputs));
+            reasonCodes = Collections.unmodifiableMap(new LinkedHashMap<>(reasonCodes));
+            next = List.copyOf(next);
+        }
+
+        @Override
+        public String type() {
+            return "model";
+        }
+    }
+
+    /**
+     * Where a {@link Model} node goes when the model fails.
+     *
+     * @param to         the id of the next node
+     * @param reasonCode the reason code emitted, e.g. {@code MODEL_UNAVAILABLE}
+     */
+    record OnFailure(String to, String reasonCode) {
+
+        public OnFailure {
+            Objects.requireNonNull(to, "to");
+            Objects.requireNonNull(reasonCode, "reasonCode");
         }
     }
 

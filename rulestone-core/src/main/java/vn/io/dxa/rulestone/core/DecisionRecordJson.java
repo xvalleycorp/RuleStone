@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import vn.io.dxa.rulestone.api.DecisionRecord;
+import vn.io.dxa.rulestone.api.DecisionRecord.ModelStep;
 
 /**
  * Writes a {@link DecisionRecord} as JSON, for audit sinks that log or publish records.
@@ -22,7 +23,8 @@ import vn.io.dxa.rulestone.api.DecisionRecord;
  *
  * <p>Fields are written in a fixed order. Absent optional fields are left out, also in the
  * steps of the path: a {@code switch} step, for example, has {@code taken} but no
- * {@code version} or {@code matchedRules}. Output
+ * {@code version} or {@code matchedRules}, and a {@code model} step has the model's id and
+ * version, mode, status and, when it succeeded, its outputs and ranked attributions. Output
  * values use the {@link FactsJson} forms, e.g. {@code "25000 VND"} for money.
  */
 public final class DecisionRecordJson {
@@ -60,6 +62,7 @@ public final class DecisionRecordJson {
                 step.matchedRules().forEach(matched::add);
             }
             step.taken().ifPresent(taken -> node.put("taken", taken));
+            step.model().ifPresent(model -> model(node, model));
         });
         record.error().ifPresent(error -> json.put("error", error));
         record.routing().ifPresent(routing -> {
@@ -70,6 +73,29 @@ public final class DecisionRecordJson {
             routing.shadowOf().ifPresent(id -> node.put("shadowOf", id));
         });
         return json;
+    }
+
+    /** The fields of a model step; the outputs, confidence and attributions only when the model succeeded. */
+    private static void model(ObjectNode node, ModelStep model) {
+        node.put("mode", model.mode().jsonName());
+        node.putObject("model").put("id", model.modelId()).put("version", model.modelVersion());
+        node.put("status", model.status().name());
+        model.detail().ifPresent(detail -> node.put("detail", detail));
+        model.latencyMs().ifPresent(latency -> node.put("latencyMs", latency));
+        if (model.status().failed()) {
+            return;
+        }
+        node.set("outputs", FactsJson.writeValues(model.outputs()));
+        model.confidence().ifPresent(confidence -> node.put("confidence", confidence.toPlainString()));
+        model.attributionMethod().ifPresent(method -> node.put("attributionMethod", method));
+        ArrayNode attributions = node.putArray("attributions");
+        model.attributions().forEach(a -> {
+            ObjectNode attribution = attributions.addObject()
+                    .put("feature", a.feature())
+                    .put("rank", a.rank())
+                    .put("direction", a.direction().name());
+            a.reasonCode().ifPresent(code -> attribution.put("reasonCode", code));
+        });
     }
 
     /** The record as compact JSON text, one line. */

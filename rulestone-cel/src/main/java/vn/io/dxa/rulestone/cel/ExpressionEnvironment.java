@@ -284,6 +284,28 @@ public final class ExpressionEnvironment {
     }
 
     /**
+     * Parses and type-checks {@code source}, whose result type is whatever it produces: one of the
+     * primitive types or a list of them, as {@link CelExpression#resultType()} then says.
+     *
+     * @throws ExpressionException if the expression is malformed or ill-typed, or produces a value
+     *                             with fields, or one whose type cannot be determined
+     */
+    public CelExpression compile(String source) {
+        Objects.requireNonNull(source, "source");
+        CelAbstractSyntaxTree ast = check(source);
+        ValueType type = valueType(ast.getResultType());
+        if (type == null || containsStruct(type)) {
+            throw new ExpressionException("expression must produce bool, int, string, decimal, money, date or a "
+                    + "list of them, but produces " + ast.getResultType().name() + ": " + source, null);
+        }
+        return program(source, type, ast.getResultType(), ast);
+    }
+
+    private static boolean containsStruct(ValueType type) {
+        return type instanceof ValueType.Struct || type instanceof ValueType.ListOf list && containsStruct(list.element());
+    }
+
+    /**
      * Converts Java values for every declared variable into their runtime form.
      * Undeclared entries are ignored.
      *

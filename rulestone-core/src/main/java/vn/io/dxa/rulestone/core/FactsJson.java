@@ -25,10 +25,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import vn.io.dxa.rulestone.api.Facts;
+import vn.io.dxa.rulestone.api.ModelResult;
+import vn.io.dxa.rulestone.api.ModelStatus;
 import vn.io.dxa.rulestone.api.Money;
+import vn.io.dxa.rulestone.api.SuppliedModel;
 import vn.io.dxa.rulestone.cel.ValueType;
 
 /**
@@ -186,6 +191,83 @@ public final class FactsJson {
     }
 
     /**
+     * Reads the model results that a caller supplies for the {@code model} nodes of a decision
+     * flow: a JSON object of node id to either a result or a failure.
+     *
+     * <pre>{@code
+     * {
+     *   "pd": { "modelId": "retail_pd_application", "modelVersion": "3.1.0",
+     *           "outputs": { "pd": "0.0310" },
+     *           "confidence": "0.92",
+     *           "attributionMethod": "SHAP",
+     *           "attributions": [ { "feature": "utilisation", "contribution": "0.0120" } ] },
+     *   "fraud": { "failure": "TIMEOUT" }
+     * }
+     * }</pre>
+     *
+     * <p>{@code confidence}, {@code attributionMethod} and {@code attributions} are optional. A
+     * {@code failure} is {@code TIMEOUT} or {@code ERROR}, and stands alone. Outputs are read
+     * without types, exactly: integers as {@code Long}, other numbers as {@code BigDecimal}, strings
+     * as strings and arrays as lists. The engine then reads them with the types the node declares,
+     * so a decimal can be written {@code "0.0310"} or {@code 0.0310}, and money {@code "1500000 VND"}.
+     * Contributions and the confidence are decimals, as numbers or strings.
+     *
+     * @param json a JSON object of model node id to result
+     * @return node id to supplied result, in JSON order, for {@code Facts.withModels}
+     * @throws InvalidFactsException listing every problem, located by node id, never quoting values
+     */
+    public static Map<String, SuppliedModel> readModels(JsonNode json) {
+        Objects.requireNonNull(json, "json");
+        Reader reader = new Reader();
+        Map<String, SuppliedModel> models = new LinkedHashMap<>();
+        if (!json.isObject()) {
+            reader.problem("$", "expected an object of model node ids to results");
+        } else {
+            json.properties().forEach(e -> {
+                SuppliedModel model = reader.model(e.getValue(), e.getKey());
+                if (model != null) {
+                    models.put(e.getKey(), model);
+                }
+            });
+        }
+        reader.throwIfAny();
+        return Collections.unmodifiableMap(models);
+    }
+
+    /**
+     * Reads facts and, when {@code models} is present, the model results that come with them; see
+     * {@link #readFacts(JsonNode, Map)} and {@link #readModels(JsonNode)}. Problems in the model
+     * results are located under {@code models.}.
+     *
+     * @param json   a JSON object of input names to values
+     * @param inputs the declared inputs of the decision
+     * @param models a JSON object of model node id to result, or null or JSON null for none
+     * @return the facts with the model results
+     * @throws InvalidFactsException listing every problem in both
+     */
+    public static Facts readFacts(JsonNode json, Map<String, ValueType> inputs, JsonNode models) {
+        List<String> problems = new ArrayList<>();
+        Facts facts = Facts.empty();
+        try {
+            facts = readFacts(json, inputs);
+        } catch (InvalidFactsException e) {
+            problems.addAll(e.problems());
+        }
+        Map<String, SuppliedModel> supplied = Map.of();
+        if (models != null && !models.isNull()) {
+            try {
+                supplied = readModels(models);
+            } catch (InvalidFactsException e) {
+                e.problems().forEach(p -> problems.add(p.startsWith("$") ? "models" + p.substring(1) : "models." + p));
+            }
+        }
+        if (!problems.isEmpty()) {
+            throw new InvalidFactsException(problems);
+        }
+        return facts.withModels(supplied);
+    }
+
+    /**
      * The types of the values in {@code DecisionResult.output()} for {@code table}: its declared
      * outputs, each wrapped in a list under the {@code COLLECT} hit policy.
      *
@@ -328,6 +410,144 @@ public final class FactsJson {
             if (!problems.isEmpty()) {
                 throw new InvalidFactsException(problems);
             }
+        }
+
+        private static final Set<String> RESULT_FIELDS = Set.of(
+                "modelId", "modelVersion", "outputs", "confidence", "attributionMethod", "attributions");
+        private static final Set<String> ATTRIBUTION_FIELDS = Set.of("feature", "contribution");
+
+        /** One supplied model result, or null after reporting a problem. */
+        SuppliedModel model(JsonNode node, String path) {
+            if (!node.isObject()) {
+                problem(path, "expected an object with \"modelId\", \"modelVersion\" and \"outputs\", or with \"failure\"");
+                return null;
+            }
+            int before = problems.size();
+            JsonNode failure = node.get("failure");
+            if (failure != null) {
+                node.fieldNames().forEachRemaining(name -> {
+                    if (!name.equals("failure")) {
+                        problem(path + "." + name, "not allowed with \"failure\"");
+                    }
+                });
+                if (!failure.isTextual() || !Set.of("TIMEOUT", "ERROR").contains(failure.textValue())) {
+                    problem(path + ".failure", "expected \"TIMEOUT\" or \"ERROR\"");
+                }
+                return problems.size() > before ? null
+                        : SuppliedModel.failed(ModelStatus.valueOf(failure.textValue()));
+            }
+            node.fieldNames().forEachRemaining(name -> {
+                if (!RESULT_FIELDS.contains(name)) {
+                    problem(path + "." + name, "unknown field (allowed: attributionMethod, attributions, confidence, "
+                            + "failure, modelId, modelVersion, outputs)");
+                }
+            });
+            String modelId = text(node, "modelId", path);
+            String modelVersion = text(node, "modelVersion", path);
+            Map<String, Object> outputs = new LinkedHashMap<>();
+            JsonNode outputsNode = node.get("outputs");
+            if (outputsNode == null || !outputsNode.isObject()) {
+                problem(path + ".outputs", "required object of output names to values");
+            } else {
+                outputsNode.properties().forEach(e -> {
+                    Object value = untyped(e.getValue(), path + ".outputs." + e.getKey());
+                    if (value != null) {
+                        outputs.put(e.getKey(), value);
+                    }
+                });
+            }
+            Optional<BigDecimal> confidence = Optional.empty();
+            JsonNode confidenceNode = node.get("confidence");
+            if (confidenceNode != null) {
+                confidence = Optional.ofNullable((BigDecimal) decimal(confidenceNode, path + ".confidence"));
+            }
+            Optional<String> method = Optional.empty();
+            JsonNode methodNode = node.get("attributionMethod");
+            if (methodNode != null) {
+                method = Optional.ofNullable(text(node, "attributionMethod", path));
+            }
+            List<ModelResult.Attribution> attributions = new ArrayList<>();
+            JsonNode attributionsNode = node.get("attributions");
+            if (attributionsNode != null) {
+                if (!attributionsNode.isArray()) {
+                    problem(path + ".attributions", "expected an array of { \"feature\", \"contribution\" }");
+                } else {
+                    for (int i = 0; i < attributionsNode.size(); i++) {
+                        String at = path + ".attributions[" + i + "]";
+                        JsonNode attribution = attributionsNode.get(i);
+                        if (!attribution.isObject()) {
+                            problem(at, "expected an object { \"feature\", \"contribution\" }");
+                            continue;
+                        }
+                        attribution.fieldNames().forEachRemaining(name -> {
+                            if (!ATTRIBUTION_FIELDS.contains(name)) {
+                                problem(at + "." + name, "unknown field (allowed: contribution, feature)");
+                            }
+                        });
+                        String feature = text(attribution, "feature", at);
+                        JsonNode contribution = attribution.get("contribution");
+                        Object value = contribution == null || contribution.isNull() ? null
+                                : decimal(contribution, at + ".contribution");
+                        if (contribution == null || contribution.isNull()) {
+                            problem(at + ".contribution", "required decimal");
+                        }
+                        if (feature != null && value != null) {
+                            attributions.add(new ModelResult.Attribution(feature, (BigDecimal) value));
+                        }
+                    }
+                }
+            }
+            if (problems.size() > before) {
+                return null;
+            }
+            return SuppliedModel.of(new ModelResult(modelId, modelVersion, outputs, confidence, attributions, method));
+        }
+
+        private String text(JsonNode node, String field, String path) {
+            JsonNode value = node.get(field);
+            if (value == null || !value.isTextual() || value.textValue().isBlank()) {
+                problem(path + "." + field, "required non-empty string");
+                return null;
+            }
+            return value.textValue();
+        }
+
+        /** A value read without a declared type, exactly; null after reporting a problem. */
+        private Object untyped(JsonNode node, String path) {
+            if (node.isTextual()) {
+                return node.textValue();
+            }
+            if (node.isBoolean()) {
+                return node.booleanValue();
+            }
+            if (node.isIntegralNumber()) {
+                if (node.canConvertToLong()) {
+                    return node.longValue();
+                }
+                return new BigDecimal(node.bigIntegerValue());
+            }
+            if (node.isBigDecimal()) {
+                return node.decimalValue();
+            }
+            if (node.isArray()) {
+                List<Object> items = new ArrayList<>();
+                for (int i = 0; i < node.size(); i++) {
+                    Object item = untyped(node.get(i), path + "[" + i + "]");
+                    if (item != null) {
+                        items.add(item);
+                    }
+                }
+                return Collections.unmodifiableList(items);
+            }
+            if (node.isNull()) {
+                problem(path, "null is not a value");
+            } else if (node.isFloatingPointNumber()) {
+                problem(path, "floating-point number; read the JSON with USE_BIG_DECIMAL_FOR_FLOATS"
+                        + " or write the decimal as a string, e.g. \"0.0980\"");
+            } else {
+                problem(path, "expected a bool, number, string or array: model outputs have no fields");
+            }
+            return null;
         }
 
         /** The converted value, or null after reporting a problem. {@code node} is never JSON null. */

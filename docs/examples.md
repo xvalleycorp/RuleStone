@@ -1,6 +1,6 @@
 # Examples
 
-The [`examples/`](../examples/) directory holds complete decision tables for common banking problems, and a decision flow that chains tables. Each one is loaded and evaluated by the project's test suite, so the results quoted here are checked on every build. Thresholds, scores and rates are invented for illustration; amounts are in VND.
+The [`examples/`](../examples/) directory holds complete decision tables for common banking problems, and two decision flows that chain tables, one of them with machine-learning models. Each one is loaded and evaluated by the project's test suite, so the results quoted here are checked on every build. Thresholds, scores and rates are invented for illustration; amounts are in VND.
 
 | File | Problem | Shows |
 |---|---|---|
@@ -12,6 +12,7 @@ The [`examples/`](../examples/) directory holds complete decision tables for com
 | [`credit_limit_increase.stone.json`](../examples/credit_limit_increase.stone.json) | Credit card limit increase | [Local values](decision-tables.md#local-values) (`let`) shared by the rules, computed only when read; `sum`, `filter` and `map` over the customer's loans |
 | [`aml_name_screening.stone.json`](../examples/aml_name_screening.stone.json), [`aml_transaction_monitoring.stone.json`](../examples/aml_transaction_monitoring.stone.json), [`aml_alert_action.stone.json`](../examples/aml_alert_action.stone.json) | Anti-money laundering: watchlist screening and transaction monitoring | Fuzzy name matching with aliases and dates of birth; `money` arithmetic and comparisons; date functions and `businessDate`; `COLLECT` alerts chained to a `FIRST` action |
 | [`flows/card_origination.flow.json`](../examples/flows/card_origination.flow.json) and the tables in [`flows/`](../examples/flows/) | Credit card origination | A [decision flow](flows.md): policy knock-outs, segmentation with `switch`, a `derive` node, two grade tables sharing a name, and a champion/challenger `split` |
+| [`flows/card_origination_scored.flow.json`](../examples/flows/card_origination_scored.flow.json) | Credit card origination with models | A flow with [model nodes](flows.md#model-nodes): a fraud score supplied by the caller, two invoked PD models sharing a name, and a referral whenever a model fails |
 
 ## Loan eligibility: priorities and versions
 
@@ -496,3 +497,15 @@ Pitfalls:
 | New customer, 19 years old | `policy`, `affordability`, `segment`, `grade_new`, `referred` | `REFER`, grade D, reason `THIN_CREDIT_FILE` |
 
 The bucket depends only on the applicant id and the split's salt, so `C-1001` is in the challenger bucket on every evaluation. [`card_origination.stone-test.json`](../examples/flows/card_origination.stone-test.json) checks these paths and more, and covers every rule, node and branch.
+
+[`card_origination_scored.flow.json`](../examples/flows/card_origination_scored.flow.json) makes the same decision with models, as explained in [Model nodes](flows.md#model-nodes). A fraud score comes with the facts; a probability of default (PD) comes from a behavioural model for existing customers and an application model for new ones, and the `card_pd_grade` table turns it into a grade. With a fraud score of 0.05 unless stated:
+
+| Applicant | Models | Path | Outcome |
+|---|---|---|---|
+| Existing customer | PD 0.0150, `utilisation` the top attribution | `policy`, `fraud`, `segment`, `pd_behaviour`, `grade`, `limit`, `approved` | `APPROVE`, grade A, limit 120,000,000, reason `HIGH_UTILISATION` |
+| Any | fraud score 0.92 | `policy`, `fraud`, `referred` | `REFER`, reasons `NEW_DEVICE`, `ADDRESS_MISMATCH` |
+| Any | no fraud score | `policy`, `fraud`, `referred` | `REFER`, reason `FRAUD_SCORE_UNAVAILABLE` |
+| Existing customer | behavioural model timed out | `policy`, `fraud`, `segment`, `pd_behaviour`, `referred` | `REFER`, reason `MODEL_UNAVAILABLE` |
+| New customer | PD 0.0100 with confidence 0.50, below the 0.70 required | `policy`, `fraud`, `segment`, `pd_application`, `referred` | `REFER`, reason `MODEL_UNAVAILABLE` |
+
+[`card_origination_scored.stone-test.json`](../examples/flows/card_origination_scored.stone-test.json) gives the model results of each case in `models`, and covers every rule, node and branch, including the failure path of every model node.

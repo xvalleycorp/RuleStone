@@ -251,8 +251,9 @@ final class Api {
             throw new ApiException(400, "bad_request", "expected {\"table\": {...}, \"facts\": {...}, \"asOf\": \"yyyy-MM-dd\"}");
         }
         for (String field : (Iterable<String>) body::fieldNames) {
-            if (!List.of("table", "facts", "asOf").contains(field)) {
-                throw new ApiException(400, "bad_request", "unknown field '" + field + "' (allowed: asOf, facts, table)");
+            if (!List.of("table", "facts", "models", "asOf").contains(field)) {
+                throw new ApiException(400, "bad_request", "unknown field '" + field
+                        + "' (allowed: asOf, facts, models, table)");
             }
         }
         LocalDate asOf = null;
@@ -280,7 +281,8 @@ final class Api {
         JsonNode factsJson = body.get("facts");
         Facts facts;
         try {
-            facts = FactsJson.readFacts(factsJson == null || factsJson.isNull() ? Json.object() : factsJson, table);
+            facts = FactsJson.readFacts(factsJson == null || factsJson.isNull() ? Json.object() : factsJson,
+                    table.inputs(), body.get("models"));
         } catch (InvalidFactsException e) {
             // FactsJson messages name locations and expected forms, never values.
             ObjectNode error = Json.object();

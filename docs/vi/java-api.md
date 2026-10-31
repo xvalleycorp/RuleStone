@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: 0e1b5e3dfcc0329a5efc8d594d016fb6424cb8f5a24bac7f047080cfc7473fd7
+sourceHash: 5d860f0a12285c9dcc30a73e74302c38fe12a38542fe057da34a3909724a39a6
 ---
 
 # Java API
@@ -26,7 +26,7 @@ Trang này giải thích cách nhúng RuleStone vào một ứng dụng Java: t�
 
 | Artifact | Package | Công dụng |
 |---|---|---|
-| `rulestone-api` | `vn.io.dxa.rulestone.api` | Các kiểu mà mã ứng dụng của bạn gọi tới: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult` và các ngoại lệ. Chỉ phụ thuộc JDK. |
+| `rulestone-api` | `vn.io.dxa.rulestone.api` | Các kiểu mà mã ứng dụng của bạn gọi tới: `RuleStoneEngine`, `DecisionRef`, `Facts`, `DecisionResult` và các ngoại lệ, cùng SPI (giao diện nhà cung cấp dịch vụ) cho mô hình, `ModelInvoker` và `ModelResult`. Chỉ phụ thuộc JDK. |
 | `rulestone-core` | `vn.io.dxa.rulestone.core` | Engine nhúng, bảng quyết định và định dạng `.stone.json`. |
 | `rulestone-cel` | `vn.io.dxa.rulestone.cel` | Ngôn ngữ biểu thức. Được `rulestone-core` sử dụng; chỉ dùng trực tiếp khi cần đánh giá các biểu thức độc lập. |
 | `rulestone-audit-kafka` | `vn.io.dxa.rulestone.audit.kafka` | Audit sink đẩy bản ghi quyết định lên Kafka; xem [Đẩy bản ghi lên Kafka](#đẩy-bản-ghi-lên-kafka). |
@@ -70,6 +70,8 @@ RuleStoneEngine engine = RuleStone.builder()
 | `timeout(Duration)` | Thời gian chờ tối đa mặc định của mọi lần đánh giá, cho các yêu cầu không tự đặt; xem [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa). Mặc định không có. |
 | `canary(String, String, double)` / `shadow(String, String)` | Chuyển một phần yêu cầu của một quyết định sang phiên bản mới, hoặc đánh giá phiên bản mới ở chế độ bóng trên mọi yêu cầu; xem [Phiên bản canary và phiên bản bóng](#phiên-bản-canary-và-phiên-bản-bóng). |
 | `shadowExecutor(Executor)` | Chạy các lần đánh giá bóng trên executor này thay vì trên luồng của bên gọi. |
+| `modelInvoker(String, ModelInvoker)` | Đăng ký invoker gọi một mô hình cho các [nút mô hình](flows.md#nút-mô-hình) ở chế độ `invoke` của các luồng; xem [Mô hình trong luồng quyết định](#mô-hình-trong-luồng-quyết-định). |
+| `suppliedModelsOnly()` | Chạy mọi nút mô hình ở chế độ `supplied`, không gọi mô hình nào: dùng cho kiểm thử và replay, không bao giờ dùng cho production. |
 | `build()` | Biên dịch và kiểm tra kiểu mọi luật và mọi luồng, kiểm tra các phiên bản trùng lặp và ngày tháng mâu thuẫn (xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực)) và việc mỗi canary và phiên bản bóng đều trỏ tới một phiên bản đã đăng ký, rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
 
 `DecisionTableJson.read(...)` nhận một `String`, một `InputStream` (đọc theo UTF-8) hoặc một `Path`, và ném `InvalidDecisionException` khi tệp có bất kỳ lỗi nào. Hãy nạp tệp từ bất cứ nơi nào bạn lưu chúng: classpath, một thư mục, một cột trong cơ sở dữ liệu hay một dịch vụ cấu hình.
@@ -168,6 +170,8 @@ record Applicant(int age, BigDecimal monthlyIncome, BigDecimal monthlyDebt,
 ```
 
 Với các lớp khác, như JavaBean hay entity JPA, hãy chuyển sang `Map` hoặc record ở ranh giới gọi. Cách này giữ cho các proxy lazy-loading và các trường không liên quan nằm ngoài quyết định của bạn.
+
+`Facts` còn có thể mang kết quả của những mô hình mà chính bạn đã chạy, cho các [nút mô hình](flows.md#nút-mô-hình) ở chế độ `supplied` của một luồng: `facts.withModelResult("fraud", result)`, hoặc `withModelFailure("fraud", ModelStatus.TIMEOUT)` nếu lần gọi lỗi. Các kết quả này được giữ tách khỏi các đầu vào, dưới id của nút: `asMap()` chỉ trả về các đầu vào, còn `models()` trả về các kết quả mô hình. Một quyết định không có nút như vậy sẽ từ chối chúng.
 
 ## Tiền, ngày và ngày nghiệp vụ
 
@@ -289,7 +293,7 @@ DecisionResult result = engine.evaluate(
 | `factsHash` | Hash của các đầu vào đã khai báo; xem bên dưới. Bị bỏ qua nếu đầu vào không hợp lệ. |
 | `output` | Các đầu ra, viết theo cách của `FactsJson`. Rỗng khi trạng thái không phải `OK`. |
 | `reasonCodes` | Từng reason code kèm nút đã tạo ra nó. |
-| `path` | Từng nút đã được đánh giá. Với một bảng quyết định, đó là bảng kèm phiên bản và các luật đã khớp; với một [luồng quyết định](flows.md#bản-ghi-quyết-định), đó là mọi nút đã đi qua, theo thứ tự. Khi việc đánh giá lỗi giữa chừng trong một bảng, trường này cho thấy các luật đã khớp trước khi lỗi. |
+| `path` | Từng nút đã được đánh giá. Với một bảng quyết định, đó là bảng kèm phiên bản và các luật đã khớp; với một [luồng quyết định](flows.md#bản-ghi-quyết-định), đó là mọi nút đã đi qua, theo thứ tự, và với một nút mô hình, đó là mô hình, trạng thái của nó và, khi thành công, các đầu ra và các attribution đã xếp hạng (xem [Bước mô hình trong bản ghi](flows.md#bước-mô-hình-trong-bản-ghi)). Khi việc đánh giá lỗi giữa chừng trong một bảng, trường này cho thấy các luật đã khớp trước khi lỗi. |
 | `error` | Chỉ có khi trạng thái không phải `OK`: thông điệp của exception, không bao giờ chứa giá trị đầu vào. Với exception không phải `RuleStoneException`, chỉ kiểu exception được ghi lại. |
 | `routing` | Chỉ có khi một phiên bản khác với phiên bản đang có hiệu lực được đánh giá, dưới dạng canary hoặc phiên bản bóng; xem [Phiên bản canary và phiên bản bóng](#phiên-bản-canary-và-phiên-bản-bóng). |
 
@@ -375,11 +379,29 @@ Khi ghi, kết quả có cùng các dạng đó, với số thập phân là chu
 | Phương thức | Chuyển đổi |
 |---|---|
 | `readFacts(String json, Map<String, ValueType> inputs)`, `readFacts(JsonNode, Map<String, ValueType>)`, `readFacts(JsonNode, DecisionTable)` | một đối tượng JSON chứa các đầu vào thành `Facts` |
+| `readModels(JsonNode json)` | một đối tượng JSON `models` ánh xạ id nút mô hình tới kết quả hoặc lỗi, như trong [Kết quả do bên gọi cung cấp](flows.md#kết-quả-do-bên-gọi-cung-cấp), thành `Map` mà `Facts.withModels` nhận |
+| `readFacts(JsonNode facts, Map<String, ValueType> inputs, JsonNode models)` | đầu vào và kết quả mô hình cùng lúc; lỗi trong kết quả mô hình được định vị dưới `models.` |
 | `readValues(JsonNode json, Map<String, ValueType> types)` | một đối tượng JSON chứa các giá trị có tên thành một `Map`, ví dụ các đầu ra kỳ vọng với kiểu lấy từ `resultTypes(table)` |
 | `readValue(JsonNode json, ValueType type)` | một giá trị |
 | `resultTypes(DecisionTable table)` | kiểu của các giá trị trong `DecisionResult.output()`: các đầu ra đã khai báo, mỗi đầu ra là một danh sách khi dùng `COLLECT` |
 | `writeValue(Object value)`, `writeValues(Map<String, ?> values)` | giá trị Java thành một `JsonNode` hoặc một `ObjectNode` |
 | `write(Map<String, ?> values)` | giá trị Java thành văn bản JSON dạng gọn |
+
+## Mô hình trong luồng quyết định
+
+Một luồng quyết định có thể dùng mô hình học máy qua [nút mô hình](flows.md#nút-mô-hình). Các kiểu nằm trong `rulestone-api`, nên `rulestone-core` không phụ thuộc vào nhà cung cấp mô hình nào; các adapter cho máy chủ mô hình qua HTTP, thẻ điểm và ONNX được lên kế hoạch thành các mô-đun riêng.
+
+| Kiểu | Vai trò |
+|---|---|
+| `ModelInvoker` | Gọi một mô hình: `ModelResult invoke(ModelCall call) throws ModelException`. Đăng ký một invoker cho mỗi id mô hình bằng `RuleStone.builder().modelInvoker(modelId, invoker)`. Phải an toàn đa luồng và trả về trong `call.timeout()`. |
+| `ModelCall` | Id mô hình và phiên bản đã ghim, các đặc trưng đã khai báo của nút dưới dạng giá trị có kiểu, thời gian được phép, và mã tương quan. |
+| `ModelResult` | Những gì mô hình đã trả về: id và phiên bản mô hình, các đầu ra, một độ tin cậy tuỳ chọn, và các attribution (`ModelResult.Attribution`: đặc trưng và mức đóng góp) kèm tên phương pháp đã tính chúng. `ModelResult.of(id, version, outputs)`, rồi `withConfidence` và `withAttributions`. |
+| `ModelException` | Được ném bởi một invoker không trả lời được. Như mọi ngoại lệ từ invoker, nó trở thành lỗi mô hình loại `ERROR`, không bao giờ thành ngoại lệ cho bên gọi. |
+| `ModelStatus` | `OK`, hoặc loại lỗi: `TIMEOUT`, `ERROR`, `CONTRACT_VIOLATION`, `INVALID_OUTPUT`, `LOW_CONFIDENCE`, `MISSING`. |
+| `SuppliedModel` | Một kết quả hoặc một lỗi mà bên gọi truyền cùng các fact, xem `Facts.withModelResult`. |
+| `DecisionRecord.ModelStep` | Phần mô hình của một bước trên đường đi trong bản ghi: mô hình đã được hỏi gì và đã trả lời gì, không có giá trị đặc trưng hay mức đóng góp. |
+
+`toString()` của `ModelCall` và `ModelResult` nêu tên đặc trưng và đầu ra nhưng không bao giờ hiển thị giá trị. Xem [Nút mô hình](flows.md#nút-mô-hình) để biết hợp đồng mà một kết quả phải đáp ứng, đường xử lý lỗi và các mã lý do.
 
 ## Lỗi
 

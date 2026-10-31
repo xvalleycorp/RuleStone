@@ -349,6 +349,26 @@ class EditorApiTest {
     }
 
     @Test
+    void readsSuppliedModelResults() {
+        JsonNode table = editor.get("/api/tables/" + V3).json().get("table");
+        String facts = "{\"applicant\": {\"age\": 30, \"monthlyIncome\": 1, \"monthlyDebt\": 0, \"segment\": \"RETAIL\","
+                + " \"blacklisted\": false}, \"amount\": 1}";
+
+        EditorHarness.Response invalid = editor.post("/api/evaluate", "{\"table\": " + table + ", \"facts\": " + facts
+                + ", \"models\": {\"pd\": {\"failure\": \"SLOW\"}}}");
+        assertThat(invalid.status()).isEqualTo(422);
+        assertThat(invalid.json().get("factProblems").toString())
+                .isEqualTo("[\"models.pd.failure: expected \\\"TIMEOUT\\\" or \\\"ERROR\\\"\"]");
+
+        // The editor evaluates decision tables, which have no model nodes: the engine rejects the results.
+        EditorHarness.Response rejected = editor.post("/api/evaluate", "{\"table\": " + table + ", \"facts\": " + facts
+                + ", \"models\": {\"pd\": {\"failure\": \"TIMEOUT\"}}}");
+        assertThat(rejected.status()).isEqualTo(422);
+        assertThat(rejected.json().get("error").get("message").asText())
+                .endsWith("model results supplied for [pd], but a decision table has no model nodes");
+    }
+
+    @Test
     void evaluationErrorsNeverEchoFactValues() {
         JsonNode table = editor.get("/api/tables/" + V3).json().get("table");
         String facts = "{\"applicant\": {\"age\": \"SECRET-123\"}, \"amount\": 1}";

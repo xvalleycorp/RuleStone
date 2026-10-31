@@ -205,7 +205,7 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
             if (decision == null) {
                 select();
             }
-            Executable.Run run = decision.run(facts, businessDate, deadline, progress, hasher);
+            Executable.Run run = decision.run(facts, businessDate, ref.correlationId(), deadline, progress, hasher);
             DecisionRecord record = record(Status.OK, run.output(), run.reasonCodes(), Optional.empty());
             return new DecisionResult(decision.definition().id(), decision.ruleVersion(), run.output(),
                     run.reasonCodes().stream().map(ReasonCode::code).toList(), progress.trace, record);

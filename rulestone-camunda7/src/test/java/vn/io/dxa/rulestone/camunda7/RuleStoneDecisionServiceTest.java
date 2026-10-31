@@ -86,6 +86,27 @@ class RuleStoneDecisionServiceTest {
     }
 
     @Test
+    void readsSuppliedModelResultsFromTheModelsVariable() {
+        DecisionCall call = new DecisionCall("risk_band", Optional.empty(), Optional.empty(), Optional.of("scores"),
+                "decision", false, "RULESTONE_DECISION_FAILED");
+
+        assertThatThrownBy(() -> service.evaluate(call, scope(Map.of("score", 420))))
+                .isInstanceOf(BpmnError.class)
+                .hasMessage("RuleStone: models variable 'scores' is missing");
+        assertThatThrownBy(() -> service.evaluate(call, scope(Map.of("score", 420,
+                "scores", Map.of("pd", Map.of("failure", "SLOW"))))))
+                .isInstanceOf(BpmnError.class)
+                .hasMessage("RuleStone decision risk_band@1: invalid process variables: "
+                        + "scores.pd.failure: expected \"TIMEOUT\" or \"ERROR\"");
+        // The service evaluates decision tables, which have no model nodes: the engine rejects the results.
+        TypedValue json = Variables.serializedObjectValue("{\"pd\": {\"failure\": \"TIMEOUT\"}}")
+                .serializationDataFormat("application/json").objectTypeName("java.util.LinkedHashMap").create();
+        assertThatThrownBy(() -> service.evaluate(call, scope(Map.of("score", 420, "scores", json))))
+                .isInstanceOf(BpmnError.class)
+                .hasMessageEndingWith("model results supplied for [pd], but a decision table has no model nodes");
+    }
+
+    @Test
     void readsOnlyTheDeclaredInputs() {
         Map<String, Object> variables = new HashMap<>(Map.of("score", 420));
         variables.put("unrelated", 0.1d);
@@ -147,7 +168,7 @@ class RuleStoneDecisionServiceTest {
 
         assertThat(result).containsEntry("matched", false).containsEntry("output", Map.of());
 
-        DecisionCall strict = new DecisionCall("risk_band", Optional.empty(), Optional.empty(), "decision", true, "NO_BAND");
+        DecisionCall strict = new DecisionCall("risk_band", Optional.empty(), Optional.empty(), Optional.empty(), "decision", true, "NO_BAND");
         assertThatThrownBy(() -> service.evaluate(strict, scope(Map.of("score", 720))))
                 .isInstanceOf(BpmnError.class)
                 .hasMessageEndingWith("matched no rule, and the task sets failOnNoMatch=true")
@@ -160,7 +181,7 @@ class RuleStoneDecisionServiceTest {
                 .isInstanceOf(RuleStoneConfigurationException.class)
                 .hasMessageStartingWith("RuleStone decision not found: unknown decision 'nope'.");
 
-        DecisionCall v9 = new DecisionCall("loan_eligibility", Optional.of("9"), Optional.empty(), "decision", false, "X");
+        DecisionCall v9 = new DecisionCall("loan_eligibility", Optional.of("9"), Optional.empty(), Optional.empty(), "decision", false, "X");
         assertThatThrownBy(() -> service.evaluate(v9, scope(Map.of())))
                 .isInstanceOf(RuleStoneConfigurationException.class)
                 .hasMessageContaining("decision 'loan_eligibility' has no version '9'");

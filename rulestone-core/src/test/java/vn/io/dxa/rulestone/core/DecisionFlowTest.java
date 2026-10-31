@@ -580,17 +580,14 @@ class DecisionFlowTest {
     // --- File format ----------------------------------------------------------------------------
 
     @Test
-    void modelNodesAreReservedButNotSupportedYet() {
+    void flowNodesAreReservedButNotSupportedYet() {
         String json = flowWith("""
-                { "a": { "type": "model", "mode": "invoke", "model": { "id": "pd", "version": "1" } },
-                  "b": { "type": "flow" }, "c": { "type": "rules" } }
+                { "b": { "type": "flow" }, "c": { "type": "rules" } }
                 """);
         assertThatThrownBy(() -> DecisionFlowJson.read(json))
                 .isInstanceOfSatisfying(InvalidDecisionException.class, e -> assertThat(e.problems()).containsExactly(
-                        "$.nodes.a.type: model nodes are not supported yet; they are planned for a later release "
-                                + "(see Hybrid AI decisioning). Until then, pass the model's score as an ordinary flow input",
                         "$.nodes.b.type: flow nodes (calling another flow) are not supported yet",
-                        "$.nodes.c.type: unknown node type 'rules' (expected table, switch, derive, split or end)"));
+                        "$.nodes.c.type: unknown node type 'rules' (expected table, switch, derive, model, split or end)"));
     }
 
     @Test

@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import vn.io.dxa.rulestone.api.DecisionRecord.ReasonCode;
 import vn.io.dxa.rulestone.api.Facts;
 
@@ -25,11 +26,13 @@ sealed interface Executable permits CompiledDecision, CompiledFlow {
     /**
      * Checks the facts and evaluates.
      *
+     * @param correlationId the caller's id of the business transaction, passed on to models
      * @param progress receives the facts hash, the rules examined and the nodes visited as the
      *                 evaluation goes, so that a failure can still be recorded
      * @throws vn.io.dxa.rulestone.api.DecisionEvaluationException if the evaluation fails or times out
      */
-    Run run(Facts facts, LocalDate businessDate, Deadline deadline, Progress progress, FactsHasher hasher);
+    Run run(Facts facts, LocalDate businessDate, Optional<String> correlationId, Deadline deadline,
+            Progress progress, FactsHasher hasher);
 
     /** The outputs, in declared order, and the reason codes of one evaluation. */
     record Run(Map<String, Object> output, List<ReasonCode> reasonCodes) {

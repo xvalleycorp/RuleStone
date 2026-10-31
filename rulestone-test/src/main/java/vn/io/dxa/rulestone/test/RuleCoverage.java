@@ -32,8 +32,10 @@ import vn.io.dxa.rulestone.core.Rule;
  * of its table, whether the table was evaluated on its own or as a node of a flow. A node counts
  * as covered once a recorded flow result passes through it. A branch is a way out of a node that
  * has several: each distinct target of a {@code switch} and of a conditional {@code next}, written
- * {@code segment -> grade_new}, and each bucket of a {@code split}, written
- * {@code limit_strategy[challenger]}. Record only results of tests that passed: what was exercised
+ * {@code segment -> grade_new}, each bucket of a {@code split}, written
+ * {@code limit_strategy[challenger]}, and for a {@code model} node each target of its {@code next}
+ * and its {@code onFailure} path, written {@code pd -> referred (onFailure)}; a model node always
+ * has both. Record only results of tests that passed: what was exercised
  * only in a failing test, or in an evaluation that failed, is not covered. Results of decisions or
  * versions that are not tracked are ignored.
  *
@@ -92,6 +94,11 @@ public final class RuleCoverage {
             split.buckets().forEach(bucket -> branches.add(id + "[" + bucket.name() + "]"));
             return branches;
         }
+        if (node instanceof FlowNode.Model model) {
+            model.next().forEach(branch -> branches.add(id + " -> " + branch.to()));
+            branches.add(failureBranch(id, model));
+            return branches;
+        }
         List<FlowNode.Branch> next = List.of();
         if (node instanceof FlowNode.Switch sw) {
             next = sw.cases();
@@ -102,6 +109,10 @@ public final class RuleCoverage {
         }
         next.forEach(branch -> branches.add(id + " -> " + branch.to()));
         return branches.size() > 1 ? branches : Set.of();
+    }
+
+    private static String failureBranch(String id, FlowNode.Model model) {
+        return id + " -> " + model.onFailure().to() + " (onFailure)";
     }
 
     /**
@@ -175,6 +186,9 @@ public final class RuleCoverage {
             FlowNode node = withBranches.get(step.node());
             if (node instanceof FlowNode.Split) {
                 step.taken().ifPresent(bucket -> branches.remove(step.node() + "[" + bucket + "]"));
+            } else if (node instanceof FlowNode.Model model && step.model().isPresent()
+                    && step.model().get().status().failed()) {
+                branches.remove(failureBranch(step.node(), model));
             } else if (node != null && i + 1 < path.size()) {
                 branches.remove(step.node() + " -> " + path.get(i + 1).node());
             }
