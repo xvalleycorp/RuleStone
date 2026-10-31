@@ -18,7 +18,8 @@ import vn.io.dxa.rulestone.cel.Bindings;
 /**
  * Computes {@code DecisionRecord.factsHash}: a hash of a decision's declared inputs in
  * canonical JSON form (keys sorted, decimals without trailing zeros, written as by
- * {@link FactsJson}). The implicit {@code businessDate} is left out; the record holds it.
+ * {@link FactsJson}). The implicit {@code businessDate} is left out; the record holds it. So are
+ * the parameters: the record names the parameter set version.
  *
  * <p>Without a key the hash is SHA-256. With a key it is HMAC-SHA256, which stops anyone
  * without the key from guessing low-variety inputs, such as a birth date, from the hash.
@@ -34,8 +35,19 @@ final class FactsHasher {
     }
 
     String hash(Bindings bindings) {
+        return hash(bindings, false);
+    }
+
+    /**
+     * @param withoutParams whether to leave out {@code params}, which holds the parameters, not
+     *                      an input, when the decision declares parameters
+     */
+    String hash(Bindings bindings, boolean withoutParams) {
         Map<String, Object> inputs = new TreeMap<>(bindings.canonicalValues());
         inputs.remove(CompiledDecision.BUSINESS_DATE);
+        if (withoutParams) {
+            inputs.remove(Parameters.PARAMS);
+        }
         byte[] canonical = FactsJson.write(inputs).getBytes(StandardCharsets.UTF_8);
         try {
             if (key == null) {

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import vn.io.dxa.rulestone.cel.CelExpression;
 import vn.io.dxa.rulestone.cel.ExpressionEnvironment;
@@ -27,8 +28,8 @@ import vn.io.dxa.rulestone.cel.ExpressionException;
  */
 final class LocalValues {
 
-    /** Reserved for parameter sets, which tables will read as {@code params.x}. */
-    static final String PARAMS = "params";
+    /** Reserved for parameter sets, which tables read as {@code params.x}. */
+    static final String PARAMS = Parameters.PARAMS;
 
     private final DecisionTable table;
     private final ExpressionEnvironment inputs;
@@ -39,13 +40,16 @@ final class LocalValues {
     private final Map<String, Set<String>> reads = new TreeMap<>();
     private final Map<String, CelExpression> compiled = new LinkedHashMap<>();
     private final Set<String> failed;
+    private final Function<String, String> undeclaredParams;
 
     /**
-     * @param inputs an environment with the table's inputs and businessDate, used to parse
-     * @param base   a builder with the table's inputs, businessDate and engine settings
+     * @param inputs           an environment with the table's inputs and businessDate, used to parse
+     * @param base             a builder with the table's inputs, businessDate, parameters and engine settings
+     * @param undeclaredParams why an expression cannot read what it reads from {@code params}, or null
      */
     LocalValues(DecisionTable table, ExpressionEnvironment inputs, Supplier<ExpressionEnvironment.Builder> base,
-                String at, List<String> problems) {
+                String at, List<String> problems, Function<String, String> undeclaredParams) {
+        this.undeclaredParams = undeclaredParams;
         this.table = table;
         this.inputs = inputs;
         this.base = base;
@@ -148,6 +152,12 @@ final class LocalValues {
                 failed.add(name); // the dependency's problem is reported
                 return false;
             }
+        }
+        String paramsProblem = undeclaredParams.apply(sources.get(name));
+        if (paramsProblem != null) {
+            problem(name, paramsProblem);
+            failed.add(name);
+            return false;
         }
         try {
             compiled.put(name, environment().compileLocal(sources.get(name)));

@@ -48,6 +48,9 @@ import java.util.OptionalLong;
  *                      is not {@link Status#OK}. Like every RuleStone message, it contains no input values.
  * @param routing       why a version other than the one in force was evaluated: a canary or a
  *                      shadow version; empty for an ordinary evaluation
+ * @param params        every parameter set version the evaluation used, each once, sorted by set
+ *                      id and then version; empty if it used none. The values are not recorded: the
+ *                      version identifies them.
  */
 public record DecisionRecord(
         String recordId,
@@ -63,7 +66,22 @@ public record DecisionRecord(
         List<ReasonCode> reasonCodes,
         List<PathStep> path,
         Optional<String> error,
-        Optional<Routing> routing) {
+        Optional<Routing> routing,
+        List<ParamSetVersion> params) {
+
+    /**
+     * A parameter set version that an evaluation used.
+     *
+     * @param set     the parameter set id
+     * @param version its exact version, e.g. {@code 7@sha256:…}
+     */
+    public record ParamSetVersion(String set, String version) {
+
+        public ParamSetVersion {
+            Objects.requireNonNull(set, "set");
+            Objects.requireNonNull(version, "version");
+        }
+    }
 
     /** Whether the evaluation completed. */
     public enum Status {
@@ -312,6 +330,7 @@ public record DecisionRecord(
         Objects.requireNonNull(factsHash, "factsHash");
         Objects.requireNonNull(error, "error");
         Objects.requireNonNull(routing, "routing");
+        Objects.requireNonNull(params, "params");
         if (error.isPresent() != (status != Status.OK)) {
             throw new IllegalArgumentException("error must be present exactly when the status is not OK");
         }
@@ -325,6 +344,16 @@ public record DecisionRecord(
         output = Collections.unmodifiableMap(new LinkedHashMap<>(output));
         reasonCodes = List.copyOf(reasonCodes);
         path = List.copyOf(path);
+        params = List.copyOf(params);
+    }
+
+    /** A record of an evaluation that used no parameter set. */
+    public DecisionRecord(String recordId, Optional<String> correlationId, String decision, Optional<String> version,
+                          LocalDate businessDate, Instant evaluatedAt, String engine, Status status,
+                          Optional<String> factsHash, Map<String, Object> output, List<ReasonCode> reasonCodes,
+                          List<PathStep> path, Optional<String> error, Optional<Routing> routing) {
+        this(recordId, correlationId, decision, version, businessDate, evaluatedAt, engine, status, factsHash,
+                output, reasonCodes, path, error, routing, List.of());
     }
 
     /** A record of an ordinary evaluation, without {@link #routing()}. */

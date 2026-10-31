@@ -603,7 +603,7 @@ class DecisionFlowTest {
         assertThatThrownBy(() -> DecisionFlowJson.read(json))
                 .isInstanceOfSatisfying(InvalidDecisionException.class, e -> assertThat(e.problems()).containsExactly(
                         "$.colour: unknown field (allowed: description, effectiveFrom, effectiveTo, id, inputs, nodes, "
-                                + "outputs, start, version)",
+                                + "outputs, params, start, version)",
                         "$.nodes.a.cases[0].when: required: only the last alternative may leave out \"when\"",
                         "$.nodes.a.cases[1].when: the last alternative must have no \"when\", so that one always "
                                 + "applies; add { \"to\": … } after it",

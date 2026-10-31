@@ -9,15 +9,16 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 /**
- * A versioned, effective-dated definition that the engine evaluates by id: a
- * {@link DecisionTable} or a {@link DecisionFlow}. Both follow the same rules, applied by
- * {@link DecisionVersions}: {@code effectiveFrom} (inclusive) is the first day a version is in
- * force, and the optional {@code effectiveTo} (exclusive) the first day it no longer is; without
- * {@code effectiveTo}, a version stays in force until the next version of the same id takes effect.
+ * A versioned, effective-dated definition: a {@link DecisionTable} or a {@link DecisionFlow},
+ * which the engine evaluates by id, or a {@link ParameterSet}, which they read. All follow the
+ * same rules, applied by {@link DecisionVersions}: {@code effectiveFrom} (inclusive) is the first
+ * day a version is in force, and the optional {@code effectiveTo} (exclusive) the first day it no
+ * longer is; without {@code effectiveTo}, a version stays in force until the next version of the
+ * same id takes effect.
  */
-public sealed interface VersionedDefinition permits DecisionTable, DecisionFlow {
+public sealed interface VersionedDefinition permits DecisionTable, DecisionFlow, ParameterSet {
 
-    /** The decision id, shared by all its versions. */
+    /** The id, shared by all its versions. */
     String id();
 
     /** The version label, e.g. {@code 3}. */

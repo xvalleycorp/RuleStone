@@ -66,7 +66,7 @@ class DecisionDefinitionTest {
                 }"""));
 
         assertThat(problems).containsExactlyInAnyOrder(
-                "$.efectiveFrom: unknown field (allowed: description, effectiveFrom, effectiveTo, hitPolicy, id, inputs, let, outputs, rules, version)",
+                "$.efectiveFrom: unknown field (allowed: description, effectiveFrom, effectiveTo, hitPolicy, id, inputs, let, outputs, params, rules, version)",
                 "$.hitPolicy: unknown hit policy 'FRIST' (expected UNIQUE, FIRST or COLLECT)",
                 "$.inputs.rate: unknown type 'double' (floating point is not supported; use decimal)",
                 "$.rules[0].then.out: expected a CEL expression string (string literals need inner quotes, e.g. \"'APPROVE'\")");

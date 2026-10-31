@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.HexFormat;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
@@ -50,13 +51,16 @@ final class CompiledDecision implements Executable {
     private final String ruleVersion;
     private final ExpressionEnvironment environment;
     private final List<CompiledRule> rules;
+    /** The parameters the table reads, or null if it declares none. */
+    private final Parameters.Binding params;
 
     private CompiledDecision(DecisionTable table, String ruleVersion, ExpressionEnvironment environment,
-                             List<CompiledRule> rules) {
+                             List<CompiledRule> rules, Parameters.Binding params) {
         this.table = table;
         this.ruleVersion = ruleVersion;
         this.environment = environment;
         this.rules = rules;
+        this.params = params;
     }
 
     DecisionTable table() {
@@ -78,8 +82,8 @@ final class CompiledDecision implements Executable {
                    Progress progress, FactsHasher hasher) {
         // The step shows the rules matched so far, also when the evaluation fails.
         progress.open(() -> new PathStep(table.id(), "table", ruleVersion, progress.matchedSince(0)));
-        Bindings bindings = bind(facts, businessDate);
-        progress.factsHash(hasher.hash(bindings));
+        Bindings bindings = bind(facts, businessDate, progress);
+        progress.factsHash(hasher.hash(bindings, params != null));
         if (!facts.models().isEmpty()) {
             throw new DecisionEvaluationException(table.id(), ruleVersion, "model results supplied for "
                     + facts.models().keySet() + ", but a decision table has no model nodes", null);
@@ -93,11 +97,13 @@ final class CompiledDecision implements Executable {
     /**
      * Compiles every expression of {@code table}.
      *
+     * @param parameterSets every registered parameter set, which the table's {@code params} are checked against
      * @param problems receives every problem found, prefixed with the table and location
      * @return the compiled decision, or empty if any problem was found
      */
     static Optional<CompiledDecision> compile(DecisionTable table, int maxIterations,
-                                              Map<String, Integer> currencyScales, List<String> problems) {
+                                              Map<String, Integer> currencyScales, Parameters.Registry parameterSets,
+                                              List<String> problems) {
         String at = table.ref() + " ";
         int before = problems.size();
 
@@ -127,12 +133,25 @@ final class CompiledDecision implements Executable {
             problems.add(at + "inputs." + BUSINESS_DATE + ": reserved name; every decision receives "
                     + BUSINESS_DATE + " implicitly (DecisionRef.asOf, else the engine clock)");
         }
+        Parameters.Binding params = null;
+        ValueType paramsType = null;
+        if (table.params().isPresent()) {
+            params = Parameters.check(at, table.params().get(), inputs, parameterSets, problems).orElse(null);
+            paramsType = Parameters.type(table.params().get());
+            // Reported, then compiled with the parameters in its place so that other problems are found too.
+            inputs.remove(Parameters.PARAMS);
+        }
+        boolean paramsInput = inputs.containsKey(Parameters.PARAMS);
+        ValueType declaredParams = paramsType;
 
         Supplier<ExpressionEnvironment.Builder> base = () -> {
             ExpressionEnvironment.Builder builder = ExpressionEnvironment.builder()
                     .variables(inputs)
                     .variable(BUSINESS_DATE, ValueType.DATE)
                     .maxIterations(maxIterations);
+            if (declaredParams != null) {
+                builder.variable(Parameters.PARAMS, declaredParams);
+            }
             currencyScales.forEach(builder::currencyScale);
             return builder;
         };
@@ -143,9 +162,12 @@ final class CompiledDecision implements Executable {
             problems.add(at + "inputs: " + e.getMessage());
             return Optional.empty();
         }
+        ExpressionEnvironment parsing = environment;
+        Function<String, String> undeclared =
+                source -> Parameters.undeclared(parsing, source, table.params(), paramsInput);
         Set<String> failedLocals = new TreeSet<>();
         if (!table.let().isEmpty()) {
-            environment = new LocalValues(table, environment, base, at, problems).compile(failedLocals);
+            environment = new LocalValues(table, environment, base, at, problems, undeclared).compile(failedLocals);
         }
 
         List<CompiledRule> rules = new ArrayList<>();
@@ -162,7 +184,7 @@ final class CompiledDecision implements Executable {
                 }
             });
             CelExpression when = compile(rulesEnvironment, rule.when(), ValueType.BOOL, ruleAt + ".when", problems,
-                    failedLocals);
+                    failedLocals, undeclared);
             Map<String, CelExpression> then = new LinkedHashMap<>();
             rule.then().forEach((output, source) -> {
                 ValueType type = table.outputs().get(output);
@@ -170,7 +192,7 @@ final class CompiledDecision implements Executable {
                     problems.add(ruleAt + ".then." + output + ": undeclared output (declared: " + table.outputs().keySet() + ")");
                 } else if (!containsStruct(type)) {
                     then.put(output, compile(rulesEnvironment, source, type, ruleAt + ".then." + output, problems,
-                            failedLocals));
+                            failedLocals, undeclared));
                 }
             });
             rules.add(new CompiledRule(rule.id(), when, then, rule.reasonCode()));
@@ -180,22 +202,33 @@ final class CompiledDecision implements Executable {
             return Optional.empty();
         }
         String ruleVersion = table.version() + "@sha256:" + sha256(DecisionTableJson.write(table));
-        return Optional.of(new CompiledDecision(table, ruleVersion, environment, List.copyOf(rules)));
+        return Optional.of(new CompiledDecision(table, ruleVersion, environment, List.copyOf(rules), params));
     }
 
     /**
-     * Converts and type-checks the facts for this decision.
+     * Converts and type-checks the facts for this decision, and binds its parameters.
      *
-     * @param businessDate the value of the implicit {@code businessDate} input
+     * @param businessDate the value of the implicit {@code businessDate} input, which also selects
+     *                     the parameter set version
+     * @param progress     gives the parameter set versions the request forces, and receives those used
      * @throws DecisionEvaluationException if a fact is missing or has the wrong type
+     * @throws vn.io.dxa.rulestone.api.DecisionNotFoundException if no version of the parameter set
+     *         is in force, or the request forces one that does not exist
      */
-    Bindings bind(Facts facts, LocalDate businessDate) {
+    Bindings bind(Facts facts, LocalDate businessDate, Progress progress) {
         if (facts.asMap().containsKey(BUSINESS_DATE)) {
             throw failure("invalid input " + BUSINESS_DATE + ": reserved name; the business date comes from "
                     + "DecisionRef.asOf or the engine clock and cannot be passed as a fact", null);
         }
+        if (params != null && facts.asMap().containsKey(Parameters.PARAMS)) {
+            throw failure("invalid input " + Parameters.PARAMS + ": reserved name; the parameters come from "
+                    + "parameter set " + params.declaration().set() + " and cannot be passed as a fact", null);
+        }
         Map<String, Object> inputs = new HashMap<>(facts.asMap());
         inputs.put(BUSINESS_DATE, businessDate);
+        if (params != null) {
+            inputs.put(Parameters.PARAMS, params.select(businessDate, progress));
+        }
         try {
             return environment.bind(inputs);
         } catch (InvalidValueException e) {
@@ -307,7 +340,13 @@ final class CompiledDecision implements Executable {
     }
 
     private static CelExpression compile(ExpressionEnvironment environment, String source, ValueType type,
-                                         String at, List<String> problems, Set<String> failedLocals) {
+                                         String at, List<String> problems, Set<String> failedLocals,
+                                         Function<String, String> undeclared) {
+        String paramsProblem = undeclared.apply(source);
+        if (paramsProblem != null) {
+            problems.add(at + ": " + paramsProblem);
+            return null;
+        }
         if (!failedLocals.isEmpty()) {
             try {
                 if (environment.references(source).stream().anyMatch(failedLocals::contains)) {

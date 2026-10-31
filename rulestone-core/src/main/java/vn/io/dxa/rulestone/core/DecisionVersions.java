@@ -14,7 +14,8 @@ import java.util.Optional;
 import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 
 /**
- * Which version of a decision, a {@link DecisionTable} or a {@link DecisionFlow}, is in force on a date.
+ * Which version of a decision, a {@link DecisionTable} or a {@link DecisionFlow}, or of a
+ * {@link ParameterSet}, is in force on a date.
  *
  * <p>Versions of one decision are ordered by {@code effectiveFrom}; a version without one
  * starts at the beginning of time. A version stays in force until the earlier of its own
@@ -112,15 +113,27 @@ public final class DecisionVersions {
      */
     public static <T extends VersionedDefinition> T select(String id, Collection<T> versions,
                                                          Optional<String> version, LocalDate date) {
+        return select("decision", id, versions, version, date);
+    }
+
+    /**
+     * Selects a version as {@link #select(String, Collection, Optional, LocalDate)} does, naming
+     * the kind of definition in messages, e.g. {@code parameter set}.
+     *
+     * @param kind what {@code id} names, for messages: {@code decision} or {@code parameter set}
+     * @throws DecisionNotFoundException if there is no such version, or none is in force on {@code date}
+     */
+    public static <T extends VersionedDefinition> T select(String kind, String id, Collection<T> versions,
+                                                         Optional<String> version, LocalDate date) {
         if (version.isPresent()) {
             return versions.stream()
                     .filter(t -> t.version().equals(version.get()))
                     .findFirst()
                     .orElseThrow(() -> new DecisionNotFoundException(
-                            "decision '" + id + "' has no version '" + version.get() + "'"));
+                            kind + " '" + id + "' has no version '" + version.get() + "'"));
         }
         return inForce(versions, date).orElseThrow(() -> new DecisionNotFoundException(
-                "no version of decision '" + id + "' is effective on " + date));
+                "no version of " + kind + " '" + id + "' is effective on " + date));
     }
 
     private static <T extends VersionedDefinition> List<T> sorted(Collection<T> versions) {

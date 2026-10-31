@@ -190,7 +190,7 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
         private final DecisionRef ref;
         private final LocalDate businessDate;
         private final Instant evaluatedAt;
-        private final Progress progress = new Progress();
+        private final Progress progress;
         private Executable decision;
         private Optional<Routing> routing = Optional.empty();
 
@@ -199,6 +199,7 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
             this.ref = ref;
             this.businessDate = businessDate;
             this.evaluatedAt = evaluatedAt;
+            this.progress = new Progress(ref.params());
         }
 
         DecisionResult run(Facts facts, Deadline deadline) {
@@ -236,7 +237,8 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
                                       Optional<String> error) {
             return new DecisionRecord(recordId, ref.correlationId(), ref.id(),
                     Optional.ofNullable(decision).map(Executable::ruleVersion), businessDate, evaluatedAt,
-                    ENGINE, status, progress.factsHash(), output, reasonCodes, progress.path(), error, routing);
+                    ENGINE, status, progress.factsHash(), output, reasonCodes, progress.path(), error, routing,
+                    progress.params());
         }
     }
 }

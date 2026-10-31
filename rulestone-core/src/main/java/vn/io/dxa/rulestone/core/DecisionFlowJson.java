@@ -62,7 +62,8 @@ public final class DecisionFlowJson {
     public static final String FILE_SUFFIX = ".flow.json";
 
     private static final Set<String> FLOW_FIELDS = Set.of(
-            "id", "version", "description", "effectiveFrom", "effectiveTo", "inputs", "outputs", "start", "nodes");
+            "id", "version", "description", "effectiveFrom", "effectiveTo", "inputs", "outputs", "params", "start",
+            "nodes");
     private static final Set<String> TABLE_FIELDS = Set.of("type", "description", "decision", "version", "facts", "as", "next");
     private static final Set<String> SWITCH_FIELDS = Set.of("type", "description", "cases");
     private static final Set<String> DERIVE_FIELDS = Set.of("type", "description", "outputs", "set", "as", "next");
@@ -115,6 +116,8 @@ public final class DecisionFlowJson {
         flow.effectiveTo().ifPresent(d -> json.put("effectiveTo", d.toString()));
         json.put("inputs", DecisionTableJson.typesJson(flow.inputs()));
         json.put("outputs", DecisionTableJson.typesJson(flow.outputs()));
+        // Omitted when absent, so that flows without parameters keep their hash.
+        flow.params().ifPresent(p -> json.put("params", DecisionTableJson.paramsJson(p)));
         json.put("start", flow.start());
         Map<String, Object> nodes = new TreeMap<>();
         flow.nodes().forEach((id, node) -> nodes.put(id, nodeJson(node)));
@@ -216,6 +219,7 @@ public final class DecisionFlowJson {
             }
             Map<String, ValueType> inputs = reader.typeMap(root, "inputs");
             Map<String, ValueType> outputs = reader.typeMap(root, "outputs");
+            Optional<ParamsDeclaration> params = reader.params(root);
             String start = reader.requiredText(root, "start", "$");
             Map<String, FlowNode> nodes = new LinkedHashMap<>();
             JsonNode nodesNode = root.get("nodes");
@@ -232,7 +236,7 @@ public final class DecisionFlowJson {
             if (!reader.problems.isEmpty()) {
                 throw new InvalidDecisionException(reader.problems);
             }
-            return new DecisionFlow(id, version, description, from, to, inputs, outputs, start, nodes);
+            return new DecisionFlow(id, version, description, from, to, inputs, outputs, params, start, nodes);
         }
 
         private FlowNode node(JsonNode node, String path) {
