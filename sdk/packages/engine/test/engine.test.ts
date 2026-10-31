@@ -4,18 +4,20 @@
 import { describe, expect, it } from 'vitest'
 import {
   AuditError, Decimal, DecisionEvaluationError, DecisionNotFoundError, InvalidDecisionError, InvalidFactsError, LocalDate,
-  Money, createEngine, decisionRecordToJson, outputJson, parseDecisionTable, readFacts, writeDecisionRecord, writeJson,
-  type DecisionRecord, type DecisionTable,
+  Money, createEngine, decisionRecordToJson, outputJson, parseDecisionTable, parseParameterSet, readFacts,
+  writeDecisionRecord, writeJson, type DecisionRecord, type DecisionTable, type ParameterSet,
 } from '../src/index.js'
 import { exampleEngine, fixture } from './helpers.js'
 
 interface InvalidCase {
   name: string
   tables: string[]
+  paramSets?: string[]
 }
 interface JavaInvalid {
   name: string
   read: (string[] | null)[]
+  readParams?: (string[] | null)[]
   build: string[]
 }
 
@@ -41,9 +43,22 @@ describe('invalid tables report the problems Java reports', () => {
         }
       })
       expect(read).toEqual(expected.read)
+      const paramSets: ParameterSet[] = []
+      if (testCase.paramSets) {
+        const readParams = testCase.paramSets.map((text) => {
+          try {
+            paramSets.push(parseParameterSet(text))
+            return null
+          } catch (e) {
+            if (!(e instanceof InvalidDecisionError)) throw e
+            return e.problems
+          }
+        })
+        expect(readParams).toEqual(expected.readParams)
+      }
       let build: readonly string[] = []
       try {
-        await createEngine({ tables })
+        await createEngine({ tables, paramSets })
       } catch (e) {
         if (!(e instanceof InvalidDecisionError)) throw e
         build = e.problems

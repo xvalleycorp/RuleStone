@@ -13,13 +13,17 @@ export type { AuditSink, CompiledDecision, DecisionRef, DecisionResult, EngineOp
 
 export { parseDecisionTable, writeDecisionTable, ruleVersionOf, isEffectiveOn, tableRef } from './table.js'
 export { versionProblems, versionInForce, selectVersion } from './versions.js'
-export type { DecisionTable, HitPolicy, Rule } from './table.js'
+export type { DecisionTable, HitPolicy, ParamsDeclaration, Rule } from './table.js'
+export type { Versioned } from './versions.js'
+
+export { parseParameterSet, writeParameterSet, parameterSetVersionOf, PARAMS } from './params.js'
+export type { ParameterSet, Parameter } from './params.js'
 
 export { readFacts, readValues, readValue, resultTypes, valueToJson, valuesToJson, writeValues, valueToPlain } from './facts.js'
 export type { JsonInput } from './facts.js'
 
 export { decisionRecordToJson, writeDecisionRecord } from './record.js'
-export type { DecisionRecord, PathStep, ReasonCode } from './record.js'
+export type { DecisionRecord, ParamSetVersion, PathStep, ReasonCode } from './record.js'
 
 export { parseStoneTests, checkStoneTestCase, StoneTestFailure, InvalidStoneTestError } from './stone-test.js'
 export type { StoneTestCase, StoneTestOutcome } from './stone-test.js'

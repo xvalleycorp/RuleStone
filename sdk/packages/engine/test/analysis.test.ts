@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   BUSINESS_DATE, InvalidDecisionError, analyzeExpression, codePointIndex, createEngine, formatCelType, functionCatalog,
-  inputStructName, localValueTypes, parseDecisionTable, type DecisionTable, type Expr, type ValueType,
+  inputStructName, localValueTypes, parseDecisionTable, structOf, type DecisionTable, type Expr, type ValueType,
 } from '../src/index.js'
 import { exampleTables } from './helpers.js'
 
@@ -41,7 +41,13 @@ function slice(source: string, node: Expr): string {
 }
 
 function variables(table: DecisionTable): Map<string, ValueType> {
-  return new Map([...table.inputs, [BUSINESS_DATE, 'date' as ValueType], ...localValueTypes(table.inputs, table.let ?? new Map())])
+  const params: [string, ValueType][] = table.params ? [['params', structOf(table.params.values)]] : []
+  return new Map([
+    ...table.inputs,
+    [BUSINESS_DATE, 'date' as ValueType],
+    ...params,
+    ...localValueTypes(table.inputs, table.let ?? new Map(), table.params?.values),
+  ])
 }
 
 describe('source spans', () => {

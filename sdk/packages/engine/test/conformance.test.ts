@@ -8,8 +8,8 @@
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
-  RuleStoneError, checkStoneTestCase, decisionRecordToJson, parseDecisionTable, parseStoneTests, ruleVersionOf,
-  writeDecisionTable, writeJson, type DecisionRecord, type DecisionTable, type RuleStoneEngine, type StoneTestCase,
+  RuleStoneError, checkStoneTestCase, decisionRecordToJson, parameterSetVersionOf, parseDecisionTable, parseParameterSet,
+  parseStoneTests, ruleVersionOf, writeDecisionTable, writeJson, writeParameterSet, type DecisionRecord, type DecisionTable, type RuleStoneEngine, type StoneTestCase,
 } from '../src/index.js'
 import { EXAMPLES, FIXTURES, exampleEngine, exampleTables, files, fixture, read } from './helpers.js'
 
@@ -22,9 +22,23 @@ describe('content hash', () => {
     ...files(join(FIXTURES, 'tables'), '.stone.json').map((f) => join(FIXTURES, 'tables', f)),
   ]
 
-  it('covers every table the Java fixture covers', () => {
-    expect(tableFiles.map((f) => f.split('/').pop()).sort()).toEqual(Object.keys(hashes).sort())
+  const paramFiles = [
+    ...files(EXAMPLES, '.params.json').map((f) => join(EXAMPLES, f)),
+    ...files(join(FIXTURES, 'tables'), '.params.json').map((f) => join(FIXTURES, 'tables', f)),
+  ]
+
+  it('covers every table and parameter set the Java fixture covers', () => {
+    expect([...tableFiles, ...paramFiles].map((f) => f.split('/').pop()).sort()).toEqual(Object.keys(hashes).sort())
   })
+
+  for (const file of paramFiles) {
+    const name = file.split('/').pop()!
+    it(`${name} has the Java canonical form and version`, async () => {
+      const set = parseParameterSet(read(file))
+      expect(writeParameterSet(set)).toBe(hashes[name]!.canonical)
+      expect(await parameterSetVersionOf(set)).toBe(hashes[name]!.ruleVersion)
+    })
+  }
 
   for (const file of tableFiles) {
     const name = file.split('/').pop()!

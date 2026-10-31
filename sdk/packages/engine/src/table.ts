@@ -25,6 +25,19 @@ export interface Rule {
   readonly reasonCode?: string
 }
 
+/**
+ * The parameters a table reads from a parameter set, as ParamsDeclaration: the "params" object,
+ * e.g. { "set": "retail_credit", "values": { "maxDti": "decimal" } }.
+ */
+export interface ParamsDeclaration {
+  /** The parameter set id. */
+  readonly set: string
+  /** A version of the set to use whatever the business date. */
+  readonly version?: string
+  /** The parameters read, by name, with their types, in file order. */
+  readonly values: ReadonlyMap<string, ValueType>
+}
+
 /** A versioned decision table. Structural and type errors are reported when an engine is built. */
 export interface DecisionTable {
   readonly id: string
@@ -37,6 +50,11 @@ export interface DecisionTable {
   readonly hitPolicy: HitPolicy
   readonly inputs: ReadonlyMap<string, ValueType>
   readonly outputs: ReadonlyMap<string, ValueType>
+  /**
+   * The parameters the rules and local values read as params.<name>, from the version of a
+   * parameter set in force on the business date (or the pinned version). Absent when there are none.
+   */
+  readonly params?: ParamsDeclaration
   /**
    * Local values: name to CEL expression, in file order. Every rule can read them by name; each is
    * computed when first read, at most once per evaluation. Absent or empty when there are none.
@@ -62,7 +80,8 @@ export function tableRef(table: DecisionTable): string {
   return `${table.id}@${table.version}`
 }
 
-const TABLE_FIELDS = ['id', 'version', 'description', 'effectiveFrom', 'effectiveTo', 'hitPolicy', 'inputs', 'outputs', 'let', 'rules']
+const TABLE_FIELDS = ['id', 'version', 'description', 'effectiveFrom', 'effectiveTo', 'hitPolicy', 'inputs', 'outputs', 'params', 'let', 'rules']
+const PARAMS_FIELDS = ['set', 'version', 'values']
 const RULE_FIELDS = ['id', 'description', 'when', 'then', 'reasonCode']
 const HIT_POLICIES: readonly HitPolicy[] = ['UNIQUE', 'FIRST', 'COLLECT']
 
@@ -87,8 +106,9 @@ export function parseDecisionTable(text: string): DecisionTable {
   return new TableReader().table(root)
 }
 
-class TableReader {
-  private readonly problems: string[] = []
+/** @internal reads tables, and the common parts of parameter sets */
+export class TableReader {
+  readonly problems: string[] = []
 
   table(root: JsonNode | undefined): DecisionTable {
     if (!root || root.type !== 'object') throw new InvalidDecisionError(['$: expected a JSON object'])
@@ -104,6 +124,7 @@ class TableReader {
     const hitPolicy = this.hitPolicy(root)
     const inputs = this.typeMap(root, 'inputs')
     const outputs = this.typeMap(root, 'outputs')
+    const params = this.params(root)
     const locals = this.localValues(root)
     const rules = this.rules(root)
     if (this.problems.length > 0) throw new InvalidDecisionError(this.problems)
@@ -116,9 +137,29 @@ class TableReader {
       hitPolicy,
       inputs,
       outputs,
+      ...(params ? { params } : {}),
       ...(locals.size > 0 ? { let: locals } : {}),
       rules,
     }
+  }
+
+  private params(root: JsonNode & { type: 'object' }): ParamsDeclaration | undefined {
+    const node = root.entries.get('params')
+    if (!node || node.type === 'null') return undefined
+    if (node.type !== 'object') {
+      this.problem('$.params', 'expected an object with "set", "values" and optionally "version"')
+      return undefined
+    }
+    this.unknownFields(node, PARAMS_FIELDS, '$.params')
+    const set = this.requiredText(node, 'set', '$.params')
+    let version: string | undefined
+    const versionNode = node.entries.get('version')
+    if (versionNode && versionNode.type !== 'null') {
+      if (versionNode.type !== 'string' || javaIsBlank(versionNode.value)) this.problem('$.params.version', 'expected a non-empty string')
+      else version = versionNode.value
+    }
+    const values = this.typeMap(node, 'values', '$.params')
+    return { set, ...(version !== undefined ? { version } : {}), values }
   }
 
   private localValues(root: JsonNode & { type: 'object' }): Map<string, string> {
@@ -188,21 +229,21 @@ class TableReader {
     return 'FIRST'
   }
 
-  private typeMap(root: JsonNode & { type: 'object' }, field: string): Map<string, ValueType> {
+  private typeMap(root: JsonNode & { type: 'object' }, field: string, path = '$'): Map<string, ValueType> {
     const node = root.entries.get(field)
     const types = new Map<string, ValueType>()
     if (!node || node.type !== 'object') {
-      this.problem(`$.${field}`, 'required object of name to type')
+      this.problem(`${path}.${field}`, 'required object of name to type')
       return types
     }
     for (const [name, value] of node.entries) {
-      const type = this.type(value, `$.${field}.${name}`)
+      const type = this.type(value, `${path}.${field}.${name}`)
       if (type) types.set(name, type)
     }
     return types
   }
 
-  private type(node: JsonNode, path: string): ValueType | undefined {
+  type(node: JsonNode, path: string): ValueType | undefined {
     if (node.type === 'string') {
       if ((PRIMITIVE_TYPES as readonly string[]).includes(node.value)) return node.value as PrimitiveType
       const hint = ['double', 'float', 'number'].includes(node.value) ? ' (floating point is not supported; use decimal)' : ''
@@ -235,7 +276,7 @@ class TableReader {
     return undefined
   }
 
-  private optionalDate(root: JsonNode & { type: 'object' }, field: string): LocalDate | undefined {
+  optionalDate(root: JsonNode & { type: 'object' }, field: string): LocalDate | undefined {
     const text = this.optionalText(root, field, '$')
     if (text === undefined) return undefined
     const date = LocalDate.parse(text)
@@ -243,7 +284,7 @@ class TableReader {
     return date
   }
 
-  private requiredText(node: JsonNode & { type: 'object' }, field: string, path: string): string {
+  requiredText(node: JsonNode & { type: 'object' }, field: string, path: string): string {
     const value = node.entries.get(field)
     if (!value || value.type !== 'string' || javaIsBlank(value.value)) {
       this.problem(`${path}.${field}`, 'required non-empty string')
@@ -252,7 +293,7 @@ class TableReader {
     return value.value
   }
 
-  private optionalText(node: JsonNode & { type: 'object' }, field: string, path: string): string | undefined {
+  optionalText(node: JsonNode & { type: 'object' }, field: string, path: string): string | undefined {
     const value = node.entries.get(field)
     if (!value || value.type === 'null') return undefined
     if (value.type !== 'string') {
@@ -262,24 +303,26 @@ class TableReader {
     return value.value
   }
 
-  private unknownFields(node: JsonNode & { type: 'object' }, allowed: readonly string[], path: string): void {
+  unknownFields(node: JsonNode & { type: 'object' }, allowed: readonly string[], path: string): void {
     for (const name of node.entries.keys()) {
       if (!allowed.includes(name)) this.problem(`${path}.${name}`, `unknown field (allowed: ${allowedList(allowed)})`)
     }
   }
 
-  private problem(path: string, message: string): void {
+  problem(path: string, message: string): void {
     this.problems.push(`${path}: ${message}`)
   }
 }
 
 // --- Canonical form and content hash -----------------------------------------------------------
 
-function sortedMap<V>(entries: Iterable<[string, V]>): Map<string, V> {
+/** @internal */
+export function sortedMap<V>(entries: Iterable<[string, V]>): Map<string, V> {
   return new Map([...entries].sort((a, b) => compareJavaStrings(a[0], b[0])))
 }
 
-function typeJson(type: ValueType): Writable {
+/** @internal a type in its canonical JSON form */
+export function typeJson(type: ValueType): Writable {
   if (isPrimitive(type)) return type
   if (type.kind === 'list') return [typeJson(type.element)]
   return sortedMap([...type.fields].map(([n, t]) => [n, typeJson(t)] as [string, Writable]))
@@ -303,6 +346,14 @@ export function writeDecisionTable(table: DecisionTable): string {
   json.set('hitPolicy', table.hitPolicy)
   json.set('inputs', typesJson(table.inputs))
   json.set('outputs', typesJson(table.outputs))
+  // Omitted when absent, so that tables without parameters keep their hash.
+  if (table.params) {
+    const params = new Map<string, Writable>()
+    params.set('set', table.params.set)
+    if (table.params.version !== undefined) params.set('version', table.params.version)
+    params.set('values', typesJson(table.params.values))
+    json.set('params', sortedMap(params))
+  }
   // Omitted when empty, so that tables without local values keep their hash.
   if (table.let && table.let.size > 0) json.set('let', sortedMap(table.let))
   json.set(

@@ -11,9 +11,14 @@ import {
   AuditError, DecisionEvaluationError, DecisionNotFoundError, ExpressionError, InvalidDecisionError, RuleStoneError,
 } from './errors.js'
 import { readFacts, writeValues, type JsonInput } from './facts.js'
-import type { DecisionRecord, PathStep, ReasonCode } from './record.js'
+import { compareJavaStrings } from './json.js'
+import type { DecisionRecord, ParamSetVersion, PathStep, ReasonCode } from './record.js'
 import { ruleVersionOf, sha256Hex, tableRef, type DecisionTable } from './table.js'
 import { compileLocals } from './locals.js'
+import {
+  PARAMS, checkParams, compileParameterSets, paramsType, selectParams, undeclaredParams,
+  type ParameterSet, type ParamsBinding, type Registry,
+} from './params.js'
 import { selectVersion, versionProblems } from './versions.js'
 import { containsStruct, type ValueType } from './types.js'
 import type { Value } from './values.js'
@@ -37,6 +42,11 @@ export interface DecisionRef {
   readonly asOf?: LocalDate | string
   /** The caller's id for the business transaction, copied into the record. No personal data. */
   readonly correlationId?: string
+  /**
+   * Parameter set versions to use whatever their dates, by set id, e.g. { retail_credit: '1' }, to
+   * replay a decision with the versions its record lists. A table that pins a version keeps it.
+   */
+  readonly params?: ReadonlyMap<string, string> | { readonly [set: string]: string }
 }
 
 /** One rule examined, and whether it matched. */
@@ -67,6 +77,8 @@ export type AuditSink = (record: DecisionRecord) => void | Promise<void>
 export interface EngineOptions {
   /** Every version of every decision; the engine selects one per request. */
   readonly tables: Iterable<DecisionTable>
+  /** Every version of every parameter set that the tables read; see parseParameterSet. */
+  readonly paramSets?: Iterable<ParameterSet>
   /** Upper bound on the iterations of the list macros in one expression evaluation. Default 10,000. */
   readonly maxIterations?: number
   /** Minor units for money.round(), overriding ISO 4217, e.g. { XAU: 4 }. */
@@ -97,6 +109,8 @@ interface CompiledRule {
 interface Compiled extends CompiledDecision {
   readonly environment: ExpressionEnvironment
   readonly rules: readonly CompiledRule[]
+  /** The parameters the table reads, if it declares any. */
+  readonly params: ParamsBinding | undefined
 }
 
 /**
@@ -110,9 +124,10 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
   for (const [currency, digits] of scales) validateCurrencyScale(currency, digits)
   const maxIterations = options.maxIterations ?? 10_000
   const problems: string[] = []
+  const registry = await compileParameterSets(options.paramSets ?? [], problems)
   const byId = new Map<string, Compiled[]>()
   for (const table of options.tables) {
-    const compiled = await compile(table, maxIterations, scales, problems)
+    const compiled = await compile(table, maxIterations, scales, registry, problems)
     if (compiled) {
       let versions = byId.get(table.id)
       if (!versions) byId.set(table.id, (versions = []))
@@ -128,6 +143,7 @@ async function compile(
   table: DecisionTable,
   maxIterations: number,
   scales: ReadonlyMap<string, number>,
+  registry: Registry,
   problems: string[],
 ): Promise<Compiled | undefined> {
   const at = tableRef(table) + ' '
@@ -150,9 +166,19 @@ async function compile(
       `${at}inputs.${BUSINESS_DATE}: reserved name; every decision receives ${BUSINESS_DATE} implicitly (DecisionRef.asOf, else the engine clock)`,
     )
   }
+  let params: ParamsBinding | undefined
+  let declared: ValueType | undefined
+  if (table.params) {
+    params = checkParams(at, table.params, inputs, registry, problems)
+    declared = paramsType(table.params)
+    // Reported, then compiled with the parameters in its place so that other problems are found too.
+    inputs.delete(PARAMS)
+  }
+  const paramsInput = inputs.has(PARAMS)
   let environment: ExpressionEnvironment
   const variables = new Map<string, ValueType>(inputs)
   variables.set(BUSINESS_DATE, 'date')
+  if (declared !== undefined) variables.set(PARAMS, declared)
   const options = { variables, maxIterations, currencyScales: scales }
   try {
     environment = new ExpressionEnvironment(options)
@@ -163,9 +189,18 @@ async function compile(
     }
     throw e
   }
+  const parsing = environment
+  const undeclared = (source: string): string | undefined => undeclaredParams(parsing, source, table.params, paramsInput)
   const failedLocals = new Set<string>()
-  if (table.let && table.let.size > 0) environment = compileLocals(table, environment, options, at, problems, failedLocals)
+  if (table.let && table.let.size > 0) {
+    environment = compileLocals(table, environment, options, at, problems, failedLocals, undeclared)
+  }
   const compileExpression = (source: string, type: ValueType, where: string): CompiledExpression | undefined => {
+    const paramsProblem = undeclared(source)
+    if (paramsProblem !== undefined) {
+      problems.push(`${where}: ${paramsProblem}`)
+      return undefined
+    }
     if (failedLocals.size > 0) {
       try {
         // A rule that reads a local value that could not be compiled: that problem is reported.
@@ -200,7 +235,7 @@ async function compile(
     if (when) rules.push({ id: rule.id, when, then, reasonCode: rule.reasonCode })
   }
   if (problems.length > before) return undefined
-  return { table, ruleVersion: await ruleVersionOf(table), environment, rules }
+  return { table, ruleVersion: await ruleVersionOf(table), environment, rules, params }
 }
 
 function compileChecked(
@@ -288,6 +323,10 @@ export class RuleStoneEngine {
     const trace: TraceStep[] = []
     let decision: Compiled | undefined
     let factsHash: string | undefined
+    const used: ParamSetVersion[] = []
+    const use = (set: string, version: string): void => {
+      if (!used.some((p) => p.set === set && p.version === version)) used.push({ set, version })
+    }
     const record = (status: 'OK' | 'ERROR', output: ReadonlyMap<string, Value>, reasonCodes: ReasonCode[], error?: string): DecisionRecord => {
       const path: PathStep[] = decision
         ? [{ node: decision.table.id, type: 'table', version: decision.ruleVersion, matchedRules: trace.filter((t) => t.matched).map((t) => t.ruleId) }]
@@ -297,6 +336,7 @@ export class RuleStoneEngine {
         ...(r.correlationId !== undefined ? { correlationId: r.correlationId } : {}),
         decision: r.id,
         ...(decision ? { version: decision.ruleVersion } : {}),
+        ...(used.length > 0 ? { params: sortParams(used) } : {}),
         businessDate,
         evaluatedAt,
         engine: ENGINE_NAME,
@@ -311,8 +351,8 @@ export class RuleStoneEngine {
     let result: DecisionResult
     try {
       decision = this.select(r, businessDate)
-      const bindings = bind(decision, facts, businessDate)
-      factsHash = await hashFacts(bindings)
+      const bindings = bind(decision, facts, businessDate, r.params, use)
+      factsHash = await hashFacts(bindings, decision.params !== undefined)
       const outcome = run(decision, bindings, trace)
       const source = decision.table.id
       result = {
@@ -366,6 +406,7 @@ interface NormalizedRef {
   readonly version: string | undefined
   readonly asOf: LocalDate | undefined
   readonly correlationId: string | undefined
+  readonly params: ReadonlyMap<string, string>
 }
 
 function normalizeRef(ref: DecisionRef | string): NormalizedRef {
@@ -379,7 +420,8 @@ function normalizeRef(ref: DecisionRef | string): NormalizedRef {
   } else {
     asOf = r.asOf
   }
-  return { id: r.id, version: r.version, asOf, correlationId: r.correlationId }
+  const params = r.params instanceof Map ? new Map(r.params) : new Map(Object.entries(r.params ?? {}))
+  return { id: r.id, version: r.version, asOf, correlationId: r.correlationId, params }
 }
 
 function failure(decision: Compiled, message: string, cause?: unknown): DecisionEvaluationError {
@@ -390,16 +432,26 @@ function bind(
   decision: Compiled,
   facts: ReadonlyMap<string, unknown> | { readonly [name: string]: unknown },
   businessDate: LocalDate,
+  forced: ReadonlyMap<string, string>,
+  use: (set: string, version: string) => void,
 ): Bindings {
-  const has = facts instanceof Map ? facts.has(BUSINESS_DATE) : Object.prototype.hasOwnProperty.call(facts, BUSINESS_DATE)
-  if (has) {
+  const hasFact = (name: string): boolean =>
+    facts instanceof Map ? facts.has(name) : Object.prototype.hasOwnProperty.call(facts, name)
+  if (hasFact(BUSINESS_DATE)) {
     throw failure(
       decision,
       `invalid input ${BUSINESS_DATE}: reserved name; the business date comes from DecisionRef.asOf or the engine clock and cannot be passed as a fact`,
     )
   }
+  if (decision.params && hasFact(PARAMS)) {
+    throw failure(
+      decision,
+      `invalid input ${PARAMS}: reserved name; the parameters come from parameter set ${decision.params.declaration.set} and cannot be passed as a fact`,
+    )
+  }
   const inputs = new Map<string, unknown>(facts instanceof Map ? facts : Object.entries(facts))
   inputs.set(BUSINESS_DATE, businessDate)
+  if (decision.params) inputs.set(PARAMS, selectParams(decision.params, businessDate, forced, use))
   try {
     return decision.environment.bind(inputs)
   } catch (e) {
@@ -408,10 +460,16 @@ function bind(
   }
 }
 
-/** The SHA-256 of the declared inputs in canonical JSON form, without businessDate. */
-async function hashFacts(bindings: Bindings): Promise<string> {
+/** Parameter set versions in the record's order: by set id, then version. */
+function sortParams(used: readonly ParamSetVersion[]): ParamSetVersion[] {
+  return [...used].sort((a, b) => compareJavaStrings(a.set, b.set) || compareJavaStrings(a.version, b.version))
+}
+
+/** The SHA-256 of the declared inputs in canonical JSON form, without businessDate and the parameters. */
+async function hashFacts(bindings: Bindings, withoutParams: boolean): Promise<string> {
   const inputs = new Map(bindings.canonicalValues())
   inputs.delete(BUSINESS_DATE)
+  if (withoutParams) inputs.delete(PARAMS)
   return 'sha256:' + (await sha256Hex(writeValues(inputs)))
 }
 

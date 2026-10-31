@@ -99,6 +99,32 @@ function collectReferences(node: Expr, bound: readonly string[], names: Set<stri
   }
 }
 
+function collectSelections(node: Expr, variable: string, shadowed: boolean, fields: Set<string>): void {
+  switch (node.kind) {
+    case 'select':
+      if (!shadowed && node.operand.kind === 'ident' && node.operand.name === variable) fields.add(node.field)
+      else collectSelections(node.operand, variable, shadowed, fields)
+      break
+    case 'call':
+      if (node.target) collectSelections(node.target, variable, shadowed, fields)
+      for (const arg of node.args) collectSelections(arg, variable, shadowed, fields)
+      break
+    case 'list':
+      for (const item of node.items) collectSelections(item, variable, shadowed, fields)
+      break
+    case 'comprehension': {
+      collectSelections(node.range, variable, shadowed, fields)
+      const inner = shadowed || node.variable === variable
+      if (node.predicate) collectSelections(node.predicate, variable, inner, fields)
+      if (node.transform) collectSelections(node.transform, variable, inner, fields)
+      break
+    }
+    case 'ident':
+    case 'literal':
+      break
+  }
+}
+
 /**
  * Typed variables plus the RuleStone CEL dialect, as vn.io.dxa.rulestone.cel.ExpressionEnvironment.
  * Compile expressions once, then evaluate them many times. Immutable.
@@ -179,6 +205,25 @@ export class ExpressionEnvironment {
     const names = new Set<string>()
     collectReferences(ast, [], names)
     return [...names].sort()
+  }
+
+  /**
+   * The fields an expression selects directly on variable `variable`, such as maxDti in
+   * `dti > params.maxDti`, also inside has(), but not on a list macro's variable of the same
+   * name; sorted. Parsed but not type-checked.
+   * @throws ExpressionError if the expression is malformed
+   */
+  selectedFields(source: string, variable: string): readonly string[] {
+    let ast: Expr
+    try {
+      ast = parseCel(source)
+    } catch (e) {
+      if (e instanceof CelParseError) throw new ExpressionError(formatIssues(source, e.issues))
+      throw e
+    }
+    const fields = new Set<string>()
+    collectSelections(ast, variable, false, fields)
+    return [...fields].sort()
   }
 
   /**

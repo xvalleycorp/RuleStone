@@ -4,7 +4,9 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createEngine, parseDecisionTable, type DecisionTable, type RuleStoneEngine } from '../src/index.js'
+import {
+  createEngine, parseDecisionTable, parseParameterSet, type DecisionTable, type ParameterSet, type RuleStoneEngine,
+} from '../src/index.js'
 
 /** The repository root. */
 export const REPO = fileURLToPath(new URL('../../../../', import.meta.url))
@@ -30,10 +32,15 @@ export function exampleTables(): DecisionTable[] {
   return files(EXAMPLES, '.stone.json').map((f) => parseDecisionTable(read(join(EXAMPLES, f))))
 }
 
+export function exampleParamSets(): ParameterSet[] {
+  return files(EXAMPLES, '.params.json').map((f) => parseParameterSet(read(join(EXAMPLES, f))))
+}
+
 /** The engine of the example tests, with the Java tests' clock: 2026-12-01 in Hanoi. */
 export function exampleEngine(tables = exampleTables()): Promise<RuleStoneEngine> {
   return createEngine({
     tables,
+    paramSets: exampleParamSets(),
     clock: () => new Date('2026-12-01T03:00:00Z'),
     timeZone: 'Asia/Ho_Chi_Minh',
     recordIds: () => 'fixture',
