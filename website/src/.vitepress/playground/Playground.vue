@@ -19,6 +19,7 @@ type Model = typeof import('@rulestone/editor/model');
 type TableEditor = import('@rulestone/editor').RulestoneTableEditor;
 type ConditionBuilder = import('@rulestone/editor').RulestoneConditionBuilder;
 type FlowCanvas = import('@rulestone/editor').RulestoneFlowCanvas;
+type TryIt = import('@rulestone/editor').RulestoneTryIt;
 type Tab = 'table' | 'builder' | 'flow';
 type Notice = { kind: 'info' | 'success' | 'error'; text: string };
 
@@ -50,6 +51,7 @@ const shareUrl = ref('');
 const editor = ref<TableEditor>();
 const builder = ref<ConditionBuilder>();
 const canvas = ref<FlowCanvas>();
+const flowRun = ref<TryIt>();
 const fileInput = ref<HTMLInputElement>();
 const engine = shallowRef<Engine>();
 const model = shallowRef<Model>();
@@ -288,19 +290,38 @@ function onBuilderChange(e: Event): void {
 
 // --- The decision flow ---------------------------------------------------------------------------
 
-const flowTables = (() => {
-  const flow = JSON.parse(data.flow) as { nodes: Record<string, { type: string; decision?: string }> };
-  const used = Object.values(flow.nodes).flatMap((n) => (n.type === 'table' && n.decision ? [n.decision] : []));
-  return [...new Set([...used, ...examples.map((e) => JSON.parse(e.text).id as string)])];
-})();
+const flows = data.flows;
+const flowSelection = ref(flows[0]!.name);
+const currentFlow = computed(() => flows.find((f) => f.name === flowSelection.value) ?? flows[0]!);
+const flowTableIds = data.flowTables.map((t) => (JSON.parse(t) as { id: string }).id);
 
-function loadFlow(): void {
+/** Shows the chosen example flow on the canvas, checked by the engine with its tables, and its sample case in Try it. */
+async function loadFlow(): Promise<void> {
   const el = canvas.value;
+  const run = flowRun.value;
   if (!el) return;
-  el.tables = flowTables;
+  const flow = currentFlow.value;
+  el.tables = flowTableIds;
+  el.definitions = { tables: data.flowTables, paramSets: data.paramSets, reasonCodes: data.reasonCodes };
   el.layout = {};
-  el.flow = JSON.parse(data.flow);
+  el.flow = JSON.parse(flow.text);
   void el.updateComplete.then(() => el.fit());
+  if (run) {
+    run.tables = data.flowTables;
+    run.paramSets = data.paramSets;
+    run.reasonCodes = data.reasonCodes;
+    run.asOf = flow.asOf ?? '2026-12-01';
+    run.flow = JSON.parse(flow.text);
+    run.models = flow.models ?? '';
+    await run.updateComplete;
+    run.facts = flow.facts;
+  }
+}
+
+/** Try it runs the flow as it is on the canvas. */
+function onFlowChange(e: Event): void {
+  const run = flowRun.value;
+  if (run) run.flow = (e as CustomEvent<{ flow: TryIt['flow'] }>).detail.flow;
 }
 
 // --- Tabs and loading ------------------------------------------------------------------------------
@@ -319,7 +340,7 @@ async function load(which: Tab): Promise<void> {
     } else if (which === 'builder') {
       await import('@rulestone/editor/condition-builder');
     } else {
-      await import('@rulestone/editor/flow-canvas');
+      await Promise.all([import('@rulestone/editor/flow-canvas'), import('@rulestone/editor/try-it')]);
     }
   } catch (e) {
     loadError.value = fill(m.value.loadFailed, { message: e instanceof Error ? e.message : String(e) });
@@ -334,7 +355,8 @@ async function load(which: Tab): Promise<void> {
     builder.value?.addEventListener('rulestone-change', onBuilderChange);
     loadBuilder();
   } else {
-    loadFlow();
+    canvas.value?.addEventListener('rulestone-change', onFlowChange);
+    await loadFlow();
   }
 }
 
@@ -376,6 +398,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('hashchange', onHashChange);
   editor.value?.removeEventListener('rulestone-change', onEdit);
   builder.value?.removeEventListener('rulestone-change', onBuilderChange);
+  canvas.value?.removeEventListener('rulestone-change', onFlowChange);
 });
 </script>
 
@@ -464,13 +487,23 @@ onBeforeUnmount(() => {
     <section id="rs-pg-panel-flow" v-show="tab === 'flow'" role="tabpanel" aria-labelledby="rs-pg-tab-flow" class="rs-pg-panel">
       <template v-if="opened.has('flow')">
         <div class="rs-pg-toolbar">
-          <p class="rs-pg-sample">{{ m.flowTables }}</p>
+          <label class="rs-pg-field">
+            <span>{{ m.flowExample }}</span>
+            <select v-model="flowSelection" :disabled="!ready.has('flow')" @change="loadFlow">
+              <option v-for="f in flows" :key="f.name" :value="f.name">{{ f.name }}</option>
+            </select>
+          </label>
           <div class="rs-pg-buttons">
             <button type="button" :disabled="!ready.has('flow')" @click="loadFlow">{{ m.resetFlow }}</button>
           </div>
         </div>
+        <p class="rs-pg-sample">
+          {{ fill(m.flowSample, { file: `examples/flows/${currentFlow.name}.flow.json`, case: currentFlow.caseName }) }}
+        </p>
         <p v-if="!ready.has('flow') && !loadError" class="rs-pg-loading">{{ m.loading }}</p>
         <rulestone-flow-canvas v-if="ready.has('flow')" ref="canvas" :locale="locale" :theme="theme"></rulestone-flow-canvas>
+        <h3 v-if="ready.has('flow')" class="rs-pg-run-title">{{ m.flowRun }}</h3>
+        <rulestone-try-it v-if="ready.has('flow')" ref="flowRun" :locale="locale" :theme="theme"></rulestone-try-it>
       </template>
     </section>
   </div>
@@ -658,7 +691,8 @@ onBeforeUnmount(() => {
   color: var(--vp-c-text-2);
 }
 
-.rs-pg-cel-title {
+.rs-pg-cel-title,
+.rs-pg-run-title {
   margin: 16px 0 6px;
   font-size: 15px;
 }

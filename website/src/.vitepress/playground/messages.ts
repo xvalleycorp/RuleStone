@@ -46,7 +46,9 @@ const en = {
   builderRule: 'Start from rule',
   builderCel: 'The condition as CEL',
   builderHelp: 'Build the condition with blocks, or switch to CEL text. The CEL below is what the rule’s "when" field would contain.',
-  flowTables: 'The tables this flow refers to are part of the design proposal; they are not in examples/.',
+  flowExample: 'Flow',
+  flowSample: 'The flow is {file}, checked by the engine with its tables; Try it starts from the test case “{case}”.',
+  flowRun: 'Try it',
   resetFlow: 'Reset flow',
 };
 
@@ -94,7 +96,9 @@ const vi: PlaygroundMessages = {
   builderRule: 'Bắt đầu từ luật',
   builderCel: 'Điều kiện dưới dạng CEL',
   builderHelp: 'Dựng điều kiện bằng các khối, hoặc chuyển sang viết CEL. Đoạn CEL bên dưới là nội dung trường "when" của luật.',
-  flowTables: 'Các bảng mà luồng này tham chiếu thuộc đề xuất thiết kế; chúng không có trong examples/.',
+  flowExample: 'Luồng',
+  flowSample: 'Luồng là {file}, được bộ máy luật kiểm tra cùng các bảng của nó; Chạy thử bắt đầu từ ca kiểm thử “{case}”.',
+  flowRun: 'Chạy thử',
   resetFlow: 'Khôi phục luồng',
 };
 

@@ -58,10 +58,13 @@ describe('records of the Java engine replay in the browser engine', () => {
     }
   }
 
-  for (const file of files(EXAMPLES, '.stone-test.json').slice(0, 4)) {
+  for (const file of files(EXAMPLES, '.stone-test.json')) {
     for (const testCase of parseStoneTests(read(join(EXAMPLES, file)), file, exampleTables())) {
       it(`${file}: ${testCase.name}`, async () => {
         const record = readDecisionRecord(javaRecord(tableRecords[file]![testCase.name]!))
+        // A record with no version has nothing to replay; one that failed because the request forced a
+        // parameter set version that does not exist records no parameter set version to force again.
+        if (record.version === undefined || (record.status !== 'OK' && testCase.params.size > 0)) return
         const comparison = await tableEngine.replay(record, testCase.facts)
         expect(comparison.differences).toEqual([])
       })

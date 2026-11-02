@@ -221,6 +221,7 @@ export class RulestoneTryIt extends RulestoneElement {
       }
       .note {
         font-size: 0.88em;
+        overflow-wrap: anywhere;
       }
       .result p.mono {
         overflow-wrap: anywhere;
