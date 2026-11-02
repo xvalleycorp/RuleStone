@@ -153,6 +153,8 @@ final class CompiledFlow implements Executable {
         private final Map<String, ValueType> publishedType = new HashMap<>();
         /** Table node id to the versions of its decision it may evaluate. */
         private final Map<String, List<CompiledDecision>> versions = new HashMap<>();
+        /** Whether a table node's decision has a version that failed to compile, which is reported already. */
+        private boolean failedTable;
 
         Compiler(DecisionFlow flow, Map<String, List<CompiledDecision>> tables,
                  Map<String, List<DecisionTable>> registered, Set<String> flowIds, int maxIterations,
@@ -207,7 +209,8 @@ final class CompiledFlow implements Executable {
             }
             unreachable(order);
             publications(order);
-            if (problems.size() > before) {
+            // A table the flow uses failed to compile: that is reported, and its outputs are unknown.
+            if (problems.size() > before || failedTable) {
                 return Optional.empty();
             }
             sharedNames();
@@ -632,6 +635,7 @@ final class CompiledFlow implements Executable {
             }
             List<CompiledDecision> all = tables.getOrDefault(table.decision(), List.of());
             if (all.size() < registered.get(table.decision()).size()) {
+                failedTable = true;
                 return null;   // a version failed to compile, which is already reported
             }
             if (table.version().isPresent()) {

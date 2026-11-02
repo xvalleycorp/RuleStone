@@ -500,6 +500,20 @@ class DecisionFlowTest {
     }
 
     @Test
+    void aTableThatFailsToCompileIsReportedOnceAndNotAgainByTheFlow() {
+        DecisionTable broken = DecisionTableJson.read("""
+                { "id": "grade", "version": "1", "hitPolicy": "FIRST", "inputs": { "score": "int" },
+                  "outputs": { "grade": "string" }, "rules": [ { "id": "R", "when": "score +", "then": { "grade": "'A'" } } ] }
+                """);
+        assertThatThrownBy(() -> RuleStone.builder().decision(broken).flow(DecisionFlowJson.read(flowWith("""
+                { "a": { "type": "table", "decision": "grade", "next": "e" },
+                  "e": { "type": "end", "set": { "out": "a.grade" } } }
+                """))).build())
+                .isInstanceOfSatisfying(InvalidDecisionException.class, e -> assertThat(e.problems())
+                        .hasSize(1).allMatch(p -> p.startsWith("grade@1 rules[R].when: ")));
+    }
+
+    @Test
     void tableInputsAreMatchedByNameAndType() {
         String flow = """
                 { "id": "f", "version": "1", "inputs": { "score": "string", "flag": "bool" },
