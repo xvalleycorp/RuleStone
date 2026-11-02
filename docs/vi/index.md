@@ -1,6 +1,6 @@
 ---
 source: README.md
-sourceHash: b274b49612fb91626a7b18438aeaeccf8eebbf6a38c964ff61048d6cdc5cb5ea
+sourceHash: cb522b1f3b96c44b695cca77683266fcd2fa9bea33eb757318f11d56ababedf6
 ---
 
 # Tài liệu RuleStone
@@ -18,6 +18,7 @@ sourceHash: b274b49612fb91626a7b18438aeaeccf8eebbf6a38c964ff61048d6cdc5cb5ea
 | [Java API](java-api.md) | Nhúng engine vào ứng dụng: đầu vào, kết quả, lỗi, nạp lại luật, đa luồng. |
 | [Luồng quyết định](flows.md) | Nối các bảng quyết định và mô hình học máy thành một quyết định với nút rẽ nhánh, giá trị dẫn xuất, nút mô hình, phép chia champion/challenger và nút kết thúc, theo định dạng `.flow.json`. |
 | [Kiểm thử](testing.md) | Kiểm thử bảng quyết định và luồng quyết định: ca kiểm thử bằng JSON, tích hợp JUnit 5, độ bao phủ luật và nút, và assertion dạng fluent. |
+| [Giải thích quyết định](explanations.md) | Giải thích quyết định bằng ngôn ngữ của khách hàng với một danh mục mã lý do đã được duyệt, và kiểm tra rằng mọi mã lý do đều có nội dung. |
 | [Trình soạn thảo web](editor.md) | Tạo và sửa bảng quyết định trên trình duyệt, thử với các fact mẫu và lưu tệp `.stone.json`. |
 | [SDK trình soạn thảo](editor-sdk.md) | Nhúng các trình soạn thảo trực quan vào ứng dụng web của bạn, với React, Angular, Vue hoặc HTML thuần, và chạy luật ngay trong trình duyệt. |
 | [Tích hợp Temporal](temporal.md) | Đánh giá quyết định từ workflow Temporal, dưới dạng activity hoặc ngay trong mã workflow với phiên bản luật được ghim. |

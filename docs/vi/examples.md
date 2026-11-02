@@ -1,6 +1,6 @@
 ---
 source: examples.md
-sourceHash: 1bdad21dc936d5a0a2575f50757a86927011af1b66d4ddb5b7c2071bb7953f62
+sourceHash: 7a00971c27c8f418d778bc9c02409ca79bfe251e40fd7d54286d48707cc0ba09
 ---
 
 # Ví dụ
@@ -18,6 +18,7 @@ Thư mục [`examples/`](../../examples/) chứa các bảng quyết định ho�
 | [`aml_name_screening.stone.json`](../../examples/aml_name_screening.stone.json), [`aml_transaction_monitoring.stone.json`](../../examples/aml_transaction_monitoring.stone.json), [`aml_alert_action.stone.json`](../../examples/aml_alert_action.stone.json) | Phòng, chống rửa tiền: sàng lọc danh sách theo dõi và giám sát giao dịch | So khớp tên gần đúng với bí danh và ngày sinh; số học và so sánh với `money`; các hàm ngày và `businessDate`; cảnh báo `COLLECT` nối tiếp tới hành động `FIRST` |
 | [`flows/card_origination.flow.json`](../../examples/flows/card_origination.flow.json) và các bảng trong [`flows/`](../../examples/flows/) | Phát hành thẻ tín dụng | Một [luồng quyết định](flows.md): luật loại trừ (knock-out) của chính sách, phân khúc bằng `switch`, một nút `derive`, hai bảng xếp hạng dùng chung một tên, và một phép chia champion/challenger bằng `split` |
 | [`flows/card_origination_scored.flow.json`](../../examples/flows/card_origination_scored.flow.json) | Phát hành thẻ tín dụng có dùng mô hình | Một luồng có [nút mô hình](flows.md#nút-mô-hình): một điểm gian lận do bên gọi cung cấp, hai mô hình PD được engine gọi và dùng chung một tên, và việc chuyển người xét duyệt hễ một mô hình lỗi |
+| [`reason-codes.json`](../../examples/reason-codes.json) | Giải thích quyết định cho khách hàng và nhân viên | Một [danh mục mã lý do](explanations.md) với nội dung tiếng Anh và tiếng Việt cho mọi mã lý do của các ví dụ; các kiểm thử ví dụ bắt buộc phải có danh mục này |
 
 ## Xét điều kiện vay: thứ tự ưu tiên và phiên bản
 

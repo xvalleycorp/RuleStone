@@ -200,6 +200,7 @@ The **Local values** tab lists each local value as a name and a CEL expression, 
 |---|---|---|
 | `table` | property | The table as parsed `.stone.json`, a plain object. The editor works on a copy and never changes the host's object. |
 | `paramSets` | property | The parameter sets the table may read: every version of each, as `.params.json` text or parsed JSON. The table's `params` are checked against them as the engine checks them, the Parameters tab shows their values, and Try it uses the version in force on its date. Without them, a table that declares `params` reports its set as not registered. |
+| `reasonCodes` | property | A [reason-code catalog](explanations.md) for the Try it panel, as `reason-codes.json` text or parsed JSON: the panel then explains each run. |
 | `validator` | property | Optional `async (table, localResult) => HostProblem[]` for server-side checks. See [the validator hook](#server-side-checks-the-validator-hook). |
 | `asOf` / `as-of` | property / attribute | The business date the Try it panel starts with (`yyyy-MM-dd`). Default: today. |
 | `facts` | property / attribute | Facts for the Try it panel as JSON text, in the forms of a `.stone-test.json` case. |
@@ -267,11 +268,12 @@ Renaming a field updates every rule expression that uses it through the type-che
 |---|---|---|
 | `table` | property | The table to run. |
 | `paramSets` | property | The parameter sets the table reads, as `.params.json` text or parsed JSON; the version in force on `asOf` is used, and the record lists it. |
+| `reasonCodes` | property | A [reason-code catalog](explanations.md), as `reason-codes.json` text or parsed JSON. Every reason code of the table must then have a message, and the panel lists the messages of each run's reasons in the panel's locale (or the catalog's first locale); `rulestone-run` carries the `explanation`. |
 | `asOf` / `as-of` | property / attribute | The business date. Default: today, in the browser's time zone. |
 | `facts` | property / attribute | Initial facts as JSON text. |
 | `factsText` | property (read only) | The facts as they would be run, as JSON text. |
 | `run()` | method | Runs the table; resolves with the event's detail. |
-| `rulestone-run` | event | `detail`: `{ ok, result?, record?, recordJson?, error?, problems?, matchedRules, evaluatedRules }`. |
+| `rulestone-run` | event | `detail`: `{ ok, result?, record?, recordJson?, explanation?, error?, problems?, matchedRules, evaluatedRules }`. |
 
 The form is generated from the inputs, with fields for money (amount and currency), dates, decimals, structs and lists. A JSON mode takes the facts in the same forms as `.stone-test.json` files. The result shows the outputs, reason codes, the trace, the rule version and the decision record.
 

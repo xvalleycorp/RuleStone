@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: b67ec3382b5aedae4d7a188d8344d2df2b09bf023639182266de60f09c0ba08c
+sourceHash: b849ecaee16b960d8f9dc2e1f946ceb3da6a75dde199c994bc756df3ae677781
 ---
 
 # SDK trình soạn thảo
@@ -205,6 +205,7 @@ Thẻ **Giá trị cục bộ** liệt kê mỗi giá trị cục bộ dưới d
 |---|---|---|
 | `table` | thuộc tính | Bảng dưới dạng `.stone.json` đã phân tích, một đối tượng thuần. Trình soạn thảo làm việc trên một bản sao và không bao giờ thay đổi đối tượng của ứng dụng chủ. |
 | `paramSets` | thuộc tính | Các bộ tham số mà bảng có thể đọc: mọi phiên bản của mỗi bộ, dạng văn bản `.params.json` hoặc JSON đã phân tích. `params` của bảng được kiểm tra với chúng như engine kiểm tra, thẻ Tham số hiển thị giá trị của chúng, và Chạy thử dùng phiên bản có hiệu lực vào ngày của nó. Nếu không có, một bảng khai báo `params` sẽ báo bộ tham số của nó chưa được đăng ký. |
+| `reasonCodes` | thuộc tính | Một [danh mục mã lý do](explanations.md) cho bảng Chạy thử, dạng văn bản `reason-codes.json` hoặc JSON đã phân tích: khi đó bảng giải thích mỗi lần chạy. |
 | `validator` | thuộc tính | Hàm tuỳ chọn `async (table, localResult) => HostProblem[]` cho các bước kiểm tra phía máy chủ. Xem [hook validator](#kiểm-tra-phía-máy-chủ-hook-validator). |
 | `asOf` / `as-of` | thuộc tính / attribute | Ngày nghiệp vụ mà bảng Chạy thử bắt đầu (`yyyy-MM-dd`). Mặc định: hôm nay. |
 | `facts` | thuộc tính / attribute | Dữ liệu đầu vào cho bảng Chạy thử dưới dạng văn bản JSON, theo các dạng của một ca kiểm thử `.stone-test.json`. |
@@ -272,11 +273,12 @@ Bộ chọn trường liệt kê các đầu vào, các giá trị cục bộ, c
 |---|---|---|
 | `table` | thuộc tính | Bảng cần chạy. |
 | `paramSets` | thuộc tính | Các bộ tham số mà bảng đọc, dạng văn bản `.params.json` hoặc JSON đã phân tích; phiên bản có hiệu lực vào `asOf` được dùng, và bản ghi liệt kê nó. |
+| `reasonCodes` | thuộc tính | Một [danh mục mã lý do](explanations.md), dạng văn bản `reason-codes.json` hoặc JSON đã phân tích. Khi đó mọi mã lý do của bảng phải có nội dung, và bảng liệt kê nội dung các lý do của mỗi lần chạy theo locale của bảng (hoặc locale đầu tiên của danh mục); `rulestone-run` mang theo `explanation`. |
 | `asOf` / `as-of` | thuộc tính / attribute | Ngày nghiệp vụ. Mặc định: hôm nay, theo múi giờ của trình duyệt. |
 | `facts` | thuộc tính / attribute | Dữ liệu đầu vào ban đầu dưới dạng văn bản JSON. |
 | `factsText` | thuộc tính (chỉ đọc) | Dữ liệu đầu vào sẽ được chạy, dưới dạng văn bản JSON. |
 | `run()` | phương thức | Chạy bảng; trả về `detail` của sự kiện. |
-| `rulestone-run` | sự kiện | `detail`: `{ ok, result?, record?, recordJson?, error?, problems?, matchedRules, evaluatedRules }`. |
+| `rulestone-run` | sự kiện | `detail`: `{ ok, result?, record?, recordJson?, explanation?, error?, problems?, matchedRules, evaluatedRules }`. |
 
 Biểu mẫu được tạo từ các đầu vào, với ô nhập cho tiền (số tiền và đơn vị tiền tệ), ngày, số thập phân, struct và danh sách. Chế độ JSON nhận dữ liệu đầu vào theo cùng các dạng như tệp `.stone-test.json`. Kết quả hiển thị các đầu ra, mã lý do, vết thực thi (trace), phiên bản luật và bản ghi quyết định.
 

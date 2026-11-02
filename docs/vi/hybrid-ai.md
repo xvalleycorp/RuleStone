@@ -1,13 +1,13 @@
 ---
 source: hybrid-ai.md
-sourceHash: 8c4786615bb76daa3806809f03150a021338c5219dcb528112f439c6935f6d46
+sourceHash: c8381f6ee6a62929dac40c2d012ca537c7d5cb3c83aa9a68e22e171e528f892e
 ---
 
 # Ra quyết định AI lai
 
-> Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-10-30
+> Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-11-02
 >
-> Bước 1 tới 3 của [kế hoạch triển khai](#9-kế-hoạch-triển-khai) **đã có**: mọi lần đánh giá đều tạo ra một bản ghi quyết định (xem [Bản ghi quyết định và kiểm toán](java-api.md#bản-ghi-quyết-định-và-kiểm-toán)), luồng quyết định chạy được trong bộ máy luật Java (xem [Luồng quyết định](flows.md)), và luồng dùng được mô hình qua nút mô hình ở chế độ `invoke` và `supplied` (xem [Nút mô hình](flows.md#nút-mô-hình)). Mọi phần còn lại trong trang này là đề xuất để rà soát và sẽ thay đổi trước khi phát hành.
+> Bước 1 tới 4 của [kế hoạch triển khai](#9-kế-hoạch-triển-khai) **đã có**: mọi lần đánh giá đều tạo ra một bản ghi quyết định (xem [Bản ghi quyết định và kiểm toán](java-api.md#bản-ghi-quyết-định-và-kiểm-toán)), luồng quyết định chạy được trong bộ máy luật Java (xem [Luồng quyết định](flows.md)), luồng dùng được mô hình qua nút mô hình ở chế độ `invoke` và `supplied` (xem [Nút mô hình](flows.md#nút-mô-hình)), và bản ghi được giải thích bằng một danh mục mã lý do (xem [Giải thích quyết định](explanations.md)). Mọi phần còn lại trong trang này là đề xuất để rà soát và sẽ thay đổi trước khi phát hành.
 
 Trang này đặc tả cách RuleStone kết hợp mô hình học máy (machine learning) với luật, và cách mọi quyết định tự giải thích. Trang đề cập ba nội dung:
 
@@ -335,7 +335,7 @@ Việc không đưa giá trị vào bản ghi mặc định nghĩa là bản ghi
   }
   ```
 
-  Lời giải thích cho khách hàng và nhân viên được tạo ra từ danh mục này một cách **tất định**. Về sau một LLM có thể diễn đạt lại để điều chỉnh giọng văn, chỉ dùng bản ghi đã che dữ liệu làm đầu vào, nhưng các mã vẫn là nguồn sự thật. Đây chính là mẫu "giải thích quyết định" đã có trong trang [kiến trúc](architecture.md#7-tích-hợp-ai-dự-kiến).
+  Lời giải thích cho khách hàng và nhân viên được tạo ra từ danh mục này một cách **tất định**. Về sau một LLM có thể diễn đạt lại để điều chỉnh giọng văn, chỉ dùng bản ghi đã che dữ liệu làm đầu vào, nhưng các mã vẫn là nguồn sự thật. Đây chính là mẫu "giải thích quyết định" đã có trong trang [kiến trúc](architecture.md#7-tích-hợp-ai-dự-kiến). *Đã có:* danh mục được phát hành còn khai báo `version` và `locales`; xem [Giải thích quyết định](explanations.md).
 
 ### 4.5 Replay và chấm điểm lại
 
@@ -477,7 +477,14 @@ Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử
    - **Kiểm thử.** Ca kiểm thử `.stone-test.json` cung cấp kết quả trong `models`, như ở [mục 6](#6-kiểm-thử-luồng-có-dùng-mô-hình). `RuleStone.builder().suppliedModelsOnly()` chạy mọi nút mô hình ở chế độ `supplied`, cho kiểm thử và cho replay. Độ bao phủ tính đường `onFailure` của mỗi nút mô hình là một nhánh, được viết `pd -> referred (onFailure)`.
    - **Tính tất định và replay.** Chế độ `supplied` là tất định. Với chế độ `invoke`, replay (bước 5) cần từ mỗi bước mô hình trạng thái, các đầu ra và độ tin cậy của nó, cùng thứ hạng và chiều của các attribution, vốn cho ra cùng các mã lý do. Replay sẽ dựng lại các kết quả từ bản ghi và chạy luồng với `suppliedModelsOnly()`.
    - **Bên gọi dùng JSON.** `FactsJson.readModels` đọc đối tượng `models`. Activity của Temporal (`DecisionRequest.models`), worker của Camunda 8 và delegate của Camunda 7 (`modelsVariable`) và endpoint đánh giá của trình soạn thảo (`models`) nhận đối tượng này, nhưng vẫn chỉ đánh giá bảng quyết định. Việc đánh giá luồng qua các tích hợp này được để lại cho sau.
-4. **Giải thích.** Thêm danh mục mã lý do với thông điệp EN/VI và một bộ hiển thị giải thích tất định.
+4. **Giải thích.** *Đã xong.* Thêm danh mục mã lý do với thông điệp EN/VI và một bộ hiển thị giải thích tất định. Xem [Giải thích quyết định](explanations.md) và [Kiểm thử phần giải thích](testing.md#kiểm-thử-phần-giải-thích). Những điểm trang này còn để ngỏ đã được quyết định như sau:
+   - **Định dạng danh mục.** `reason-codes.json` bọc các mã của [4.4](#44-mã-lý-do-và-giải-thích-dễ-hiểu) trong một đối tượng có `version` bắt buộc, `description` không bắt buộc và các `locales` được khai báo, để tệp có phiên bản và kiểm tra được: mỗi mã có thông điệp cho đúng các locale đó. Tệp được đọc chặt chẽ, mọi vấn đề được báo cùng lúc, như với bảng.
+   - **Phiên bản.** Danh mục có phiên bản chính xác, `<version>@sha256:<hash của dạng chuẩn>`, như bảng và bộ tham số, và mỗi phần giải thích ghi phiên bản đó. Danh mục không có ngày hiệu lực và không có id: mỗi engine có một danh mục. Mã băm của các bảng, luồng và bộ tham số hiện có không thay đổi.
+   - **Thông điệp** là một dòng văn bản thuần. Chưa có placeholder; `{` và `}` bị từ chối để sau này có thể thêm placeholder cho giá trị đầu ra mà không đổi các danh mục hiện có. Mỗi mã và mỗi locale có một thông điệp, không tách văn bản cho khách hàng và cho nhân viên: thông điệp về gian lận, AML và lỗi mô hình được viết cho nhân viên, vì tiết lộ một cảnh báo cho khách hàng có thể là hành vi tiết lộ thông tin (tipping off).
+   - **Kiểm tra lúc nạp.** `RuleStone.builder().reasonCodeCatalog(catalog)` làm việc tạo engine kiểm tra mọi mã lý do mà một bảng hay luồng đã đăng ký có thể đưa ra: `reasonCode` của luật, và `reasonCodes` cùng mã `onFailure` của nút mô hình. Danh mục là không bắt buộc; `requireReasonCodeCatalog()` làm nó trở thành bắt buộc.
+   - **Bộ hiển thị.** `RuleStoneEngine.explain(record, locale)` và `Explanations.explain(record, catalog, locale)` dựng một `Explanation` (trong `rulestone-api`) chỉ từ bản ghi và danh mục: kết quả (các đầu ra của bản ghi), các lý do kèm thông điệp, các bước với phiên bản bảng, luật khớp, nhánh và attribution của mô hình theo thứ hạng và chiều, và các phiên bản bộ tham số. Hash của đầu vào, đầu ra của mô hình, độ tin cậy, độ trễ và chi tiết lỗi bị bỏ qua. `Explanations.text` và `Explanations.write` hiển thị nó dưới dạng văn bản, với tiêu đề tiếng Anh và tiếng Việt có sẵn, và dưới dạng JSON. Locale là một thẻ ngôn ngữ bình thường, không bao giờ là locale mặc định của JVM.
+   - **Bộ máy luật trên trình duyệt.** Bộ máy này đọc danh mục, kiểm tra danh mục trong `createEngine` và hiển thị cùng văn bản và JSON, giống nhau đến từng byte, kể cả bản ghi của luồng do bộ máy luật Java ghi; `java-explanations.json` kiểm tra điều này. Bảng Chạy thử của trình soạn thảo nhận danh mục qua `reasonCodes`.
+   - **Kiểm thử.** Một ca `.stone-test.json` có thể kỳ vọng `"explanation": { "locale", "reasons", "messages" }`.
 5. **Replay và chấm điểm lại.** Thêm các API này, và mở rộng tích hợp Temporal và Camunda để mang theo id bản ghi.
 6. **Adapter.** Làm `rulestone-model-http` trước, rồi `rulestone-model-scorecard`, rồi `rulestone-model-onnx`.
 7. **Mô hình chạy bóng, nút LLM, và khung vẽ luồng trong trình soạn thảo.**

@@ -13,6 +13,7 @@ The [`examples/`](../examples/) directory holds complete decision tables for com
 | [`aml_name_screening.stone.json`](../examples/aml_name_screening.stone.json), [`aml_transaction_monitoring.stone.json`](../examples/aml_transaction_monitoring.stone.json), [`aml_alert_action.stone.json`](../examples/aml_alert_action.stone.json) | Anti-money laundering: watchlist screening and transaction monitoring | Fuzzy name matching with aliases and dates of birth; `money` arithmetic and comparisons; date functions and `businessDate`; `COLLECT` alerts chained to a `FIRST` action |
 | [`flows/card_origination.flow.json`](../examples/flows/card_origination.flow.json) and the tables in [`flows/`](../examples/flows/) | Credit card origination | A [decision flow](flows.md): policy knock-outs, segmentation with `switch`, a `derive` node, two grade tables sharing a name, and a champion/challenger `split` |
 | [`flows/card_origination_scored.flow.json`](../examples/flows/card_origination_scored.flow.json) | Credit card origination with models | A flow with [model nodes](flows.md#model-nodes): a fraud score supplied by the caller, two invoked PD models sharing a name, and a referral whenever a model fails |
+| [`reason-codes.json`](../examples/reason-codes.json) | Explaining decisions to customers and staff | A [reason-code catalog](explanations.md) with an English and a Vietnamese message for every reason code of the examples; the example tests require it |
 
 ## Loan eligibility: priorities and versions
 

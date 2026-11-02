@@ -1,6 +1,6 @@
 ---
 source: testing.md
-sourceHash: aeaf927daa6569d67a0545a58e828e894b2541ad45008849272501fd02cacd6f
+sourceHash: b4f19c8f617f300ad1a00c444f1f1608c866e2912a357b5207c82eebaca6bb56
 ---
 
 # Kiểm thử bảng quyết định
@@ -20,6 +20,7 @@ Mô-đun cung cấp ba công cụ:
 - [Chạy tệp kiểm thử với JUnit 5](#chạy-tệp-kiểm-thử-với-junit-5)
 - [Độ bao phủ luật](#độ-bao-phủ-luật)
 - [Kiểm thử luồng quyết định](#kiểm-thử-luồng-quyết-định)
+- [Kiểm thử phần giải thích](#kiểm-thử-phần-giải-thích)
 - [Assertion dạng fluent trong Java](#assertion-dạng-fluent-trong-java)
 - [Thực hành khuyến nghị cho ngân hàng](#thực-hành-khuyến-nghị-cho-ngân-hàng)
 
@@ -110,6 +111,7 @@ Một bảng đọc tham số được kiểm thử với các bộ tham số m�
 | `matchedRules` | Đúng các luật này khớp, theo thứ tự đánh giá. `[]` nghĩa là không có luật nào. Với một luồng, đó là các luật của mọi nút `table`, theo thứ tự. |
 | `path` | Với một luồng: đúng các nút này được đi qua, theo thứ tự, từ nút bắt đầu tới nút kết thúc. Với một bảng, đường đi chỉ gồm id của quyết định. |
 | `ruleVersion` | Phiên bản được dùng: `"3"` chấp nhận mọi nội dung của phiên bản 3; `"3@sha256:…"` (giá trị `ruleVersion` đầy đủ của một kết quả) chỉ chấp nhận đúng nội dung đó. |
+| `explanation` | Phần giải thích của bản ghi bằng một locale, theo danh mục mã lý do của engine: xem [Kiểm thử phần giải thích](#kiểm-thử-phần-giải-thích). |
 | `error` | Việc đánh giá thất bại với một `RuleStoneException` có thông báo chứa đoạn văn bản này, ví dụ `"division by zero"`, `"balance: missing input"` hoặc `"no version of decision 'loan_eligibility' is effective on 2025-12-31"`. Không thể kết hợp với các trường khác. |
 
 ### Giá trị
@@ -314,6 +316,39 @@ RuleStoneEngine engine = RuleStone.builder().decisions(tables).flows(flows).supp
 ```
 
 Độ bao phủ tính hai loại nhánh cho một nút mô hình, và nút mô hình luôn có cả hai: mỗi đích của `next`, và đường `onFailure`, được viết `pd_behaviour -> referred (onFailure)`. Nhánh `onFailure` chỉ được tính khi mô hình lỗi, kể cả khi `next` dẫn tới cùng một nút, nên mỗi nút mô hình cần một ca kiểm thử trong đó mô hình của nó lỗi.
+
+## Kiểm thử phần giải thích
+
+Khi engine có [danh mục mã lý do](explanations.md), một ca kiểm thử còn có thể kiểm tra [phần giải thích](explanations.md#giải-thích-một-quyết-định) của bản ghi bằng một locale. Ca kiểm thử sau, trong [`examples/credit_limit_increase.stone-test.json`](../../examples/credit_limit_increase.stone-test.json), kiểm tra nội dung tiếng Việt mà khách hàng bị từ chối sẽ đọc:
+
+```json
+"expect": {
+  "output": { "decision": "REJECT" }, "reasonCodes": ["DTI_HIGH"], "matchedRules": ["DTI_HIGH"],
+  "explanation": {
+    "locale": "vi",
+    "reasons": ["DTI_HIGH"],
+    "messages": ["Tổng số tiền trả nợ hằng tháng của quý khách quá cao so với thu nhập."]
+  }
+}
+```
+
+| Trường | Kiểm tra |
+|---|---|
+| `locale` | Bắt buộc. Locale dùng để giải thích bản ghi; danh mục phải có locale này. |
+| `reasons` | Đúng các mã lý do này, theo đúng thứ tự này, và mỗi mã có nội dung trong locale đó. |
+| `messages` | Đúng các nội dung này, theo đúng thứ tự này. |
+
+Hãy ghi `reasons`, `messages` hoặc cả hai. Tạo engine cần kiểm thử cùng với danh mục, như trong môi trường thật; khi đó `requireReasonCodeCatalog()` còn làm việc tạo engine thất bại nếu một mã của bảng hay luồng không có nội dung, nghĩa là toàn bộ danh mục được kiểm tra trước khi ca kiểm thử nào chạy:
+
+```java
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)
+        .reasonCodeCatalog(ReasonCodeCatalogJson.read(Path.of("rules/reason-codes.json")))
+        .requireReasonCodeCatalog()
+        .build();
+```
+
+Một ca kiểm thử kỳ vọng phần giải thích sẽ thất bại với engine không có danh mục.
 
 ## Assertion dạng fluent trong Java
 

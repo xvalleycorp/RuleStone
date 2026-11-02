@@ -307,6 +307,17 @@ To verify a decision later, recompute the hash from the inputs you stored and co
 
 **Sinks must succeed.** Sinks run synchronously on the evaluating thread. If a sink throws, the evaluation fails with an `AuditException` and the caller gets no result: a decision is never returned without its record having been accepted. A sink that must not slow decisions down can hand records to its own queue. When an evaluation has already failed and a sink also fails, the caller receives the original exception, with the `AuditException` attached as suppressed.
 
+### Explaining records
+
+With a [reason-code catalog](explanations.md), the engine explains any record in words, in the customer's language: the outcome, the reasons with their reviewed messages, and what decided. Build the engine with `reasonCodeCatalog(...)`, which also checks that every reason code of every table and flow has a message, and call `explain`:
+
+```java
+Explanation explanation = engine.explain(result.record(), "vi");
+String notice = Explanations.text(explanation);
+```
+
+Like the record, an explanation contains no input values. See [Explanations](explanations.md).
+
 ### Publishing records to Kafka
 
 `rulestone-audit-kafka` publishes records to a Kafka topic, written by `DecisionRecordJson` and keyed by correlation id, so that the records of one transaction stay in order on one partition. It is fast enough for an inline path: it hands each record to the producer's buffer and does not wait for the broker. Bring your own Kafka client; the module is compiled against `kafka-clients` 4.4 and does not redistribute it.

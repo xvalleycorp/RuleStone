@@ -1,6 +1,6 @@
 ---
 source: architecture.md
-sourceHash: 3cfa8365151fe82fb0d3c4e12d9baaa5bc4c9ea731c313b52ae351f3281fb983
+sourceHash: c37904cc0e94f298ae93edda62b42832c728c643942fd7c32a7b6deeb8219101
 ---
 
 # Kiến trúc RuleStone
@@ -212,5 +212,5 @@ Mọi lỗi trong một định nghĩa luật đã được báo cáo cùng lúc
    - Còn lại: lịch làm việc.
 3. **M2 — Quản trị:** maker-checker, kiểm toán liên kết bằng chuỗi băm, kho luật JDBC và audit sink JDBC.
 4. **M3 — Tích hợp** *(đã bắt đầu)*: đã xong Temporal, Camunda 7 và 8, và audit sink Kafka. Còn lại: Spring Boot starter, máy chủ REST/gRPC, khả năng quan sát (Micrometer, OpenTelemetry), bộ xử lý Kafka.
-5. **M4 — Phân tích và AI** *(đã bắt đầu)*: nút mô hình (bước 3 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)) đã xong. Còn lại: phân tích tĩnh, cú pháp văn bản `.stone`, giải thích quyết định, chạy lại và chấm điểm lại, các adapter mô hình (bước 4 đến 7), trợ lý soạn luật, máy chủ MCP.
+5. **M4 — Phân tích và AI** *(đã bắt đầu)*: nút mô hình và [giải thích quyết định](explanations.md) bằng danh mục mã lý do (bước 3 và 4 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)) đã xong. Còn lại: phân tích tĩnh, cú pháp văn bản `.stone`, chạy lại và chấm điểm lại, các adapter mô hình (bước 5 đến 7), trợ lý soạn luật, máy chủ MCP.
 6. **M5 — Mô phỏng** *(đã bắt đầu)*: đã xong phiên bản bóng và canary trên lưu lượng thật, và trình soạn thảo web cho bảng. Còn lại: kiểm thử ngược và champion/challenger trên dữ liệu lịch sử, soạn luồng vượt ra ngoài phần thiết kế.

@@ -45,6 +45,7 @@ Events are `CustomEvent`s that bubble and cross shadow roots (`composed`).
 |---|---|---|
 | `table` | property | The table as parsed `.stone.json` (a plain object). The editor works on a copy and never changes the host's object. |
 | `paramSets` | property | Every version of the parameter sets the table may read, as `.params.json` text or parsed JSON. The table's `params` are checked against them, the Parameters tab shows their values, and Try it binds the version in force. |
+| `reasonCodes` | property | A reason-code catalog for Try it (`reason-codes.json` text or parsed JSON): each run is explained with its messages. |
 | `validator` | property | Optional `async (table, localResult) => HostProblem[]`, for server-side checks such as calling the bank's Java RuleStone service. A `HostProblem` is `{ message, severity?, target? }`. |
 | `asOf` / `as-of` | property / attribute | The business date the Try it panel starts with. |
 | `facts` | property / attribute | Facts for the Try it panel as JSON text, for example from a `.stone-test.json` case. |
@@ -117,6 +118,7 @@ The palette has the node types `table`, `switch`, `derive`, `model`, `split`, `e
 |---|---|---|
 | `table` | property | The table to run. |
 | `paramSets` | property | The parameter sets the table reads (`.params.json` text or parsed JSON); the version in force on `asOf` is used. |
+| `reasonCodes` | property | A reason-code catalog (`reason-codes.json` text or parsed JSON): the table's reason codes are checked against it, and each run is explained with its messages. |
 | `asOf` / `as-of` | property / attribute | The business date (default today). |
 | `facts` | property / attribute | Initial facts as JSON text. |
 | `run()` | method | Runs the table; resolves with the event's detail. |
