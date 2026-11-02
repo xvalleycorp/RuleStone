@@ -289,6 +289,8 @@ export function anchorMap(markdown) {
   for (const segment of splitFences(parseFrontMatter(markdown).body)) {
     if (segment.code) continue;
     for (const line of segment.text.split('\n')) {
+      // Explicit HTML anchors, such as <a id="parameters"></a>, keep their id on both sides.
+      for (const [, id] of line.matchAll(/<a\s+id="([^"]+)"\s*><\/a>/g)) map.set(id, id);
       if (!/^#{1,6}\s/.test(line)) continue;
       const custom = /\s\{#([^}]+)\}\s*$/.exec(line);
       const text = headingText(line.replace(/\s\{#[^}]+\}\s*$/, ''));
