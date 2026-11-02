@@ -88,6 +88,28 @@ export class DecisionEvaluationError extends RuleStoneError {
   }
 }
 
+/** An evaluation took longer than its timeout, as DecisionTimeoutException. */
+export class DecisionTimeoutError extends DecisionEvaluationError {
+  constructor(
+    decisionId: string,
+    ruleVersion: string,
+    /** The timeout that passed, in milliseconds. */
+    readonly timeoutMs: number,
+    /** The rules examined before the time ran out, in evaluation order. */
+    readonly trace: readonly { readonly ruleId: string; readonly matched: boolean }[],
+  ) {
+    super(decisionId, ruleVersion, `evaluation timed out after ${formatTimeout(timeoutMs)} with ${trace.length} rule(s) examined`)
+    this.name = 'DecisionTimeoutError'
+  }
+}
+
+/** A timeout as Java's DecisionTimeoutException writes a Duration: ms, µs or ns. */
+function formatTimeout(timeoutMs: number): string {
+  const nanos = Math.round(timeoutMs * 1_000_000)
+  if (nanos % 1_000_000 === 0) return `${nanos / 1_000_000} ms`
+  return nanos % 1_000 === 0 ? `${nanos / 1_000} µs` : `${nanos} ns`
+}
+
 /** An audit sink failed, so the evaluation failed, as AuditException. */
 export class AuditError extends RuleStoneError {
   constructor(

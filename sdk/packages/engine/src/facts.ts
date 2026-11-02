@@ -65,9 +65,9 @@ export function readValues(json: JsonInput, types: ReadonlyMap<string, ValueType
   return values
 }
 
-/** Reads facts for a decision: the same as readValues(json, table.inputs). */
-export function readFacts(json: JsonInput, inputs: ReadonlyMap<string, ValueType> | DecisionTable): Map<string, Value> {
-  return readValues(json, inputs instanceof Map ? inputs : (inputs as DecisionTable).inputs)
+/** Reads facts for a decision table or flow: the same as readValues(json, decision.inputs). */
+export function readFacts(json: JsonInput, inputs: ReadonlyMap<string, ValueType> | { readonly inputs: ReadonlyMap<string, ValueType> }): Map<string, Value> {
+  return readValues(json, inputs instanceof Map ? inputs : (inputs as { readonly inputs: ReadonlyMap<string, ValueType> }).inputs)
 }
 
 /** Reads one value of a declared type. @throws InvalidFactsError, located at "value" */

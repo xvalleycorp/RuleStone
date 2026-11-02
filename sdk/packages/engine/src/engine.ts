@@ -1,41 +1,37 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// The engine: compiles decision tables (reporting every problem together), selects the
-// version by id, version or effective date, evaluates with the FIRST, UNIQUE and COLLECT hit
-// policies and produces a decision record for every evaluation, as the Java engine does.
+// The engine: compiles decision tables and flows (reporting every problem together), selects the
+// version by id, version or effective date, evaluates tables with the FIRST, UNIQUE and COLLECT hit
+// policies and flows node by node, model nodes included, and produces a decision record for every
+// evaluation, as the Java engine does.
 
-import { Bindings, CompiledExpression, ExpressionEnvironment, validateCurrencyScale } from './cel/environment.js'
+import { validateCurrencyScale } from './cel/environment.js'
 import { LocalDate, dateInZone } from './date.js'
+import { AuditError, DecisionNotFoundError, DecisionTimeoutError, InvalidDecisionError, InvalidFactsError, RuleStoneError } from './errors.js'
 import {
-  AuditError, DecisionEvaluationError, DecisionNotFoundError, ExpressionError, InvalidDecisionError, RuleStoneError,
-} from './errors.js'
+  BUSINESS_DATE, CompiledTable, Deadline, FactsHasher, NO_OVERRIDES, Progress, compileTable, factsMap, monotonicNow,
+  type Executable, type FactsInput, type MonotonicClock, type Overrides, type TraceStep,
+} from './executable.js'
 import { readFacts, writeValues, type JsonInput } from './facts.js'
-import { compareJavaStrings } from './json.js'
-import type { DecisionRecord, ParamSetVersion, PathStep, ReasonCode } from './record.js'
-import { ruleVersionOf, sha256Hex, tableRef, type DecisionTable } from './table.js'
-import { compileLocals } from './locals.js'
-import {
-  PARAMS, checkParams, compileParameterSets, paramsType, selectParams, undeclaredParams,
-  type ParameterSet, type ParamsBinding, type Registry,
-} from './params.js'
+import type { DecisionFlow } from './flow.js'
+import { CompiledFlow, compileFlow, type Models } from './flow-engine.js'
+import { readModels, type ModelInvoker, type SuppliedModel } from './models.js'
+import { compileParameterSets, type ParameterSet, type Registry } from './params.js'
+import type { DecisionRecord, ModelStep, ReasonCode } from './record.js'
+import type { DecisionTable } from './table.js'
 import { selectVersion, versionProblems } from './versions.js'
 import {
   MISSING_CATALOG, explainRecord, missingReasonCodes, reasonCodeCatalogVersionOf,
   type ExplainableRecord, type Explanation, type ReasonCodeCatalog,
 } from './explanation.js'
-import { containsStruct, type ValueType } from './types.js'
 import type { Value } from './values.js'
 
-/** Implicit input of every decision: the date the decision is made for. */
-export const BUSINESS_DATE = 'businessDate'
+export { BUSINESS_DATE }
+export type { TraceStep }
 
 /** Names the engine in decision records. */
 export const ENGINE_NAME = 'rulestone-js 0.1.0'
-
-const ID = /^[A-Za-z][A-Za-z0-9_.-]*$/
-const VERSION_FROM_DIGIT = /^[0-9][A-Za-z0-9_.-]*$/
-const REASON_CODE = /^[A-Z][A-Z0-9_]*$/
 
 /** Which decision to evaluate, and which version of it. */
 export interface DecisionRef {
@@ -51,12 +47,8 @@ export interface DecisionRef {
    * replay a decision with the versions its record lists. A table that pins a version keeps it.
    */
   readonly params?: ReadonlyMap<string, string> | { readonly [set: string]: string }
-}
-
-/** One rule examined, and whether it matched. */
-export interface TraceStep {
-  readonly ruleId: string
-  readonly matched: boolean
+  /** The timeout of this evaluation, in milliseconds, instead of the engine's; see EngineOptions.timeoutMs. */
+  readonly timeoutMs?: number
 }
 
 /** The outcome of evaluating one decision, as DecisionResult. */
@@ -67,6 +59,7 @@ export interface DecisionResult {
   /** Outputs in declaration order; under COLLECT every output is a list. */
   readonly output: ReadonlyMap<string, Value>
   readonly reasonCodes: readonly string[]
+  /** Every rule examined, in order; for a flow, across all its table nodes. */
   readonly trace: readonly TraceStep[]
   /** Whether at least one rule matched. */
   readonly matched: boolean
@@ -78,10 +71,15 @@ export interface DecisionResult {
 /** Receives the record of every evaluation; throwing (or rejecting) fails the evaluation. */
 export type AuditSink = (record: DecisionRecord) => void | Promise<void>
 
+/** Model results passed with the facts, by model node id. */
+export type ModelsInput = ReadonlyMap<string, SuppliedModel> | { readonly [node: string]: SuppliedModel }
+
 export interface EngineOptions {
-  /** Every version of every decision; the engine selects one per request. */
+  /** Every version of every decision table; the engine selects one per request. */
   readonly tables: Iterable<DecisionTable>
-  /** Every version of every parameter set that the tables read; see parseParameterSet. */
+  /** Every version of every decision flow, which use the tables; see parseDecisionFlow. */
+  readonly flows?: Iterable<DecisionFlow>
+  /** Every version of every parameter set that the tables and flows read; see parseParameterSet. */
   readonly paramSets?: Iterable<ParameterSet>
   /** Upper bound on the iterations of the list macros in one expression evaluation. Default 10,000. */
   readonly maxIterations?: number
@@ -97,185 +95,99 @@ export interface EngineOptions {
   readonly auditSinks?: readonly AuditSink[]
   /**
    * The reviewed messages of reason codes, for engine.explain; see parseReasonCodeCatalog. Every
-   * reason code of every table must then have a message.
+   * reason code of every table and model node must then have a message.
    */
   readonly reasonCodeCatalog?: ReasonCodeCatalog
   /** Fail unless a reasonCodeCatalog is given. Default false. */
   readonly requireReasonCodeCatalog?: boolean
+  /** The invoker of each model that model nodes in invoke mode call, by model id. */
+  readonly modelInvokers?: ReadonlyMap<string, ModelInvoker> | { readonly [modelId: string]: ModelInvoker }
+  /**
+   * Run every model node in supplied mode, for tests and replays: the engine calls no model and
+   * needs no invoker. Do not use it in production.
+   */
+  readonly suppliedModelsOnly?: boolean
+  /**
+   * Key for the record's factsHash, at least 16 bytes: the hash is then HMAC-SHA256, so that nobody
+   * without the key can test guesses of low-variety inputs against a record.
+   */
+  readonly factsHashKey?: Uint8Array
+  /**
+   * Default timeout of every evaluation, in milliseconds, for requests without one. The engine checks
+   * the time before each node and each rule, so it never interrupts a rule. Default: none.
+   */
+  readonly timeoutMs?: number
+  /** The monotonic clock timeouts and model latencies are measured with, in milliseconds; default performance.now. For tests. */
+  readonly monotonicClock?: MonotonicClock
 }
 
-/** A compiled decision version. */
-export interface CompiledDecision {
-  readonly table: DecisionTable
-  readonly ruleVersion: string
-}
+/** A compiled version of a decision table or flow. */
+export type CompiledDecision =
+  | { readonly kind: 'table'; readonly table: DecisionTable; readonly definition: DecisionTable; readonly ruleVersion: string }
+  | { readonly kind: 'flow'; readonly flow: DecisionFlow; readonly definition: DecisionFlow; readonly ruleVersion: string }
 
-interface CompiledRule {
-  readonly id: string
-  readonly when: CompiledExpression
-  readonly then: ReadonlyMap<string, CompiledExpression>
-  readonly reasonCode: string | undefined
-}
-
-interface Compiled extends CompiledDecision {
-  readonly environment: ExpressionEnvironment
-  readonly rules: readonly CompiledRule[]
-  /** The parameters the table reads, if it declares any. */
-  readonly params: ParamsBinding | undefined
-}
+type Compiled = CompiledTable | CompiledFlow
 
 /**
- * Compiles and type-checks every table, checks versions for duplicates and contradictory dates, and
- * returns an immutable engine.
- * @throws InvalidDecisionError listing every problem in every table
- * @throws RangeError for an invalid currency scale
+ * Compiles and type-checks every parameter set, table and flow, checks versions for duplicates and
+ * contradictory dates, and returns an immutable engine.
+ * @throws InvalidDecisionError listing every problem in every definition
+ * @throws RangeError for an invalid currency scale, timeout or factsHashKey
  */
 export async function createEngine(options: EngineOptions): Promise<RuleStoneEngine> {
   const scales = options.currencyScales instanceof Map ? options.currencyScales : new Map(Object.entries(options.currencyScales ?? {}))
   for (const [currency, digits] of scales) validateCurrencyScale(currency, digits)
+  if (options.timeoutMs !== undefined) checkTimeout(options.timeoutMs)
+  if (options.factsHashKey !== undefined && options.factsHashKey.length < 16) throw new RangeError('factsHashKey must be at least 16 bytes')
   const maxIterations = options.maxIterations ?? 10_000
   const problems: string[] = []
-  const registry = await compileParameterSets(options.paramSets ?? [], problems)
-  const byId = new Map<string, Compiled[]>()
+  const registry: Registry = await compileParameterSets(options.paramSets ?? [], problems)
+  const compiledTables = new Map<string, CompiledTable[]>()
+  const registered = new Map<string, DecisionTable[]>()
   const tables = [...options.tables]
   for (const table of tables) {
-    const compiled = await compile(table, maxIterations, scales, registry, problems)
+    if (!registered.has(table.id)) registered.set(table.id, [])
+    registered.get(table.id)!.push(table)
+    const compiled = await compileTable(table, maxIterations, scales, registry, problems)
     if (compiled) {
-      let versions = byId.get(table.id)
-      if (!versions) byId.set(table.id, (versions = []))
-      versions.push(compiled)
+      if (!compiledTables.has(table.id)) compiledTables.set(table.id, [])
+      compiledTables.get(table.id)!.push(compiled)
     }
   }
-  for (const versions of byId.values()) checkVersions(versions, problems)
-  if (options.reasonCodeCatalog) problems.push(...missingReasonCodes(tables, options.reasonCodeCatalog))
+  for (const versions of compiledTables.values()) problems.push(...versionProblems(versions.map((c) => c.table)))
+  const flows = [...(options.flows ?? [])]
+  const byId = new Map<string, Compiled[]>()
+  for (const [id, versions] of compiledTables) byId.set(id, [...versions])
+  const invokers = options.modelInvokers instanceof Map ? options.modelInvokers : new Map(Object.entries(options.modelInvokers ?? {}))
+  const now = options.monotonicClock ?? monotonicNow
+  const models: Models = { invokers, suppliedOnly: options.suppliedModelsOnly ?? false, now }
+  const flowContext = {
+    tables: compiledTables, registered, flowIds: new Set(flows.map((f) => f.id)), maxIterations, currencyScales: scales, models, registry,
+  }
+  const flowVersions = new Map<string, DecisionFlow[]>()
+  for (const flow of flows) {
+    if (!flowVersions.has(flow.id)) flowVersions.set(flow.id, [])
+    flowVersions.get(flow.id)!.push(flow)
+    const compiled = await compileFlow(flow, flowContext, problems)
+    if (compiled) {
+      if (!byId.has(flow.id)) byId.set(flow.id, [])
+      byId.get(flow.id)!.push(compiled)
+    }
+  }
+  for (const versions of flowVersions.values()) problems.push(...versionProblems(versions))
+  if (options.reasonCodeCatalog) problems.push(...missingReasonCodes(tables, options.reasonCodeCatalog, flows))
   else if (options.requireReasonCodeCatalog) problems.push(MISSING_CATALOG)
-  if (problems.length > 0) throw new InvalidDecisionError(problems)
+  if (problems.length > 0) {
+    throw new InvalidDecisionError(problems)
+  }
   const catalog = options.reasonCodeCatalog
     ? { catalog: options.reasonCodeCatalog, version: await reasonCodeCatalogVersionOf(options.reasonCodeCatalog) }
     : undefined
-  return new RuleStoneEngine(byId, options, catalog)
+  return new RuleStoneEngine(byId, registry, options, catalog)
 }
 
-async function compile(
-  table: DecisionTable,
-  maxIterations: number,
-  scales: ReadonlyMap<string, number>,
-  registry: Registry,
-  problems: string[],
-): Promise<Compiled | undefined> {
-  const at = tableRef(table) + ' '
-  const before = problems.length
-  if (!ID.test(table.id)) problems.push(`${at}id: must match [A-Za-z][A-Za-z0-9_.-]*`)
-  if (!ID.test(table.version) && !VERSION_FROM_DIGIT.test(table.version)) {
-    problems.push(`${at}version: must be letters, digits, '.', '_' or '-'`)
-  }
-  if (table.effectiveFrom && table.effectiveTo && table.effectiveFrom.compareTo(table.effectiveTo) >= 0) {
-    problems.push(`${at}effectiveTo: must be after effectiveFrom`)
-  }
-  for (const [name, type] of table.outputs) {
-    if (containsStruct(type)) problems.push(`${at}outputs.${name}: outputs must be bool, int, string, decimal, money, date or lists of them`)
-  }
-  if (table.rules.length === 0) problems.push(`${at}rules: a decision table needs at least one rule`)
-
-  const inputs = new Map(table.inputs)
-  if (inputs.delete(BUSINESS_DATE)) {
-    problems.push(
-      `${at}inputs.${BUSINESS_DATE}: reserved name; every decision receives ${BUSINESS_DATE} implicitly (DecisionRef.asOf, else the engine clock)`,
-    )
-  }
-  let params: ParamsBinding | undefined
-  let declared: ValueType | undefined
-  if (table.params) {
-    params = checkParams(at, table.params, inputs, registry, problems)
-    declared = paramsType(table.params)
-    // Reported, then compiled with the parameters in its place so that other problems are found too.
-    inputs.delete(PARAMS)
-  }
-  const paramsInput = inputs.has(PARAMS)
-  let environment: ExpressionEnvironment
-  const variables = new Map<string, ValueType>(inputs)
-  variables.set(BUSINESS_DATE, 'date')
-  if (declared !== undefined) variables.set(PARAMS, declared)
-  const options = { variables, maxIterations, currencyScales: scales }
-  try {
-    environment = new ExpressionEnvironment(options)
-  } catch (e) {
-    if (e instanceof RangeError) {
-      problems.push(`${at}inputs: ${e.message}`)
-      return undefined
-    }
-    throw e
-  }
-  const parsing = environment
-  const undeclared = (source: string): string | undefined => undeclaredParams(parsing, source, table.params, paramsInput)
-  const failedLocals = new Set<string>()
-  if (table.let && table.let.size > 0) {
-    environment = compileLocals(table, environment, options, at, problems, failedLocals, undeclared)
-  }
-  const compileExpression = (source: string, type: ValueType, where: string): CompiledExpression | undefined => {
-    const paramsProblem = undeclared(source)
-    if (paramsProblem !== undefined) {
-      problems.push(`${where}: ${paramsProblem}`)
-      return undefined
-    }
-    if (failedLocals.size > 0) {
-      try {
-        // A rule that reads a local value that could not be compiled: that problem is reported.
-        if (environment.references(source).some((n) => failedLocals.has(n))) return undefined
-      } catch (e) {
-        if (!(e instanceof ExpressionError)) throw e
-      }
-    }
-    return compileChecked(environment, source, type, where, problems)
-  }
-
-  const rules: CompiledRule[] = []
-  const ids = new Set<string>()
-  for (const rule of table.rules) {
-    const ruleAt = `${at}rules[${rule.id}]`
-    if (ids.has(rule.id)) problems.push(`${ruleAt}: duplicate rule id`)
-    ids.add(rule.id)
-    if (rule.reasonCode !== undefined && !REASON_CODE.test(rule.reasonCode)) {
-      problems.push(`${ruleAt}.reasonCode: must be UPPER_SNAKE_CASE, e.g. DTI_HIGH`)
-    }
-    const when = compileExpression(rule.when, 'bool', `${ruleAt}.when`)
-    const then = new Map<string, CompiledExpression>()
-    for (const [output, source] of rule.then) {
-      const type = table.outputs.get(output)
-      if (type === undefined) {
-        problems.push(`${ruleAt}.then.${output}: undeclared output (declared: [${[...table.outputs.keys()].join(', ')}])`)
-      } else if (!containsStruct(type)) {
-        const expression = compileExpression(source, type, `${ruleAt}.then.${output}`)
-        if (expression) then.set(output, expression)
-      }
-    }
-    if (when) rules.push({ id: rule.id, when, then, reasonCode: rule.reasonCode })
-  }
-  if (problems.length > before) return undefined
-  return { table, ruleVersion: await ruleVersionOf(table), environment, rules, params }
-}
-
-function compileChecked(
-  environment: ExpressionEnvironment,
-  source: string,
-  type: ValueType,
-  at: string,
-  problems: string[],
-): CompiledExpression | undefined {
-  try {
-    return environment.compile(source, type)
-  } catch (e) {
-    if (e instanceof ExpressionError) {
-      problems.push(`${at}: ${e.message}`)
-      return undefined
-    }
-    throw e
-  }
-}
-
-/** Versions of one decision must be consistent; see versionProblems. */
-function checkVersions(versions: Compiled[], problems: string[]): void {
-  problems.push(...versionProblems(versions.map((c) => c.table)))
+function checkTimeout(timeoutMs: number): void {
+  if (!(timeoutMs > 0) || !Number.isFinite(timeoutMs)) throw new RangeError('timeout must be positive')
 }
 
 function randomId(): string {
@@ -288,16 +200,62 @@ function randomId(): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
 }
 
-/** An immutable set of compiled decisions. */
+/** One evaluation, keeping what is known so far so that a failure can still be recorded, as Attempt. */
+export class Attempt {
+  decision: Executable | undefined
+  /** The record of a failed replay or re-score. */
+  failure: DecisionRecord | undefined
+
+  constructor(
+    readonly recordId: string,
+    readonly ref: NormalizedRef,
+    readonly businessDate: LocalDate,
+    readonly evaluatedAt: Date,
+    readonly progress: Progress,
+  ) {}
+
+  record(status: DecisionRecord['status'], output: ReadonlyMap<string, Value>, reasonCodes: readonly ReasonCode[], error?: string): DecisionRecord {
+    const params = this.progress.params()
+    return {
+      recordId: this.recordId,
+      ...(this.ref.correlationId !== undefined ? { correlationId: this.ref.correlationId } : {}),
+      decision: this.ref.id,
+      ...(this.decision ? { version: this.decision.ruleVersion } : {}),
+      ...(params.length > 0 ? { params } : {}),
+      businessDate: this.businessDate,
+      evaluatedAt: this.evaluatedAt,
+      engine: ENGINE_NAME,
+      status,
+      ...(this.progress.factsHash !== undefined ? { factsHash: this.progress.factsHash } : {}),
+      output,
+      reasonCodes,
+      path: this.progress.path(),
+      ...(error !== undefined ? { error } : {}),
+    }
+  }
+
+  failed(e: unknown): DecisionRecord {
+    // RuleStone messages never contain input values; other errors might, so only their type is recorded.
+    const message = e instanceof RuleStoneError ? e.message : `internal error: ${e instanceof Error ? e.name : typeof e}`
+    return this.record(e instanceof DecisionTimeoutError ? 'TIMEOUT' : 'ERROR', new Map(), [], message)
+  }
+}
+
+/** An immutable set of compiled decision tables and flows. */
 export class RuleStoneEngine {
   private readonly clock: () => Date
   private readonly timeZone: string | undefined
   private readonly recordIds: () => string
   private readonly sinks: readonly AuditSink[]
+  private readonly hasher: FactsHasher
+  private readonly timeoutMs: number | undefined
+  private readonly now: MonotonicClock
 
   /** @internal use createEngine */
   constructor(
     private readonly byId: ReadonlyMap<string, readonly Compiled[]>,
+    /** @internal */
+    readonly parameterSets: Registry,
     options: EngineOptions,
     private readonly catalog?: { readonly catalog: ReasonCodeCatalog; readonly version: string },
   ) {
@@ -305,6 +263,9 @@ export class RuleStoneEngine {
     this.timeZone = options.timeZone
     this.recordIds = options.recordIds ?? randomId
     this.sinks = [...(options.auditSinks ?? [])]
+    this.hasher = new FactsHasher(options.factsHashKey)
+    this.timeoutMs = options.timeoutMs
+    this.now = options.monotonicClock ?? monotonicNow
   }
 
   /**
@@ -322,7 +283,7 @@ export class RuleStoneEngine {
     return this.catalog?.version
   }
 
-  /** Every compiled version, by decision id, sorted by effectiveFrom. */
+  /** Every compiled version of every table and flow, by decision id. */
   decisions(): ReadonlyMap<string, readonly CompiledDecision[]> {
     return this.byId
   }
@@ -335,73 +296,48 @@ export class RuleStoneEngine {
 
   /**
    * Evaluates a decision with JSON facts, read with the declared inputs of the version the
-   * reference selects (FactsJson forms: "1500000 VND", "2026-11-01", decimals as numbers or strings).
-   * @throws InvalidFactsError for facts that do not match the declared types
+   * reference selects (FactsJson forms: "1500000 VND", "2026-11-01", decimals as numbers or strings),
+   * and for a flow the supplied model results, as FactsJson.readFacts(facts, inputs, models).
+   * @throws InvalidFactsError for facts or model results that do not match, listing every problem
    */
-  async evaluateJson(ref: DecisionRef | string, json: JsonInput): Promise<DecisionResult> {
-    const facts = readFacts(json, this.resolve(ref).table.inputs)
-    return this.evaluate(ref, facts)
+  async evaluateJson(ref: DecisionRef | string, json: JsonInput, models?: JsonInput): Promise<DecisionResult> {
+    const problems: string[] = []
+    let facts = new Map<string, Value>()
+    try {
+      facts = readFacts(json, this.resolve(ref).definition.inputs)
+    } catch (e) {
+      if (!(e instanceof InvalidFactsError)) throw e
+      problems.push(...e.problems)
+    }
+    let supplied = new Map<string, SuppliedModel>()
+    if (models !== undefined && models !== null && !(typeof models === 'object' && (models as { type?: unknown }).type === 'null')) {
+      try {
+        supplied = readModels(models)
+      } catch (e) {
+        if (!(e instanceof InvalidFactsError)) throw e
+        for (const p of e.problems) problems.push(p.startsWith('$') ? 'models' + p.slice(1) : 'models.' + p)
+      }
+    }
+    if (problems.length > 0) throw new InvalidFactsError(problems)
+    return this.evaluate(ref, facts, supplied)
   }
 
   /**
-   * Evaluates a decision. Facts the decision does not declare are ignored.
-   * @throws DecisionNotFoundError, DecisionEvaluationError or AuditError; the error's `record` holds the decision record
+   * Evaluates a decision. Facts the decision does not declare are ignored. For a flow, `models` are
+   * the results of its model nodes in supplied mode, by node id.
+   * @throws DecisionNotFoundError, DecisionEvaluationError (DecisionTimeoutError when the timeout
+   *         passes) or AuditError; the error's `record` holds the decision record
    */
-  async evaluate(ref: DecisionRef | string, facts: ReadonlyMap<string, unknown> | { readonly [name: string]: unknown }): Promise<DecisionResult> {
+  async evaluate(ref: DecisionRef | string, facts: FactsInput, models?: ModelsInput): Promise<DecisionResult> {
     const r = normalizeRef(ref)
-    const evaluatedAt = this.clock()
-    const businessDate = r.asOf ?? dateInZone(evaluatedAt, this.timeZone)
-    const recordId = this.recordIds()
-    if (!recordId || recordId.trim() === '') throw new Error('recordIds supplied an empty record id')
-    const trace: TraceStep[] = []
-    let decision: Compiled | undefined
-    let factsHash: string | undefined
-    const used: ParamSetVersion[] = []
-    const use = (set: string, version: string): void => {
-      if (!used.some((p) => p.set === set && p.version === version)) used.push({ set, version })
-    }
-    const record = (status: 'OK' | 'ERROR', output: ReadonlyMap<string, Value>, reasonCodes: ReasonCode[], error?: string): DecisionRecord => {
-      const path: PathStep[] = decision
-        ? [{ node: decision.table.id, type: 'table', version: decision.ruleVersion, matchedRules: trace.filter((t) => t.matched).map((t) => t.ruleId) }]
-        : []
-      return {
-        recordId,
-        ...(r.correlationId !== undefined ? { correlationId: r.correlationId } : {}),
-        decision: r.id,
-        ...(decision ? { version: decision.ruleVersion } : {}),
-        ...(used.length > 0 ? { params: sortParams(used) } : {}),
-        businessDate,
-        evaluatedAt,
-        engine: ENGINE_NAME,
-        status,
-        ...(factsHash !== undefined ? { factsHash } : {}),
-        output,
-        reasonCodes,
-        path,
-        ...(error !== undefined ? { error } : {}),
-      }
-    }
+    // The timeout counts from here, so that it covers everything the caller waits for.
+    const deadline = this.deadline(r)
+    const attempt = this.attempt(r, new Progress(r.params))
     let result: DecisionResult
     try {
-      decision = this.select(r, businessDate)
-      const bindings = bind(decision, facts, businessDate, r.params, use)
-      factsHash = await hashFacts(bindings, decision.params !== undefined)
-      const outcome = run(decision, bindings, trace)
-      const source = decision.table.id
-      result = {
-        decisionId: decision.table.id,
-        ruleVersion: decision.ruleVersion,
-        output: outcome.output,
-        reasonCodes: outcome.reasonCodes,
-        trace,
-        matched: trace.some((t) => t.matched),
-        matchedRules: trace.filter((t) => t.matched).map((t) => t.ruleId),
-        record: record('OK', outcome.output, outcome.reasonCodes.map((code) => ({ code, source }))),
-      }
+      result = await this.run(attempt, facts, models, deadline)
     } catch (e) {
-      // RuleStone messages never contain input values; other errors might, so only their type is recorded.
-      const message = e instanceof RuleStoneError ? e.message : `internal error: ${e instanceof Error ? e.name : typeof e}`
-      const failed = record('ERROR', new Map(), [], message)
+      const failed = attempt.failed(e)
       if (e instanceof RuleStoneError) e.record = failed
       try {
         await this.audit(failed)
@@ -414,7 +350,52 @@ export class RuleStoneEngine {
     return result
   }
 
-  private async audit(record: DecisionRecord): Promise<void> {
+  /** @internal a new attempt for a reference, with a fresh record id and the clock read once */
+  attempt(r: NormalizedRef, progress: Progress): Attempt {
+    // Read the clock once: the same instant dates the record, and its date in the zone selects the version.
+    const evaluatedAt = this.clock()
+    const businessDate = r.asOf ?? dateInZone(evaluatedAt, this.timeZone)
+    const recordId = this.recordIds()
+    if (!recordId || recordId.trim() === '') throw new Error('recordIds supplied an empty record id')
+    return new Attempt(recordId, r, businessDate, evaluatedAt, progress)
+  }
+
+  /** @internal runs an attempt without writing to the audit sinks */
+  async run(attempt: Attempt, facts: FactsInput, models: ModelsInput | undefined, deadline: Deadline): Promise<DecisionResult> {
+    attempt.decision ??= this.select(attempt.ref, attempt.businessDate)
+    const decision = attempt.decision
+    const progress = attempt.progress
+    const run = await decision.run({
+      facts: factsMap(facts),
+      models: models === undefined ? new Map() : models instanceof Map ? models : new Map(Object.entries(models)),
+      businessDate: attempt.businessDate,
+      correlationId: attempt.ref.correlationId,
+      deadline,
+      progress,
+      hasher: this.hasher,
+    })
+    const record = attempt.record('OK', run.output, run.reasonCodes)
+    const matchedRules = progress.trace.filter((t) => t.matched).map((t) => t.ruleId)
+    return {
+      decisionId: decision.definition.id,
+      ruleVersion: decision.ruleVersion,
+      output: run.output,
+      reasonCodes: run.reasonCodes.map((r) => r.code),
+      trace: progress.trace,
+      matched: matchedRules.length > 0,
+      matchedRules,
+      record,
+    }
+  }
+
+  /** @internal the deadline of a request: its own timeout, else the engine's */
+  deadline(r: NormalizedRef): Deadline {
+    const timeout = r.timeoutMs ?? this.timeoutMs
+    return timeout === undefined ? Deadline.NONE : Deadline.after(timeout, this.now)
+  }
+
+  /** @internal */
+  async audit(record: DecisionRecord): Promise<void> {
     for (const sink of this.sinks) {
       try {
         await sink(record)
@@ -426,23 +407,32 @@ export class RuleStoneEngine {
     }
   }
 
-  private select(ref: NormalizedRef, date: LocalDate): Compiled {
+  /** @internal every compiled version of a decision */
+  versionsOf(id: string): readonly Compiled[] | undefined {
+    return this.byId.get(id)
+  }
+
+  /** @internal */
+  select(ref: NormalizedRef, date: LocalDate): Compiled {
     const versions = this.byId.get(ref.id)
     if (!versions) throw new DecisionNotFoundError(`unknown decision '${ref.id}'`)
-    const table = selectVersion(ref.id, versions.map((d) => d.table), ref.version, date)
-    return versions.find((d) => d.table === table)!
+    const definition = selectVersion(ref.id, versions.map((d) => d.definition), ref.version, date)
+    return versions.find((d) => d.definition === definition)!
   }
 }
 
-interface NormalizedRef {
+/** @internal */
+export interface NormalizedRef {
   readonly id: string
   readonly version: string | undefined
   readonly asOf: LocalDate | undefined
   readonly correlationId: string | undefined
   readonly params: ReadonlyMap<string, string>
+  readonly timeoutMs: number | undefined
 }
 
-function normalizeRef(ref: DecisionRef | string): NormalizedRef {
+/** @internal */
+export function normalizeRef(ref: DecisionRef | string): NormalizedRef {
   const r: DecisionRef = typeof ref === 'string' ? { id: ref } : ref
   if (r.id.trim() === '') throw new RangeError('id must not be blank')
   if (r.correlationId !== undefined && r.correlationId.trim() === '') throw new RangeError('correlationId must not be blank')
@@ -453,118 +443,15 @@ function normalizeRef(ref: DecisionRef | string): NormalizedRef {
   } else {
     asOf = r.asOf
   }
+  if (r.timeoutMs !== undefined) checkTimeout(r.timeoutMs)
   const params = r.params instanceof Map ? new Map(r.params) : new Map(Object.entries(r.params ?? {}))
-  return { id: r.id, version: r.version, asOf, correlationId: r.correlationId, params }
-}
-
-function failure(decision: Compiled, message: string, cause?: unknown): DecisionEvaluationError {
-  return new DecisionEvaluationError(decision.table.id, decision.ruleVersion, message, cause === undefined ? undefined : { cause })
-}
-
-function bind(
-  decision: Compiled,
-  facts: ReadonlyMap<string, unknown> | { readonly [name: string]: unknown },
-  businessDate: LocalDate,
-  forced: ReadonlyMap<string, string>,
-  use: (set: string, version: string) => void,
-): Bindings {
-  const hasFact = (name: string): boolean =>
-    facts instanceof Map ? facts.has(name) : Object.prototype.hasOwnProperty.call(facts, name)
-  if (hasFact(BUSINESS_DATE)) {
-    throw failure(
-      decision,
-      `invalid input ${BUSINESS_DATE}: reserved name; the business date comes from DecisionRef.asOf or the engine clock and cannot be passed as a fact`,
-    )
-  }
-  if (decision.params && hasFact(PARAMS)) {
-    throw failure(
-      decision,
-      `invalid input ${PARAMS}: reserved name; the parameters come from parameter set ${decision.params.declaration.set} and cannot be passed as a fact`,
-    )
-  }
-  const inputs = new Map<string, unknown>(facts instanceof Map ? facts : Object.entries(facts))
-  inputs.set(BUSINESS_DATE, businessDate)
-  if (decision.params) inputs.set(PARAMS, selectParams(decision.params, businessDate, forced, use))
-  try {
-    return decision.environment.bind(inputs)
-  } catch (e) {
-    if (e instanceof ExpressionError) throw failure(decision, `invalid input ${e.message}`, e)
-    throw e
-  }
-}
-
-/** Parameter set versions in the record's order: by set id, then version. */
-function sortParams(used: readonly ParamSetVersion[]): ParamSetVersion[] {
-  return [...used].sort((a, b) => compareJavaStrings(a.set, b.set) || compareJavaStrings(a.version, b.version))
-}
-
-/** The SHA-256 of the declared inputs in canonical JSON form, without businessDate and the parameters. */
-async function hashFacts(bindings: Bindings, withoutParams: boolean): Promise<string> {
-  const inputs = new Map(bindings.canonicalValues())
-  inputs.delete(BUSINESS_DATE)
-  if (withoutParams) inputs.delete(PARAMS)
-  return 'sha256:' + (await sha256Hex(writeValues(inputs)))
-}
-
-interface Outcome {
-  readonly output: ReadonlyMap<string, Value>
-  readonly reasonCodes: readonly string[]
-}
-
-function run(decision: Compiled, bindings: Bindings, trace: TraceStep[]): Outcome {
-  const matches = (rule: CompiledRule): boolean => {
-    let matched: Value
-    try {
-      matched = rule.when.evaluate(bindings)
-    } catch (e) {
-      if (e instanceof ExpressionError) throw failure(decision, `rule ${rule.id} condition failed: ${e.message}`, e)
-      throw e
-    }
-    trace.push({ ruleId: rule.id, matched: matched === true })
-    return matched === true
-  }
-  const outputs = (rule: CompiledRule): Map<string, Value> => {
-    const output = new Map<string, Value>()
-    for (const [name, expression] of rule.then) {
-      try {
-        output.set(name, expression.evaluate(bindings))
-      } catch (e) {
-        if (e instanceof ExpressionError) throw failure(decision, `rule ${rule.id} output '${name}' failed: ${e.message}`, e)
-        throw e
-      }
-    }
-    return output
-  }
-  const reasons = (rules: readonly CompiledRule[]) => rules.flatMap((r) => (r.reasonCode !== undefined ? [r.reasonCode] : []))
-  const matchAll = () => decision.rules.filter((rule) => matches(rule))
-
-  switch (decision.table.hitPolicy) {
-    case 'FIRST':
-      for (const rule of decision.rules) {
-        if (matches(rule)) return { output: outputs(rule), reasonCodes: reasons([rule]) }
-      }
-      return { output: new Map(), reasonCodes: [] }
-    case 'UNIQUE': {
-      const matched = matchAll()
-      if (matched.length > 1) {
-        throw failure(decision, `UNIQUE hit policy violated: rules [${matched.map((r) => r.id).join(', ')}] all matched`)
-      }
-      if (matched.length === 0) return { output: new Map(), reasonCodes: [] }
-      return { output: outputs(matched[0]!), reasonCodes: reasons(matched) }
-    }
-    case 'COLLECT': {
-      const matched = matchAll()
-      const collected = new Map<string, Value[]>()
-      for (const name of decision.table.outputs.keys()) collected.set(name, [])
-      for (const rule of matched) for (const [name, value] of outputs(rule)) collected.get(name)!.push(value)
-      const output = new Map<string, Value>()
-      for (const [name, values] of collected) output.set(name, Object.freeze(values))
-      return { output, reasonCodes: reasons(matched) }
-    }
-  }
+  return { id: r.id, version: r.version, asOf, correlationId: r.correlationId, params, timeoutMs: r.timeoutMs }
 }
 
 /** The JSON text of a result's output, e.g. {"fee":"25000 VND"}. */
 export function outputJson(result: DecisionResult): string {
   return writeValues(result.output)
 }
+
+export type { Overrides, ModelStep }
+export { NO_OVERRIDES }

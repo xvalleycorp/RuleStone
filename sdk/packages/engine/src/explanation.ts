@@ -7,9 +7,10 @@
 
 import type { LocalDate } from './date.js'
 import { InvalidDecisionError } from './errors.js'
+import type { DecisionFlow } from './flow.js'
 import { valueToJson, valuesToJson } from './facts.js'
 import { JsonSyntaxError, parseJson, writeJson, type JsonNode, type Writable } from './json.js'
-import type { ParamSetVersion } from './record.js'
+import type { Direction, ParamSetVersion, RankedAttribution } from './record.js'
 import { TableReader, sha256Hex, sortedMap, tableRef, type DecisionTable } from './table.js'
 import type { Value } from './values.js'
 
@@ -146,13 +147,22 @@ export async function reasonCodeCatalogVersionOf(catalog: ReasonCodeCatalog): Pr
 }
 
 /** @internal every reason code of the tables without a message in the catalog, as the Java engine reports them */
-export function missingReasonCodes(tables: Iterable<DecisionTable>, catalog: ReasonCodeCatalog): string[] {
+export function missingReasonCodes(tables: Iterable<DecisionTable>, catalog: ReasonCodeCatalog, flows: Iterable<DecisionFlow> = []): string[] {
   const problems: string[] = []
+  const missing = (code: string, at: string): void => {
+    if (!catalog.codes.has(code)) problems.push(`${at}: reason code '${code}' is not in the reason-code catalog`)
+  }
   for (const table of tables) {
     for (const rule of table.rules) {
-      if (rule.reasonCode !== undefined && !catalog.codes.has(rule.reasonCode)) {
-        problems.push(`${tableRef(table)} rules[${rule.id}].reasonCode: reason code '${rule.reasonCode}' is not in the reason-code catalog`)
-      }
+      if (rule.reasonCode !== undefined) missing(rule.reasonCode, `${tableRef(table)} rules[${rule.id}].reasonCode`)
+    }
+  }
+  for (const flow of flows) {
+    for (const [id, node] of flow.nodes) {
+      if (node.type !== 'model') continue
+      const at = `${flow.id}@${flow.version} nodes.${id}`
+      for (const [feature, code] of node.reasonCodes) missing(code, `${at}.reasonCodes.${feature}`)
+      missing(node.onFailure.reasonCode, `${at}.onFailure.reasonCode`)
     }
   }
   return problems
@@ -163,16 +173,7 @@ export const MISSING_CATALOG = 'reason-code catalog: required, but none is regis
 
 // --- Explanations ---------------------------------------------------------------------------
 
-/** The sign of a feature's contribution, as RankedAttribution.Direction. */
-export type Direction = 'INCREASES_RISK' | 'DECREASES_RISK' | 'NONE'
-
-/** One attribution of a model's result, by rank, without its contribution value. */
-export interface RankedAttribution {
-  readonly feature: string
-  readonly rank: number
-  readonly direction: Direction
-  readonly reasonCode?: string
-}
+export type { Direction, RankedAttribution }
 
 /**
  * A decision record as an explanation reads it: the browser engine's DecisionRecord, or a record of

@@ -10,6 +10,8 @@ import type { DecisionResult, RuleStoneEngine } from './engine.js'
 import { InvalidFactsError, RuleStoneError } from './errors.js'
 import { readValues, resultTypes } from './facts.js'
 import { JsonSyntaxError, parseJson, type JsonNode } from './json.js'
+import type { DecisionFlow } from './flow.js'
+import { readModels, type SuppliedModel } from './models.js'
 import { Money } from './money.js'
 import { allowedList, type DecisionTable } from './table.js'
 import { versionInForce } from './versions.js'
@@ -17,8 +19,8 @@ import { typesEqual, type ValueType } from './types.js'
 import type { Value } from './values.js'
 
 const FILE_FIELDS = ['decision', 'description', 'cases']
-const CASE_FIELDS = ['name', 'description', 'version', 'asOf', 'params', 'facts', 'expect']
-const EXPECT_FIELDS = ['output', 'exactOutput', 'reasonCodes', 'matchedRules', 'ruleVersion', 'explanation', 'error']
+const CASE_FIELDS = ['name', 'description', 'version', 'asOf', 'params', 'facts', 'models', 'expect']
+const EXPECT_FIELDS = ['output', 'exactOutput', 'reasonCodes', 'matchedRules', 'path', 'ruleVersion', 'explanation', 'error']
 const EXPLANATION_FIELDS = ['locale', 'reasons', 'messages']
 
 /** One test case: a request and the expected outcome. Absent expectations are not checked. */
@@ -32,11 +34,15 @@ export interface StoneTestCase {
   /** Parameter set versions the case forces, by set id; empty when the case uses the date. */
   readonly params: ReadonlyMap<string, string>
   readonly facts: ReadonlyMap<string, Value>
+  /** For a flow, the results of its model nodes, by node id; empty when the case gives none. */
+  readonly models: ReadonlyMap<string, SuppliedModel>
   /** Expected outputs; null means the output must be absent. */
   readonly output: ReadonlyMap<string, Value | null>
   readonly exactOutput: boolean
   readonly reasonCodes?: readonly string[]
   readonly matchedRules?: readonly string[]
+  /** For a flow, the ids of the nodes visited, in order. */
+  readonly path?: readonly string[]
   readonly ruleVersion?: string
   /**
    * The explanation of the record in a locale, with the engine's reason-code catalog: its reason
@@ -75,10 +81,16 @@ export class StoneTestFailure extends Error {
 /**
  * Reads the cases of a .stone-test.json file. With the tables, facts and expected outputs are
  * read with the declared types (money as "1500000 VND", dates as "2026-11-01"); without them,
- * numbers become bigint or Decimal and objects Maps.
+ * numbers become bigint or Decimal and objects Maps. Pass the flows too, with every table they use,
+ * for the cases of a flow.
  * @throws InvalidStoneTestError listing every problem
  */
-export function parseStoneTests(text: string, source: string, tables?: readonly DecisionTable[]): StoneTestCase[] {
+export function parseStoneTests(
+  text: string,
+  source: string,
+  tables?: readonly DecisionTable[],
+  flows?: readonly DecisionFlow[],
+): StoneTestCase[] {
   let root: JsonNode | undefined
   try {
     root = parseJson(text, { failOnTrailingTokens: true })
@@ -86,7 +98,7 @@ export function parseStoneTests(text: string, source: string, tables?: readonly 
     if (e instanceof JsonSyntaxError) throw new InvalidStoneTestError(source, [`invalid JSON: ${e.message}`])
     throw e
   }
-  return new Reader(source, tables).file(root)
+  return new Reader(source, tables, flows).file(root)
 }
 
 interface Schema {
@@ -102,6 +114,7 @@ class Reader {
   constructor(
     private readonly source: string,
     private readonly tables: readonly DecisionTable[] | undefined,
+    private readonly flows: readonly DecisionFlow[] | undefined,
   ) {}
 
   file(root: JsonNode | undefined): StoneTestCase[] {
@@ -158,6 +171,16 @@ class Reader {
     }
     const schema = this.schema(decision, version, asOf, path)
     const facts = this.facts(node.entries.get('facts'), `${path}.facts`, schema)
+    let models = new Map<string, SuppliedModel>()
+    const modelsNode = node.entries.get('models')
+    if (modelsNode !== undefined) {
+      try {
+        models = readModels(modelsNode)
+      } catch (e) {
+        if (!(e instanceof InvalidFactsError)) throw e
+        for (const p of e.problems) this.problems.push(`${path}.models${p.startsWith('$') ? p.slice(1) : '.' + p}`)
+      }
+    }
 
     const expect = node.entries.get('expect')
     const at = `${path}.expect`
@@ -181,6 +204,7 @@ class Reader {
     }
     const reasonCodes = this.stringList(expect, 'reasonCodes', at)
     const matchedRules = this.stringList(expect, 'matchedRules', at)
+    const nodes = this.stringList(expect, 'path', at)
     const ruleVersion = this.optionalText(expect, 'ruleVersion', at)
     const explanation = this.explanation(expect.entries.get('explanation'), `${at}.explanation`)
     const error = this.optionalText(expect, 'error', at)
@@ -188,7 +212,7 @@ class Reader {
       if (javaIsBlank(error)) this.problem(`${at}.error`, 'required non-empty text that the error message must contain')
       const others = [...expect.entries.keys()].filter((f) => f !== 'error' && EXPECT_FIELDS.includes(f))
       if (others.length > 0) {
-        this.problem(at, `"error" cannot be combined with [${others.join(', ')}]: a failed evaluation has no output, reason codes or matched rules`)
+        this.problem(at, `"error" cannot be combined with [${others.join(', ')}]: a failed evaluation has no output, reason codes, matched rules or path`)
       }
     }
     if (this.problems.length > before) return undefined
@@ -201,10 +225,12 @@ class Reader {
       ...(asOf ? { asOf } : {}),
       params,
       facts,
+      models,
       output,
       exactOutput,
       ...(reasonCodes ? { reasonCodes } : {}),
       ...(matchedRules ? { matchedRules } : {}),
+      ...(nodes ? { path: nodes } : {}),
       ...(ruleVersion !== undefined ? { ruleVersion } : {}),
       ...(explanation ? { explanation } : {}),
       ...(error !== undefined ? { error } : {}),
@@ -227,6 +253,21 @@ class Reader {
 
   private schema(decision: string, version: string | undefined, asOf: LocalDate | undefined, path: string): Schema | undefined {
     if (!this.tables) return undefined
+    const flowVersions = (this.flows ?? []).filter((f) => f.id === decision)
+    if (flowVersions.length > 0) {
+      const inForceFlow = asOf ? versionInForce(flowVersions, asOf) : undefined
+      const candidates =
+        version !== undefined ? flowVersions.filter((f) => f.version === version) : asOf ? (inForceFlow ? [inForceFlow] : []) : flowVersions
+      if (candidates.length === 0) return undefined // the engine reports the unknown version
+      const schema: Schema = { inputs: candidates[0]!.inputs, results: candidates[0]!.outputs }
+      for (const flow of candidates) {
+        if (!sameTypes(flow.inputs, schema.inputs) || !sameTypes(flow.outputs, schema.results)) {
+          this.problem(path, `set "version" or "asOf": the versions of "${decision}" declare different inputs or outputs`)
+          return undefined
+        }
+      }
+      return schema
+    }
     const versions = this.tables.filter((t) => t.id === decision)
     const inForce = asOf ? versionInForce(versions, asOf) : undefined
     const candidates =
@@ -403,6 +444,7 @@ export async function checkStoneTestCase(engine: RuleStoneEngine, testCase: Ston
         ...(testCase.params.size > 0 ? { params: testCase.params } : {}),
       },
       testCase.facts,
+      testCase.models,
     )
   } catch (e) {
     if (e instanceof RuleStoneError) failure = e
@@ -451,6 +493,7 @@ export async function checkStoneTestCase(engine: RuleStoneEngine, testCase: Ston
   }
   list('reason codes', testCase.reasonCodes, actual.reasonCodes)
   list('matched rules', testCase.matchedRules, actual.matchedRules)
+  list('path', testCase.path, actual.record.path.map((step) => step.node))
   if (testCase.ruleVersion !== undefined) {
     const ok = testCase.ruleVersion.includes('@')
       ? actual.ruleVersion === testCase.ruleVersion
