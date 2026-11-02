@@ -376,7 +376,7 @@ public final class RuleStone {
             };
             return new DefaultRuleStoneEngine(byId, clock, auditSinks, new FactsHasher(factsHashKey), checkedIds,
                     timeout, nanoTime, new DefaultRuleStoneEngine.Routes(canaries, shadows, shadowExecutor),
-                    Optional.ofNullable(reasonCodeCatalog));
+                    Optional.ofNullable(reasonCodeCatalog), parameterSets);
         }
 
         /** The compiled {@code version} of decision {@code id}, or a problem if it was never registered. */
