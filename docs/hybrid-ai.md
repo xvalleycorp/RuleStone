@@ -2,7 +2,7 @@
 
 > Status: **design proposal**, partly implemented · Last updated: 2026-11-02
 >
-> Steps 1 to 4 of the [implementation plan](#9-implementation-plan) are **available**: every evaluation produces a decision record (see [Decision records and auditing](java-api.md#decision-records-and-auditing)), decision flows run in the Java engine (see [Decision flows](flows.md)), flows use models through model nodes in `invoke` and `supplied` mode (see [Model nodes](flows.md#model-nodes)), and records are explained with a reason-code catalog (see [Explanations](explanations.md)). Everything else on this page is a proposal for review and will change before it ships.
+> Steps 1 to 5 of the [implementation plan](#9-implementation-plan) are **available**: every evaluation produces a decision record (see [Decision records and auditing](java-api.md#decision-records-and-auditing)), decision flows run in the Java engine (see [Decision flows](flows.md)), flows use models through model nodes in `invoke` and `supplied` mode (see [Model nodes](flows.md#model-nodes)), records are explained with a reason-code catalog (see [Explanations](explanations.md)), and recorded decisions are replayed and re-scored (see [Replay and re-score](replay.md)). Everything else on this page is a proposal for review and will change before it ships.
 
 This page specifies how RuleStone combines machine-learning models with rules, and how every decision explains itself. It covers three things:
 
@@ -337,14 +337,16 @@ Keeping values out of the default record means it can be written to ordinary log
 - **Replay** re-runs a decision from its record. The engine loads the recorded flow and table versions, and the caller supplies the original facts, which are checked against `factsHash`. Each model node runs in `supplied` mode using the recorded outputs. The result must match the record exactly. This is how an auditor reproduces a decision years later, after the models have changed.
 - **Re-score** runs the same facts through a different model or flow version and reports the differences. It is used for model validation and backtesting, and it is never written back as the decision.
 
+*Available:* `RuleStoneEngine.replay` and `rescore`; see [Replay and re-score](replay.md).
+
 ### 4.6 Where records go
 
 | Integration | Behaviour |
 |---|---|
 | Embedded | `RuleStone.builder().auditSink(…)`; sinks are called synchronously after evaluation, and asynchronous sinks buffer on their own. *Available.* |
 | `rulestone-audit-jdbc` / `-kafka` (planned) | An append-only store. Records are chained by hash in the governance module (planned), which makes tampering visible. |
-| Temporal | The activity returns the record id. The record is written by the activity, never by workflow code, so replays do not write duplicates. |
-| Camunda | The record id is stored as a process variable for traceability, and the record goes to the configured sink. |
+| Temporal | The activity returns the record id. In workflow code, the record is written once, on first execution, and later workflow tasks replay it, so replays do not write duplicates. *Available.* |
+| Camunda | The record id is stored in the result variable for traceability, and the record goes to the configured sink. *Available.* |
 
 ## 5. Java API sketch
 
@@ -480,7 +482,16 @@ Each step is a separate, reviewable change with its own tests and documentation.
    - **Renderer.** `RuleStoneEngine.explain(record, locale)` and `Explanations.explain(record, catalog, locale)` build an `Explanation` (in `rulestone-api`) from the record and the catalog only: the outcome (the record's outputs), the reasons with their messages, the steps with table versions, matched rules, branches and model attributions by rank and direction, and the parameter set versions. The facts hash, model outputs, confidence, latency and failure details are left out. `Explanations.text` and `Explanations.write` render it as text, with English and Vietnamese headings built in, and as JSON. A locale is a plain language tag, never the JVM default.
    - **Browser engine.** It reads catalogs, checks them in `createEngine` and renders the same text and JSON, byte for byte, including records of flows that the Java engine wrote; `java-explanations.json` checks this. The editor's Try it panel takes a catalog in `reasonCodes`.
    - **Testing.** A `.stone-test.json` case can expect `"explanation": { "locale", "reasons", "messages" }`.
-5. **Replay and re-score.** Add these APIs, and extend the Temporal and Camunda integrations to carry record ids.
+5. **Replay and re-score.** *Done.* Add these APIs, and extend the Temporal and Camunda integrations to carry record ids. See [Replay and re-score](replay.md). Points this page left open were decided as follows:
+   - **API.** `RuleStoneEngine.replay(record, facts)` and `rescore(record, facts, target, models)` return a `DecisionComparison` (in `rulestone-api`): the recorded record, the record of the new evaluation, its result if it succeeded, and the differences, each with a `Kind` (`FACTS`, `STATUS`, `VERSION`, `BUSINESS_DATE`, `PARAMS`, `OUTPUT`, `REASON_CODES`, `PATH`) and a description without input or output values. `DecisionRecordJson.read` reads records back, strictly, with every problem in an `InvalidRecordException`; values come back in the Java forms of their JSON, and outputs are compared in their JSON forms.
+   - **Replay** evaluates exactly the recorded decision version, business date and parameter set versions, and in a flow the recorded version of every table step, even when another version would now be in force. Each model node takes its recorded result: the outputs, the confidence, the attribution method, and attributions with contributions rebuilt from their ranks and directions, which give the same reason codes; a recorded failure is the same failure, and `MISSING` is missing again. This works on any engine, not only one built with `suppliedModelsOnly()`, and the replayed steps record the mode `supplied`. The mode, latency and failure detail of model steps are not compared. The facts are checked against `factsHash` with the engine's `factsHashKey`; a different hash, or another hash algorithm, is a `FACTS` difference, not an exception. Facts that carry model results are rejected.
+   - **No side effects.** Neither method writes to the audit sinks, uses canary or shadow versions, or applies the engine's default timeout to a replay. The new record has a new record id and the engine clock's instant; it is not marked as a replay, since it goes nowhere unless the caller stores it, which it must not do as a decision.
+   - **Version checks.** A recorded decision, table or parameter set version that is not registered with exactly its content hash fails with `DecisionNotFoundException`, naming the version and, when the label is registered with other content, that version. A record without a version (the decision was not found) cannot be replayed. Records of failed evaluations replay and must fail with the same error; a `TIMEOUT` record replays without a timeout, so its status differs.
+   - **Re-score** takes a `DecisionRef` for the target, so the version, business date and parameter set versions are selected as for `evaluate`, and the record's correlation id is kept unless the target has one. It first checks the facts with the recorded version, which must be registered. Models are explicit, with `ModelSource`: `RECORDED` (results supplied with the facts first, then recorded results for the same node, model id and version, else `MISSING`; no model is called) or `LIVE` (as `evaluate`: invokers are called).
+   - **Temporal.** `DecisionOutcome` gains `recordId` and `correlationId`, and `DecisionRequest` a `correlationId`. In-workflow evaluation records the decision record in its `sideEffect` marker (`rulestone-pin/2`) and replays it on later workflow tasks with `replay`: the sinks receive the record once, models are not called again, and parameter set and table versions are pinned too. Histories with `rulestone-pin/1` markers are reproduced as before.
+   - **Camunda.** The result of the Camunda 8 worker and the Camunda 7 delegate holds `recordId`, and `correlationId` when the new `correlationIdVariable` header or field names a variable that holds it. The element template does not have the header yet. The integrations still evaluate decision tables only.
+   - **Testing.** `ReplayCheck.assertReplays` in `rulestone-test` fails a test when a recorded decision no longer replays exactly, for golden records.
+   - **Browser engine.** It does not replay records; that is left for later. The Java engine is the engine of record.
 6. **Adapters.** Build `rulestone-model-http` first, then `rulestone-model-scorecard`, then `rulestone-model-onnx`.
 7. **Shadow models, LLM nodes, and the flow canvas in the editor.**
 

@@ -1,6 +1,6 @@
 ---
 source: temporal.md
-sourceHash: b073628313d3c24b80189e6d1b257ea733a8d72e75576ddcdf137b4b9efaa7ec
+sourceHash: 2448479b24e66008faa9b28b69a001ea74758bb02ccadc3b8130872bdafd73a0
 ---
 
 # Tích hợp Temporal
@@ -14,6 +14,7 @@ sourceHash: b073628313d3c24b80189e6d1b257ea733a8d72e75576ddcdf137b4b9efaa7ec
 - [Payload: số thập phân, tiền và ngày](#payload-số-thập-phân-tiền-và-ngày)
 - [Lỗi và thử lại](#lỗi-và-thử-lại)
 - [Quy tắc về tính tất định và phiên bản](#quy-tắc-về-tính-tất-định-và-phiên-bản)
+- [Bản ghi quyết định](#bản-ghi-quyết-định)
 - [Search attribute](#search-attribute)
 - [Danh sách kiểm tra vận hành](#danh-sách-kiểm-tra-vận-hành)
 
@@ -22,7 +23,7 @@ sourceHash: b073628313d3c24b80189e6d1b257ea733a8d72e75576ddcdf137b4b9efaa7ec
 | | Trong workflow: `RuleStoneWorkflow` | Activity: `RuleStoneActivities` |
 |---|---|---|
 | Luật chạy ở đâu | Trong mã workflow, trên workflow worker | Trong một activity, trên bất kỳ worker nào có các luật |
-| History ghi lại gì | Ngày nghiệp vụ và chính xác phiên bản luật (`3@sha256:…`), vài trăm byte | Toàn bộ yêu cầu (fact) và kết quả, cùng các sự kiện của activity |
+| History ghi lại gì | Bản ghi quyết định: ngày nghiệp vụ, chính xác các phiên bản, đầu ra, mã lý do và đường đi, không có fact; khoảng một kilobyte | Toàn bộ yêu cầu (fact) và kết quả, cùng các sự kiện của activity |
 | Độ trễ | Không có: không cần gọi tới dịch vụ Temporal | Một activity: lên lịch, worker poll và hoàn tất |
 | Ngôn ngữ viết workflow | Java | Bất kỳ: payload là JSON thông thường |
 | Xem kết quả | Chỉ khi workflow trả về, lưu hoặc upsert kết quả | Trong kết quả activity, trên giao diện Temporal |
@@ -30,7 +31,7 @@ sourceHash: b073628313d3c24b80189e6d1b257ea733a8d72e75576ddcdf137b4b9efaa7ec
 
 Hãy dùng cách đánh giá **trong workflow** cho các workflow Java đưa ra nhiều quyết định hoặc cần quyết định nhanh, như tính giá cho từng kỳ trả góp của một lịch trả nợ. Hãy dùng **activity** khi workflow được viết bằng ngôn ngữ khác, khi chỉ những worker chuyên dụng mới được nạp luật, hoặc khi kiểm toán viên muốn thấy đầu vào và kết quả của từng quyết định trong history của workflow.
 
-Việc đánh giá là thuần (pure), nên cách đánh giá trong workflow chỉ cần lưu luật *nào* đã được dùng, không cần lưu kết quả: chạy lại cùng phiên bản luật vào cùng ngày với cùng các fact cho cùng kết quả. Cái giá phải trả là yêu cầu về replay ở dòng cuối của bảng.
+Việc đánh giá là thuần (pure), nên cách đánh giá trong workflow chỉ lưu [bản ghi quyết định](java-api.md#bản-ghi-quyết-định-và-kiểm-toán), không bao giờ lưu các fact: [replay](replay.md) bản ghi với cùng các fact cho cùng kết quả. Cái giá phải trả là yêu cầu về replay ở dòng cuối của bảng.
 
 ## Thiết lập
 
@@ -44,7 +45,7 @@ Thêm mô-đun. Temporal SDK có scope `provided`: mô-đun dùng phiên bản `
 </dependency>
 ```
 
-Đăng ký cả hai cách dùng trên một worker. Hãy tạo một engine từ mọi phiên bản luật mà các workflow đang chạy có thể còn replay, và đưa cho activity cùng các bảng đó. Các bảng đọc [tham số](decision-tables.md#tham-số) cũng cần bộ tham số của chúng: thêm `.paramSets(...)` vào builder, với mọi phiên bản mà các workflow đang chạy có thể replay. Cách dùng trong workflow cố định ngày nghiệp vụ và phiên bản luật, nhưng chưa cố định phiên bản bộ tham số: một phiên bản bộ tham số thêm về sau có hiệu lực từ một ngày nghiệp vụ trong quá khứ sẽ làm thay đổi một lần replay, nên chỉ thêm phiên bản mới với ngày trong tương lai.
+Đăng ký cả hai cách dùng trên một worker. Hãy tạo một engine từ mọi phiên bản luật mà các workflow đang chạy có thể còn replay, và đưa cho activity cùng các bảng đó. Các bảng đọc [tham số](decision-tables.md#tham-số) cũng cần bộ tham số của chúng: thêm `.paramSets(...)` vào builder, với mọi phiên bản mà các workflow đang chạy có thể replay. Cách dùng trong workflow cũng ghim cả phiên bản bộ tham số, thông qua bản ghi quyết định.
 
 ```java
 RuleStoneEngine engine = RuleStone.builder()
@@ -98,20 +99,24 @@ Nếu không có `DecisionRef.asOf`, ngày nghiệp vụ là `Workflow.currentTi
 Ở **lần thực thi đầu tiên** của mỗi lần gọi `evaluate`:
 
 1. Ngày nghiệp vụ được xác định như trên.
-2. Bên trong `Workflow.sideEffect`, engine chọn phiên bản có hiệu lực vào ngày đó. Id quyết định, ngày nghiệp vụ và chính xác phiên bản luật, `<version>@sha256:<hash>`, được ghi vào history của workflow dưới dạng một marker JSON nhỏ. Các fact không được ghi lại.
-3. Quyết định được đánh giá với đúng phiên bản và ngày đó: `DecisionRef.of(id).version(label).asOf(date)`.
+2. Bên trong `Workflow.sideEffect`, engine đánh giá quyết định vào ngày đó và gửi bản ghi quyết định của nó tới các audit sink. Id quyết định, ngày nghiệp vụ, chính xác phiên bản luật, `<version>@sha256:<hash>`, và bản ghi quyết định được ghi vào history của workflow dưới dạng một marker JSON. Các fact không được ghi lại.
+3. Kết quả được [replay](replay.md#chạy-lại-một-quyết-định) từ bản ghi quyết định đã ghi, bằng `engine.replay`.
 
-Khi **replay**, bước 2 không chạy. Marker đã ghi được đọc lại và bước 3 đánh giá phiên bản đã ghi vào ngày đã ghi. Một phiên bản có hiệu lực trong khoảng thời gian đó, một múi giờ bị thay đổi hay một đồng hồ khác đều không thể làm thay đổi kết quả. Sau đó mã băm nội dung hiện tại của engine cho nhãn phiên bản đó được so sánh với mã băm đã ghi.
+Khi **replay**, bước 2 không chạy. Marker đã ghi được đọc lại và bước 3 replay quyết định đã ghi: với đúng phiên bản luật, ngày nghiệp vụ, phiên bản bộ tham số và phiên bản bảng đã ghi, với các kết quả mô hình mà bản ghi chứa, không gọi mô hình nào và không ghi gì vào audit sink. Một phiên bản có hiệu lực trong khoảng thời gian đó, một múi giờ bị thay đổi, một đồng hồ khác hay một mô hình được huấn luyện lại đều không thể làm thay đổi kết quả. Lần replay kiểm tra rằng mọi phiên bản đã ghi đều được đăng ký với mã băm nội dung đã ghi, và các fact cho ra kết quả đã ghi.
+
+Các workflow có history do một phiên bản RuleStone trước đó ghi, mà marker chỉ chứa phiên bản và ngày, không có bản ghi, được tái lập như trước: phiên bản đã ghi được đánh giá vào ngày đã ghi và mã băm nội dung của nó được so sánh với mã băm đã ghi. Kết quả của chúng không có record id.
 
 `sideEffect` được dùng thay cho các phương án khác vì nó ghi một giá trị một lần và trả về đúng giá trị đó ở mọi lần replay, không cần gọi tới dịch vụ Temporal. `mutableSideEffect` dành cho các giá trị thay đổi trong một lần chạy, được định danh bằng một id dùng chung giữa các lần gọi. Một local activity sẽ thêm thời gian chờ tối đa, cơ chế thử lại và một luồng worker thứ hai cho một công việc thuần CPU không thể lỗi tạm thời. Các marker được ghép với lời gọi theo thứ tự, nên marker còn lưu id quyết định, và một lần replay đi tới một quyết định khác ở vị trí đó sẽ thất bại.
 
 ### Khi replay không tái lập được quyết định
 
-Nếu phiên bản đã ghi không còn được đăng ký, hoặc mã băm nội dung của nó khác đi (có người sửa nội dung luật mà không đổi nhãn phiên bản), `evaluate` ném `RuleVersionMismatchException`. Thông báo lỗi nêu tên quyết định và cả hai phiên bản:
+Nếu một phiên bản đã ghi không còn được đăng ký, hoặc mã băm nội dung của nó khác đi (có người sửa nội dung luật mà không đổi nhãn phiên bản), `evaluate` ném `RuleVersionMismatchException`. Thông báo lỗi nêu tên quyết định và các phiên bản:
 
 ```text
-RuleStone replay mismatch for decision 'loan_eligibility': workflow history recorded rule version 3@sha256:2008…, but version '3' now registered in the engine is 3@sha256:77ba…. The rule content changed without a new version label. Register the original content of version '3' again (publish changes under a new label); the workflow task is retried until then.
+RuleStone replay mismatch for decision 'loan_eligibility': workflow history recorded rule version 3@sha256:2008…, which this engine cannot replay: decision 'loan_eligibility' has no version 3@sha256:2008…: version '3' is registered with other content, 3@sha256:77ba…; register the content the record names. Keep every rule and parameter set version registered, with its original content, while workflows that used it can still replay; publish changes under a new version label. The workflow task is retried until then.
 ```
+
+Ngoại lệ này cũng được ném khi các fact không còn cho ra kết quả đã ghi, vì mã workflow dựng chúng từ dữ liệu không tất định; thông báo liệt kê các [điểm khác biệt](replay.md#kết-quả-so-sánh), không kèm giá trị.
 
 Ngoại lệ này là một `NonDeterministicException` của Temporal. Temporal làm thất bại *workflow task*, hiển thị thông báo trên giao diện và thử lại task đó. Workflow vẫn mở: nó không hoàn tất, cũng không thất bại với một kết quả mà bộ luật ban đầu sẽ không tạo ra. Hãy đăng ký lại nội dung luật ban đầu và workflow sẽ tiếp tục. Nếu bạn muốn làm thất bại các workflow như vậy, hãy thêm `NonDeterministicException.class` vào `WorkflowImplementationOptions.setFailWorkflowExceptionTypes`, như Temporal khuyến nghị cho các trường hợp không tất định khác.
 
@@ -161,7 +166,7 @@ public DecisionOutcome decide(LoanApplication application) {
 }
 ```
 
-Hãy truyền `withAsOf` mỗi khi hồ sơ có ngày nghiệp vụ. Nếu không, activity dùng ngày hôm nay theo đồng hồ của chính nó, truyền ngày đó một cách tường minh cho engine và ghi lại trong `DecisionOutcome.businessDate()`. Vì kết quả được ghi trong history, một workflow được replay sẽ nhận kết quả ban đầu kể cả khi luật đã thay đổi.
+Hãy truyền `withAsOf` mỗi khi hồ sơ có ngày nghiệp vụ, và `withCorrelationId` với id hồ sơ của bạn, như số hồ sơ vay, để tìm lại được bản ghi quyết định. Nếu không, activity dùng ngày hôm nay theo đồng hồ của chính nó, truyền ngày đó một cách tường minh cho engine và ghi lại trong `DecisionOutcome.businessDate()`. Vì kết quả được ghi trong history, một workflow được replay sẽ nhận kết quả ban đầu kể cả khi luật đã thay đổi.
 
 **Hiện chỉ có bảng quyết định.** Activity đánh giá bảng quyết định. [Luồng quyết định](flows.md) chưa thể được đánh giá qua activity. `DecisionRequest.withModels(models)` đã mang được kết quả của những mô hình mà bên gọi tự chạy, ở dạng `models` của [kết quả do bên gọi cung cấp](flows.md#kết-quả-do-bên-gọi-cung-cấp), cho các nút mô hình của luồng. Activity đọc chúng một cách chặt chẽ và báo một kết quả sai định dạng là `INVALID_REQUEST`; cho tới khi activity đánh giá được luồng, một bảng quyết định sẽ từ chối chúng với `DECISION_EVALUATION_FAILED`.
 
@@ -226,6 +231,17 @@ Thông báo lỗi và chi tiết lỗi nêu tên quyết định, phiên bản, 
 4. **Fact là dữ liệu workflow**, như mô tả trong [Fact trong mã workflow](#fact-trong-mã-workflow).
 5. **Chọn múi giờ nghiệp vụ một lần.** Đổi múi giờ không ảnh hưởng tới các workflow đang chạy, vốn đã ghi lại ngày, nhưng sẽ thay đổi ngày mà các workflow mới nhận được khi gần nửa đêm.
 
+## Bản ghi quyết định
+
+Mỗi lần đánh giá tạo ra một [bản ghi quyết định](java-api.md#bản-ghi-quyết-định-và-kiểm-toán), và engine gửi bản ghi đó tới các audit sink của nó. `DecisionOutcome.recordId()` nêu bản ghi đó, và `correlationId()` cho mã tương quan (correlation id) của yêu cầu. Hãy lưu chúng cùng hồ sơ: với bản ghi và các fact, quyết định có thể được [replay hoặc chấm điểm lại](replay.md) về sau.
+
+| | Bản ghi được ghi | `recordId()` |
+|---|---|---|
+| Activity | Bởi activity, mỗi lần thử một lần; một lần thử lại ghi một bản ghi mới | Bản ghi của lần thử có kết quả nằm trong history |
+| Trong workflow | Ở lần thực thi đầu tiên, bên trong `Workflow.sideEffect`; không bao giờ khi replay | Như nhau ở mọi lần replay; `null` với các history được ghi trước khi RuleStone ghi giá trị này |
+
+`DecisionRequest.withCorrelationId(id)` đặt mã tương quan cho activity; trong mã workflow, hãy dùng `DecisionRef.correlationId(id)`. Giống như bản ghi, kết quả không chứa giá trị đầu vào nào.
+
 ## Search attribute
 
 `RuleStoneSearchAttributes.upsert(outcome, "decision")` đặt bốn search attribute có kiểu, để người vận hành tìm workflow theo kết quả, ví dụ `RuleStoneDecision = 'loan_eligibility' AND RuleStoneOutcome = 'REVIEW'`:
@@ -251,7 +267,8 @@ Một workflow chỉ giữ một giá trị cho mỗi attribute; khi workflow đ
 
 ## Danh sách kiểm tra vận hành
 
-- [ ] Engine của worker và các bảng của activity chứa mọi phiên bản luật mà các workflow đang mở (cách trong workflow) đã dùng, cộng thêm thời hạn lưu giữ.
+- [ ] Engine của worker và các bảng của activity chứa mọi phiên bản luật và phiên bản bộ tham số mà các workflow đang mở (cách trong workflow) đã dùng, cộng thêm thời hạn lưu giữ.
+- [ ] Engine có một audit sink, và `recordId` của kết quả được lưu cùng hồ sơ.
 - [ ] Các lần phát hành luật thêm nhãn phiên bản mới và không bao giờ sửa phiên bản đã dùng. CI so sánh mã băm nội dung của các nhãn đã phát hành.
 - [ ] Đồng hồ của engine, đồng hồ của activity và múi giờ của `RuleStoneWorkflow` là múi giờ nghiệp vụ của ngân hàng bạn.
 - [ ] Activity options có start-to-close timeout ngắn và số lần thử lại có giới hạn.

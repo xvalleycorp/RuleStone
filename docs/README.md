@@ -12,6 +12,7 @@
 | [Decision flows](flows.md) | Chain decision tables and machine-learning models into one decision with switches, derived values, model nodes, champion/challenger splits and end nodes, in the `.flow.json` format. |
 | [Testing](testing.md) | Test decision tables and flows: JSON test cases, JUnit 5 integration, rule and node coverage and fluent assertions. |
 | [Explanations](explanations.md) | Explain decisions in the customer's language with a reviewed reason-code catalog, and check that every reason code has a message. |
+| [Replay and re-score](replay.md) | Reproduce a recorded decision exactly from its record and the original facts, and compare it with another version, other parameters or today's models. |
 | [Web editor](editor.md) | Create and edit decision tables in the browser, try them on sample facts and save `.stone.json` files. |
 | [Editor SDK](editor-sdk.md) | Embed the visual editors in your own web application, with React, Angular, Vue or plain HTML, and run rules in the browser. |
 | [Temporal integration](temporal.md) | Evaluate decisions from Temporal workflows, as activities or inside workflow code with pinned rule versions. |

@@ -14,6 +14,8 @@
  *   <li>{@link vn.io.dxa.rulestone.test.StoneTests}: runs those files as JUnit 5 dynamic tests.</li>
  *   <li>{@link vn.io.dxa.rulestone.test.RuleCoverage}: reports, per decision version, the rules
  *       no passing test has matched.</li>
+ *   <li>{@link vn.io.dxa.rulestone.test.ReplayCheck}: asserts that recorded decisions, such as golden
+ *       records, still replay exactly.</li>
  * </ul>
  *
  * <p>Use this module with test scope. Only {@code StoneTests} needs JUnit, which the module

@@ -35,6 +35,8 @@ import org.camunda.bpm.engine.delegate.JavaDelegate;
  *       according to the service's clock.</td></tr>
  *   <tr><td>{@code modelsVariable}</td><td>no</td><td>Variable holding supplied model results, a JSON
  *       object of model node id to result (see {@code FactsJson.readModels}); otherwise none.</td></tr>
+ *   <tr><td>{@code correlationIdVariable}</td><td>no</td><td>Variable holding the correlation id, e.g. the
+ *       loan application number, which the decision record and the result carry; otherwise none.</td></tr>
  *   <tr><td>{@code resultVariable}</td><td>no</td><td>Default {@code decision}.</td></tr>
  *   <tr><td>{@code failOnNoMatch}</td><td>no</td><td>{@code true} to throw the BPMN error when no rule
  *       matches; default {@code false}.</td></tr>
@@ -61,6 +63,7 @@ public class RuleStoneDelegate implements JavaDelegate {
     private Expression version;
     private Expression asOfVariable;
     private Expression modelsVariable;
+    private Expression correlationIdVariable;
     private Expression resultVariable;
     private Expression failOnNoMatch;
     private Expression errorCode;
@@ -116,6 +119,15 @@ public class RuleStoneDelegate implements JavaDelegate {
     }
 
     /**
+     * Sets the name of the variable holding the correlation id.
+     *
+     * @param correlationIdVariable the variable name
+     */
+    public void setCorrelationIdVariable(Expression correlationIdVariable) {
+        this.correlationIdVariable = correlationIdVariable;
+    }
+
+    /**
      * Sets the variable the result is written to.
      *
      * @param resultVariable the variable name
@@ -162,6 +174,7 @@ public class RuleStoneDelegate implements JavaDelegate {
                 field(version, "version", execution),
                 field(asOfVariable, "asOfVariable", execution),
                 field(modelsVariable, "modelsVariable", execution),
+                field(correlationIdVariable, "correlationIdVariable", execution),
                 field(resultVariable, "resultVariable", execution)
                         .orElse(RuleStoneDecisionService.DEFAULT_RESULT_VARIABLE),
                 bool(field(failOnNoMatch, "failOnNoMatch", execution), execution),

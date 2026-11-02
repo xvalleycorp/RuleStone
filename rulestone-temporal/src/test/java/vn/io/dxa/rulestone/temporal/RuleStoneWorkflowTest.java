@@ -34,12 +34,16 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.Money;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.core.DecisionTable;
+import vn.io.dxa.rulestone.core.RuleStone;
 import vn.io.dxa.rulestone.temporal.TestWorkflows.CardFee;
 import vn.io.dxa.rulestone.temporal.TestWorkflows.CardFeeImpl;
 import vn.io.dxa.rulestone.temporal.TestWorkflows.CardFeeInput;
@@ -195,8 +199,9 @@ class RuleStoneWorkflowTest {
         assertThat(registered).isNotEqualTo(recorded);
         assertThat(thrown).hasMessageContaining(RuleVersionMismatchException.class.getName())
                 .hasMessageContaining("RuleStone replay mismatch for decision 'loan_eligibility': workflow history"
-                        + " recorded rule version " + recorded + ", but version '3' now registered in the engine is "
-                        + registered + ". The rule content changed without a new version label.");
+                        + " recorded rule version " + recorded + ", which this engine cannot replay: decision"
+                        + " 'loan_eligibility' has no version " + recorded + ": version '3' is registered with other"
+                        + " content, " + registered + "; register the content the record names.");
     }
 
     @Test
@@ -206,8 +211,26 @@ class RuleStoneWorkflowTest {
         Throwable thrown = catchThrowable(() -> replay(history, engine(List.of(loanV2())), HCM));
 
         assertThat(thrown).hasMessageContaining(RuleVersionMismatchException.class.getName())
-                .hasMessageContaining("but the engine has no version '3'. Keep every rule version registered"
-                        + " while workflows that used it can still replay.");
+                .hasMessageContaining("which this engine cannot replay: decision 'loan_eligibility' has no version 3@")
+                .hasMessageContaining("Keep every rule and parameter set version registered");
+    }
+
+    @Test
+    void theDecisionIsRecordedOnceAndItsRecordIdIsStableAcrossReplays() throws Exception {
+        List<DecisionRecord> audited = Collections.synchronizedList(new ArrayList<>());
+        RuleStoneEngine auditing = RuleStone.builder().clock(Clock.system(HCM)).decisions(allTables())
+                .auditSink(audited::add).build();
+        WorkflowClient client = startWorker(NEAR_MIDNIGHT, LoanWorkflow.class, new LoanWorkflowImpl(auditing, HCM));
+
+        DecisionOutcome outcome = stub(client, LoanWorkflow.class, "loan-audited").decide(APPROVABLE);
+
+        assertThat(audited).hasSize(1);
+        assertThat(outcome.recordId()).isEqualTo(audited.get(0).recordId());
+        assertThat(outcome.ruleVersion()).isEqualTo(audited.get(0).version().orElseThrow());
+
+        // Replaying the history writes no record, and reproduces the decision from the recorded one.
+        replay(client.fetchHistory("loan-audited"), auditing, HCM);
+        assertThat(audited).hasSize(1);
     }
 
     @Test

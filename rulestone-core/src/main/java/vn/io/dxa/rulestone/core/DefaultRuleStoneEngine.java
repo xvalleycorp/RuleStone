@@ -12,16 +12,24 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import vn.io.dxa.rulestone.api.AuditException;
 import vn.io.dxa.rulestone.api.AuditSink;
+import vn.io.dxa.rulestone.api.DecisionComparison;
+import vn.io.dxa.rulestone.api.DecisionComparison.Difference;
 import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 import vn.io.dxa.rulestone.api.DecisionRecord;
+import vn.io.dxa.rulestone.api.DecisionRecord.ModelStep;
+import vn.io.dxa.rulestone.api.DecisionRecord.ParamSetVersion;
+import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
 import vn.io.dxa.rulestone.api.DecisionRecord.ReasonCode;
 import vn.io.dxa.rulestone.api.DecisionRecord.Routing;
 import vn.io.dxa.rulestone.api.DecisionRecord.Status;
@@ -30,6 +38,7 @@ import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.DecisionTimeoutException;
 import vn.io.dxa.rulestone.api.Explanation;
 import vn.io.dxa.rulestone.api.Facts;
+import vn.io.dxa.rulestone.api.ModelSource;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.api.RuleStoneException;
 
@@ -62,10 +71,13 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
     private final Routes routes;
     private final Optional<ReasonCodeCatalog> catalog;
     private final String catalogVersion;
+    private final Parameters.Registry parameterSets;
 
     DefaultRuleStoneEngine(Map<String, List<Executable>> decisions, Clock clock, List<AuditSink> sinks,
                            FactsHasher hasher, Supplier<String> recordIds, Optional<Duration> timeout,
-                           LongSupplier nanoTime, Routes routes, Optional<ReasonCodeCatalog> catalog) {
+                           LongSupplier nanoTime, Routes routes, Optional<ReasonCodeCatalog> catalog,
+                           Parameters.Registry parameterSets) {
+        this.parameterSets = parameterSets;
         this.decisions = Map.copyOf(decisions);
         this.clock = clock;
         this.sinks = List.copyOf(sinks);
@@ -112,6 +124,148 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
         } finally {
             shadow(attempt, facts);
         }
+    }
+
+    @Override
+    public DecisionComparison replay(DecisionRecord record, Facts facts) {
+        Objects.requireNonNull(record, "record");
+        Objects.requireNonNull(facts, "facts");
+        if (!facts.models().isEmpty()) {
+            throw new IllegalArgumentException("a replay takes the model results from the record; the facts must "
+                    + "not carry any, but carry " + facts.models().keySet());
+        }
+        Attempt attempt = replayAttempt(record);
+        Optional<DecisionResult> result = run(attempt, facts, Deadline.NONE);
+        DecisionRecord evaluated = result.map(DecisionResult::record).orElseGet(() -> attempt.failure);
+        List<Difference> differences = new ArrayList<>();
+        Comparisons.factsHash(record.factsHash(), evaluated.factsHash()).ifPresent(differences::add);
+        differences.addAll(Comparisons.compare(record, evaluated));
+        return new DecisionComparison(record, evaluated, result, differences);
+    }
+
+    @Override
+    public DecisionComparison rescore(DecisionRecord record, Facts facts, DecisionRef target, ModelSource models) {
+        Objects.requireNonNull(record, "record");
+        Objects.requireNonNull(facts, "facts");
+        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(models, "models");
+        if (!target.id().equals(record.decision())) {
+            throw new IllegalArgumentException("a re-score evaluates the recorded decision '" + record.decision()
+                    + "', not '" + target.id() + "'");
+        }
+        // The facts are checked with the recorded version, whose inputs the hash covers.
+        Attempt check = replayAttempt(record);
+        Optional<DecisionResult> original = run(check, facts, Deadline.NONE);
+        Optional<String> originalHash = original.map(r -> r.record().factsHash())
+                .orElseGet(() -> check.failure.factsHash());
+
+        DecisionRef ref = target.correlationId().isPresent() || record.correlationId().isEmpty()
+                ? target : target.correlationId(record.correlationId().get());
+        Instant evaluatedAt = clock.instant();
+        LocalDate businessDate = ref.asOf().orElseGet(() -> LocalDate.ofInstant(evaluatedAt, clock.getZone()));
+        Progress.Overrides overrides = models == ModelSource.RECORDED
+                ? new Progress.Overrides(Map.of(), recordedModels(record), true)
+                : Progress.Overrides.NONE;
+        Attempt attempt = new Attempt(recordIds.get(), ref, businessDate, evaluatedAt,
+                new Progress(ref.params(), overrides));
+        attempt.decision = resolve(ref, businessDate);
+        Optional<DecisionResult> result = run(attempt, facts, deadline(ref));
+        DecisionRecord evaluated = result.map(DecisionResult::record).orElseGet(() -> attempt.failure);
+        List<Difference> differences = new ArrayList<>();
+        Comparisons.factsHash(record.factsHash(), originalHash).ifPresent(differences::add);
+        differences.addAll(Comparisons.compare(record, evaluated));
+        return new DecisionComparison(record, evaluated, result, differences);
+    }
+
+    /**
+     * An attempt that evaluates exactly what {@code record} names: its version, business date and
+     * parameter set versions, the version of each table step, and the recorded model results.
+     *
+     * @throws DecisionNotFoundException if one of these versions is not registered with exactly the
+     *         recorded content hash
+     */
+    private Attempt replayAttempt(DecisionRecord record) {
+        String recorded = record.version().orElseThrow(() -> new IllegalArgumentException("record "
+                + record.recordId() + " names no version of decision '" + record.decision()
+                + "': none was found when it was made, so there is nothing to replay"));
+        Executable decision = exact(record.decision(), recorded);
+        Map<String, String> tables = new LinkedHashMap<>();
+        for (PathStep step : record.path()) {
+            if (step.type().equals("table") && step.decision().isPresent() && step.version().isPresent()) {
+                exact(step.decision().get(), step.version().get());
+                tables.put(step.node(), step.version().get());
+            }
+        }
+        Map<String, String> params = new LinkedHashMap<>();
+        for (ParamSetVersion used : record.params()) {
+            exactParams(used);
+            params.put(used.set(), label(used.version()));
+        }
+        DecisionRef ref = new DecisionRef(record.decision(), Optional.of(label(recorded)),
+                Optional.of(record.businessDate()), record.correlationId(), Optional.empty(), params);
+        Attempt attempt = new Attempt(recordIds.get(), ref, record.businessDate(), clock.instant(),
+                new Progress(params, new Progress.Overrides(tables, recordedModels(record), true)));
+        attempt.decision = decision;
+        return attempt;
+    }
+
+    /** The recorded step of every model node, by node id. */
+    private static Map<String, ModelStep> recordedModels(DecisionRecord record) {
+        Map<String, ModelStep> models = new LinkedHashMap<>();
+        record.path().forEach(step -> step.model().ifPresent(model -> models.put(step.node(), model)));
+        return models;
+    }
+
+    /**
+     * Runs an attempt without writing to the audit sinks, keeping its record on failure.
+     *
+     * @return the result, or empty if the evaluation failed; {@code attempt.failure} then holds its record
+     */
+    private Optional<DecisionResult> run(Attempt attempt, Facts facts, Deadline deadline) {
+        try {
+            return Optional.of(attempt.run(facts, deadline));
+        } catch (RuntimeException e) {
+            attempt.failure = attempt.failed(e);
+            return Optional.empty();
+        }
+    }
+
+    /** The registered decision whose exact version is {@code exact}, e.g. {@code 4@sha256:…}. */
+    private Executable exact(String id, String exact) {
+        List<Executable> versions = decisions.get(id);
+        if (versions == null) {
+            throw new DecisionNotFoundException("unknown decision '" + id + "': the record names version " + exact);
+        }
+        Optional<Executable> found = versions.stream().filter(d -> d.ruleVersion().equals(exact)).findFirst();
+        if (found.isPresent()) {
+            return found.get();
+        }
+        String label = label(exact);
+        Optional<String> sameLabel = versions.stream().map(Executable::ruleVersion)
+                .filter(v -> label(v).equals(label)).findFirst();
+        throw new DecisionNotFoundException("decision '" + id + "' has no version " + exact
+                + sameLabel.map(v -> ": version '" + label + "' is registered with other content, " + v
+                        + "; register the content the record names").orElse(""));
+    }
+
+    /** Checks that the parameter set version {@code used} names is registered with exactly its hash. */
+    private void exactParams(ParamSetVersion used) {
+        List<Parameters.CompiledSet> versions = parameterSets.compiled().getOrDefault(used.set(), List.of());
+        if (versions.stream().anyMatch(c -> c.version().equals(used.version()))) {
+            return;
+        }
+        String label = label(used.version());
+        Optional<String> sameLabel = versions.stream().map(Parameters.CompiledSet::version)
+                .filter(v -> label(v).equals(label)).findFirst();
+        throw new DecisionNotFoundException(Parameters.KIND + " '" + used.set() + "' has no version " + used.version()
+                + sameLabel.map(v -> ": version '" + label + "' is registered with other content, " + v
+                        + "; register the content the record names").orElse(""));
+    }
+
+    /** The label of an exact version: {@code 4} for {@code 4@sha256:…}. */
+    private static String label(String exact) {
+        int at = exact.indexOf('@');
+        return at < 0 ? exact : exact.substring(0, at);
     }
 
     private Deadline deadline(DecisionRef ref) {
@@ -205,13 +359,19 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
         private final Progress progress;
         private Executable decision;
         private Optional<Routing> routing = Optional.empty();
+        /** The record of a failed replay or re-score. */
+        private DecisionRecord failure;
 
         Attempt(String recordId, DecisionRef ref, LocalDate businessDate, Instant evaluatedAt) {
+            this(recordId, ref, businessDate, evaluatedAt, new Progress(ref.params()));
+        }
+
+        Attempt(String recordId, DecisionRef ref, LocalDate businessDate, Instant evaluatedAt, Progress progress) {
             this.recordId = recordId;
             this.ref = ref;
             this.businessDate = businessDate;
             this.evaluatedAt = evaluatedAt;
-            this.progress = new Progress(ref.params());
+            this.progress = progress;
         }
 
         DecisionResult run(Facts facts, Deadline deadline) {

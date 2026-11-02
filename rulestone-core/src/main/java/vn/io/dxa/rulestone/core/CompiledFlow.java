@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
+import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 import vn.io.dxa.rulestone.api.DecisionRecord.ModelStep;
 import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
 import vn.io.dxa.rulestone.api.DecisionRecord.RankedAttribution;
@@ -993,7 +994,7 @@ final class CompiledFlow implements Executable {
             if (!(nodes.get(node) instanceof ModelNode model)) {
                 throw failure("model result supplied for '" + node + "', which is not a model node of this flow", null);
             }
-            if (model.invoker() != null) {
+            if (model.invoker() != null && !progress.overrides().recordedModels()) {
                 throw failure("model result supplied for node '" + node + "', which calls its model (mode invoke); "
                         + "supply results only for nodes in supplied mode, or build the engine with "
                         + "suppliedModelsOnly() for tests", null);
@@ -1040,7 +1041,7 @@ final class CompiledFlow implements Executable {
         if (node instanceof TableNode table) {
             progress.open(() -> new PathStep(id, "table", Optional.of(table.decision()), Optional.empty(),
                     List.of(), Optional.empty()));
-            CompiledDecision decision = table.select(businessDate);
+            CompiledDecision decision = table.select(businessDate, progress.overrides().tables().get(id));
             int from = progress.trace.size();
             progress.open(() -> PathStep.table(id, table.decision(), decision.ruleVersion(), progress.matchedSince(from)));
             Map<String, Object> facts = new HashMap<>();
@@ -1099,7 +1100,8 @@ final class CompiledFlow implements Executable {
     private String model(String id, ModelNode node, Map<String, Object> values, Evaluation evaluation,
                          Progress progress, List<ReasonCode> reasons) {
         FlowNode.Model model = node.definition();
-        ModelMode mode = node.invoker() == null ? ModelMode.SUPPLIED : ModelMode.INVOKE;
+        boolean recorded = progress.overrides().recordedModels();
+        ModelMode mode = node.invoker() == null || recorded ? ModelMode.SUPPLIED : ModelMode.INVOKE;
         progress.open(() -> PathStep.visit(id, "model"));
         // Features are computed in every mode, so that tests and replays meet the same expression errors.
         Map<String, Object> features = new LinkedHashMap<>();
@@ -1111,7 +1113,13 @@ final class CompiledFlow implements Executable {
         OptionalLong latency = OptionalLong.empty();
         if (mode == ModelMode.SUPPLIED) {
             SuppliedModel supplied = evaluation.facts().models().get(id);
-            if (supplied == null) {
+            ModelStep step = recorded ? progress.overrides().models().get(id) : null;
+            if (supplied == null && step != null && step.modelId().equals(model.modelId())
+                    && step.modelVersion().equals(model.modelVersion())) {
+                outcome = step.status().failed()
+                        ? ModelOutcome.failed(step.status(), "as recorded")
+                        : check(node, recordedResult(step));
+            } else if (supplied == null) {
                 outcome = ModelOutcome.failed(ModelStatus.MISSING, "no result was supplied for this node");
             } else if (supplied.failure().isPresent()) {
                 outcome = ModelOutcome.failed(supplied.failure().get(), "reported by the caller");
@@ -1162,6 +1170,30 @@ final class CompiledFlow implements Executable {
         progress.open(() -> PathStep.model(id, step(model, mode, done, took)));
         progress.close();
         return node.next().route(values);
+    }
+
+    /**
+     * The result a recorded step shows, for a replay: its outputs, confidence and attribution method,
+     * and attributions with contributions made up from their ranks and directions, which give the
+     * same ranks, directions and reason codes again.
+     */
+    static ModelResult recordedResult(ModelStep step) {
+        List<RankedAttribution> ranked = new ArrayList<>(step.attributions());
+        ranked.sort(Comparator.comparingInt(RankedAttribution::rank));
+        List<ModelResult.Attribution> attributions = new ArrayList<>();
+        int size = ranked.size();
+        for (int i = 0; i < size; i++) {
+            RankedAttribution attribution = ranked.get(i);
+            BigDecimal magnitude = BigDecimal.valueOf((long) size - i);
+            BigDecimal contribution = switch (attribution.direction()) {
+                case INCREASES_RISK -> magnitude;
+                case DECREASES_RISK -> magnitude.negate();
+                case NONE -> BigDecimal.ZERO;
+            };
+            attributions.add(new ModelResult.Attribution(attribution.feature(), contribution));
+        }
+        return new ModelResult(step.modelId(), step.modelVersion(), step.outputs(), step.confidence(), attributions,
+                step.attributionMethod());
     }
 
     private static ModelStep step(FlowNode.Model model, ModelMode mode, ModelOutcome outcome, OptionalLong latency) {
@@ -1287,8 +1319,16 @@ final class CompiledFlow implements Executable {
                              Map<String, CelExpression> mapped, Map<String, String> byName,
                              Optional<String> publish, Router next) implements Node {
 
-        /** The pinned version, else the version in force on {@code date}. */
-        CompiledDecision select(LocalDate date) {
+        /**
+         * The version {@code exact} names, if not null, for a replay; else the pinned version; else the
+         * version in force on {@code date}.
+         */
+        CompiledDecision select(LocalDate date, String exact) {
+            if (exact != null) {
+                return versions.stream().filter(d -> d.ruleVersion().equals(exact)).findFirst()
+                        .orElseThrow(() -> new DecisionNotFoundException("decision '" + decision
+                                + "' has no version " + exact + " that this node can use"));
+            }
             DecisionTable table = DecisionVersions.select(decision, definitions, pinned, date);
             return versions.stream().filter(d -> d.table() == table).findFirst().orElseThrow();
         }

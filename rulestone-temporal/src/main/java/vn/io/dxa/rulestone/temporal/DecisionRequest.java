@@ -41,6 +41,9 @@ import vn.io.dxa.rulestone.api.Facts;
  * @param asOf       the business date, or {@code null} for today according to the activity's clock
  * @param facts      the inputs in JSON forms; {@code null} means none
  * @param models     supplied model results by model node id; {@code null} means none
+ * @param correlationId the caller's id of the business transaction, copied into the decision record
+ *                   and the outcome, e.g. the loan application number; {@code null} means none. It
+ *                   must not contain personal data.
  */
 public record DecisionRequest(
         String decisionId,
@@ -49,7 +52,8 @@ public record DecisionRequest(
         @JsonDeserialize(using = PayloadJson.ExactObjectDeserializer.class)
         ObjectNode facts,
         @JsonDeserialize(using = PayloadJson.ExactObjectDeserializer.class)
-        ObjectNode models) {
+        ObjectNode models,
+        String correlationId) {
 
     /**
      * Validates the request and keeps a copy of the facts.
@@ -64,6 +68,9 @@ public record DecisionRequest(
         if (version != null && version.isBlank()) {
             throw new IllegalArgumentException("version must not be blank");
         }
+        if (correlationId != null && correlationId.isBlank()) {
+            throw new IllegalArgumentException("correlationId must not be blank");
+        }
         facts = facts == null ? JsonNodeFactory.instance.objectNode() : facts.deepCopy();
         models = models == null ? null : models.deepCopy();
     }
@@ -77,7 +84,20 @@ public record DecisionRequest(
      * @param facts      the inputs in JSON forms; {@code null} means none
      */
     public DecisionRequest(String decisionId, String version, LocalDate asOf, ObjectNode facts) {
-        this(decisionId, version, asOf, facts, null);
+        this(decisionId, version, asOf, facts, null, null);
+    }
+
+    /**
+     * A request without a correlation id.
+     *
+     * @param decisionId the decision to evaluate
+     * @param version    an exact version label, or {@code null}
+     * @param asOf       the business date, or {@code null}
+     * @param facts      the inputs in JSON forms; {@code null} means none
+     * @param models     supplied model results by model node id; {@code null} means none
+     */
+    public DecisionRequest(String decisionId, String version, LocalDate asOf, ObjectNode facts, ObjectNode models) {
+        this(decisionId, version, asOf, facts, models, null);
     }
 
     /**
@@ -103,7 +123,7 @@ public record DecisionRequest(
      *                                  message names the fact, never its value
      */
     public static DecisionRequest of(String decisionId, Map<String, ?> facts) {
-        return new DecisionRequest(decisionId, null, null, PayloadJson.write(facts), null);
+        return new DecisionRequest(decisionId, null, null, PayloadJson.write(facts), null, null);
     }
 
     /**
@@ -134,7 +154,8 @@ public record DecisionRequest(
      * @return the new request
      */
     public DecisionRequest withModels(ObjectNode models) {
-        return new DecisionRequest(decisionId, version, asOf, facts, Objects.requireNonNull(models, "models"));
+        return new DecisionRequest(decisionId, version, asOf, facts, Objects.requireNonNull(models, "models"),
+                correlationId);
     }
 
     /**
@@ -144,7 +165,8 @@ public record DecisionRequest(
      * @return the new request
      */
     public DecisionRequest withVersion(String version) {
-        return new DecisionRequest(decisionId, Objects.requireNonNull(version, "version"), asOf, facts, models);
+        return new DecisionRequest(decisionId, Objects.requireNonNull(version, "version"), asOf, facts, models,
+                correlationId);
     }
 
     /**
@@ -155,7 +177,21 @@ public record DecisionRequest(
      * @return the new request
      */
     public DecisionRequest withAsOf(LocalDate date) {
-        return new DecisionRequest(decisionId, version, Objects.requireNonNull(date, "date"), facts, models);
+        return new DecisionRequest(decisionId, version, Objects.requireNonNull(date, "date"), facts, models,
+                correlationId);
+    }
+
+    /**
+     * Returns a copy with a correlation id, which the decision record and the outcome carry, so that
+     * the record can be found and the decision replayed later.
+     *
+     * @param correlationId the caller's id of the business transaction, e.g. {@code "LOAN-2026-000123"};
+     *                      never personal data
+     * @return the new request
+     */
+    public DecisionRequest withCorrelationId(String correlationId) {
+        return new DecisionRequest(decisionId, version, asOf, facts, models,
+                Objects.requireNonNull(correlationId, "correlationId"));
     }
 
     /**
@@ -168,6 +204,9 @@ public record DecisionRequest(
         DecisionRef ref = DecisionRef.of(decisionId);
         if (version != null) {
             ref = ref.version(version);
+        }
+        if (correlationId != null) {
+            ref = ref.correlationId(correlationId);
         }
         return asOf == null ? ref : ref.asOf(asOf);
     }

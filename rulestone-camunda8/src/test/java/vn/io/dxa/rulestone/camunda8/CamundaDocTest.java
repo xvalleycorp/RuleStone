@@ -128,6 +128,12 @@ class CamundaDocTest {
         assertThat(written.get("matchedRules")).isEqualTo(documented.get("matchedRules"));
         assertThat(written.get("matched")).isEqualTo(documented.get("matched"));
         assertThat(written.get("ruleVersion").asText()).startsWith(documented.get("ruleVersion").asText().replace("…", ""));
+        assertThat(written.get("recordId").isTextual()).isTrue();
+        assertThat(fieldNames(written)).isEqualTo(fieldNames(documented));
+    }
+
+    private static List<String> fieldNames(JsonNode node) {
+        return node.properties().stream().map(Map.Entry::getKey).toList();
     }
 
     @Test

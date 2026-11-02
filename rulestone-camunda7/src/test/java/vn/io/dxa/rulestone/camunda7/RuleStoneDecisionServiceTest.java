@@ -87,7 +87,7 @@ class RuleStoneDecisionServiceTest {
 
     @Test
     void readsSuppliedModelResultsFromTheModelsVariable() {
-        DecisionCall call = new DecisionCall("risk_band", Optional.empty(), Optional.empty(), Optional.of("scores"),
+        DecisionCall call = new DecisionCall("risk_band", Optional.empty(), Optional.empty(), Optional.of("scores"), Optional.empty(),
                 "decision", false, "RULESTONE_DECISION_FAILED");
 
         assertThatThrownBy(() -> service.evaluate(call, scope(Map.of("score", 420))))
@@ -168,7 +168,7 @@ class RuleStoneDecisionServiceTest {
 
         assertThat(result).containsEntry("matched", false).containsEntry("output", Map.of());
 
-        DecisionCall strict = new DecisionCall("risk_band", Optional.empty(), Optional.empty(), Optional.empty(), "decision", true, "NO_BAND");
+        DecisionCall strict = new DecisionCall("risk_band", Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), "decision", true, "NO_BAND");
         assertThatThrownBy(() -> service.evaluate(strict, scope(Map.of("score", 720))))
                 .isInstanceOf(BpmnError.class)
                 .hasMessageEndingWith("matched no rule, and the task sets failOnNoMatch=true")
@@ -181,7 +181,7 @@ class RuleStoneDecisionServiceTest {
                 .isInstanceOf(RuleStoneConfigurationException.class)
                 .hasMessageStartingWith("RuleStone decision not found: unknown decision 'nope'.");
 
-        DecisionCall v9 = new DecisionCall("loan_eligibility", Optional.of("9"), Optional.empty(), Optional.empty(), "decision", false, "X");
+        DecisionCall v9 = new DecisionCall("loan_eligibility", Optional.of("9"), Optional.empty(), Optional.empty(), Optional.empty(), "decision", false, "X");
         assertThatThrownBy(() -> service.evaluate(v9, scope(Map.of())))
                 .isInstanceOf(RuleStoneConfigurationException.class)
                 .hasMessageContaining("decision 'loan_eligibility' has no version '9'");
@@ -189,6 +189,23 @@ class RuleStoneDecisionServiceTest {
         assertThatThrownBy(() -> service.evaluate(" ", scope(Map.of())))
                 .isInstanceOf(RuleStoneConfigurationException.class)
                 .hasMessage("RuleStone: decisionId must not be blank");
+    }
+
+    @Test
+    void theResultNamesTheRecordAndCarriesTheCorrelationId() {
+        Map<String, Object> plain = service.evaluate("risk_band", scope(Map.of("score", 420)));
+        assertThat(plain.get("recordId")).isInstanceOf(String.class);
+        assertThat(plain).doesNotContainKey("correlationId");
+
+        DecisionCall call = new DecisionCall("risk_band", Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of("applicationNo"), "decision", false, "RULESTONE_DECISION_FAILED");
+        Map<String, Object> result = service.evaluate(call,
+                scope(Map.of("score", 420, "applicationNo", "LOAN-2026-000123")));
+        assertThat(result).containsEntry("correlationId", "LOAN-2026-000123");
+
+        assertThatThrownBy(() -> service.evaluate(call, scope(Map.of("score", 420))))
+                .isInstanceOf(BpmnError.class)
+                .hasMessage("RuleStone: correlation id variable 'applicationNo' is missing");
     }
 
     @Test

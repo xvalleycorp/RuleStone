@@ -1,6 +1,6 @@
 ---
 source: camunda.md
-sourceHash: 49f86feac0fe694f5bb4ac6c9b132a9ba4928f9d39dcc139bc086ebacc441783
+sourceHash: cca7e15e1a87f9f55626326528ff3f75d0e18d826f5ffab2692b2e4cebbb29c5
 ---
 
 # Tích hợp Camunda
@@ -12,10 +12,11 @@ Nhiều ngân hàng điều phối quy trình khởi tạo khoản vay, tiếp n
 | `rulestone-camunda8` | Camunda 8 (Zeebe) | Một job worker, và một element template cho Camunda Modeler biến một service task thành "RuleStone decision" |
 | `rulestone-camunda7` | Engine nhúng Camunda 7 | Một `JavaDelegate`, một process engine plugin và một expression bean |
 
-Cả hai đều đọc đầu vào của quyết định từ các biến quy trình, đánh giá phiên bản có hiệu lực vào ngày nghiệp vụ, và ghi cùng một kết quả: `output`, `reasonCodes`, `matchedRules`, `ruleVersion` và `matched`. Cả hai đều biến dữ liệu sai thành một **BPMN error** mà một boundary event có thể bắt, và biến lỗi cấu hình, như một quyết định không xác định, thành một **incident**. Không mô-đun nào ghi log, và không thông báo nào chứa giá trị của biến.
+Cả hai đều đọc đầu vào của quyết định từ các biến quy trình, đánh giá phiên bản có hiệu lực vào ngày nghiệp vụ, và ghi cùng một kết quả: `output`, `reasonCodes`, `matchedRules`, `ruleVersion`, `matched` và `recordId`, cùng `correlationId` khi task nêu một mã tương quan. Cả hai đều biến dữ liệu sai thành một **BPMN error** mà một boundary event có thể bắt, và biến lỗi cấu hình, như một quyết định không xác định, thành một **incident**. Không mô-đun nào ghi log, và không thông báo nào chứa giá trị của biến.
 
 - [Camunda 8](#camunda-8)
 - [Camunda 7](#camunda-7)
+- [Bản ghi quyết định](#bản-ghi-quyết-định)
 - [Độ chính xác số thập phân](#độ-chính-xác-số-thập-phân)
 - [RuleStone hay Camunda DMN?](#rulestone-hay-camunda-dmn)
 
@@ -94,6 +95,7 @@ Sau đó chọn một task, chọn **Change element → RuleStone decision**, v�
 | `version` | không | | Một nhãn phiên bản cụ thể, để chạy lại và điều tra. Nếu không có, dùng phiên bản có hiệu lực vào ngày nghiệp vụ. |
 | `asOfVariable` | không | | Một biến quy trình chứa ngày nghiệp vụ dạng `"yyyy-MM-dd"`, như ngày nộp hồ sơ. Nếu không có, dùng ngày hôm nay theo đồng hồ của worker. |
 | `modelsVariable` | không | | Một biến quy trình chứa kết quả của những mô hình mà quy trình tự chạy, ở dạng `models` của [kết quả do bên gọi cung cấp](flows.md#kết-quả-do-bên-gọi-cung-cấp). Chưa có trong element template; xem bên dưới. |
+| `correlationIdVariable` | không | | Một biến quy trình chứa id hồ sơ của bạn, như số hồ sơ vay, ở dạng chuỗi hoặc số nguyên. Giá trị này trở thành mã tương quan (correlation id) của bản ghi quyết định; xem [Bản ghi quyết định](#bản-ghi-quyết-định). Chưa có trong element template. |
 | `resultVariable` | không | `decision` | Biến nhận kết quả. |
 | `failOnNoMatch` | không | `false` | `true` sẽ ném BPMN error khi không có luật nào khớp. |
 | `errorCode` | không | `RULESTONE_DECISION_FAILED` | Mã của BPMN error. |
@@ -139,7 +141,8 @@ Job hoàn tất với một biến:
     "reasonCodes": [],
     "matchedRules": ["R4"],
     "ruleVersion": "3@sha256:…",
-    "matched": true
+    "matched": true,
+    "recordId": "3f6c2a8e-5b1d-4e7a-9c0f-2d8b6e4a1c75"
   }
 }
 ```
@@ -152,7 +155,7 @@ Nếu không có output mapping, Zeebe gộp biến vào process instance. Để
 
 | Tình huống | Hành vi |
 |---|---|
-| Một đầu vào bị thiếu hoặc sai dạng; biến ngày nghiệp vụ bị thiếu hoặc không phải ngày; một luật bị lỗi, ví dụ chia cho không; một bảng `UNIQUE` khớp hai luật; không luật nào khớp và `failOnNoMatch` là `true` | Task ném BPMN error `errorCode`. Hãy bắt nó bằng một error boundary event và chuyển hồ sơ sang xem xét thủ công. **Không thay bằng một quyết định mặc định.** |
+| Một đầu vào bị thiếu hoặc sai dạng; biến ngày nghiệp vụ hoặc biến mã tương quan bị thiếu hoặc sai dạng; một luật bị lỗi, ví dụ chia cho không; một bảng `UNIQUE` khớp hai luật; không luật nào khớp và `failOnNoMatch` là `true` | Task ném BPMN error `errorCode`. Hãy bắt nó bằng một error boundary event và chuyển hồ sơ sang xem xét thủ công. **Không thay bằng một quyết định mặc định.** |
 | Quyết định hoặc phiên bản không xác định, không có phiên bản nào có hiệu lực vào ngày nghiệp vụ, hoặc một header không hợp lệ | Job thất bại và không còn lần thử lại nào, tạo ra một **incident** với thông báo cho biết cần sửa gì. Hãy sửa phần triển khai hoặc mô hình, rồi thử lại incident trong Operate. |
 | Mọi trường hợp khác, như sự cố hạ tầng | Job thất bại và bớt đi một lần thử lại, sau thời gian chờ (mặc định 10 giây). Khi hết lần thử lại, Zeebe tạo một incident. |
 
@@ -218,7 +221,7 @@ Cấu hình delegate bằng các field, mỗi field là một chuỗi hoặc m�
 </bpmn:boundaryEvent>
 ```
 
-Các field giống các header của Camunda 8: `decisionId` (bắt buộc), `version`, `asOfVariable`, `modelsVariable`, `resultVariable` (mặc định `decision`), `failOnNoMatch` (mặc định `false`) và `errorCode` (mặc định `RULESTONE_DECISION_FAILED`). Như ở Camunda 8, delegate hiện chỉ đánh giá bảng quyết định, và `modelsVariable` dành cho các nút mô hình của luồng. Sau đó các gateway đọc kết quả bằng JUEL:
+Các field giống các header của Camunda 8: `decisionId` (bắt buộc), `version`, `asOfVariable`, `modelsVariable`, `correlationIdVariable`, `resultVariable` (mặc định `decision`), `failOnNoMatch` (mặc định `false`) và `errorCode` (mặc định `RULESTONE_DECISION_FAILED`). Như ở Camunda 8, delegate hiện chỉ đánh giá bảng quyết định, và `modelsVariable` dành cho các nút mô hình của luồng. Sau đó các gateway đọc kết quả bằng JUEL:
 
 ```xml
 <bpmn:sequenceFlow id="Flow_Approve" sourceRef="Outcome" targetRef="Disburse">
@@ -258,6 +261,12 @@ Một lỗi cấu hình trong task đồng bộ làm thất bại lời gọi AP
   <bpmn:extensionElements>
     <camunda:failedJobRetryTimeCycle>R1/PT0S</camunda:failedJobRetryTimeCycle>
 ```
+
+## Bản ghi quyết định
+
+Mỗi lần đánh giá tạo ra một [bản ghi quyết định](java-api.md#bản-ghi-quyết-định-và-kiểm-toán), và engine gửi bản ghi đó tới các audit sink của nó. `recordId` của kết quả nêu bản ghi đó. Với `correlationIdVariable`, bản ghi và kết quả còn mang id hồ sơ của bạn dưới dạng `correlationId`, để có thể nối bản ghi với dữ liệu của bạn; giá trị này không được chứa dữ liệu cá nhân. Hãy giữ record id cùng với process instance, ví dụ bằng cách map `decision.recordId` sang một biến: với bản ghi và các fact, quyết định có thể được [replay hoặc chấm điểm lại](replay.md) về sau.
+
+Một job được thử lại, hoặc một task Camunda 7 đồng bộ có transaction bị rollback và chạy lại, sẽ đánh giá lại và ghi một bản ghi mới, với id mới; kết quả trong quy trình nêu bản ghi của lần đánh giá đã hoàn tất task.
 
 ## Độ chính xác số thập phân
 

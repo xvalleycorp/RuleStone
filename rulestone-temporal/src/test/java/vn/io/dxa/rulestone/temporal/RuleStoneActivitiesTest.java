@@ -27,14 +27,19 @@ import io.temporal.worker.Worker;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.Money;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
+import vn.io.dxa.rulestone.core.RuleStone;
 import vn.io.dxa.rulestone.temporal.TestWorkflows.CountingActivities;
 import vn.io.dxa.rulestone.temporal.TestWorkflows.ViaActivity;
 import vn.io.dxa.rulestone.temporal.TestWorkflows.ViaActivityImpl;
@@ -98,6 +103,24 @@ class RuleStoneActivitiesTest {
         assertThat(outcome.businessDate()).isEqualTo(LocalDate.of(2026, 11, 15));
         assertThat(outcome.matchedRules()).containsExactly("R4");
         assertThat(outcome.matched()).isTrue();
+    }
+
+    @Test
+    void theOutcomeNamesTheRecordAndCarriesTheCorrelationId() {
+        List<DecisionRecord> audited =
+                Collections.synchronizedList(new ArrayList<>());
+        RuleStoneEngine engine = RuleStone.builder().clock(clockAt("2026-11-15"))
+                .decisions(allTables()).auditSink(audited::add).build();
+        WorkflowClient client = start(engine, clockAt("2026-11-15"));
+
+        DecisionOutcome outcome = stub(client, ViaActivity.class).evaluate(DecisionRequest.of("loan_eligibility",
+                        Facts.of("applicant", adult("20000000", "0"), "amount", new BigDecimal("50000000")))
+                .withAsOf(LocalDate.of(2026, 11, 15)).withCorrelationId("LOAN-2026-000123"));
+
+        assertThat(audited).hasSize(1);
+        assertThat(outcome.recordId()).isEqualTo(audited.get(0).recordId());
+        assertThat(outcome.correlationId()).isEqualTo("LOAN-2026-000123");
+        assertThat(audited.get(0).correlationId()).contains("LOAN-2026-000123");
     }
 
     @Test

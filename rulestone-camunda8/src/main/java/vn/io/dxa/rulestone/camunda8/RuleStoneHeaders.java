@@ -21,6 +21,9 @@ package vn.io.dxa.rulestone.camunda8;
  *   <tr><td>{@value #MODELS_VARIABLE}</td><td>no</td><td>Name of a process variable holding
  *       supplied model results, as a JSON object of model node id to result (see
  *       {@code FactsJson.readModels}); otherwise none.</td></tr>
+ *   <tr><td>{@value #CORRELATION_ID_VARIABLE}</td><td>no</td><td>Name of a process variable holding
+ *       the correlation id, such as the loan application number, which the decision record and the
+ *       result carry; otherwise none.</td></tr>
  *   <tr><td>{@value #RESULT_VARIABLE}</td><td>no</td><td>Variable the result is written to; default
  *       {@value #DEFAULT_RESULT_VARIABLE}.</td></tr>
  *   <tr><td>{@value #FAIL_ON_NO_MATCH}</td><td>no</td><td>{@code true} to throw the BPMN error when
@@ -45,6 +48,12 @@ public final class RuleStoneHeaders {
      * nodes of a decision flow in {@code supplied} mode.
      */
     public static final String MODELS_VARIABLE = "modelsVariable";
+
+    /**
+     * Header naming the process variable that holds the correlation id: a string or an integer, never
+     * personal data.
+     */
+    public static final String CORRELATION_ID_VARIABLE = "correlationIdVariable";
 
     /** Header naming the variable the result is written to. */
     public static final String RESULT_VARIABLE = "resultVariable";

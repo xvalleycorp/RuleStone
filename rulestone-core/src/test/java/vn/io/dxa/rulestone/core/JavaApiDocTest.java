@@ -284,11 +284,19 @@ class JavaApiDocTest {
 
         DecisionResult result = engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2027, 7, 1)), facts);
         List<DecisionRecord.ParamSetVersion> used = result.record().params();
-        DecisionResult replay = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
+        DecisionResult tried = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
                 .asOf(LocalDate.of(2027, 7, 1)).params("retail_credit", "2"), facts);
 
         assertThat(used).singleElement().satisfies(p -> assertThat(p.version()).startsWith("2@sha256:"));
-        assertThat(replay.output()).isEqualTo(result.output()).containsEntry("decision", "REJECT");
-        assertThat(replay.record().params()).isEqualTo(used);
+        assertThat(tried.output()).isEqualTo(result.output()).containsEntry("decision", "REJECT");
+        assertThat(tried.record().params()).isEqualTo(used);
+
+        // Replaying and re-scoring, as in the page.
+        String stored = DecisionRecordJson.write(result.record());
+        DecisionRecord record = DecisionRecordJson.read(stored);
+        vn.io.dxa.rulestone.api.DecisionComparison replay = engine.replay(record, facts);
+        assertThat(replay.matches()).isTrue();
+        assertThat(Files.readString(Path.of("..", "docs", "java-api.md")))
+                .contains("DecisionComparison replay = engine.replay(record, facts);");
     }
 }

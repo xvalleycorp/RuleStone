@@ -56,7 +56,9 @@ import vn.io.dxa.rulestone.core.InvalidFactsException;
  * The as-of variable holds a {@code LocalDate} or a {@code "yyyy-MM-dd"} string.
  *
  * <p><b>Result.</b> A {@code Map}: {@code output} (the decision's outputs), {@code reasonCodes},
- * {@code matchedRules}, {@code ruleVersion} and {@code matched}. Output values are {@code Boolean},
+ * {@code matchedRules}, {@code ruleVersion}, {@code matched}, {@code recordId}, the id of the decision
+ * record, which the engine handed to its audit sinks, and {@code correlationId}, when the task names
+ * a correlation id variable. With the record and the facts, the decision can be replayed later. Output values are {@code Boolean},
  * {@code Long}, {@code String}, {@code BigDecimal} and {@code LocalDate} (and lists of them), so JUEL
  * compares them exactly; money becomes its text form {@code "<amount> <CCY>"}.
  *
@@ -154,6 +156,10 @@ public final class RuleStoneDecisionService {
         if (call.version().isPresent()) {
             ref = ref.version(call.version().get());
         }
+        Optional<String> correlationId = correlationId(call, variables);
+        if (correlationId.isPresent()) {
+            ref = ref.correlationId(correlationId.get());
+        }
         DecisionResult result;
         try {
             result = engine.evaluate(ref, facts);
@@ -174,6 +180,24 @@ public final class RuleStoneDecisionService {
         return Variables.objectValue(result)
                 .serializationDataFormat(Variables.SerializationDataFormats.JAVA)
                 .create();
+    }
+
+    /** The correlation id held in the task's correlation id variable, if it names one. */
+    private static Optional<String> correlationId(DecisionCall call, VariableScope variables) {
+        if (call.correlationIdVariable().isEmpty()) {
+            return Optional.empty();
+        }
+        String name = call.correlationIdVariable().get();
+        Object value = variables.getVariable(name);
+        if (value == null) {
+            throw new BpmnError(call.errorCode(), "RuleStone: correlation id variable '" + name + "' is missing");
+        }
+        if (!(value instanceof String || value instanceof Long || value instanceof Integer)
+                || value.toString().isBlank()) {
+            throw new BpmnError(call.errorCode(), "RuleStone: correlation id variable '" + name
+                    + "' must be a non-blank string or an integer");
+        }
+        return Optional.of(value.toString().trim());
     }
 
     private LocalDate businessDate(DecisionCall call, VariableScope variables) {
@@ -287,6 +311,8 @@ public final class RuleStoneDecisionService {
         map.put("matchedRules", new ArrayList<>(result.matchedRules()));
         map.put("ruleVersion", result.ruleVersion());
         map.put("matched", result.matched());
+        map.put("recordId", result.record().recordId());
+        result.record().correlationId().ifPresent(id -> map.put("correlationId", id));
         return map;
     }
 

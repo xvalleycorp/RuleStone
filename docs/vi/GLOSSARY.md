@@ -18,6 +18,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | decision graph | đồ thị quyết định | |
 | decision table | bảng quyết định | |
 | definition (of a decision) | định nghĩa (quyết định, luật) | |
+| difference (replay, re-score) | điểm khác biệt | Một `DecisionComparison.Difference`: điều khác nhau giữa quyết định đã ghi và lần đánh giá mới. |
 | effective date; effective from / to | ngày hiệu lực; hiệu lực từ / đến | |
 | effective dating | hiệu lực theo ngày | |
 | evaluate | đánh giá | "Đánh giá một quyết định", "luật không được đánh giá". |
@@ -175,6 +176,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | element template | element template | Giữ nguyên. |
 | failure path (`onFailure`) | đường xử lý lỗi | Đường mà nút mô hình đi theo khi mô hình lỗi. |
 | feature (model) | đặc trưng | |
+| golden record | bản ghi mẫu | Bản ghi quyết định đã review, được giữ cùng luật để kiểm tra rằng nó vẫn replay chính xác. |
 | hybrid AI decisioning | ra quyết định AI lai | |
 | incident (Camunda) | incident | Giữ nguyên; sự cố cần người vận hành xử lý. |
 | invoke mode, supplied mode | chế độ `invoke`, chế độ `supplied` | Giữ nguyên tên chế độ. |

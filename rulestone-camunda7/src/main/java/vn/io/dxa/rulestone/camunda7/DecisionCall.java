@@ -15,6 +15,7 @@ import java.util.Optional;
  * @param version        an exact version label
  * @param asOfVariable   the variable holding the business date
  * @param modelsVariable the variable holding supplied model results
+ * @param correlationIdVariable the variable holding the correlation id
  * @param resultVariable the variable the delegate writes the result to
  * @param failOnNoMatch  whether "no rule matched" throws the BPMN error
  * @param errorCode      the BPMN error code
@@ -24,6 +25,7 @@ record DecisionCall(
         Optional<String> version,
         Optional<String> asOfVariable,
         Optional<String> modelsVariable,
+        Optional<String> correlationIdVariable,
         String resultVariable,
         boolean failOnNoMatch,
         String errorCode) {
@@ -33,12 +35,13 @@ record DecisionCall(
         Objects.requireNonNull(version, "version");
         Objects.requireNonNull(asOfVariable, "asOfVariable");
         Objects.requireNonNull(modelsVariable, "modelsVariable");
+        Objects.requireNonNull(correlationIdVariable, "correlationIdVariable");
         Objects.requireNonNull(resultVariable, "resultVariable");
         Objects.requireNonNull(errorCode, "errorCode");
     }
 
     static DecisionCall of(String decisionId, Optional<String> asOfVariable) {
-        return new DecisionCall(decisionId, Optional.empty(), asOfVariable, Optional.empty(),
+        return new DecisionCall(decisionId, Optional.empty(), asOfVariable, Optional.empty(), Optional.empty(),
                 RuleStoneDecisionService.DEFAULT_RESULT_VARIABLE, false, RuleStoneDecisionService.DEFAULT_ERROR_CODE);
     }
 }

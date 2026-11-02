@@ -9,6 +9,7 @@
 - [Payloads: decimals, money and dates](#payloads-decimals-money-and-dates)
 - [Errors and retries](#errors-and-retries)
 - [Determinism and versioning rules](#determinism-and-versioning-rules)
+- [Decision records](#decision-records)
 - [Search attributes](#search-attributes)
 - [Operational checklist](#operational-checklist)
 
@@ -17,7 +18,7 @@
 | | In-workflow: `RuleStoneWorkflow` | Activity: `RuleStoneActivities` |
 |---|---|---|
 | Where rules run | In workflow code, on the workflow worker | In an activity, on any worker that has the rules |
-| What history records | The business date and exact rule version (`3@sha256:…`), a few hundred bytes | The full request (facts) and outcome, plus activity events |
+| What history records | The decision record: business date, exact versions, outputs, reason codes and path, no facts; about a kilobyte | The full request (facts) and outcome, plus activity events |
 | Latency | None: no round trip to the Temporal service | One activity: scheduling, a worker poll and completion |
 | Workflow language | Java | Any: payloads are plain JSON |
 | Seeing the outcome | Only if the workflow returns, stores or upserts it | In the activity result, in the Temporal UI |
@@ -25,7 +26,7 @@
 
 Use **in-workflow** evaluation for Java workflows that make many decisions or need them fast, such as pricing every installment of a schedule. Use the **activity** when the workflow is written in another language, when only dedicated workers may load the rules, or when auditors want each decision's inputs and outcome in the workflow history.
 
-Evaluation is pure, so the in-workflow style needs to store only *which* rules were used, not their result: replaying the same rule version on the same date with the same facts gives the same outcome. The price is the replay requirement in the last row of the table.
+Evaluation is pure, so the in-workflow style stores only the [decision record](java-api.md#decision-records-and-auditing), never the facts: [replaying](replay.md) the record with the same facts gives the same outcome. The price is the replay requirement in the last row of the table.
 
 ## Setup
 
@@ -39,7 +40,7 @@ Add the module. The Temporal SDK has `provided` scope: the module works with the
 </dependency>
 ```
 
-Register both styles on a worker. Build one engine from every rule version that running workflows may still replay, and give the activity the same tables. Tables that read [parameters](decision-tables.md#parameters) need their parameter sets too: add `.paramSets(...)` to the builder, with every version that running workflows may replay. The in-workflow style pins the business date and the rule version, not yet the parameter set versions: a parameter set version added later that takes effect on a past business date would change a replay, so add new versions only with future dates.
+Register both styles on a worker. Build one engine from every rule version that running workflows may still replay, and give the activity the same tables. Tables that read [parameters](decision-tables.md#parameters) need their parameter sets too: add `.paramSets(...)` to the builder, with every version that running workflows may replay. The in-workflow style pins the parameter set versions as well, through the decision record.
 
 ```java
 RuleStoneEngine engine = RuleStone.builder()
@@ -93,20 +94,24 @@ Without `DecisionRef.asOf`, the business date is `Workflow.currentTimeMillis()` 
 On the **first execution** of each `evaluate` call:
 
 1. The business date is resolved as above.
-2. Inside `Workflow.sideEffect`, the engine selects the version effective on that date. The decision id, business date and exact rule version, `<version>@sha256:<hash>`, are recorded in workflow history as a small JSON marker. Facts are not recorded.
-3. The decision is evaluated with exactly that version and date: `DecisionRef.of(id).version(label).asOf(date)`.
+2. Inside `Workflow.sideEffect`, the engine evaluates the decision on that date, and hands its decision record to the audit sinks. The decision id, business date, exact rule version, `<version>@sha256:<hash>`, and the decision record are recorded in workflow history as a JSON marker. Facts are not recorded.
+3. The outcome is [replayed](replay.md#replaying-a-decision) from the recorded decision record, with `engine.replay`.
 
-On **replay**, step 2 does not run. The recorded marker is read back and step 3 evaluates the recorded version on the recorded date. A version that became effective in the meantime, a changed time zone or a different clock cannot change the outcome. The engine's current content hash for that version label is then compared with the recorded one.
+On **replay**, step 2 does not run. The recorded marker is read back and step 3 replays the recorded decision: with exactly the recorded rule version, business date, parameter set versions and table versions, with the model results the record holds, calling no model and writing nothing to the audit sinks. A version that became effective in the meantime, a changed time zone, a different clock or a retrained model cannot change the outcome. The replay checks that every recorded version is registered with its recorded content hash, and that the facts give the recorded outcome.
+
+Workflows whose history was written by an earlier RuleStone, whose marker holds the version and date but no record, are reproduced as before: the recorded version is evaluated on the recorded date and its content hash compared with the recorded one. Their outcomes have no record id.
 
 `sideEffect` is used rather than the alternatives because it records a value once and returns it unchanged on every replay, without a round trip to the Temporal service. `mutableSideEffect` is meant for values that change during a run, keyed by an id shared across calls. A local activity would add a timeout, retries and a second worker thread for pure CPU work that cannot fail transiently. Markers are matched to calls by order, so the marker also stores the decision id, and a replay that reaches a different decision at that point fails.
 
 ### When replay cannot reproduce a decision
 
-If the recorded version is no longer registered, or its content hash differs (someone edited the rule text without changing the version label), `evaluate` throws `RuleVersionMismatchException`. Its message names the decision and both versions:
+If a recorded version is no longer registered, or its content hash differs (someone edited the rule text without changing the version label), `evaluate` throws `RuleVersionMismatchException`. Its message names the decision and the versions:
 
 ```text
-RuleStone replay mismatch for decision 'loan_eligibility': workflow history recorded rule version 3@sha256:2008…, but version '3' now registered in the engine is 3@sha256:77ba…. The rule content changed without a new version label. Register the original content of version '3' again (publish changes under a new label); the workflow task is retried until then.
+RuleStone replay mismatch for decision 'loan_eligibility': workflow history recorded rule version 3@sha256:2008…, which this engine cannot replay: decision 'loan_eligibility' has no version 3@sha256:2008…: version '3' is registered with other content, 3@sha256:77ba…; register the content the record names. Keep every rule and parameter set version registered, with its original content, while workflows that used it can still replay; publish changes under a new version label. The workflow task is retried until then.
 ```
+
+It is thrown too when the facts no longer give the recorded outcome, because the workflow code builds them from data that is not deterministic; the message lists the [differences](replay.md#the-comparison), without values.
 
 The exception is a Temporal `NonDeterministicException`. Temporal fails the workflow *task*, shows the message in the UI, and retries the task. The workflow stays open: it neither completes nor fails with an outcome the original rules would not have produced. Register the original rule content again and the workflow continues. If you would rather fail such workflows, add `NonDeterministicException.class` to `WorkflowImplementationOptions.setFailWorkflowExceptionTypes`, as Temporal recommends for other non-determinism.
 
@@ -156,7 +161,7 @@ public DecisionOutcome decide(LoanApplication application) {
 }
 ```
 
-Pass `withAsOf` whenever the case has a business date. Without it, the activity uses today's date from its own clock, passes that date to the engine explicitly, and records it in `DecisionOutcome.businessDate()`. Because the outcome is recorded in history, a replayed workflow gets the original outcome even after the rules change.
+Pass `withAsOf` whenever the case has a business date, and `withCorrelationId` with your id of the case, such as the application number, so that the decision record can be found. Without it, the activity uses today's date from its own clock, passes that date to the engine explicitly, and records it in `DecisionOutcome.businessDate()`. Because the outcome is recorded in history, a replayed workflow gets the original outcome even after the rules change.
 
 **Decision tables only, for now.** The activity evaluates decision tables. [Decision flows](flows.md) cannot be evaluated through it yet. `DecisionRequest.withModels(models)` already carries the results of models that the caller ran itself, in the `models` form of [supplied results](flows.md#supplied-results), for the model nodes of flows. The activity reads them strictly, and reports a malformed one as `INVALID_REQUEST`; until the activity evaluates flows, a decision table rejects them with `DECISION_EVALUATION_FAILED`.
 
@@ -221,6 +226,17 @@ Failure messages and details name the decision, version, rule, input and field i
 4. **Facts are workflow data**, as described in [Facts in workflow code](#facts-in-workflow-code).
 5. **Choose the business zone once.** Changing it does not affect running workflows, whose dates are recorded, but it changes which date new workflows get near midnight.
 
+## Decision records
+
+Every evaluation produces a [decision record](java-api.md#decision-records-and-auditing), and the engine hands it to its audit sinks. `DecisionOutcome.recordId()` names it, and `correlationId()` gives the correlation id of the request. Store them with the case: with the record and the facts, the decision can be [replayed or re-scored](replay.md) later.
+
+| | Record written | `recordId()` |
+|---|---|---|
+| Activity | By the activity, once per attempt; a retried attempt writes a new record | The record of the attempt whose outcome is in history |
+| In-workflow | On first execution, inside `Workflow.sideEffect`; never on replay | The same on every replay; `null` for histories written before RuleStone recorded it |
+
+`DecisionRequest.withCorrelationId(id)` sets the activity's correlation id; in workflow code, use `DecisionRef.correlationId(id)`. Like the record, the outcome holds no input values.
+
 ## Search attributes
 
 `RuleStoneSearchAttributes.upsert(outcome, "decision")` sets four typed search attributes, so operators can find workflows by outcome, for example `RuleStoneDecision = 'loan_eligibility' AND RuleStoneOutcome = 'REVIEW'`:
@@ -246,7 +262,8 @@ A workflow holds one value per attribute; when it makes several decisions, upser
 
 ## Operational checklist
 
-- [ ] The worker's engine and the activity's tables hold every rule version that open workflows (in-workflow style) used, plus the retention period.
+- [ ] The worker's engine and the activity's tables hold every rule and parameter set version that open workflows (in-workflow style) used, plus the retention period.
+- [ ] The engine has an audit sink, and the outcome's `recordId` is stored with the case.
 - [ ] Rule releases add new version labels and never edit used versions. CI compares content hashes of released labels.
 - [ ] Engine clock, activity clock and `RuleStoneWorkflow` zone are your bank's business time zone.
 - [ ] Activity options have a short start-to-close timeout and bounded retries.

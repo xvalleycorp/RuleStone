@@ -53,6 +53,7 @@ const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
       ['java-api.md', 'Java API'],
       ['testing.md', 'Testing'],
       ['explanations.md', 'Explanations'],
+      ['replay.md', 'Replay and re-score'],
       ['temporal.md', 'Temporal integration'],
       ['editor.md', 'Web editor'],
       ['editor-sdk.md', 'Editor SDK'],

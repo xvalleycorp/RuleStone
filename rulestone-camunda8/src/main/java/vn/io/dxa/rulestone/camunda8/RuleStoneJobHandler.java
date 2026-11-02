@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
 import vn.io.dxa.rulestone.api.DecisionNotFoundException;
 import vn.io.dxa.rulestone.api.DecisionRef;
@@ -40,7 +41,8 @@ import vn.io.dxa.rulestone.core.InvalidFactsException;
  * <pre>{@code
  * { "decision": { "output": {"decision": "APPROVE", "limit": "309000000"},
  *                 "reasonCodes": [], "matchedRules": ["R4"],
- *                 "ruleVersion": "3@sha256:…", "matched": true } }
+ *                 "ruleVersion": "3@sha256:…", "matched": true,
+ *                 "recordId": "3f6c2a8e-…" } }
  * }</pre>
  *
  * <p>Outputs are in RuleStone's JSON forms: decimals, money and dates are strings, integers numbers.
@@ -152,6 +154,10 @@ public final class RuleStoneJobHandler implements JobHandler {
         if (task.version().isPresent()) {
             ref = ref.version(task.version().get());
         }
+        Optional<String> correlationId = correlationId(task, variables);
+        if (correlationId.isPresent()) {
+            ref = ref.correlationId(correlationId.get());
+        }
         DecisionResult result;
         try {
             result = engine.evaluate(ref, facts);
@@ -181,6 +187,24 @@ public final class RuleStoneJobHandler implements JobHandler {
         return value;
     }
 
+    /** The correlation id held in the task's correlation id variable, if it names one. */
+    private Optional<String> correlationId(DecisionTask task, ObjectNode variables) {
+        if (task.correlationIdVariable().isEmpty()) {
+            return Optional.empty();
+        }
+        String name = task.correlationIdVariable().get();
+        JsonNode value = variables.get(name);
+        if (value == null || value.isNull()) {
+            throw TaskFailure.bpmnError("RuleStone task: correlation id variable '" + name + "' is missing"
+                    + (options.fetchVariables().isEmpty() ? "" : "; is it among the worker's fetched variables?"));
+        }
+        if (!(value.isTextual() || value.isIntegralNumber()) || value.asText().isBlank()) {
+            throw TaskFailure.bpmnError("RuleStone task: correlation id variable '" + name
+                    + "' must be a non-blank string or an integer");
+        }
+        return Optional.of(value.asText().trim());
+    }
+
     private LocalDate businessDate(DecisionTask task, ObjectNode variables) {
         if (task.asOfVariable().isEmpty()) {
             return LocalDate.now(options.clock());
@@ -207,6 +231,8 @@ public final class RuleStoneJobHandler implements JobHandler {
         decision.set("matchedRules", strings(result.matchedRules()));
         decision.put("ruleVersion", result.ruleVersion());
         decision.put("matched", result.matched());
+        decision.put("recordId", result.record().recordId());
+        result.record().correlationId().ifPresent(id -> decision.put("correlationId", id));
         ObjectNode variables = JobVariables.MAPPER.createObjectNode();
         variables.set(resultVariable, decision);
         try {

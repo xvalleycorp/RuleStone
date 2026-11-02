@@ -13,12 +13,32 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Supplier;
+import vn.io.dxa.rulestone.api.DecisionRecord.ModelStep;
 import vn.io.dxa.rulestone.api.DecisionRecord.ParamSetVersion;
 import vn.io.dxa.rulestone.api.DecisionRecord.PathStep;
 import vn.io.dxa.rulestone.api.TraceStep;
 
 /** What one evaluation has done so far: enough to record it, also when it fails half-way. Not thread-safe. */
 final class Progress {
+
+    /**
+     * What a replay or re-score fixes for one evaluation, apart from the parameter set versions.
+     *
+     * @param tables         node id to the exact version, e.g. {@code 3@sha256:…}, that a {@code table}
+     *                       node of a flow must use
+     * @param models         node id to the recorded step whose result a {@code model} node uses
+     * @param recordedModels whether model nodes take their results from {@code models} and the facts
+     *                       only, calling no model
+     */
+    record Overrides(Map<String, String> tables, Map<String, ModelStep> models, boolean recordedModels) {
+
+        static final Overrides NONE = new Overrides(Map.of(), Map.of(), false);
+
+        Overrides {
+            tables = Map.copyOf(tables);
+            models = Map.copyOf(models);
+        }
+    }
 
     /** Every rule examined, in order, across all tables. */
     final List<TraceStep> trace = new ArrayList<>();
@@ -28,6 +48,7 @@ final class Progress {
     private Optional<String> factsHash = Optional.empty();
     /** The parameter set versions the request forces, by set id. */
     private final Map<String, String> forcedParams;
+    private final Overrides overrides;
     /** Every parameter set version used, by set id and then version. */
     private final Set<ParamSetVersion> params = new TreeSet<>(
             Comparator.comparing(ParamSetVersion::set).thenComparing(ParamSetVersion::version));
@@ -38,11 +59,24 @@ final class Progress {
 
     /** @param forcedParams the parameter set versions the request forces, by set id */
     Progress(Map<String, String> forcedParams) {
+        this(forcedParams, Overrides.NONE);
+    }
+
+    /**
+     * @param forcedParams the parameter set versions the request forces, by set id
+     * @param overrides    what a replay or re-score fixes besides
+     */
+    Progress(Map<String, String> forcedParams, Overrides overrides) {
         this.forcedParams = Map.copyOf(forcedParams);
+        this.overrides = overrides;
     }
 
     Map<String, String> forcedParams() {
         return forcedParams;
+    }
+
+    Overrides overrides() {
+        return overrides;
     }
 
     /** Records that the evaluation used {@code version} of parameter set {@code set}. */
