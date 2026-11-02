@@ -113,38 +113,60 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | adverse-action notice | thông báo từ chối (adverse action) | Thông báo lý do từ chối gửi khách hàng. |
 | AML (anti-money laundering) | phòng, chống rửa tiền (AML) | |
 | alias | bí danh | |
+| anchor, anchoring (audit log) | neo, neo chuỗi | Đưa mã băm đầu chuỗi ra một nơi mà người quản trị nền tảng không ghi đè được. |
 | applicant | người vay | Trong ví dụ xét điều kiện vay. |
+| approval | phê duyệt | |
+| approval statement | văn bản phê duyệt | Văn bản có chữ ký nêu mã băm nội dung của các đối tượng được duyệt (`.approval.jws`). |
+| approver, checker | người duyệt | |
 | audit, auditable | kiểm toán, kiểm toán được | |
 | audit trail | dấu vết kiểm toán | |
 | backtesting | kiểm thử ngược (backtesting) | |
 | champion/challenger | champion/challenger | Giữ nguyên; giải thích "so sánh phiên bản đang chạy với phiên bản thử thách". |
+| change set | bộ thay đổi | Các đối tượng được trình duyệt, phê duyệt và kích hoạt cùng nhau. |
+| content hash | mã băm nội dung | |
 | core banking | core banking | Giữ nguyên (hệ thống ngân hàng lõi). |
 | credit scoring | chấm điểm tín dụng | |
 | debt-to-income ratio (DTI) | tỷ lệ nợ trên thu nhập (DTI) | |
+| detached signature | chữ ký tách rời | Chữ ký lưu riêng, không nằm trong tệp được ký. |
 | dormant account | tài khoản ngủ đông | |
+| emergency change | thay đổi khẩn cấp | |
 | enhanced due diligence | thẩm định tăng cường | |
 | deposit rate | lãi suất tiền gửi | |
 | deterministic | tất định | |
 | eligibility | điều kiện; xét điều kiện (vay) | "Loan eligibility" → "xét điều kiện vay". |
 | explainability | khả năng giải thích | |
 | false positive / false negative | dương tính giả / âm tính giả | Cảnh báo sai / bỏ sót. |
+| four-eyes principle | nguyên tắc bốn mắt | Người duyệt phải khác người lập. |
 | fraud | gian lận | |
 | fuzzy matching | so khớp gần đúng | |
+| hash chain, hash-chained | chuỗi băm, liên kết chuỗi băm | Mỗi mục chứa mã băm của mục trước. |
+| identity provider | nhà cung cấp định danh | Hệ thống SSO của ngân hàng. |
 | KYC (know your customer) | KYC (nhận biết khách hàng) | |
 | governance | quản trị | |
+| lifecycle | vòng đời | Các trạng thái (`DRAFT`, `ACTIVE`…) giữ nguyên. |
 | limit (credit limit) | hạn mức | |
 | large cash transaction report (CTR) | báo cáo giao dịch tiền mặt lớn | |
+| maker | người lập | |
 | maker-checker | maker-checker (người lập – người duyệt) | |
 | mask (data masking) | che (che dữ liệu) | |
 | PEP (politically exposed person) | người có ảnh hưởng chính trị (PEP) | |
 | personal data protection | bảo vệ dữ liệu cá nhân | |
 | policy (credit policy) | chính sách | |
+| post-approval | phê duyệt bổ sung | Phê duyệt đầy đủ sau một thay đổi khẩn cấp. |
+| principal | chủ thể (principal) | Người hoặc hệ thống được xác thực. |
+| release (governance) | bản phát hành | Tập phiên bản đã duyệt mà một engine nạp, có chữ ký. |
 | reproducible | tái lập được | |
+| retire (a version) | ngừng sử dụng (phiên bản) | |
+| risk tier | cấp rủi ro | |
 | sanctions screening | sàng lọc danh sách cấm vận | |
+| seal, sealing (records) | niêm phong | Băm một lô bản ghi quyết định để phát hiện việc sửa đổi. |
+| signature, sign | chữ ký, ký | |
 | structuring | chia nhỏ giao dịch | Chia nhỏ để né ngưỡng báo cáo. |
+| submit, submission | trình duyệt, lần trình duyệt | |
 | suspicious transaction report (STR) | báo cáo giao dịch đáng ngờ | |
 | segregation of duties | phân tách nhiệm vụ | |
 | tamper-evident | chống giả mạo | |
+| timestamp authority | tổ chức cấp dấu thời gian | RFC 3161. |
 | transfer fee | phí chuyển tiền | |
 | tipping off | tiết lộ thông tin (tipping off) | Cho khách hàng biết về cảnh báo nghi ngờ hoặc báo cáo AML; bị pháp luật cấm. |
 | transliteration | chuyển tự | |
@@ -152,6 +174,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | unsecured (consumer) loan | khoản vay (tiêu dùng) tín chấp | |
 | value date | ngày giá trị | |
 | watchlist | danh sách theo dõi | |
+| withdraw (a submission) | rút lại | |
 
 ## Decision flows, AI and orchestration
 
