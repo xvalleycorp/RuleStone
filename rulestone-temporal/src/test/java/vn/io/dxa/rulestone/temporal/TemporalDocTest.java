@@ -103,9 +103,10 @@ class TemporalDocTest {
         assertThat(quoted)
                 .startsWith("RuleStone replay mismatch for decision 'loan_eligibility': workflow history recorded"
                         + " rule version 3@sha256:")
-                .contains(", but version '3' now registered in the engine is 3@sha256:")
-                .endsWith(". The rule content changed without a new version label. Register the original content"
-                        + " of version '3' again (publish changes under a new label); the workflow task is retried"
-                        + " until then.\n");
+                .contains(", which this engine cannot replay: decision 'loan_eligibility' has no version 3@sha256:",
+                        ": version '3' is registered with other content, 3@sha256:")
+                .endsWith("; register the content the record names. Keep every rule and parameter set version"
+                        + " registered, with its original content, while workflows that used it can still replay;"
+                        + " publish changes under a new version label. The workflow task is retried until then.\n");
     }
 }

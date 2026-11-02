@@ -7,10 +7,11 @@ Many banks orchestrate loan origination, onboarding and payment investigations w
 | `rulestone-camunda8` | Camunda 8 (Zeebe) | A job worker, and a Camunda Modeler element template that turns a service task into a "RuleStone decision" |
 | `rulestone-camunda7` | The Camunda 7 embedded engine | A `JavaDelegate`, a process engine plugin and an expression bean |
 
-Both read the decision's inputs from process variables, evaluate the version in force on the business date, and write the same result: `output`, `reasonCodes`, `matchedRules`, `ruleVersion` and `matched`. Both turn bad data into a **BPMN error** that a boundary event can catch, and configuration mistakes, such as an unknown decision, into an **incident**. Neither logs anything, and no message contains a variable value.
+Both read the decision's inputs from process variables, evaluate the version in force on the business date, and write the same result: `output`, `reasonCodes`, `matchedRules`, `ruleVersion`, `matched` and `recordId`, and `correlationId` when the task names one. Both turn bad data into a **BPMN error** that a boundary event can catch, and configuration mistakes, such as an unknown decision, into an **incident**. Neither logs anything, and no message contains a variable value.
 
 - [Camunda 8](#camunda-8)
 - [Camunda 7](#camunda-7)
+- [Decision records](#decision-records)
 - [Decimal precision](#decimal-precision)
 - [RuleStone or Camunda DMN?](#rulestone-or-camunda-dmn)
 
@@ -89,6 +90,7 @@ Then select a task, choose **Change element → RuleStone decision**, and fill i
 | `version` | no | | An exact version label, for replays and investigations. Otherwise the version effective on the business date is used. |
 | `asOfVariable` | no | | A process variable holding the business date as `"yyyy-MM-dd"`, such as the application date. Otherwise today, according to the worker's clock. |
 | `modelsVariable` | no | | A process variable holding the results of models that the process ran itself, in the `models` form of [supplied results](flows.md#supplied-results). Not in the element template yet; see below. |
+| `correlationIdVariable` | no | | A process variable holding your id of the case, such as the loan application number, as a string or an integer. It becomes the decision record's correlation id; see [Decision records](#decision-records). Not in the element template yet. |
 | `resultVariable` | no | `decision` | The variable the result is written to. |
 | `failOnNoMatch` | no | `false` | `true` throws the BPMN error when no rule matches. |
 | `errorCode` | no | `RULESTONE_DECISION_FAILED` | The code of the BPMN error. |
@@ -134,7 +136,8 @@ The job completes with one variable:
     "reasonCodes": [],
     "matchedRules": ["R4"],
     "ruleVersion": "3@sha256:…",
-    "matched": true
+    "matched": true,
+    "recordId": "3f6c2a8e-5b1d-4e7a-9c0f-2d8b6e4a1c75"
   }
 }
 ```
@@ -147,7 +150,7 @@ Without output mappings, Zeebe merges the variable into the process instance. To
 
 | Situation | Behaviour |
 |---|---|
-| An input is missing or in the wrong form; the as-of variable is missing or not a date; a rule fails, for example on division by zero; a `UNIQUE` table matches twice; no rule matches and `failOnNoMatch` is `true` | The task throws the BPMN error `errorCode`. Catch it with an error boundary event and route the case to manual review. **Do not substitute a default decision.** |
+| An input is missing or in the wrong form; the as-of or correlation id variable is missing or not of its form; a rule fails, for example on division by zero; a `UNIQUE` table matches twice; no rule matches and `failOnNoMatch` is `true` | The task throws the BPMN error `errorCode`. Catch it with an error boundary event and route the case to manual review. **Do not substitute a default decision.** |
 | Unknown decision or version, no version effective on the business date, or an invalid header | The job fails with no retries left, which raises an **incident** with a message saying what to fix. Fix the deployment or the model, then retry the incident in Operate. |
 | Anything else, such as an outage | The job fails with one retry fewer, after the backoff (10 seconds by default). When retries run out, Zeebe raises an incident. |
 
@@ -213,7 +216,7 @@ Configure the delegate with fields, each a string or an expression:
 </bpmn:boundaryEvent>
 ```
 
-The fields are those of the Camunda 8 headers: `decisionId` (required), `version`, `asOfVariable`, `modelsVariable`, `resultVariable` (default `decision`), `failOnNoMatch` (default `false`) and `errorCode` (default `RULESTONE_DECISION_FAILED`). As in Camunda 8, the delegate evaluates decision tables only for now, and `modelsVariable` is for the model nodes of flows. Gateways then read the result with JUEL:
+The fields are those of the Camunda 8 headers: `decisionId` (required), `version`, `asOfVariable`, `modelsVariable`, `correlationIdVariable`, `resultVariable` (default `decision`), `failOnNoMatch` (default `false`) and `errorCode` (default `RULESTONE_DECISION_FAILED`). As in Camunda 8, the delegate evaluates decision tables only for now, and `modelsVariable` is for the model nodes of flows. Gateways then read the result with JUEL:
 
 ```xml
 <bpmn:sequenceFlow id="Flow_Approve" sourceRef="Outcome" targetRef="Disburse">
@@ -253,6 +256,12 @@ A configuration error in a synchronous task fails the API call that ran it, such
   <bpmn:extensionElements>
     <camunda:failedJobRetryTimeCycle>R1/PT0S</camunda:failedJobRetryTimeCycle>
 ```
+
+## Decision records
+
+Every evaluation produces a [decision record](java-api.md#decision-records-and-auditing), which the engine hands to its audit sinks. The result's `recordId` names it. With `correlationIdVariable`, the record and the result also carry your id of the case as `correlationId`, so that the record can be joined with your data; it must not contain personal data. Keep the record id with the process instance, for example by mapping `decision.recordId` to a variable: with the record and the facts, the decision can be [replayed or re-scored](replay.md) later.
+
+A job that is retried, or a synchronous Camunda 7 task whose transaction rolls back and runs again, evaluates again and writes a new record, with a new id; the result in the process names the record of the evaluation that completed the task.
 
 ## Decimal precision
 

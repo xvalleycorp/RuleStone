@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: f309242dc33f1a696aa5bfb70e2ff8591516b0af29ea54bb860870ca3cc2fdbb
+sourceHash: 936f9a8fa692609430490798dfac82aa00e5d89c360acb4b578edb89bb2180b0
 ---
 
 # Java API
@@ -72,7 +72,7 @@ RuleStoneEngine engine = RuleStone.builder()
 | `canary(String, String, double)` / `shadow(String, String)` | Chuyển một phần yêu cầu của một quyết định sang phiên bản mới, hoặc đánh giá phiên bản mới ở chế độ bóng trên mọi yêu cầu; xem [Phiên bản canary và phiên bản bóng](#phiên-bản-canary-và-phiên-bản-bóng). |
 | `shadowExecutor(Executor)` | Chạy các lần đánh giá bóng trên executor này thay vì trên luồng của bên gọi. |
 | `modelInvoker(String, ModelInvoker)` | Đăng ký invoker gọi một mô hình cho các [nút mô hình](flows.md#nút-mô-hình) ở chế độ `invoke` của các luồng; xem [Mô hình trong luồng quyết định](#mô-hình-trong-luồng-quyết-định). |
-| `suppliedModelsOnly()` | Chạy mọi nút mô hình ở chế độ `supplied`, không gọi mô hình nào: dùng cho kiểm thử và replay, không bao giờ dùng cho production. |
+| `suppliedModelsOnly()` | Chạy mọi nút mô hình ở chế độ `supplied`, không gọi mô hình nào: dùng cho kiểm thử, không bao giờ dùng cho production. Để tái lập các quyết định đã ghi, hãy dùng [`replay`](#replay-và-chấm-điểm-lại), vốn không cần engine đặc biệt nào. |
 | `build()` | Biên dịch và kiểm tra kiểu mọi luật và mọi luồng, kiểm tra các phiên bản trùng lặp và ngày tháng mâu thuẫn (xem [Phiên bản và ngày hiệu lực](decision-tables.md#phiên-bản-và-ngày-hiệu-lực)) và việc mỗi canary và phiên bản bóng đều trỏ tới một phiên bản đã đăng ký, rồi trả về một engine bất biến. Ném `InvalidDecisionException` liệt kê mọi lỗi. |
 
 `DecisionTableJson.read(...)` nhận một `String`, một `InputStream` (đọc theo UTF-8) hoặc một `Path`, và ném `InvalidDecisionException` khi tệp có bất kỳ lỗi nào. Hãy nạp tệp từ bất cứ nơi nào bạn lưu chúng: classpath, một thư mục, một cột trong cơ sở dữ liệu hay một dịch vụ cấu hình.
@@ -104,7 +104,7 @@ DecisionResult result = engine.evaluate(
 |---|---|
 | `DecisionRef.of("loan_eligibility")` | Phiên bản có hiệu lực hôm nay, theo đồng hồ của engine. |
 | `DecisionRef.of("loan_eligibility").asOf(date)` | Phiên bản có hiệu lực vào ngày `date`. **Nên dùng**: kết quả không phụ thuộc vào thời điểm mã chạy. |
-| `DecisionRef.of("loan_eligibility").version("2")` | Đúng phiên bản `2`, bất kể ngày: kể cả một phiên bản chỉ có hiệu lực về sau, hoặc đã hết hiệu lực. Dùng để chạy lại, điều tra, và thử một phiên bản trước ngày hiệu lực của nó. |
+| `DecisionRef.of("loan_eligibility").version("2")` | Đúng phiên bản `2`, bất kể ngày: kể cả một phiên bản chỉ có hiệu lực về sau, hoặc đã hết hiệu lực. Dùng để điều tra và thử một phiên bản trước ngày hiệu lực của nó; để tái lập một quyết định đã ghi, hãy dùng [`replay`](#replay-và-chấm-điểm-lại). |
 | `….correlationId("LOAN-2026-000123")` | Ghi mã giao dịch nghiệp vụ của bạn (mã tương quan) vào bản ghi quyết định, để có thể đối chiếu với dữ liệu của bạn. Mã này không được chứa dữ liệu cá nhân. Dùng kết hợp được với mọi dòng ở trên. |
 | `….timeout(Duration.ofMillis(2))` | Làm việc đánh giá thất bại với `DecisionTimeoutException` nếu nó kéo dài hơn mức này; xem [Thời gian chờ tối đa](#thời-gian-chờ-tối-đa). Dùng kết hợp được với mọi dòng ở trên. |
 | `….params("retail_credit", "7")` | Dùng đúng phiên bản `7` của bộ tham số `retail_credit`, bất kể ngày, để chạy lại một quyết định với các phiên bản mà bản ghi của nó liệt kê; xem [Bộ tham số](#bộ-tham-số). Dùng kết hợp được với mọi dòng ở trên. |
@@ -323,6 +323,19 @@ String notice = Explanations.text(explanation);
 
 Như bản ghi, phần giải thích không chứa giá trị đầu vào nào. Xem [Giải thích quyết định](explanations.md).
 
+### Replay và chấm điểm lại
+
+Với một bản ghi đã lưu và các fact gốc, `engine.replay(record, facts)` ra lại quyết định với đúng các phiên bản, ngày nghiệp vụ, phiên bản bộ tham số và kết quả mô hình mà bản ghi nêu, rồi so sánh kết quả với bản ghi; `engine.rescore(record, facts, target, models)` thì đánh giá các fact với một phiên bản khác và báo cáo các điểm khác biệt. Cả hai đều không ghi vào audit sink. `DecisionRecordJson.read` đọc lại một bản ghi đã lưu:
+
+```java
+DecisionRecord record = DecisionRecordJson.read(stored);
+
+DecisionComparison replay = engine.replay(record, facts);
+replay.matches();   // true: the same outputs, reason codes and path, from the same facts
+```
+
+Xem [Chạy lại và chấm điểm lại](replay.md).
+
 ### Đẩy bản ghi lên Kafka
 
 `rulestone-audit-kafka` đẩy bản ghi lên một topic Kafka, viết bằng `DecisionRecordJson` và dùng mã tương quan làm khoá, để các bản ghi của một giao dịch luôn theo đúng thứ tự trên cùng một partition. Nó đủ nhanh cho luồng xử lý trực tiếp (inline): nó chuyển mỗi bản ghi vào bộ đệm của producer và không chờ broker. Bạn tự cung cấp Kafka client; mô-đun được biên dịch với `kafka-clients` 4.4 và không phân phối lại thư viện này.
@@ -431,8 +444,8 @@ RuleStoneEngine engine = RuleStone.builder()
 DecisionResult result = engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2027, 7, 1)), facts);
 List<ParamSetVersion> used = result.record().params();   // retail_credit, 2@sha256:…
 
-// Replaying the decision later with the versions its record names:
-DecisionResult replay = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
+// Evaluating with named versions, for example to try version 2 on another date:
+DecisionResult tried = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
         .asOf(LocalDate.of(2027, 7, 1)).params("retail_credit", "2"), facts);
 ```
 
@@ -449,7 +462,8 @@ Mọi ngoại lệ đều kế thừa `RuleStoneException`, một unchecked exce
 |---|---|---|
 | `InvalidDecisionException` (core) | Khi nạp tệp hoặc tạo engine. `problems()` liệt kê mọi lỗi kèm vị trí. | Sửa định nghĩa. Lúc khởi động, hãy dừng ngay (fail fast); khi nạp lại, hãy giữ engine trước đó (xem bên dưới). |
 | `InvalidFactsException` (core) | Khi đọc fact hoặc giá trị JSON bằng `FactsJson`. `problems()` liệt kê mọi lỗi kèm vị trí. | Từ chối yêu cầu vì đầu vào không hợp lệ, ví dụ trả về HTTP 400 kèm danh sách lỗi. |
-| `DecisionNotFoundException` (api) | Không có quyết định với id đó, không có phiên bản đó, hoặc không có phiên bản nào có hiệu lực vào ngày đó. | Lỗi cấu hình: kiểm tra các phiên bản đã đăng ký và ngày hiệu lực của chúng. |
+| `InvalidRecordException` (core) | Khi đọc một bản ghi quyết định bằng `DecisionRecordJson.read`. `problems()` liệt kê mọi lỗi kèm vị trí. | Bản ghi đã lưu bị hỏng, hoặc không do `DecisionRecordJson.write` ghi. |
+| `DecisionNotFoundException` (api) | Không có quyết định với id đó, không có phiên bản đó, hoặc không có phiên bản nào có hiệu lực vào ngày đó. Với [replay](replay.md#phiên-bản-chưa-được-đăng-ký), một phiên bản mà bản ghi nêu không được đăng ký với đúng hash nội dung đã ghi. | Lỗi cấu hình: kiểm tra các phiên bản đã đăng ký và ngày hiệu lực của chúng. |
 | `AuditException` (api) | Một audit sink ném lỗi khi nhận bản ghi quyết định; exception của sink là nguyên nhân, và `recordId()` cho biết bản ghi nào. | Coi như lỗi hệ thống: quyết định đã không được trả về và không được giả định. |
 | `DecisionTimeoutException` (api) | Việc đánh giá kéo dài hơn thời gian chờ tối đa. Là một `DecisionEvaluationException`, nên hãy bắt nó trước. `timeout()` và `trace()` cho biết giới hạn là bao nhiêu và những luật nào đã được xét. | Áp dụng phương án dự phòng cho một quyết định không đưa ra kịp. |
 | `DecisionEvaluationException` (api) | Đầu vào không hợp lệ (thiếu, sai kiểu, số dấu phẩy động cho một decimal, một fact tên `businessDate`), một biểu thức lỗi lúc chạy, hoặc một bảng `UNIQUE` có nhiều luật cùng khớp. `decisionId()` và `ruleVersion()` xác định quyết định. | Coi như lỗi hệ thống đối với hồ sơ này, ví dụ chuyển sang xem xét thủ công. **Không thay bằng một quyết định mặc định.** |

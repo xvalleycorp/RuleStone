@@ -205,5 +205,5 @@ All problems in a rule definition are already reported together, each with its l
    - Remaining: business calendars.
 3. **M2 — Governance:** maker-checker, hash-chained audit, JDBC repository and JDBC audit sink.
 4. **M3 — Integration** *(started)*: Temporal, Camunda 7 and 8, and the Kafka audit sink are done. Remaining: Spring Boot starter, REST/gRPC server, observability (Micrometer, OpenTelemetry), Kafka processor.
-5. **M4 — Analysis and AI** *(started)*: model nodes and [explanations](explanations.md) with a reason-code catalog (steps 3 and 4 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)) are done. Remaining: static analysis, `.stone` text syntax, replay and re-scoring, and model adapters (steps 5 to 7), authoring assistant, MCP server.
+5. **M4 — Analysis and AI** *(started)*: model nodes, [explanations](explanations.md) with a reason-code catalog, and [replay and re-scoring](replay.md) of recorded decisions (steps 3 to 5 of the [hybrid AI plan](hybrid-ai.md#9-implementation-plan)) are done. Remaining: static analysis, `.stone` text syntax, model adapters (steps 6 and 7), authoring assistant, MCP server.
 6. **M5 — Simulation** *(started)*: shadow and canary versions on live traffic, and the web editor for tables, are done. Remaining: backtesting and champion/challenger on historical data, flow editing beyond design.

@@ -1,13 +1,13 @@
 ---
 source: hybrid-ai.md
-sourceHash: c8381f6ee6a62929dac40c2d012ca537c7d5cb3c83aa9a68e22e171e528f892e
+sourceHash: 6bdd0ec3f70c8763049b68ce438442e83ba0460b5e6931e26f45abffc0be4ddc
 ---
 
 # Ra quyết định AI lai
 
 > Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-11-02
 >
-> Bước 1 tới 4 của [kế hoạch triển khai](#9-kế-hoạch-triển-khai) **đã có**: mọi lần đánh giá đều tạo ra một bản ghi quyết định (xem [Bản ghi quyết định và kiểm toán](java-api.md#bản-ghi-quyết-định-và-kiểm-toán)), luồng quyết định chạy được trong bộ máy luật Java (xem [Luồng quyết định](flows.md)), luồng dùng được mô hình qua nút mô hình ở chế độ `invoke` và `supplied` (xem [Nút mô hình](flows.md#nút-mô-hình)), và bản ghi được giải thích bằng một danh mục mã lý do (xem [Giải thích quyết định](explanations.md)). Mọi phần còn lại trong trang này là đề xuất để rà soát và sẽ thay đổi trước khi phát hành.
+> Bước 1 tới 5 của [kế hoạch triển khai](#9-kế-hoạch-triển-khai) **đã có**: mọi lần đánh giá đều tạo ra một bản ghi quyết định (xem [Bản ghi quyết định và kiểm toán](java-api.md#bản-ghi-quyết-định-và-kiểm-toán)), luồng quyết định chạy được trong bộ máy luật Java (xem [Luồng quyết định](flows.md)), luồng dùng được mô hình qua nút mô hình ở chế độ `invoke` và `supplied` (xem [Nút mô hình](flows.md#nút-mô-hình)), bản ghi được giải thích bằng một danh mục mã lý do (xem [Giải thích quyết định](explanations.md)), và các quyết định đã ghi được chạy lại và chấm điểm lại (xem [Chạy lại và chấm điểm lại](replay.md)). Mọi phần còn lại trong trang này là đề xuất để rà soát và sẽ thay đổi trước khi phát hành.
 
 Trang này đặc tả cách RuleStone kết hợp mô hình học máy (machine learning) với luật, và cách mọi quyết định tự giải thích. Trang đề cập ba nội dung:
 
@@ -342,14 +342,16 @@ Việc không đưa giá trị vào bản ghi mặc định nghĩa là bản ghi
 - **Replay** chạy lại một quyết định từ bản ghi của nó. Engine nạp các phiên bản luồng và bảng đã ghi, còn bên gọi cung cấp các fact ban đầu, được kiểm chứng với `factsHash`. Mỗi nút mô hình chạy ở chế độ `supplied` với các đầu ra đã ghi. Kết quả phải khớp chính xác với bản ghi. Đây là cách một kiểm toán viên tái lập một quyết định nhiều năm sau, khi các mô hình đã thay đổi.
 - **Chấm điểm lại** (re-score) chạy cùng các fact qua một phiên bản mô hình hoặc luồng khác và báo cáo các điểm khác biệt. Việc này dùng để thẩm định mô hình và kiểm thử ngược, và kết quả không bao giờ được ghi đè thành quyết định.
 
+*Đã có:* `RuleStoneEngine.replay` và `rescore`; xem [Chạy lại và chấm điểm lại](replay.md).
+
 ### 4.6 Bản ghi được gửi tới đâu
 
 | Tích hợp | Hành vi |
 |---|---|
 | Nhúng | `RuleStone.builder().auditSink(…)`; các sink được gọi đồng bộ sau khi đánh giá, còn sink bất đồng bộ tự đệm dữ liệu. *Đã có.* |
 | `rulestone-audit-jdbc` / `-kafka` (dự kiến) | Một kho chỉ cho phép ghi thêm (append-only). Các bản ghi được liên kết bằng chuỗi băm trong mô-đun quản trị (dự kiến), giúp mọi sự giả mạo đều lộ ra. |
-| Temporal | Activity trả về id của bản ghi. Bản ghi được activity ghi, không bao giờ do mã workflow ghi, nên replay không tạo bản ghi trùng lặp. |
-| Camunda | Id của bản ghi được lưu thành một biến quy trình để truy vết, và bản ghi được gửi tới sink đã cấu hình. |
+| Temporal | Activity trả về id của bản ghi. Trong mã workflow, bản ghi được ghi một lần, ở lần thực thi đầu tiên, và các workflow task sau đó replay nó, nên replay không tạo bản ghi trùng lặp. *Đã có.* |
+| Camunda | Id của bản ghi được lưu trong biến kết quả để truy vết, và bản ghi được gửi tới sink đã cấu hình. *Đã có.* |
 
 ## 5. Phác thảo Java API
 
@@ -485,7 +487,16 @@ Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử
    - **Bộ hiển thị.** `RuleStoneEngine.explain(record, locale)` và `Explanations.explain(record, catalog, locale)` dựng một `Explanation` (trong `rulestone-api`) chỉ từ bản ghi và danh mục: kết quả (các đầu ra của bản ghi), các lý do kèm thông điệp, các bước với phiên bản bảng, luật khớp, nhánh và attribution của mô hình theo thứ hạng và chiều, và các phiên bản bộ tham số. Hash của đầu vào, đầu ra của mô hình, độ tin cậy, độ trễ và chi tiết lỗi bị bỏ qua. `Explanations.text` và `Explanations.write` hiển thị nó dưới dạng văn bản, với tiêu đề tiếng Anh và tiếng Việt có sẵn, và dưới dạng JSON. Locale là một thẻ ngôn ngữ bình thường, không bao giờ là locale mặc định của JVM.
    - **Bộ máy luật trên trình duyệt.** Bộ máy này đọc danh mục, kiểm tra danh mục trong `createEngine` và hiển thị cùng văn bản và JSON, giống nhau đến từng byte, kể cả bản ghi của luồng do bộ máy luật Java ghi; `java-explanations.json` kiểm tra điều này. Bảng Chạy thử của trình soạn thảo nhận danh mục qua `reasonCodes`.
    - **Kiểm thử.** Một ca `.stone-test.json` có thể kỳ vọng `"explanation": { "locale", "reasons", "messages" }`.
-5. **Replay và chấm điểm lại.** Thêm các API này, và mở rộng tích hợp Temporal và Camunda để mang theo id bản ghi.
+5. **Replay và chấm điểm lại.** *Đã xong.* Thêm các API này, và mở rộng tích hợp Temporal và Camunda để mang theo id bản ghi. Xem [Chạy lại và chấm điểm lại](replay.md). Những điểm trang này còn để ngỏ đã được quyết định như sau:
+   - **API.** `RuleStoneEngine.replay(record, facts)` và `rescore(record, facts, target, models)` trả về một `DecisionComparison` (trong `rulestone-api`): bản ghi đã ghi, bản ghi của lần đánh giá mới, kết quả của nó nếu thành công, và các điểm khác biệt, mỗi điểm có một `Kind` (`FACTS`, `STATUS`, `VERSION`, `BUSINESS_DATE`, `PARAMS`, `OUTPUT`, `REASON_CODES`, `PATH`) và một mô tả không chứa giá trị đầu vào hay đầu ra. `DecisionRecordJson.read` đọc lại bản ghi một cách chặt chẽ, mọi vấn đề nằm trong một `InvalidRecordException`; giá trị được đọc lại ở dạng Java tương ứng với JSON của chúng, và đầu ra được so sánh ở dạng JSON.
+   - **Replay** đánh giá đúng phiên bản quyết định, ngày nghiệp vụ và các phiên bản bộ tham số đã ghi, và trong một luồng là phiên bản đã ghi của từng bước bảng, kể cả khi một phiên bản khác hiện đang có hiệu lực. Mỗi nút mô hình nhận kết quả đã ghi của nó: các đầu ra, độ tin cậy, phương pháp attribution, và các attribution với mức đóng góp được dựng lại từ thứ hạng và chiều của chúng, cho ra cùng các mã lý do; một lỗi đã ghi là cùng lỗi đó, và `MISSING` lại là thiếu. Việc này chạy trên mọi engine, không chỉ engine tạo bằng `suppliedModelsOnly()`, và các bước được replay ghi chế độ `supplied`. Chế độ, độ trễ và chi tiết lỗi của bước mô hình không được so sánh. Các fact được kiểm tra với `factsHash` bằng `factsHashKey` của engine; một hash khác, hoặc một thuật toán hash khác, là một điểm khác biệt loại `FACTS`, không phải một ngoại lệ. Fact mang kết quả mô hình bị từ chối.
+   - **Không có tác dụng phụ.** Cả hai phương thức đều không ghi vào audit sink, không dùng phiên bản canary hay phiên bản bóng, và replay không áp thời gian chờ tối đa mặc định của engine. Bản ghi mới có record id mới và thời điểm lấy từ đồng hồ của engine; nó không được đánh dấu là replay, vì nó không đi đâu trừ khi bên gọi lưu nó, và bên gọi không được lưu nó như một quyết định.
+   - **Kiểm tra phiên bản.** Một phiên bản quyết định, bảng hoặc bộ tham số đã ghi mà không được đăng ký với đúng hash nội dung của nó sẽ lỗi với `DecisionNotFoundException`, nêu tên phiên bản đó và, khi nhãn đó được đăng ký với nội dung khác, nêu cả phiên bản đó. Bản ghi không có phiên bản (quyết định không được tìm thấy) không replay được. Bản ghi của lần đánh giá lỗi vẫn replay được và phải lỗi với cùng thông báo; bản ghi `TIMEOUT` được replay không có thời gian chờ tối đa, nên trạng thái của nó khác.
+   - **Chấm điểm lại** nhận một `DecisionRef` làm đích, nên phiên bản, ngày nghiệp vụ và các phiên bản bộ tham số được chọn như với `evaluate`, và mã tương quan của bản ghi được giữ trừ khi đích có mã riêng. Trước tiên nó kiểm tra các fact bằng phiên bản đã ghi, phiên bản này phải được đăng ký. Mô hình được nêu rõ bằng `ModelSource`: `RECORDED` (trước hết là kết quả cung cấp cùng fact, sau đó là kết quả đã ghi cho cùng nút, id và phiên bản mô hình, nếu không thì `MISSING`; không mô hình nào được gọi) hoặc `LIVE` (như `evaluate`: các invoker được gọi).
+   - **Temporal.** `DecisionOutcome` có thêm `recordId` và `correlationId`, và `DecisionRequest` có thêm `correlationId`. Đánh giá trong workflow ghi bản ghi quyết định vào marker `sideEffect` của nó (`rulestone-pin/2`) và replay bản ghi đó ở các workflow task sau bằng `replay`: sink nhận bản ghi một lần, mô hình không bị gọi lại, và phiên bản bộ tham số cùng phiên bản bảng cũng được ghim. History có marker `rulestone-pin/1` được tái lập như trước.
+   - **Camunda.** Kết quả của worker Camunda 8 và delegate Camunda 7 chứa `recordId`, và `correlationId` khi header hoặc field mới `correlationIdVariable` nêu một biến chứa nó. Element template chưa có header này. Các tích hợp vẫn chỉ đánh giá bảng quyết định.
+   - **Kiểm thử.** `ReplayCheck.assertReplays` trong `rulestone-test` làm một bài kiểm thử lỗi khi một quyết định đã ghi không còn replay chính xác, dùng cho các bản ghi mẫu.
+   - **Bộ máy luật trên trình duyệt.** Bộ máy này chưa replay bản ghi; việc đó được để lại cho sau. Bộ máy luật Java là bộ máy luật chính thức.
 6. **Adapter.** Làm `rulestone-model-http` trước, rồi `rulestone-model-scorecard`, rồi `rulestone-model-onnx`.
 7. **Mô hình chạy bóng, nút LLM, và khung vẽ luồng trong trình soạn thảo.**
 

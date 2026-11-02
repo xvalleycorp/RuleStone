@@ -67,7 +67,7 @@ RuleStoneEngine engine = RuleStone.builder()
 | `canary(String, String, double)` / `shadow(String, String)` | Routes a share of the requests for a decision to a new version, or evaluates a new version in shadow on every request; see [Canary and shadow versions](#canary-and-shadow-versions). |
 | `shadowExecutor(Executor)` | Runs shadow evaluations on this executor instead of the caller's thread. |
 | `modelInvoker(String, ModelInvoker)` | Registers the invoker that calls a model for the [model nodes](flows.md#model-nodes) of flows in `invoke` mode; see [Models in decision flows](#models-in-decision-flows). |
-| `suppliedModelsOnly()` | Runs every model node in `supplied` mode, calling no model: for tests and replays, never for production. |
+| `suppliedModelsOnly()` | Runs every model node in `supplied` mode, calling no model: for tests, never for production. To reproduce recorded decisions, use [`replay`](#replaying-and-re-scoring), which needs no special engine. |
 | `build()` | Compiles and type-checks every rule and flow, checks versions for duplicates and contradictory dates (see [Versions and effective dates](decision-tables.md#versions-and-effective-dates)) and that every canary and shadow names a registered version, and returns an immutable engine. Throws `InvalidDecisionException` listing every problem. |
 
 `DecisionTableJson.read(...)` accepts a `String`, an `InputStream` (read as UTF-8) or a `Path`, and throws `InvalidDecisionException` for any problem in the file. Load files from wherever you keep them: the classpath, a directory, a database column or a configuration service.
@@ -99,7 +99,7 @@ DecisionResult result = engine.evaluate(
 |---|---|
 | `DecisionRef.of("loan_eligibility")` | Effective today, according to the engine clock. |
 | `DecisionRef.of("loan_eligibility").asOf(date)` | Effective on `date`. **Recommended**: the result does not depend on when the code runs. |
-| `DecisionRef.of("loan_eligibility").version("2")` | Exactly version `2`, regardless of dates: also a version that takes effect only later, or is no longer in force. For replays, investigations and trying a version before its effective date. |
+| `DecisionRef.of("loan_eligibility").version("2")` | Exactly version `2`, regardless of dates: also a version that takes effect only later, or is no longer in force. For investigations and trying a version before its effective date; to reproduce a recorded decision, use [`replay`](#replaying-and-re-scoring). |
 | `….correlationId("LOAN-2026-000123")` | Adds your id for the business transaction to the decision record, so that it can be joined with your own data. It must not contain personal data. Combines with any of the above. |
 | `….timeout(Duration.ofMillis(2))` | Fails the evaluation with a `DecisionTimeoutException` if it takes longer; see [Timeouts](#timeouts). Combines with any of the above. |
 | `….params("retail_credit", "7")` | Uses exactly version `7` of parameter set `retail_credit`, regardless of dates, to replay a decision with the versions its record lists; see [Parameter sets](#parameter-sets). Combines with any of the above. |
@@ -318,6 +318,19 @@ String notice = Explanations.text(explanation);
 
 Like the record, an explanation contains no input values. See [Explanations](explanations.md).
 
+### Replaying and re-scoring
+
+With a stored record and the original facts, `engine.replay(record, facts)` makes the decision again with exactly the versions, business date, parameter set versions and model results the record names, and compares the outcome with the record; `engine.rescore(record, facts, target, models)` evaluates the facts with another version instead and reports the differences. Neither writes to the audit sinks. `DecisionRecordJson.read` reads a stored record back:
+
+```java
+DecisionRecord record = DecisionRecordJson.read(stored);
+
+DecisionComparison replay = engine.replay(record, facts);
+replay.matches();   // true: the same outputs, reason codes and path, from the same facts
+```
+
+See [Replay and re-score](replay.md).
+
 ### Publishing records to Kafka
 
 `rulestone-audit-kafka` publishes records to a Kafka topic, written by `DecisionRecordJson` and keyed by correlation id, so that the records of one transaction stay in order on one partition. It is fast enough for an inline path: it hands each record to the producer's buffer and does not wait for the broker. Bring your own Kafka client; the module is compiled against `kafka-clients` 4.4 and does not redistribute it.
@@ -426,8 +439,8 @@ RuleStoneEngine engine = RuleStone.builder()
 DecisionResult result = engine.evaluate(DecisionRef.of("loan_eligibility").asOf(LocalDate.of(2027, 7, 1)), facts);
 List<ParamSetVersion> used = result.record().params();   // retail_credit, 2@sha256:…
 
-// Replaying the decision later with the versions its record names:
-DecisionResult replay = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
+// Evaluating with named versions, for example to try version 2 on another date:
+DecisionResult tried = engine.evaluate(DecisionRef.of("loan_eligibility").version("4")
         .asOf(LocalDate.of(2027, 7, 1)).params("retail_credit", "2"), facts);
 ```
 
@@ -444,7 +457,8 @@ All exceptions extend `RuleStoneException`, an unchecked exception.
 |---|---|---|
 | `InvalidDecisionException` (core) | Loading a file or building an engine. `problems()` lists every problem with its location. | Fix the definition. At startup, fail fast; when reloading, keep the previous engine (see below). |
 | `InvalidFactsException` (core) | Reading JSON facts or values with `FactsJson`. `problems()` lists every problem with its location. | Reject the request as invalid input, e.g. with HTTP 400 and the problems. |
-| `DecisionNotFoundException` (api) | No decision with that id, no such version, or no version effective on the date. | Configuration error: check registered versions and their dates. |
+| `InvalidRecordException` (core) | Reading a decision record with `DecisionRecordJson.read`. `problems()` lists every problem with its location. | The stored record is damaged or was not written by `DecisionRecordJson.write`. |
+| `DecisionNotFoundException` (api) | No decision with that id, no such version, or no version effective on the date. For a [replay](replay.md#versions-that-are-not-registered), a version the record names is not registered with exactly its recorded content hash. | Configuration error: check registered versions and their dates. |
 | `AuditException` (api) | An audit sink threw while accepting a decision record; the sink's exception is the cause and `recordId()` names the record. | Treat as a system failure: the decision was not returned and must not be assumed. |
 | `DecisionTimeoutException` (api) | The evaluation took longer than its timeout. A `DecisionEvaluationException`, so catch it first. `timeout()` and `trace()` say what the limit was and which rules were examined. | Apply your fallback for a decision that could not be made in time. |
 | `DecisionEvaluationException` (api) | Invalid input (missing, wrong type, floating point for a decimal, a fact named `businessDate`), an expression failing at run time, or a `UNIQUE` table with several matches. `decisionId()` and `ruleVersion()` identify the decision. | Treat as a system failure for this case, e.g. route it to manual review. **Do not substitute a default decision.** |
