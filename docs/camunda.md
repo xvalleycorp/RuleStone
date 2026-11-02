@@ -90,7 +90,7 @@ Then select a task, choose **Change element → RuleStone decision**, and fill i
 | `version` | no | | An exact version label, for replays and investigations. Otherwise the version effective on the business date is used. |
 | `asOfVariable` | no | | A process variable holding the business date as `"yyyy-MM-dd"`, such as the application date. Otherwise today, according to the worker's clock. |
 | `modelsVariable` | no | | A process variable holding the results of models that the process ran itself, in the `models` form of [supplied results](flows.md#supplied-results). Not in the element template yet; see below. |
-| `correlationIdVariable` | no | | A process variable holding your id of the case, such as the loan application number, as a string or an integer. It becomes the decision record's correlation id; see [Decision records](#decision-records). Not in the element template yet. |
+| `correlationIdVariable` | no | | A process variable holding your id of the case, such as the loan application number, as a string or an integer. It becomes the decision record's correlation id; see [Decision records](#decision-records). In the element template as "Correlation id variable". |
 | `resultVariable` | no | `decision` | The variable the result is written to. |
 | `failOnNoMatch` | no | `false` | `true` throws the BPMN error when no rule matches. |
 | `errorCode` | no | `RULESTONE_DECISION_FAILED` | The code of the BPMN error. |

@@ -1,6 +1,6 @@
 ---
 source: camunda.md
-sourceHash: cca7e15e1a87f9f55626326528ff3f75d0e18d826f5ffab2692b2e4cebbb29c5
+sourceHash: 19f60e076f149e0123ca8f383bc75bcf488e4f9bbc6791497669f440339e14c4
 ---
 
 # Tích hợp Camunda
@@ -95,7 +95,7 @@ Sau đó chọn một task, chọn **Change element → RuleStone decision**, v�
 | `version` | không | | Một nhãn phiên bản cụ thể, để chạy lại và điều tra. Nếu không có, dùng phiên bản có hiệu lực vào ngày nghiệp vụ. |
 | `asOfVariable` | không | | Một biến quy trình chứa ngày nghiệp vụ dạng `"yyyy-MM-dd"`, như ngày nộp hồ sơ. Nếu không có, dùng ngày hôm nay theo đồng hồ của worker. |
 | `modelsVariable` | không | | Một biến quy trình chứa kết quả của những mô hình mà quy trình tự chạy, ở dạng `models` của [kết quả do bên gọi cung cấp](flows.md#kết-quả-do-bên-gọi-cung-cấp). Chưa có trong element template; xem bên dưới. |
-| `correlationIdVariable` | không | | Một biến quy trình chứa id hồ sơ của bạn, như số hồ sơ vay, ở dạng chuỗi hoặc số nguyên. Giá trị này trở thành mã tương quan (correlation id) của bản ghi quyết định; xem [Bản ghi quyết định](#bản-ghi-quyết-định). Chưa có trong element template. |
+| `correlationIdVariable` | không | | Một biến quy trình chứa id hồ sơ của bạn, như số hồ sơ vay, ở dạng chuỗi hoặc số nguyên. Giá trị này trở thành mã tương quan (correlation id) của bản ghi quyết định; xem [Bản ghi quyết định](#bản-ghi-quyết-định). Có trong element template với tên "Correlation id variable". |
 | `resultVariable` | không | `decision` | Biến nhận kết quả. |
 | `failOnNoMatch` | không | `false` | `true` sẽ ném BPMN error khi không có luật nào khớp. |
 | `errorCode` | không | `RULESTONE_DECISION_FAILED` | Mã của BPMN error. |

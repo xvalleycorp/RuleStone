@@ -113,7 +113,7 @@ class ElementTemplateTest {
         Map<String, String> headers = headers(template);
 
         assertThat(headers.keySet()).containsExactlyInAnyOrder(RuleStoneHeaders.DECISION_ID, RuleStoneHeaders.VERSION,
-                RuleStoneHeaders.AS_OF_VARIABLE, RuleStoneHeaders.RESULT_VARIABLE, RuleStoneHeaders.FAIL_ON_NO_MATCH,
+                RuleStoneHeaders.AS_OF_VARIABLE, RuleStoneHeaders.CORRELATION_ID_VARIABLE, RuleStoneHeaders.RESULT_VARIABLE, RuleStoneHeaders.FAIL_ON_NO_MATCH,
                 RuleStoneHeaders.ERROR_CODE);
         assertThat(headers.get(RuleStoneHeaders.RESULT_VARIABLE)).isEqualTo(RuleStoneHeaders.DEFAULT_RESULT_VARIABLE);
         assertThat(headers.get(RuleStoneHeaders.ERROR_CODE)).isEqualTo(RuleStoneHeaders.DEFAULT_ERROR_CODE);
