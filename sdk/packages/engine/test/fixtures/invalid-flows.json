@@ -1,0 +1,273 @@
+[
+  {
+    "name": "a valid flow builds",
+    "tables": [
+      { "id": "t_policy", "version": "1", "hitPolicy": "FIRST", "inputs": { "applicant": { "id": "string", "age": "int" } }, "outputs": { "decision": "string" },
+        "rules": [ { "id": "R", "when": "applicant.age >= 18", "then": { "decision": "'OK'" } } ] }
+    ],
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "applicant": { "id": "string", "age": "int" } }, "outputs": { "decision": "string" }, "start": "policy",
+        "nodes": { "policy": { "type": "table", "decision": "t_policy", "next": "done" }, "done": { "type": "end", "set": { "decision": "has(policy.decision) ? policy.decision : 'NONE'" } } } }
+    ]
+  },
+  {
+    "name": "invalid JSON, not an object, empty text",
+    "flows": ["{ \"id\": \"f\", }", "[1]", "  "]
+  },
+  {
+    "name": "unknown, missing and mistyped fields",
+    "flows": [
+      "{ \"id\": 1, \"version\": \" \", \"descripton\": \"x\", \"effectiveFrom\": \"2026-02-30\", \"inputs\": [], \"outputs\": { \"a\": \"double\" }, \"start\": 5, \"nodes\": {} }",
+      "{ \"id\": \"f\", \"version\": \"1\", \"effectiveFrom\": \"2026-02-01\", \"effectiveTo\": \"2026-01-01\", \"inputs\": {}, \"outputs\": {}, \"params\": [], \"start\": \"a\", \"nodes\": [] }"
+    ]
+  },
+  {
+    "name": "node shapes",
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": 3,
+          "b": { "description": "no type" },
+          "c": { "type": 7 },
+          "d": { "type": "flow", "flow": "other" },
+          "e": { "type": "rule" },
+          "f": { "type": "table", "decision": "t", "facts": { "x": 1 }, "as": 2, "next": 4, "extra": true },
+          "g": { "type": "switch", "cases": [] },
+          "h": { "type": "switch", "cases": [ { "to": "a" }, { "when": "x > 1", "to": "b" }, 5, { "when": "x", "to": "c", "else": "d" } ] },
+          "i": { "type": "derive", "outputs": { "v": "int" }, "set": [], "next": "  " },
+          "j": { "type": "split", "key": "", "salt": "s", "buckets": [ { "name": "a", "percent": 50.5, "to": "x" }, 1, { "name": "b", "to": "y", "share": 1 } ] },
+          "k": { "type": "split", "key": "k", "salt": "s" },
+          "l": { "type": "end", "set": { "d": 1 }, "next": "a" },
+          "m": { "type": "end", "description": 4 }
+        } }
+    ]
+  },
+  {
+    "name": "model node fields",
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": { "type": "model", "mode": "batch", "model": { "id": "m", "version": "1", "tag": "x" }, "features": [], "outputs": { "s": "decimal" },
+            "minConfidence": 0.7, "timeoutMs": "80", "reasonCodes": { "f": 1 }, "maxReasonCodes": 1.5, "onFailure": { "to": "b", "code": "X" },
+            "shadow": { "id": "m2" }, "prompt": "p", "kind": "llm", "next": "b" },
+          "b": { "type": "model", "model": "m@1", "outputs": { "s": "decimal" }, "minConfidence": "high", "reasonCodes": [], "onFailure": "b", "next": [ { "to": "c" } ] },
+          "c": { "type": "model", "mode": "supplied", "outputs": {}, "minConfidence": 1, "timeoutMs": 9999999999, "next": "d" },
+          "d": { "type": "end", "set": { "d": "'X'" } }
+        } }
+    ]
+  },
+  {
+    "name": "graph: unknown targets, start, cycles and unreachable nodes",
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "missing",
+        "nodes": {
+          "a": { "type": "switch", "cases": [ { "when": "x > 1", "to": "b" }, { "to": "nowhere" } ] },
+          "b": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "1" }, "next": "a" },
+          "c": { "type": "end", "set": { "d": "'X'" } }
+        } },
+      { "id": "g", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": { "type": "switch", "cases": [ { "when": "x > 1", "to": "b" }, { "to": "e" } ] },
+          "b": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "1" }, "next": "c" },
+          "c": { "type": "switch", "cases": [ { "when": "x > 2", "to": "b" }, { "to": "e" } ] },
+          "e": { "type": "end", "set": { "d": "'X'" } },
+          "u": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "1" }, "next": "w" },
+          "w": { "type": "switch", "cases": [ { "when": "true", "to": "u" }, { "to": "e" } ] },
+          "z": { "type": "end", "set": { "d": "'Z'" } }
+        } },
+      { "id": "h", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": { "type": "switch", "cases": [ { "when": "x > 1", "to": "e" }, { "to": "e" } ] },
+          "e": { "type": "end", "set": { "d": "'X'" } },
+          "lost": { "type": "end", "set": { "d": "'L'" } },
+          "lost2": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "1" }, "next": "lost" }
+        } }
+    ]
+  },
+  {
+    "name": "structure: branches, sets and splits",
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string", "n": "int", "s": { "a": "int" } }, "start": "a",
+        "nodes": {
+          "a": { "type": "split", "key": "string(x)", "salt": " ", "buckets": [ { "name": "c", "percent": 60, "to": "b" }, { "name": "c", "percent": 0, "to": "b" }, { "name": " ", "percent": 120, "to": "b" } ] },
+          "b": { "type": "derive", "outputs": { "v": "int", "w": { "a": "int" } }, "set": { "v": "1", "z": "2" }, "next": "t" },
+          "t": { "type": "table", "decision": "t_policy", "version": " ", "next": "e" },
+          "e": { "type": "end", "set": { "d": "'X'", "extra": "1" } },
+          "v": { "type": "derive", "outputs": {}, "set": {}, "next": "e" }
+        } }
+    ]
+  },
+  {
+    "name": "names: node ids, as names, inputs and params",
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "applicant": { "id": "string", "age": "int" }, "businessDate": "date" }, "outputs": { "d": "string" }, "start": "applicant",
+        "nodes": {
+          "applicant": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "1" }, "as": "in", "next": "params" },
+          "params": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "1" }, "as": "businessDate", "next": "x1" },
+          "x1": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "1" }, "as": "e2", "next": "e2" },
+          "e2": { "type": "switch", "cases": [ { "when": "true", "to": "1bad" }, { "to": "1bad" } ] },
+          "1bad": { "type": "end", "set": { "d": "'X'" } }
+        } }
+    ]
+  },
+  {
+    "name": "values not set on every path",
+    "tables": [
+      { "id": "card_policy", "version": "1", "hitPolicy": "FIRST", "inputs": { "applicant": { "id": "string", "age": "int" } }, "outputs": { "decision": "string" },
+        "rules": [ { "id": "R", "when": "applicant.age < 18", "then": { "decision": "'REJECT'" } } ] },
+      { "id": "card_limit", "version": "1", "hitPolicy": "FIRST", "inputs": { "riskGrade": "string" }, "outputs": { "limit": "money" },
+        "rules": [ { "id": "L", "when": "true", "then": { "limit": "money('1000', 'VND')" } } ] }
+    ],
+    "flows": [
+      { "id": "card", "version": "1", "inputs": { "applicant": { "id": "string", "age": "int" } }, "outputs": { "decision": "string", "limit": "money" }, "start": "policy",
+        "nodes": {
+          "policy": { "type": "table", "decision": "card_policy", "next": [ { "when": "has(policy.decision)", "to": "referred" }, { "to": "grade" } ] },
+          "grade": { "type": "derive", "outputs": { "riskGrade": "string" }, "set": { "riskGrade": "'A'" }, "next": "limit" },
+          "limit": { "type": "table", "decision": "card_limit", "facts": { "riskGrade": "grade.riskGrade" }, "next": "approved" },
+          "approved": { "type": "end", "set": { "decision": "'APPROVE'", "limit": "limit.limit" } },
+          "referred": { "type": "end", "set": { "decision": "grade.riskGrade + policy.decision", "limit": "limit.limit" } }
+        } }
+    ]
+  },
+  {
+    "name": "shared names",
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "s",
+        "nodes": {
+          "s": { "type": "switch", "cases": [ { "when": "x > 1", "to": "a" }, { "to": "b" } ] },
+          "a": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "1" }, "as": "g", "next": "c" },
+          "b": { "type": "derive", "outputs": { "v": "string" }, "set": { "v": "'1'" }, "as": "g", "next": "c" },
+          "c": { "type": "derive", "outputs": { "v": "int" }, "set": { "v": "2" }, "as": "g", "next": "e" },
+          "e": { "type": "end", "set": { "d": "'X'" } }
+        } }
+    ]
+  },
+  {
+    "name": "table nodes: unknown decisions, flows, versions and facts",
+    "tables": [
+      { "id": "t_policy", "version": "1", "hitPolicy": "FIRST", "inputs": { "applicant": { "id": "string", "age": "int" }, "amount": "money", "score": "decimal" }, "outputs": { "decision": "string" },
+        "rules": [ { "id": "R", "when": "true", "then": { "decision": "'OK'" } } ] },
+      { "id": "t_versions", "version": "1", "effectiveFrom": "2026-01-01", "hitPolicy": "FIRST", "inputs": { "n": "int" }, "outputs": { "a": "string", "b": "int" },
+        "rules": [ { "id": "R", "when": "true", "then": { "a": "'x'" } } ] },
+      { "id": "t_versions", "version": "2", "effectiveFrom": "2026-06-01", "hitPolicy": "FIRST", "inputs": { "n": "string" }, "outputs": { "a": "string", "b": "string" },
+        "rules": [ { "id": "R", "when": "true", "then": { "a": "'y'" } } ] }
+    ],
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "applicant": { "id": "string" }, "amount": "decimal", "n": "int" }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": { "type": "table", "decision": "nope", "next": "b" },
+          "b": { "type": "table", "decision": "other_flow", "next": "c" },
+          "c": { "type": "table", "decision": "t_versions", "version": "9", "next": "d" },
+          "d": { "type": "table", "decision": "t_policy", "facts": { "applicant": "{'id': 'x'}", "unknown": "1" }, "next": "v" },
+          "v": { "type": "table", "decision": "t_versions", "next": "w" },
+          "w": { "type": "table", "decision": "t_policy", "facts": { "applicant": "  applicant ", "amount": "amount", "score": "'x'" }, "next": "e" },
+          "e": { "type": "end", "set": { "d": "v.a + string(v.b)" } }
+        } },
+      { "id": "other_flow", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "e",
+        "nodes": { "e": { "type": "end", "set": { "d": "'X'" } } } }
+    ]
+  },
+  {
+    "name": "expressions: types, syntax and parameters",
+    "paramSets": [
+      "{ \"id\": \"retail\", \"version\": \"1\", \"values\": { \"maxAge\": { \"type\": \"int\", \"value\": 70 } } }"
+    ],
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string", "n": "int" }, "start": "s",
+        "params": { "set": "retail", "values": { "maxAge": "int" } },
+        "nodes": {
+          "s": { "type": "switch", "cases": [ { "when": "x", "to": "a" }, { "when": "x > params.minAge", "to": "a" }, { "to": "a" } ] },
+          "a": { "type": "derive", "outputs": { "v": "int", "w": "decimal" }, "set": { "v": "x +", "w": "x" }, "next": [ { "when": "a.v > params.maxAge", "to": "k" }, { "to": "k" } ] },
+          "k": { "type": "split", "key": "x", "salt": "s", "buckets": [ { "name": "a", "percent": 100, "to": "e" } ] },
+          "e": { "type": "end", "set": { "d": "string(a.v) + nope", "n": "s.taken" } }
+        } },
+      { "id": "g", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "e",
+        "nodes": { "e": { "type": "end", "set": { "d": "string(params.maxAge)" } } } },
+      { "id": "h", "version": "1", "inputs": { "x": "int", "params": "int" }, "outputs": { "d": "string" }, "start": "e",
+        "params": { "set": "missing", "values": { "maxAge": "int", "bad-name": "int" } },
+        "nodes": { "e": { "type": "end", "set": { "d": "string(params.maxAge)" } } } }
+    ]
+  },
+  {
+    "name": "model nodes: contracts",
+    "invokers": ["retail_pd"],
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int", "u": "decimal" }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": { "type": "model", "mode": "invoke", "model": { "id": "retail_pd", "version": "latest" }, "outputs": { "pd": "decimal", "in": "int", "s": { "a": "int" } },
+            "valid": "pd >= decimal(0)", "minConfidence": "1.5", "timeoutMs": 0, "reasonCodes": { "u": "high_u" }, "maxReasonCodes": 11,
+            "onFailure": { "to": "e", "reasonCode": "model-down" }, "next": "b" },
+          "b": { "type": "model", "mode": "invoke", "model": { "id": "unregistered", "version": "2.x" }, "outputs": {},
+            "onFailure": { "to": "e", "reasonCode": "DOWN" }, "next": "c" },
+          "c": { "type": "model", "mode": "supplied", "model": { "id": "1fraud", "version": ">=1.0" }, "features": { "x": "x" }, "outputs": { "score": "decimal" },
+            "timeoutMs": 50, "minConfidence": "-1", "onFailure": { "to": "e", "reasonCode": "DOWN" }, "next": "e" },
+          "e": { "type": "end", "set": { "d": "'X'" } }
+        } }
+    ]
+  },
+  {
+    "name": "model nodes: features, valid and what onFailure may read",
+    "invokers": ["retail_pd"],
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int", "applicant": { "id": "string" } }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": { "type": "model", "mode": "invoke", "model": { "id": "retail_pd", "version": "2.4.0" }, "timeoutMs": 80,
+            "features": { "x": "x", "who": "applicant", "bad": "x +", "nums": "[x, x]" }, "outputs": { "pd": "decimal" },
+            "valid": "pd > 0", "onFailure": { "to": "fail", "reasonCode": "DOWN" }, "next": [ { "when": "a.pd > decimal('0.5')", "to": "fail" }, { "to": "ok" } ] },
+          "ok": { "type": "end", "set": { "d": "string(a.pd)" } },
+          "fail": { "type": "end", "set": { "d": "string(a.pd)" } }
+        } }
+    ]
+  },
+  {
+    "name": "model nodes: no invoker unless supplied only",
+    "suppliedModelsOnly": true,
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": { "type": "model", "mode": "invoke", "model": { "id": "retail_pd", "version": "2.4.0" }, "timeoutMs": 80,
+            "features": { "x": "x" }, "outputs": { "pd": "decimal" }, "onFailure": { "to": "e", "reasonCode": "DOWN" }, "next": "e" },
+          "e": { "type": "end", "set": { "d": "'X'" } }
+        } }
+    ]
+  },
+  {
+    "name": "flow header, versions and the shared id namespace",
+    "tables": [
+      { "id": "dup", "version": "1", "hitPolicy": "FIRST", "inputs": {}, "outputs": {}, "rules": [ { "id": "R", "when": "true" } ] }
+    ],
+    "flows": [
+      { "id": "dup", "version": "v 1", "inputs": { "x": "int" }, "outputs": { "d": "string", "s": { "a": "int" } }, "start": "e",
+        "nodes": { "e": { "type": "end", "set": { "d": "'X'", "s": "x" } } } },
+      { "id": "g", "version": "1", "effectiveFrom": "2026-01-01", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "e",
+        "nodes": { "e": { "type": "end", "set": { "d": "'1'" } } } },
+      { "id": "g", "version": "2", "effectiveFrom": "2026-01-01", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "e",
+        "nodes": { "e": { "type": "end", "set": { "d": "'2'" } } } },
+      { "id": "g", "version": "2", "effectiveFrom": "2026-03-01", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "e",
+        "nodes": { "e": { "type": "end", "set": { "d": "'3'" } } } }
+    ]
+  },
+  {
+    "name": "a table that fails to compile is reported once",
+    "tables": [
+      { "id": "t_broken", "version": "1", "hitPolicy": "FIRST", "inputs": { "x": "int" }, "outputs": { "decision": "string" },
+        "rules": [ { "id": "R", "when": "x +", "then": { "decision": "'OK'" } } ] }
+    ],
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "t",
+        "nodes": { "t": { "type": "table", "decision": "t_broken", "next": "e" }, "e": { "type": "end", "set": { "d": "t.decision" } } } }
+    ]
+  },
+  {
+    "name": "reason codes missing from the catalog",
+    "reasonCodes": "{ \"version\": \"1\", \"locales\": [\"en\"], \"codes\": { \"DOWN\": { \"en\": \"The model was unavailable.\" } } }",
+    "flows": [
+      { "id": "f", "version": "1", "inputs": { "x": "int" }, "outputs": { "d": "string" }, "start": "a",
+        "nodes": {
+          "a": { "type": "model", "mode": "supplied", "model": { "id": "fraud", "version": "1.0.0" }, "outputs": { "score": "decimal" },
+            "reasonCodes": { "device": "NEW_DEVICE", "address": "DOWN" }, "onFailure": { "to": "e", "reasonCode": "FRAUD_DOWN" }, "next": "e" },
+          "e": { "type": "end", "set": { "d": "'X'" } }
+        } }
+    ]
+  }
+]
