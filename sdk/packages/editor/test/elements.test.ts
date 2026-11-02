@@ -432,6 +432,18 @@ describe('<rulestone-flow-canvas>', () => {
     expect(into.querySelector('tspan.failure')).not.toBeNull()
   })
 
+  it('ends a line of edge labels that would run far past the node with +N', async () => {
+    const f = flow()
+    for (const [i, id] of ['policy', 'grade', 'limit'].entries()) {
+      f.nodes[id]!.next = [{ when: `applicant.age > ${i} && applicant.existingCustomer`, to: 'referred' }, { to: 'approved' }]
+    }
+    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: f })
+    const referred = el.layout['referred']!
+    const into = $$(el, 'text.edge-label').find((t) => Number(t.getAttribute('x')) === referred.x + 6 && Number(t.getAttribute('y')) === referred.y - 6)!
+    expect(into.textContent!.replace(/\s+/g, ' ').trim()).toMatch(/ \+\d+$/)
+    expect(into.textContent!.replace(/\s+/g, ' ').trim().length).toBeLessThanOrEqual(46)
+  })
+
   it('zooms with two fingers around their midpoint, and never connects on a cancelled drag', async () => {
     const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: flow() })
     const svg = $(el, 'svg')!

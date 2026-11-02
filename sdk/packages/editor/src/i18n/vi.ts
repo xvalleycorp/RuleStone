@@ -230,6 +230,7 @@ export const vi: Messages = {
   tryIt: {
     label: 'Chạy thử',
     intro: 'Đánh giá các luật như hiện tại, ngay trong trình duyệt, bằng bộ máy luật RuleStone.',
+    introFlow: 'Chạy luồng như hiện tại, cùng các bảng của nó, ngay trong trình duyệt, bằng bộ máy luật RuleStone.',
     asOf: 'Ngày nghiệp vụ',
     asOfHelp: 'Ngày ra quyết định (asOf); trong luật, ngày này là businessDate.',
     form: 'Biểu mẫu',

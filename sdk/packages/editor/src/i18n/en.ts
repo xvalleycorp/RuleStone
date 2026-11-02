@@ -225,6 +225,7 @@ export const en = {
   tryIt: {
     label: 'Try it',
     intro: 'Runs the rules as they are now, in the browser, with the RuleStone engine.',
+    introFlow: 'Runs the flow as it is now, with its tables, in the browser, with the RuleStone engine.',
     asOf: 'Business date',
     asOfHelp: 'The date the decision is made for (asOf); rules see it as businessDate.',
     form: 'Form',

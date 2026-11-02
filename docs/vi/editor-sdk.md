@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: 3d93c5b7df3e2ff9d3c15bb42d775de70799287105b45a36612cb55db336bb49
+sourceHash: a4a2e7850b606dc5f722d09cc1ae0ed8a484cb1ba903f1e95912753848f10edd
 ---
 
 # SDK trình soạn thảo
@@ -482,14 +482,14 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@dxa/rulestone-editor` (mọi phần tử) | 374.8 KiB, 109.4 KiB khi nén gzip | 216.0 KiB, 60.0 KiB khi nén gzip |
-| `./table-editor` | 324.3 KiB, 95.0 KiB khi nén gzip | 165.3 KiB, 45.5 KiB khi nén gzip |
-| `./rules-grid` | 178.1 KiB, 54.5 KiB khi nén gzip | 105.7 KiB, 30.2 KiB khi nén gzip |
-| `./condition-builder` | 157.7 KiB, 49.2 KiB khi nén gzip | 85.0 KiB, 24.9 KiB khi nén gzip |
-| `./schema-designer` | 134.5 KiB, 43.3 KiB khi nén gzip | 61.9 KiB, 19.2 KiB khi nén gzip |
-| `./flow-canvas` | 246.9 KiB, 75.7 KiB khi nén gzip | 90.4 KiB, 26.8 KiB khi nén gzip |
-| `./try-it` | 220.4 KiB, 68.4 KiB khi nén gzip | 62.6 KiB, 18.8 KiB khi nén gzip |
-| `./cel-input` | 110.7 KiB, 36.3 KiB khi nén gzip | 52.9 KiB, 16.4 KiB khi nén gzip |
+| `@dxa/rulestone-editor` (mọi phần tử) | 375.2 KiB, 109.5 KiB khi nén gzip | 216.4 KiB, 60.1 KiB khi nén gzip |
+| `./table-editor` | 324.6 KiB, 95.1 KiB khi nén gzip | 165.7 KiB, 45.5 KiB khi nén gzip |
+| `./rules-grid` | 178.4 KiB, 54.5 KiB khi nén gzip | 106.0 KiB, 30.3 KiB khi nén gzip |
+| `./condition-builder` | 158.0 KiB, 49.3 KiB khi nén gzip | 85.3 KiB, 24.9 KiB khi nén gzip |
+| `./schema-designer` | 134.8 KiB, 43.3 KiB khi nén gzip | 62.2 KiB, 19.2 KiB khi nén gzip |
+| `./flow-canvas` | 247.3 KiB, 75.8 KiB khi nén gzip | 90.8 KiB, 26.9 KiB khi nén gzip |
+| `./try-it` | 220.7 KiB, 68.4 KiB khi nén gzip | 62.9 KiB, 18.8 KiB khi nén gzip |
+| `./cel-input` | 110.9 KiB, 36.4 KiB khi nén gzip | 53.2 KiB, 16.5 KiB khi nén gzip |
 
 Riêng `@dxa/rulestone-engine` là 158.9 KiB, 49.3 KiB khi nén gzip; entry point `/cel` của nó là 56.6 KiB, 19.0 KiB khi nén gzip. Vùng vẽ luồng và bảng Chạy thử tạo bộ máy luật, nên nạp cả mã luồng, nút mô hình và replay của bộ máy luật; lưới luật, trình tạo điều kiện, trình thiết kế lược đồ và ô nhập CEL không tạo bộ máy luật nào và bỏ phần mã đó ra. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
 

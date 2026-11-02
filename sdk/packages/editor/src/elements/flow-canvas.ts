@@ -19,6 +19,9 @@ interface View {
   readonly zoom: number
 }
 
+/** At most this many characters of edge labels on one line, about the width of a node and a half. */
+const EDGE_LABEL_CHARS = 40
+
 type Drag =
   | { readonly kind: 'move'; readonly id: string; readonly startX: number; readonly startY: number; readonly origX: number; readonly origY: number; moved: boolean }
   | { readonly kind: 'pan'; readonly startX: number; readonly startY: number; readonly view: View }
@@ -640,7 +643,9 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   /**
    * Edge labels, where the edges arrive: just above the target node's top left corner, drawn
    * over nodes and edges so that they stay readable wherever the nodes are. The labels of the
-   * edges into one node share one line, each label once, so that they never overlap.
+   * edges into one node share one line, each label once, so that they never overlap; a line
+   * that would run far past the node ends with "+N" for the labels left out, which every edge
+   * still names in its tooltip.
    */
   private renderEdgeLabels(edges: readonly Edge[]): SVGTemplateResult[] {
     const byTarget = new Map<string, Map<string, boolean>>()
@@ -652,10 +657,18 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     }
     return [...byTarget].map(([to, labels]) => {
       const b = this.layout[to]!
-      const parts = [...labels].map(([label, failure], i) => {
+      const entries = [...labels]
+      const parts: SVGTemplateResult[] = []
+      let length = 0
+      for (const [i, [label, failure]] of entries.entries()) {
         const text = label.length > 26 ? label.slice(0, 25) + '…' : label
-        return svg`${i > 0 ? svg`<tspan> · </tspan>` : nothing}<tspan class=${failure ? 'failure' : ''}>${text}</tspan>`
-      })
+        if (i > 0 && length + 3 + text.length > EDGE_LABEL_CHARS) {
+          parts.push(svg`<tspan> +${entries.length - i}</tspan>`)
+          break
+        }
+        parts.push(svg`${i > 0 ? svg`<tspan> · </tspan>` : nothing}<tspan class=${failure ? 'failure' : ''}>${text}</tspan>`)
+        length += (i > 0 ? 3 : 0) + text.length
+      }
       return svg`<text class="edge-label" x=${b.x + 6} y=${b.y - 6}>${parts}</text>`
     })
   }

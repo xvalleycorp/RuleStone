@@ -455,7 +455,7 @@ export class RulestoneTryIt extends RulestoneElement {
       // Problems are shown when the user runs the table.
     }
     return html`
-      <p class="muted note">${this.t('tryIt.intro')}</p>
+      <p class="muted note">${this.t(this.flow ? 'tryIt.introFlow' : 'tryIt.intro')}</p>
       <div class="top">
         <label>${this.t('tryIt.asOf')}
           <input type="date" .value=${this.asOf} title=${this.t('tryIt.asOfHelp')} @change=${(e: Event) => (this.asOf = (e.target as HTMLInputElement).value)} />
