@@ -33,6 +33,11 @@ import vn.io.dxa.rulestone.core.FactsJson;
  *
  * <p>Nothing here contains input values, so an outcome is safe to log and to store for audit.
  *
+ * <p>{@code recordId} names the decision record of the evaluation, which the engine handed to its
+ * audit sinks. Keep it with the case: with the record and the original facts,
+ * {@code RuleStoneEngine.replay} reproduces the decision later, and {@code rescore} compares it
+ * with another version.
+ *
  * @param decisionId   the evaluated decision
  * @param ruleVersion  exact rule version used, {@code <version>@sha256:<hash>}
  * @param businessDate the business date the decision was evaluated on, whether given or resolved
@@ -40,6 +45,9 @@ import vn.io.dxa.rulestone.core.FactsJson;
  * @param reasonCodes  reason codes of the matching rule(s)
  * @param matchedRules ids of the matching rules, in evaluation order
  * @param trace        each evaluated rule and whether it matched
+ * @param recordId     the id of the decision record of this evaluation; {@code null} in outcomes
+ *                     recorded before RuleStone carried it
+ * @param correlationId the correlation id of the request, if it had one; else {@code null}
  */
 public record DecisionOutcome(
         String decisionId,
@@ -49,7 +57,9 @@ public record DecisionOutcome(
         ObjectNode output,
         List<String> reasonCodes,
         List<String> matchedRules,
-        List<TraceStep> trace) {
+        List<TraceStep> trace,
+        String recordId,
+        String correlationId) {
 
     /** Validates the outcome and keeps copies of its parts. */
     public DecisionOutcome {
@@ -63,6 +73,22 @@ public record DecisionOutcome(
     }
 
     /**
+     * An outcome without a record id or correlation id, as outcomes were before RuleStone carried them.
+     *
+     * @param decisionId   the evaluated decision
+     * @param ruleVersion  exact rule version used
+     * @param businessDate the business date
+     * @param output       the outputs in JSON forms
+     * @param reasonCodes  reason codes
+     * @param matchedRules ids of the matching rules
+     * @param trace        each evaluated rule and whether it matched
+     */
+    public DecisionOutcome(String decisionId, String ruleVersion, LocalDate businessDate, ObjectNode output,
+                           List<String> reasonCodes, List<String> matchedRules, List<TraceStep> trace) {
+        this(decisionId, ruleVersion, businessDate, output, reasonCodes, matchedRules, trace, null, null);
+    }
+
+    /**
      * Converts an engine result.
      *
      * @param result       the result
@@ -70,9 +96,14 @@ public record DecisionOutcome(
      * @return the outcome
      */
     public static DecisionOutcome from(DecisionResult result, LocalDate businessDate) {
+        return from(result, businessDate, result.record().recordId());
+    }
+
+    /** The outcome of {@code result}, naming the record {@code recordId}, e.g. the one a replay reproduced. */
+    static DecisionOutcome from(DecisionResult result, LocalDate businessDate, String recordId) {
         return new DecisionOutcome(result.decisionId(), result.ruleVersion(), businessDate,
                 FactsJson.writeValues(result.output()), result.reasonCodes(), result.matchedRules(),
-                result.trace());
+                result.trace(), recordId, result.record().correlationId().orElse(null));
     }
 
     /**

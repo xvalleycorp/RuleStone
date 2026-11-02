@@ -15,27 +15,34 @@ import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import vn.io.dxa.rulestone.api.DecisionComparison;
+import vn.io.dxa.rulestone.api.DecisionComparison.Difference;
 import vn.io.dxa.rulestone.api.DecisionEvaluationException;
 import vn.io.dxa.rulestone.api.DecisionNotFoundException;
+import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
+import vn.io.dxa.rulestone.core.DecisionRecordJson;
 
 /**
  * Evaluates RuleStone decisions inside workflow code, deterministically across replays.
  *
- * <p>On first execution of each {@link #evaluate} call, the business date and the exact rule version
- * ({@code <version>@sha256:<hash>}) are resolved and recorded in workflow history with
- * {@link Workflow#sideEffect}. The decision is then evaluated with that exact version and date. On
- * replay, the recorded values are read back instead of being resolved again, so a rule version that
- * became effective since, a different time zone, or a changed clock cannot change the outcome. The
- * content hash of the version now registered is compared with the recorded one; any difference fails
- * with {@link RuleVersionMismatchException}.
+ * <p>On first execution of each {@link #evaluate} call, the decision is evaluated once, inside
+ * {@link Workflow#sideEffect}, and its decision record, which holds no facts, is recorded in workflow
+ * history; the engine's audit sinks receive the record then, and only then. On every later execution
+ * of the workflow code, the recorded decision is replayed with {@link RuleStoneEngine#replay}: with
+ * exactly the recorded decision version, business date, parameter set versions, table versions and
+ * model results, writing nothing to the audit sinks and calling no model. So a version that became
+ * effective since, a different time zone, a changed clock or a retrained model cannot change the
+ * outcome. A version that is no longer registered with exactly the recorded content hash, or facts
+ * that no longer give the recorded outcome, fail with {@link RuleVersionMismatchException}.
  *
- * <p>Only the pin is recorded, not the outcome: evaluation is pure, so the same version, date and
- * facts give the same outcome. History stays small, and the outcome is visible only if the workflow
- * returns, stores or upserts it (see {@link RuleStoneSearchAttributes}).
+ * <p>The outcome carries the id of that record, the same on every replay, so that the decision can
+ * be found in the audit store and replayed or re-scored later. Histories written before RuleStone
+ * recorded the record hold the exact version and business date only; they are reproduced by
+ * evaluating that version on that date, as before, and their outcomes have no record id.
  *
  * <p>Rules for workflow code:
  *
@@ -60,7 +67,8 @@ import vn.io.dxa.rulestone.api.RuleStoneEngine;
 public final class RuleStoneWorkflow {
 
     private static final ObjectMapper PIN_MAPPER = new ObjectMapper();
-    private static final String PIN_FORMAT = "rulestone-pin/1";
+    private static final String PIN_FORMAT_V1 = "rulestone-pin/1";
+    private static final String PIN_FORMAT = "rulestone-pin/2";
 
     private final RuleStoneEngine engine;
     private final ZoneId businessZone;
@@ -93,7 +101,8 @@ public final class RuleStoneWorkflow {
      *
      * @param ref   the decision, and optionally a version or business date
      * @param facts the inputs; deterministic workflow data only
-     * @return the outcome, with the business date and exact rule version used
+     * @return the outcome, with the business date and exact rule version used, and the id of the
+     *         decision record made on first execution
      * @throws io.temporal.failure.ApplicationFailure non-retryable, of type
      *         {@link RuleStoneFailures#DECISION_NOT_FOUND} or {@link RuleStoneFailures#DECISION_EVALUATION_FAILED}
      * @throws RuleVersionMismatchException on replay, if the recorded rule version cannot be reproduced
@@ -116,6 +125,12 @@ public final class RuleStoneWorkflow {
             throw RuleStoneFailures.decisionNotFound(pin.notFound);
         }
 
+        if (pin.record != null) {
+            DecisionOutcome replayed = replay(pin, facts);
+            if (replayed != null) {
+                return replayed;
+            }
+        }
         DecisionRef pinned = DecisionRef.of(ref.id()).version(pin.versionLabel()).asOf(pin.businessDate);
         DecisionResult result;
         try {
@@ -130,7 +145,34 @@ public final class RuleStoneWorkflow {
             throw RuleStoneFailures.evaluationFailed(e);
         }
         verify(pin, result.ruleVersion());
-        return DecisionOutcome.from(result, pin.businessDate);
+        // The record of this evaluation is a new one on every execution: name the recorded one, if any.
+        String recordId = pin.record == null ? null : DecisionRecordJson.read(pin.record).recordId();
+        return DecisionOutcome.from(result, pin.businessDate, recordId);
+    }
+
+    /** Replays the decision whose record the pin holds; null if the engine cannot replay decisions. */
+    private DecisionOutcome replay(Pin pin, Facts facts) {
+        DecisionRecord recorded = DecisionRecordJson.read(pin.record);
+        DecisionComparison replay;
+        try {
+            // The model results come from the record.
+            replay = engine.replay(recorded, Facts.from(facts.asMap()));
+        } catch (UnsupportedOperationException e) {
+            return null;   // an engine of another kind: evaluate the recorded version on the recorded date
+        } catch (DecisionNotFoundException e) {
+            throw new RuleVersionMismatchException(pin.decisionId, pin.ruleVersion, null,
+                    "workflow history recorded rule version " + pin.ruleVersion + ", which this engine cannot"
+                    + " replay: " + e.getMessage() + ". Keep every rule and parameter set version registered,"
+                    + " with its original content, while workflows that used it can still replay; publish changes"
+                    + " under a new version label. The workflow task is retried until then.");
+        }
+        if (!replay.matches() || replay.result().isEmpty()) {
+            throw new RuleVersionMismatchException(pin.decisionId, pin.ruleVersion, null,
+                    "replaying the decision recorded in workflow history gave another outcome: "
+                    + String.join("; ", replay.differences().stream().map(Difference::description).toList())
+                    + ". Facts must be deterministic workflow data.");
+        }
+        return DecisionOutcome.from(replay.result().get(), pin.businessDate, recorded.recordId());
     }
 
     private LocalDate workflowBusinessDate() {
@@ -162,23 +204,29 @@ public final class RuleStoneWorkflow {
         final LocalDate businessDate;
         final String ruleVersion;   // null when the decision was not found
         final String notFound;      // the not-found message, or null
+        final String record;        // the decision record as JSON, or null: a failed evaluation, or a pin/1
 
-        private Pin(String decisionId, LocalDate businessDate, String ruleVersion, String notFound) {
+        private Pin(String decisionId, LocalDate businessDate, String ruleVersion, String notFound, String record) {
             this.decisionId = decisionId;
             this.businessDate = businessDate;
             this.ruleVersion = ruleVersion;
             this.notFound = notFound;
+            this.record = record;
         }
 
-        /** Runs on first execution only. Resolves the version by evaluating; facts never leave this method. */
+        /**
+         * Runs on first execution only. Evaluates the decision, which hands its record to the audit
+         * sinks, and keeps the record, which holds no facts; facts never leave this method.
+         */
         static Pin resolve(RuleStoneEngine engine, DecisionRef ref, LocalDate date, Facts facts) {
             try {
-                return new Pin(ref.id(), date, engine.evaluate(ref.asOf(date), facts).ruleVersion(), null);
+                DecisionResult result = engine.evaluate(ref.asOf(date), facts);
+                return new Pin(ref.id(), date, result.ruleVersion(), null, DecisionRecordJson.write(result.record()));
             } catch (DecisionEvaluationException e) {
                 // The version is known; the evaluation fails again, deterministically, after pinning.
-                return new Pin(ref.id(), date, e.ruleVersion(), null);
+                return new Pin(ref.id(), date, e.ruleVersion(), null, null);
             } catch (DecisionNotFoundException e) {
-                return new Pin(ref.id(), date, null, e.getMessage());
+                return new Pin(ref.id(), date, null, e.getMessage(), null);
             }
         }
 
@@ -197,6 +245,7 @@ public final class RuleStoneWorkflow {
             fields.put("businessDate", businessDate.toString());
             fields.put("ruleVersion", ruleVersion);
             fields.put("notFound", notFound);
+            fields.put("record", record);
             try {
                 return PIN_MAPPER.writeValueAsString(fields);
             } catch (JsonProcessingException e) {
@@ -211,11 +260,12 @@ public final class RuleStoneWorkflow {
             } catch (JsonProcessingException e) {
                 throw new IllegalStateException("workflow history holds an unreadable RuleStone pin", e);
             }
-            if (!PIN_FORMAT.equals(fields.get("format"))) {
+            String format = fields.get("format");
+            if (!PIN_FORMAT.equals(format) && !PIN_FORMAT_V1.equals(format)) {
                 throw new IllegalStateException("workflow history holds a RuleStone pin of unknown format");
             }
             return new Pin(fields.get("decisionId"), LocalDate.parse(fields.get("businessDate")),
-                    fields.get("ruleVersion"), fields.get("notFound"));
+                    fields.get("ruleVersion"), fields.get("notFound"), fields.get("record"));
         }
     }
 }

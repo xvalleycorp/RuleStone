@@ -92,6 +92,9 @@ public final class RuleStoneActivitiesImpl implements RuleStoneActivities {
         if (request.version() != null) {
             ref = ref.version(request.version());
         }
+        if (request.correlationId() != null) {
+            ref = ref.correlationId(request.correlationId());
+        }
         DecisionResult result;
         try {
             result = engine.evaluate(ref, facts);
