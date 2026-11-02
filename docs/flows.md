@@ -2,7 +2,7 @@
 
 A decision flow chains decision tables and simple logic into one decision: policy knock-outs first, then segmentation, grading and a limit matrix, with a champion/challenger split where you want to test a new strategy. This page is the reference for the `.flow.json` format and for how flows are checked, evaluated and recorded.
 
-Flows are steps 2 and 3 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan). A flow can also use machine-learning models: a [model node](#model-nodes) either calls the model or takes the result the caller passes, and checks it against a typed contract. The Java engine runs flows; the browser engine of the [Editor SDK](editor-sdk.md) does not.
+Flows are steps 2 and 3 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan). A flow can also use machine-learning models: a [model node](#model-nodes) either calls the model or takes the result the caller passes, and checks it against a typed contract. Both engines run flows, with the same results: the Java engine, and the TypeScript engine of the [Editor SDK](editor-sdk.md) (`@rulestone/engine`), for JavaScript applications and the browser.
 
 - [A first flow](#a-first-flow)
 - [Running a flow](#running-a-flow)
@@ -115,6 +115,21 @@ result.matchedRules();   // [PASS, A, A_CHALLENGER]: the matched rules of every 
 ```
 
 `build()` checks the flow against the registered tables and throws `InvalidDecisionException` listing every problem (see [Validation](#validation)). Flows share the `id` namespace of tables, so a flow and a table cannot have the same `id`. Everything else in the [Java API](java-api.md) applies to flows as it does to tables: `DecisionRef`, `Facts`, `FactsJson`, timeouts, audit sinks, and canary and shadow versions.
+
+In JavaScript or TypeScript, the [TypeScript engine](../sdk/packages/engine/README.md#decision-flows) does the same, with the same problems, results and records:
+
+```ts
+const engine = await createEngine({
+  tables: tableFiles.map(parseDecisionTable),
+  flows: [parseDecisionFlow(cardOriginationJson)],
+  auditSinks: [(record) => auditLog.push(writeDecisionRecord(record))],
+})
+const result = await engine.evaluateJson(
+  { id: 'card_origination', asOf: '2026-12-01', correlationId: 'CARD-2026-000777' },
+  { applicant: { id: 'C-1001', age: 35, income: '20000000 VND', existingCustomer: true },
+    bureau: { dpd30Count12m: 0, utilisation: '0.10' } },
+)
+```
 
 ## File format
 
@@ -382,7 +397,7 @@ The codes join the flow's reason codes in the order the nodes ran, with the node
 ### Determinism and replay
 
 - **`supplied` mode is deterministic.** The same facts, model results and business date always give the same path, outputs, reason codes and record (apart from `recordId` and `evaluatedAt`).
-- **`invoke` mode** depends on what the model answers, and when. The record therefore keeps everything that later nodes used: the outputs, the confidence, and the ranks, directions and reason codes of the attributions. Replay, step 5 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan), will rebuild each model's result from its step and run the flow with `suppliedModelsOnly()`; the ranks and directions are enough to give the same reason codes. A failed step keeps its `status`, which replays as the same failure. Replay is not available yet.
+- **`invoke` mode** depends on what the model answers, and when. The record therefore keeps everything that later nodes used: the outputs, the confidence, and the ranks, directions and reason codes of the attributions. [Replay](replay.md) rebuilds each model's result from its step and runs the flow without calling a model; the ranks and directions are enough to give the same reason codes. A failed step keeps its `status`, which replays as the same failure.
 
 ### Model steps in the record
 
@@ -516,7 +531,6 @@ Test cases for flows are `.stone-test.json` files, like those for tables, and ca
 
 ## Limitations
 
-- **No replay yet.** Re-running a recorded decision with its recorded model results is step 5 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan).
 - **No shadow models or LLM nodes yet.** A model node with `shadow`, `kind` or `prompt` is rejected as not supported yet; they are step 7.
 - **No sub-flows.** A node cannot call another flow yet.
-- **Java engine only.** The browser engine of the [Editor SDK](editor-sdk.md) does not run flows, and its flow canvas only designs them. The [web editor](editor.md) and the [Temporal](temporal.md) and [Camunda](camunda.md) integrations evaluate decision tables only for now. They already read supplied model results in JSON, in the same `models` form as above, for when they can evaluate flows; until then a decision table rejects them.
+- **Integrations.** The Java engine and the TypeScript engine of the [Editor SDK](editor-sdk.md) run flows; its flow canvas checks them with the engine, and its Try it panel runs them. The [web editor](editor.md) and the [Temporal](temporal.md) and [Camunda](camunda.md) integrations evaluate decision tables only for now. They already read supplied model results in JSON, in the same `models` form as above, for when they can evaluate flows; until then a decision table rejects them.

@@ -1,9 +1,9 @@
 ---
 layout: page
 title: Sân thử
-description: Sửa và chạy bảng quyết định RuleStone ngay trong trình duyệt bằng các thành phần soạn thảo nhúng được, dựng điều kiện và thiết kế luồng quyết định.
+description: Sửa và chạy bảng quyết định và luồng quyết định RuleStone ngay trong trình duyệt bằng các thành phần soạn thảo nhúng được, và dựng điều kiện.
 source: playground.md
-sourceHash: 9a0006111a7eba2410abc2920592ebb3873d75f2b3bc22971e481d477d41cc3a
+sourceHash: 24b1187af6592743e6a863335bfcc8d5250bb8bc86c379b3ccb910b3174e625f
 ---
 
 <script setup>
@@ -15,12 +15,12 @@ import Playground from '../.vitepress/playground/Playground.vue'
 
 # Sân thử
 
-Sửa các bảng quyết định mẫu, chạy thử với dữ liệu mẫu, dựng điều kiện bằng các khối và thiết kế một luồng quyết định. Đây là các thành phần của [SDK trình soạn thảo](/vi/docs/editor-sdk), mà ngân hàng nhúng vào ứng dụng web của chính mình.
+Sửa các bảng quyết định mẫu, chạy thử với dữ liệu mẫu, dựng điều kiện bằng các khối, và thiết kế rồi chạy các luồng quyết định mẫu. Đây là các thành phần của [SDK trình soạn thảo](/vi/docs/editor-sdk), mà ngân hàng nhúng vào ứng dụng web của chính mình.
 
 ::: info Mọi thứ chạy trong trình duyệt của bạn
 - Không có gì bạn làm ở đây được gửi tới máy chủ. Bảng, dữ liệu đầu vào và kết quả ở lại trong trình duyệt này. Liên kết chia sẻ chứa bảng ở phần địa chỉ sau dấu `#`, phần mà trình duyệt không gửi tới máy chủ.
-- **Chạy thử** đánh giá các luật bằng bộ máy luật trên trình duyệt, cho cùng kết quả với bộ máy luật Java trên mọi trường hợp mà bộ kiểm thử tương thích bao phủ. Bộ máy luật Java vẫn là bộ máy luật chính thức (engine of record): hãy dùng nó để đánh giá các quyết định trong môi trường production.
-- **Luồng quyết định hiện chỉ để thiết kế.** Vùng vẽ kiểm tra và xuất được luồng, nhưng chưa có bộ máy luật nào chạy luồng.
+- **Chạy thử** đánh giá các luật, và các luồng, bằng bộ máy luật TypeScript. Bộ máy luật này và bộ máy luật Java là hai bản hiện thực tương đương: cả hai cho cùng kết quả trên mọi trường hợp mà bộ kiểm thử tương thích bao phủ, và [README của bộ máy luật](https://github.com/xvalleycorp/RuleStone/tree/main/sdk/packages/engine#known-differences) liệt kê các khác biệt đã biết.
+- **Luồng quyết định chạy được trong bộ máy luật trên trình duyệt.** Vùng vẽ hiện các lỗi mà bộ máy luật báo cho luồng và các bảng của nó, và Chạy thử chạy luồng trên ca mẫu, với các kết quả mô hình mà ca đó cung cấp.
 :::
 
 </div>

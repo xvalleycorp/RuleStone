@@ -1,13 +1,13 @@
 ---
 source: flows.md
-sourceHash: 9a9f50d1e288e87312489aac66befa39142b126193e3b3b969704fc12fe1c8ad
+sourceHash: 2b9f7073010ee6c3d9be3d2cd481e660d5665f9e9fb2fe7647979413b49133ef
 ---
 
 # Luồng quyết định
 
 Một luồng quyết định (decision flow) nối các bảng quyết định và một số logic đơn giản thành một quyết định: luật loại trừ (knock-out) của chính sách chạy trước, sau đó là phân khúc, xếp hạng và ma trận hạn mức, kèm một phép chia champion/challenger (so sánh phiên bản đang chạy với phiên bản thử thách) ở nơi bạn muốn thử một chiến lược mới. Trang này là tài liệu tham khảo cho định dạng `.flow.json` và cho cách luồng được kiểm tra, đánh giá và ghi lại.
 
-Luồng là bước 2 và 3 của [Ra quyết định AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai). Luồng còn có thể dùng mô hình học máy: một [nút mô hình](#nút-mô-hình) hoặc gọi mô hình, hoặc nhận kết quả mà bên gọi truyền vào, rồi kiểm tra kết quả theo một hợp đồng có kiểu. Bộ máy luật Java chạy được luồng; bộ máy luật trên trình duyệt của [SDK trình soạn thảo](editor-sdk.md) thì chưa.
+Luồng là bước 2 và 3 của [Ra quyết định AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai). Luồng còn có thể dùng mô hình học máy: một [nút mô hình](#nút-mô-hình) hoặc gọi mô hình, hoặc nhận kết quả mà bên gọi truyền vào, rồi kiểm tra kết quả theo một hợp đồng có kiểu. Cả hai bộ máy luật đều chạy được luồng, với cùng kết quả: bộ máy luật Java, và bộ máy luật TypeScript của [SDK trình soạn thảo](editor-sdk.md) (`@rulestone/engine`), dành cho ứng dụng JavaScript và trình duyệt.
 
 - [Một luồng đầu tiên](#một-luồng-đầu-tiên)
 - [Chạy một luồng](#chạy-một-luồng)
@@ -120,6 +120,21 @@ result.matchedRules();   // [PASS, A, A_CHALLENGER]: the matched rules of every 
 ```
 
 `build()` kiểm tra luồng với các bảng đã đăng ký và ném `InvalidDecisionException` liệt kê mọi lỗi (xem [Kiểm tra hợp lệ](#kiểm-tra-hợp-lệ)). Luồng dùng chung không gian `id` với bảng, nên một luồng và một bảng không thể có cùng `id`. Mọi nội dung khác trong [Java API](java-api.md) áp dụng cho luồng như cho bảng: `DecisionRef`, `Facts`, `FactsJson`, thời gian chờ tối đa, audit sink, phiên bản canary và phiên bản bóng.
+
+Trong JavaScript hoặc TypeScript, [bộ máy luật TypeScript](../../sdk/packages/engine/README.md#decision-flows) (English) làm đúng như vậy, với cùng các lỗi, kết quả và bản ghi:
+
+```ts
+const engine = await createEngine({
+  tables: tableFiles.map(parseDecisionTable),
+  flows: [parseDecisionFlow(cardOriginationJson)],
+  auditSinks: [(record) => auditLog.push(writeDecisionRecord(record))],
+})
+const result = await engine.evaluateJson(
+  { id: 'card_origination', asOf: '2026-12-01', correlationId: 'CARD-2026-000777' },
+  { applicant: { id: 'C-1001', age: 35, income: '20000000 VND', existingCustomer: true },
+    bureau: { dpd30Count12m: 0, utilisation: '0.10' } },
+)
+```
 
 ## Định dạng tệp
 
@@ -387,7 +402,7 @@ Các mã này được thêm vào mã lý do của luồng theo thứ tự các 
 ### Tính tất định và replay
 
 - **Chế độ `supplied` là tất định.** Cùng các fact, cùng các kết quả mô hình và cùng ngày nghiệp vụ luôn cho cùng đường đi, đầu ra, mã lý do và bản ghi (trừ `recordId` và `evaluatedAt`).
-- **Chế độ `invoke`** phụ thuộc vào câu trả lời của mô hình, và thời điểm trả lời. Vì vậy bản ghi giữ mọi thứ mà các nút phía sau đã dùng: các đầu ra, độ tin cậy, và thứ hạng, chiều và mã lý do của các attribution. Replay (chạy lại), bước 5 của [Ra quyết định AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai), sẽ dựng lại kết quả của mỗi mô hình từ bước của nó và chạy luồng với `suppliedModelsOnly()`; thứ hạng và chiều là đủ để cho cùng các mã lý do. Một bước lỗi giữ `status` của nó, và được replay thành cùng lỗi đó. Replay hiện chưa có.
+- **Chế độ `invoke`** phụ thuộc vào câu trả lời của mô hình, và thời điểm trả lời. Vì vậy bản ghi giữ mọi thứ mà các nút phía sau đã dùng: các đầu ra, độ tin cậy, và thứ hạng, chiều và mã lý do của các attribution. [Replay (chạy lại)](replay.md) dựng lại kết quả của mỗi mô hình từ bước của nó và chạy luồng mà không gọi mô hình nào; thứ hạng và chiều là đủ để cho cùng các mã lý do. Một bước lỗi giữ `status` của nó, và được replay thành cùng lỗi đó.
 
 ### Bước mô hình trong bản ghi
 
@@ -521,7 +536,6 @@ Ca kiểm thử cho luồng là các tệp `.stone-test.json`, giống như vớ
 
 ## Giới hạn
 
-- **Chưa có replay.** Chạy lại một quyết định đã ghi với các kết quả mô hình đã ghi là bước 5 của [Ra quyết định AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai).
 - **Chưa có mô hình chạy bóng (shadow) hay nút LLM.** Một nút mô hình có `shadow`, `kind` hoặc `prompt` bị từ chối vì chưa được hỗ trợ; chúng thuộc bước 7.
 - **Chưa có luồng con.** Một nút chưa thể gọi luồng khác.
-- **Chỉ bộ máy luật Java.** Bộ máy luật trên trình duyệt của [SDK trình soạn thảo](editor-sdk.md) chưa chạy luồng, và vùng vẽ luồng của nó chỉ dùng để thiết kế. [Trình soạn thảo web](editor.md) và các tích hợp [Temporal](temporal.md) và [Camunda](camunda.md) hiện chỉ đánh giá bảng quyết định. Chúng đã đọc được kết quả mô hình do bên gọi cung cấp ở dạng JSON, theo đúng dạng `models` ở trên, để dùng khi chúng đánh giá được luồng; cho tới lúc đó, một bảng quyết định sẽ từ chối các kết quả này.
+- **Các tích hợp.** Bộ máy luật Java và bộ máy luật TypeScript của [SDK trình soạn thảo](editor-sdk.md) đều chạy được luồng; vùng vẽ luồng của SDK kiểm tra luồng bằng bộ máy luật, và bảng Chạy thử của SDK chạy luồng. [Trình soạn thảo web](editor.md) và các tích hợp [Temporal](temporal.md) và [Camunda](camunda.md) hiện chỉ đánh giá bảng quyết định. Chúng đã đọc được kết quả mô hình do bên gọi cung cấp ở dạng JSON, theo đúng dạng `models` ở trên, để dùng khi chúng đánh giá được luồng; cho tới lúc đó, một bảng quyết định sẽ từ chối các kết quả này.
