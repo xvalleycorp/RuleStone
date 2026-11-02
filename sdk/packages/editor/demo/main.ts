@@ -4,17 +4,18 @@
 /// <reference types="vite/client" />
 
 // The development demo: the editor components on example tables from examples/ and on the
-// example flow of docs/hybrid-ai.md. Query parameters (view, example, locale, theme, readonly)
+// example flow of examples/flows/ with its tables. Query parameters (view, example, locale, theme, readonly)
 // select what is shown, so that screenshots can be taken of each state.
 
 import '../src/index.js'
 import type { RulestoneConditionBuilder, RulestoneElement, RulestoneFlowCanvas, RulestoneTableEditor, TableChangeDetail } from '../src/index.js'
-import flowText from './card_origination.flow.json?raw'
+import flowText from './card_origination_scored.flow.json?raw'
 
 const tables = import.meta.glob('../../../../examples/*.stone.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 const paramSets = Object.values(
   import.meta.glob('../../../../examples/*.params.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>,
 )
+const flowTables = import.meta.glob('../../../../examples/flows/*.stone.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 const tests = import.meta.glob('../../../../examples/*.stone-test.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 
 const examples = new Map(
@@ -110,7 +111,8 @@ function render(): void {
     const canvas = document.createElement('rulestone-flow-canvas') as RulestoneFlowCanvas
     shared(canvas)
     canvas.flow = JSON.parse(flowText) as never
-    canvas.tables = ['card_policy', 'pd_to_grade', 'card_limit_matrix', 'card_limit_matrix_b', ...examples.keys()]
+    canvas.tables = [...Object.values(flowTables).map((t) => (JSON.parse(t) as { id: string }).id), ...examples.keys()]
+    canvas.definitions = { tables: Object.values(flowTables), paramSets }
     canvas.addEventListener('rulestone-change', (e) => {
       const d = (e as CustomEvent<{ problems: unknown[] }>).detail
       setStatus(`flow changed · ${d.problems.length} problems`)

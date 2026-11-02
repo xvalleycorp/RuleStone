@@ -4,7 +4,7 @@
 // Build-time data for the playground: the example tables of the repository's examples/
 // folder, one case of each table's .stone-test.json as sample facts, the examples' reason-code
 // catalog, and the example
-// decision flow of docs/hybrid-ai.md. They are read when the site is built, so the playground
+// decision flows of examples/flows/ with their tables and a test case each. They are read when the site is built, so the playground
 // always shows the same files as the repository, and nothing is copied by hand.
 
 import { readFileSync } from 'node:fs';
@@ -23,14 +23,43 @@ export interface PlaygroundExample {
   featured: boolean;
 }
 
+export interface PlaygroundFlow {
+  /** File name without .flow.json, e.g. card_origination_scored. */
+  name: string;
+  /** The .flow.json file, as written in the repository. */
+  text: string;
+  /** The test case the sample facts and model results come from. */
+  caseName: string;
+  facts: string;
+  /** The case's model results, by node id, as JSON text. */
+  models?: string;
+  asOf?: string;
+}
+
+// The example flows, in this order, with a test case each whose path is worth looking at:
+// a model result with a reason code, and the champion limit of an existing customer.
+const FLOW_CASES = new Map([
+  ['card_origination_scored', "an existing customer with a low PD gets grade A, with the model's reason code"],
+  ['card_origination', 'an existing customer with low utilisation gets grade A and the champion limit'],
+]);
+
+interface FlowCase {
+  name: string;
+  asOf?: string;
+  facts: unknown;
+  models?: unknown;
+}
+
 export interface PlaygroundData {
   examples: PlaygroundExample[];
   /** Every .params.json parameter set of examples/, as written, for the tables that read them. */
   paramSets: string[];
   /** examples/reason-codes.json, the reason-code catalog that explains the examples' decisions. */
   reasonCodes: string;
-  /** The card_origination flow of docs/hybrid-ai.md, section 3.2. */
-  flow: string;
+  /** The example flows of examples/flows/, as written, with a sample case each. */
+  flows: PlaygroundFlow[];
+  /** The tables of examples/flows/, which the flows use, as written. */
+  flowTables: string[];
 }
 
 // The examples shown first, each with a test case whose result is worth looking at: a referral,
@@ -58,10 +87,14 @@ export default {
     '../../../../examples/*.stone-test.json',
     '../../../../examples/*.params.json',
     '../../../../examples/reason-codes.json',
-    '../../../../docs/hybrid-ai.md',
+    '../../../../examples/flows/*.flow.json',
+    '../../../../examples/flows/*.stone.json',
+    '../../../../examples/flows/*.stone-test.json',
   ],
   load(files: string[]): PlaygroundData {
-    const read = (suffix: string) => files.filter((f) => f.endsWith(suffix));
+    const inFlows = (f: string) => f.replace(/\\/g, '/').includes('/examples/flows/');
+    const read = (suffix: string) => files.filter((f) => f.endsWith(suffix) && !inFlows(f));
+    const readFlows = (suffix: string) => files.filter((f) => f.endsWith(suffix) && inFlows(f)).sort();
     const tests = new Map(
       read('.stone-test.json').map((f) => [basename(f, '.stone-test.json'), JSON.parse(readFileSync(f, 'utf8')).cases as TestCase[]]),
     );
@@ -88,13 +121,26 @@ export default {
     const order = (e: PlaygroundExample) => (e.featured ? FEATURED.findIndex(([n]) => n === e.name) : FEATURED.length);
     examples.sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
 
-    // The first JSON block of docs/hybrid-ai.md that defines the card_origination flow.
-    const doc = readFileSync(read('hybrid-ai.md')[0]!, 'utf8');
-    const flow = [...doc.matchAll(/```json\n([\s\S]*?)\n```/g)]
-      .map((m) => m[1]!)
-      .find((block) => /"id": "card_origination"/.test(block) && /"nodes"/.test(block));
-    if (!flow) throw new Error('docs/hybrid-ai.md has no card_origination flow (website playground)');
-    JSON.parse(flow);
+    // The example flows, the scored one first, each with the case of its test file named in FLOW_CASES.
+    const flowTests = new Map(
+      readFlows('.stone-test.json').map((f) => [basename(f, '.stone-test.json'), JSON.parse(readFileSync(f, 'utf8')).cases as FlowCase[]]),
+    );
+    const flows = readFlows('.flow.json').map((file): PlaygroundFlow => {
+      const name = basename(file, '.flow.json');
+      const wanted = FLOW_CASES.get(name);
+      const chosen = (flowTests.get(name) ?? []).find((c) => c.name === wanted);
+      if (!chosen) throw new Error(`examples/flows/${name}.stone-test.json has no case named "${wanted}" (website playground)`);
+      return {
+        name,
+        text: readFileSync(file, 'utf8'),
+        caseName: chosen.name,
+        facts: JSON.stringify(chosen.facts, null, 2),
+        ...(chosen.models ? { models: JSON.stringify(chosen.models, null, 2) } : {}),
+        ...(chosen.asOf ? { asOf: chosen.asOf } : {}),
+      };
+    });
+    flows.sort((a, b) => [...FLOW_CASES.keys()].indexOf(a.name) - [...FLOW_CASES.keys()].indexOf(b.name));
+    const flowTables = readFlows('.stone.json').map((f) => readFileSync(f, 'utf8'));
 
     const paramSets = read('.params.json').sort().map((f) => readFileSync(f, 'utf8'));
 
@@ -102,6 +148,6 @@ export default {
     if (!catalog) throw new Error('examples/reason-codes.json is missing (website playground)');
     const reasonCodes = readFileSync(catalog, 'utf8');
 
-    return { examples, paramSets, reasonCodes, flow: flow + '\n' };
+    return { examples, paramSets, reasonCodes, flows, flowTables };
   },
 };

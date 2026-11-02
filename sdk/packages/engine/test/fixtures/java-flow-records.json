@@ -1,0 +1,1106 @@
+{
+  "card_origination.stone-test.json" : {
+    "an under-age applicant is rejected before grading" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:7ea18db412609673af389867dcfdd3d525def425d1ca41ba7d2962db3864ee85",
+      "output" : {
+        "decision" : "REJECT",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "UNDERAGE",
+        "source" : "policy"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "UNDERAGE" ]
+      }, {
+        "node" : "rejected",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", true ] ]
+    },
+    "two recent delinquencies are a knock-out" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:175c6e2cd81d6c7d49d673166074e2bb513b9b3b7dbd451910032021f16b960c",
+      "output" : {
+        "decision" : "REJECT",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "RECENT_DELINQUENCY",
+        "source" : "policy"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "DELINQUENT" ]
+      }, {
+        "node" : "rejected",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", true ] ]
+    },
+    "an existing customer with low utilisation gets grade A and the champion limit" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:3260704609969761e0abae503cc5dd17f7d7441197197e7ebc1ebc10ffdee209",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "120000000 VND",
+        "riskGrade" : "A"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_existing"
+      }, {
+        "node" : "grade_existing",
+        "type" : "table",
+        "decision" : "card_grade_existing",
+        "version" : "1@sha256:63cd7b62f4208a03bfd914f30d0ee45e4dcfcce038dccfb0e62964dc1af6fa7b",
+        "matchedRules" : [ "A" ]
+      }, {
+        "node" : "limit_strategy",
+        "type" : "split",
+        "taken" : "champion"
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "A" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", true ], [ "A_CHALLENGER", false ], [ "A", true ] ]
+    },
+    "the challenger bucket gets a higher limit for grade A" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:899ae821198f33a92c369a3b18ea9f0cee2aff1da7830743b6753ffeb63ab790",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "144000000 VND",
+        "riskGrade" : "A"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_existing"
+      }, {
+        "node" : "grade_existing",
+        "type" : "table",
+        "decision" : "card_grade_existing",
+        "version" : "1@sha256:63cd7b62f4208a03bfd914f30d0ee45e4dcfcce038dccfb0e62964dc1af6fa7b",
+        "matchedRules" : [ "A" ]
+      }, {
+        "node" : "limit_strategy",
+        "type" : "split",
+        "taken" : "challenger"
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "A_CHALLENGER" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", true ], [ "A_CHALLENGER", true ] ]
+    },
+    "an existing customer with one delinquency and moderate utilisation gets grade B" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:3e4d2d9909c9037c0b139631705eea76f9a4fd88120815bb8de4d646745e45ff",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "72000000 VND",
+        "riskGrade" : "B"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_existing"
+      }, {
+        "node" : "grade_existing",
+        "type" : "table",
+        "decision" : "card_grade_existing",
+        "version" : "1@sha256:63cd7b62f4208a03bfd914f30d0ee45e4dcfcce038dccfb0e62964dc1af6fa7b",
+        "matchedRules" : [ "B" ]
+      }, {
+        "node" : "limit_strategy",
+        "type" : "split",
+        "taken" : "champion"
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "B" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", false ], [ "B", true ], [ "A_CHALLENGER", false ], [ "A", false ], [ "B", true ] ]
+    },
+    "high utilisation gives grade C with a reason code" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:b273ecb9d6a3854c7e7744b9abf2540f0a35aff97389ddb6659894220f68f864",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "36000000 VND",
+        "riskGrade" : "C"
+      },
+      "reasonCodes" : [ {
+        "code" : "HIGH_UTILISATION",
+        "source" : "grade_existing"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_existing"
+      }, {
+        "node" : "grade_existing",
+        "type" : "table",
+        "decision" : "card_grade_existing",
+        "version" : "1@sha256:63cd7b62f4208a03bfd914f30d0ee45e4dcfcce038dccfb0e62964dc1af6fa7b",
+        "matchedRules" : [ "C" ]
+      }, {
+        "node" : "limit_strategy",
+        "type" : "split",
+        "taken" : "champion"
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "C" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", false ], [ "B", false ], [ "C", true ], [ "A_CHALLENGER", false ], [ "A", false ], [ "B", false ], [ "C", true ] ]
+    },
+    "an existing customer at grade D is referred, not declined" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:4a5655e47ff3d08c31d0ea7ceab79ba12464f9eba12d70d4520f28bcaf053774",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "D"
+      },
+      "reasonCodes" : [ {
+        "code" : "HIGH_UTILISATION",
+        "source" : "grade_existing"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_existing"
+      }, {
+        "node" : "grade_existing",
+        "type" : "table",
+        "decision" : "card_grade_existing",
+        "version" : "1@sha256:63cd7b62f4208a03bfd914f30d0ee45e4dcfcce038dccfb0e62964dc1af6fa7b",
+        "matchedRules" : [ "D" ]
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", false ], [ "B", false ], [ "C", false ], [ "D", true ] ]
+    },
+    "a young new customer has a thin file and is referred" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:4979cb7378bdec5ad20e44a9d013d00ce8bd69ff0870fb01495611162c702c36",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "D"
+      },
+      "reasonCodes" : [ {
+        "code" : "THIN_CREDIT_FILE",
+        "source" : "grade_new"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_new"
+      }, {
+        "node" : "grade_new",
+        "type" : "table",
+        "decision" : "card_grade_new",
+        "version" : "1@sha256:59b18f7e770f4ff0fa64395b47eb80eebb4151e657ebb11b36703871f92225da",
+        "matchedRules" : [ "THIN_FILE" ]
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "THIN_FILE", true ] ]
+    },
+    "a new customer with low utilisation gets grade B at most" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:f3daecf2bcefced8aa3f8b2c5711fd0819a5f06e226a14b232ff3715e86871b0",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "72000000 VND",
+        "riskGrade" : "B"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_new"
+      }, {
+        "node" : "grade_new",
+        "type" : "table",
+        "decision" : "card_grade_new",
+        "version" : "1@sha256:59b18f7e770f4ff0fa64395b47eb80eebb4151e657ebb11b36703871f92225da",
+        "matchedRules" : [ "B" ]
+      }, {
+        "node" : "limit_strategy",
+        "type" : "split",
+        "taken" : "champion"
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "B" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "THIN_FILE", false ], [ "B", true ], [ "A_CHALLENGER", false ], [ "A", false ], [ "B", true ] ]
+    },
+    "a new customer with moderate utilisation gets grade C" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:b3f169ee880409c81281e56df9162a89a6fac1cce387efc78f2d2f2f8caef7cf",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "36000000 VND",
+        "riskGrade" : "C"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_new"
+      }, {
+        "node" : "grade_new",
+        "type" : "table",
+        "decision" : "card_grade_new",
+        "version" : "1@sha256:59b18f7e770f4ff0fa64395b47eb80eebb4151e657ebb11b36703871f92225da",
+        "matchedRules" : [ "C" ]
+      }, {
+        "node" : "limit_strategy",
+        "type" : "split",
+        "taken" : "champion"
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "C" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "THIN_FILE", false ], [ "B", false ], [ "C", true ], [ "A_CHALLENGER", false ], [ "A", false ], [ "B", false ], [ "C", true ] ]
+    },
+    "a new customer with high utilisation is referred" : {
+      "decision" : "card_origination",
+      "version" : "1@sha256:986ffd80e5fedf4282e123e5c45f00da428234a6b2fbffb874571d3c056d924c",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:fc491c9cd1669ebcd6133889154a377ce16c94a5ca8698a2364c3c1fea90fc85",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "D"
+      },
+      "reasonCodes" : [ {
+        "code" : "HIGH_UTILISATION",
+        "source" : "grade_new"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "affordability",
+        "type" : "derive"
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "grade_new"
+      }, {
+        "node" : "grade_new",
+        "type" : "table",
+        "decision" : "card_grade_new",
+        "version" : "1@sha256:59b18f7e770f4ff0fa64395b47eb80eebb4151e657ebb11b36703871f92225da",
+        "matchedRules" : [ "D" ]
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "THIN_FILE", false ], [ "B", false ], [ "C", false ], [ "D", true ] ]
+    },
+    "the flow is not in force before 1 November 2026" : {
+      "decision" : "card_origination",
+      "businessDate" : "2026-10-31",
+      "status" : "ERROR",
+      "output" : { },
+      "reasonCodes" : [ ],
+      "path" : [ ],
+      "error" : "no version of decision 'card_origination' is effective on 2026-10-31"
+    }
+  },
+  "card_origination_scored.stone-test.json" : {
+    "an under-age applicant is rejected before any model is used" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:7d22e5804d01bd57ed44a5022742a93c6b223c0608f792fa0bdb4ee3cfbb3349",
+      "output" : {
+        "decision" : "REJECT",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "UNDERAGE",
+        "source" : "policy"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "UNDERAGE" ]
+      }, {
+        "node" : "rejected",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", true ] ]
+    },
+    "two recent delinquencies are a knock-out" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:b70417c386b68762bf43eff969926fff70696c2d6a1c4b445a2a4350664ff73e",
+      "output" : {
+        "decision" : "REJECT",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "RECENT_DELINQUENCY",
+        "source" : "policy"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "DELINQUENT" ]
+      }, {
+        "node" : "rejected",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", true ] ]
+    },
+    "an existing customer with a low PD gets grade A, with the model's reason code" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:cae2eeaeeeb8c7513401dca8c31c98284ca120b948da5b39018c29db203c17c5",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "120000000 VND",
+        "riskGrade" : "A"
+      },
+      "reasonCodes" : [ {
+        "code" : "HIGH_UTILISATION",
+        "source" : "pd_behaviour"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "score" : "0.05"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "pd_behaviour"
+      }, {
+        "node" : "pd_behaviour",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "retail_pd_behaviour",
+          "version" : "2.4.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "pd" : "0.0150"
+        },
+        "attributionMethod" : "SHAP",
+        "attributions" : [ {
+          "feature" : "utilisation",
+          "rank" : 1,
+          "direction" : "INCREASES_RISK",
+          "reasonCode" : "HIGH_UTILISATION"
+        }, {
+          "feature" : "dpd30Count12m",
+          "rank" : 2,
+          "direction" : "DECREASES_RISK"
+        } ]
+      }, {
+        "node" : "grade",
+        "type" : "table",
+        "decision" : "card_pd_grade",
+        "version" : "1@sha256:d75a53905d69fe66e7dd6614ce492e6c1b5ba7ef89fb756573fe48da455271ee",
+        "matchedRules" : [ "A" ]
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "A" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", true ], [ "A_CHALLENGER", false ], [ "A", true ] ]
+    },
+    "a new customer is scored by the application model, which gives one reason code at most" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:a81bb880b948c333691e2b9e1a2ead5311ba1dc2f9932846259bd5f50788d973",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "72000000 VND",
+        "riskGrade" : "B"
+      },
+      "reasonCodes" : [ {
+        "code" : "HIGH_UTILISATION",
+        "source" : "pd_application"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "score" : "0.05"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "pd_application"
+      }, {
+        "node" : "pd_application",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "retail_pd_application",
+          "version" : "3.1.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "pd" : "0.0400"
+        },
+        "confidence" : "0.90",
+        "attributionMethod" : "SHAP",
+        "attributions" : [ {
+          "feature" : "utilisation",
+          "rank" : 1,
+          "direction" : "INCREASES_RISK",
+          "reasonCode" : "HIGH_UTILISATION"
+        }, {
+          "feature" : "age",
+          "rank" : 2,
+          "direction" : "INCREASES_RISK"
+        } ]
+      }, {
+        "node" : "grade",
+        "type" : "table",
+        "decision" : "card_pd_grade",
+        "version" : "1@sha256:d75a53905d69fe66e7dd6614ce492e6c1b5ba7ef89fb756573fe48da455271ee",
+        "matchedRules" : [ "B" ]
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "B" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", false ], [ "B", true ], [ "A_CHALLENGER", false ], [ "A", false ], [ "B", true ] ]
+    },
+    "a PD from 5% to 10% gives grade C" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:c9c564aab33f2cfc3e7fb2d94d466331824d051c13146f3e5f833ada41bade93",
+      "output" : {
+        "decision" : "APPROVE",
+        "limit" : "36000000 VND",
+        "riskGrade" : "C"
+      },
+      "reasonCodes" : [ ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "score" : "0.05"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "pd_behaviour"
+      }, {
+        "node" : "pd_behaviour",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "retail_pd_behaviour",
+          "version" : "2.4.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "pd" : "0.0700"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "grade",
+        "type" : "table",
+        "decision" : "card_pd_grade",
+        "version" : "1@sha256:d75a53905d69fe66e7dd6614ce492e6c1b5ba7ef89fb756573fe48da455271ee",
+        "matchedRules" : [ "C" ]
+      }, {
+        "node" : "limit",
+        "type" : "table",
+        "decision" : "card_limit",
+        "version" : "1@sha256:af5200a630dbf793caa4d3d72f7a4547ee675eb5d03e5baaf74d27259408d31a",
+        "matchedRules" : [ "C" ]
+      }, {
+        "node" : "approved",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", false ], [ "B", false ], [ "C", true ], [ "A_CHALLENGER", false ], [ "A", false ], [ "B", false ], [ "C", true ] ]
+    },
+    "a PD of 10% or more gives grade D, which is referred" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:3d05cb1aedd7c42bbcb1c7ad080d4e9f05544aeec7bb3d91bf1e84f0f5434f23",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "PD_HIGH",
+        "source" : "grade"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "score" : "0.05"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "pd_behaviour"
+      }, {
+        "node" : "pd_behaviour",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "retail_pd_behaviour",
+          "version" : "2.4.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "pd" : "0.1500"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "grade",
+        "type" : "table",
+        "decision" : "card_pd_grade",
+        "version" : "1@sha256:d75a53905d69fe66e7dd6614ce492e6c1b5ba7ef89fb756573fe48da455271ee",
+        "matchedRules" : [ "D" ]
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ], [ "A", false ], [ "B", false ], [ "C", false ], [ "D", true ] ]
+    },
+    "a high fraud score is referred before any credit model is used" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:0440ef4d9b05b630492fce7b6f5a2df9adac1db73e55740621dc04acb58e6d3c",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "NEW_DEVICE",
+        "source" : "fraud"
+      }, {
+        "code" : "ADDRESS_MISMATCH",
+        "source" : "fraud"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "score" : "0.92"
+        },
+        "attributionMethod" : "SHAP",
+        "attributions" : [ {
+          "feature" : "deviceAgeDays",
+          "rank" : 1,
+          "direction" : "INCREASES_RISK",
+          "reasonCode" : "NEW_DEVICE"
+        }, {
+          "feature" : "addressMismatch",
+          "rank" : 2,
+          "direction" : "INCREASES_RISK",
+          "reasonCode" : "ADDRESS_MISMATCH"
+        } ]
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ] ]
+    },
+    "without the fraud score the application is referred" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:94795ad5ffd7005171e4e525a67cb712cc1848bab54806c8259001c703390d9f",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "FRAUD_SCORE_UNAVAILABLE",
+        "source" : "fraud"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "MISSING",
+        "detail" : "no result was supplied for this node"
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ] ]
+    },
+    "a behavioural model timeout is referred, never approved on a guess" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:295b04d5c1fe4fd214b32dccf244e6fc75298c947f47103bd8ef69e83eb303b6",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "MODEL_UNAVAILABLE",
+        "source" : "pd_behaviour"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "score" : "0.05"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "pd_behaviour"
+      }, {
+        "node" : "pd_behaviour",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "retail_pd_behaviour",
+          "version" : "2.4.0"
+        },
+        "status" : "TIMEOUT",
+        "detail" : "reported by the caller"
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ] ]
+    },
+    "an application model result below the minimum confidence is referred" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:931f820cf593111926b3c9710a9160d6ceb13adcdf926150ef5656fb5e8fb10f",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "MODEL_UNAVAILABLE",
+        "source" : "pd_application"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "score" : "0.05"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "pd_application"
+      }, {
+        "node" : "pd_application",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "retail_pd_application",
+          "version" : "3.1.0"
+        },
+        "status" : "LOW_CONFIDENCE",
+        "detail" : "confidence below minConfidence"
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ] ]
+    },
+    "a PD outside 0 to 1 is invalid and referred" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:d7d533532e487f3fe4a91109796b394f089556b53099699611a5b1b019482b57",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "MODEL_UNAVAILABLE",
+        "source" : "pd_behaviour"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "OK",
+        "outputs" : {
+          "score" : "0.05"
+        },
+        "attributions" : [ ]
+      }, {
+        "node" : "segment",
+        "type" : "switch",
+        "taken" : "pd_behaviour"
+      }, {
+        "node" : "pd_behaviour",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "retail_pd_behaviour",
+          "version" : "2.4.0"
+        },
+        "status" : "INVALID_OUTPUT",
+        "detail" : "the valid condition is false"
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ] ]
+    },
+    "a result from another model version breaks the contract and is referred" : {
+      "decision" : "card_origination_scored",
+      "version" : "1@sha256:d2a520ac6b9eb1e2499f4ecae00a06ad847abd85032a8fea73e502044dd3f376",
+      "businessDate" : "2026-12-01",
+      "status" : "OK",
+      "factsHash" : "sha256:ed1a5783064a466aa4904e0caeba3de893cd2c2e77ba51509753ad6434f59e9a",
+      "output" : {
+        "decision" : "REFER",
+        "limit" : "0 VND",
+        "riskGrade" : "N/A"
+      },
+      "reasonCodes" : [ {
+        "code" : "FRAUD_SCORE_UNAVAILABLE",
+        "source" : "fraud"
+      } ],
+      "path" : [ {
+        "node" : "policy",
+        "type" : "table",
+        "decision" : "card_policy",
+        "version" : "1@sha256:54e99ef7d8be5c18c3d490cbe6dc2facd60e32bce51f7769a486af9a0854adcb",
+        "matchedRules" : [ "PASS" ]
+      }, {
+        "node" : "fraud",
+        "type" : "model",
+        "mode" : "supplied",
+        "model" : {
+          "id" : "card_application_fraud",
+          "version" : "1.2.0"
+        },
+        "status" : "CONTRACT_VIOLATION",
+        "detail" : "answered by card_application_fraud@1.1.0, not the pinned card_application_fraud@1.2.0"
+      }, {
+        "node" : "referred",
+        "type" : "end"
+      } ],
+      "trace" : [ [ "UNDERAGE", false ], [ "DELINQUENT", false ], [ "PASS", true ] ]
+    }
+  }
+}

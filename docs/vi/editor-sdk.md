@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: b849ecaee16b960d8f9dc2e1f946ceb3da6a75dde199c994bc756df3ae677781
+sourceHash: cced85ec5406826b70a203d1703a785539e7b03ae9188cbb258159794a6527b6
 ---
 
 # SDK trình soạn thảo
@@ -20,7 +20,7 @@ Hãy thử các thành phần này trong [sân thử](https://rulestone.dxa.io.v
 - [Trợ năng và bàn phím](#trợ-năng-và-bàn-phím)
 - [Content Security Policy](#content-security-policy)
 - [Kích thước gói](#kích-thước-gói)
-- [Bộ máy luật trên trình duyệt và bộ máy luật Java](#bộ-máy-luật-trên-trình-duyệt-và-bộ-máy-luật-java)
+- [Bộ máy luật TypeScript và bộ máy luật Java](#bộ-máy-luật-typescript-và-bộ-máy-luật-java)
 - [Hạn chế](#hạn-chế)
 
 ## SDK là gì
@@ -267,20 +267,23 @@ Bộ chọn trường liệt kê các đầu vào, các giá trị cục bộ, c
 
 ### Bảng Chạy thử
 
-`<rulestone-try-it>` chạy một bảng ngay trong trình duyệt bằng `@rulestone/engine`.
+`<rulestone-try-it>` chạy một bảng, hoặc một luồng quyết định, ngay trong trình duyệt bằng `@rulestone/engine`.
 
 | Thành phần | Loại | Mô tả |
 |---|---|---|
 | `table` | thuộc tính | Bảng cần chạy. |
+| `flow` | thuộc tính | Một [luồng quyết định](flows.md) để chạy thay cho bảng, dưới dạng `.flow.json` đã phân tích. Khi đó biểu mẫu có các đầu vào của luồng. |
+| `tables` | thuộc tính | Khi có luồng: mọi phiên bản của mọi bảng mà luồng dùng, dạng văn bản `.stone.json` hoặc JSON đã phân tích. |
+| `models` | thuộc tính / attribute | Khi luồng có nút mô hình: kết quả của các nút đó dưới dạng văn bản JSON, theo mã nút, theo dạng `models` của một [ca kiểm thử](testing.md#kiểm-thử-luồng-quyết-định). Bảng này không gọi mô hình nào: mọi nút mô hình chạy ở chế độ `supplied`, như trong kiểm thử, và nút không có kết quả sẽ lỗi `MISSING` rồi đi theo `onFailure`. |
 | `paramSets` | thuộc tính | Các bộ tham số mà bảng đọc, dạng văn bản `.params.json` hoặc JSON đã phân tích; phiên bản có hiệu lực vào `asOf` được dùng, và bản ghi liệt kê nó. |
 | `reasonCodes` | thuộc tính | Một [danh mục mã lý do](explanations.md), dạng văn bản `reason-codes.json` hoặc JSON đã phân tích. Khi đó mọi mã lý do của bảng phải có nội dung, và bảng liệt kê nội dung các lý do của mỗi lần chạy theo locale của bảng (hoặc locale đầu tiên của danh mục); `rulestone-run` mang theo `explanation`. |
 | `asOf` / `as-of` | thuộc tính / attribute | Ngày nghiệp vụ. Mặc định: hôm nay, theo múi giờ của trình duyệt. |
 | `facts` | thuộc tính / attribute | Dữ liệu đầu vào ban đầu dưới dạng văn bản JSON. |
 | `factsText` | thuộc tính (chỉ đọc) | Dữ liệu đầu vào sẽ được chạy, dưới dạng văn bản JSON. |
-| `run()` | phương thức | Chạy bảng; trả về `detail` của sự kiện. |
+| `run()` | phương thức | Chạy bảng hoặc luồng; trả về `detail` của sự kiện. |
 | `rulestone-run` | sự kiện | `detail`: `{ ok, result?, record?, recordJson?, explanation?, error?, problems?, matchedRules, evaluatedRules }`. |
 
-Biểu mẫu được tạo từ các đầu vào, với ô nhập cho tiền (số tiền và đơn vị tiền tệ), ngày, số thập phân, struct và danh sách. Chế độ JSON nhận dữ liệu đầu vào theo cùng các dạng như tệp `.stone-test.json`. Kết quả hiển thị các đầu ra, mã lý do, vết thực thi (trace), phiên bản luật và bản ghi quyết định.
+Biểu mẫu được tạo từ các đầu vào, với ô nhập cho tiền (số tiền và đơn vị tiền tệ), ngày, số thập phân, struct và danh sách. Chế độ JSON nhận dữ liệu đầu vào theo cùng các dạng như tệp `.stone-test.json`. Kết quả hiển thị các đầu ra, mã lý do, phần giải thích, đường đi của luồng (từng nút, phiên bản bảng và các luật khớp của nút bảng, nhánh được chọn và trạng thái của mô hình), vết thực thi (trace), phiên bản luật và bản ghi quyết định.
 
 ### Ô nhập CEL
 
@@ -300,14 +303,16 @@ Biểu mẫu được tạo từ các đầu vào, với ô nhập cho tiền (s
 
 ### Vùng vẽ luồng
 
-`<rulestone-flow-canvas>` thiết kế một luồng quyết định (`.flow.json`, đề xuất trong [Ra quyết định AI lai](hybrid-ai.md#3-mẫu-b-mô-hình-là-nút-trong-luồng-quyết-định)) trên một vùng vẽ, với bảng các loại nút, các cạnh, cuộn và thu phóng, bảng thuộc tính và những bước kiểm tra mà trình soạn thảo làm được khi không có bộ máy luật.
+`<rulestone-flow-canvas>` thiết kế một [luồng quyết định](flows.md) (`.flow.json`) trên một vùng vẽ, với bảng các loại nút, các cạnh, cuộn và thu phóng, bảng thuộc tính và các lỗi mà bộ máy luật báo.
 
 | Thành phần | Loại | Mô tả |
 |---|---|---|
 | `flow` | thuộc tính | Luồng, dưới dạng `.flow.json` đã phân tích. |
 | `layout` | thuộc tính | Vị trí các nút theo mã nút. Định dạng tệp không có bố cục, nên bố cục được giữ riêng. Những vị trí còn thiếu được tự động bố trí. |
-| `tables` | thuộc tính | Các mã quyết định đã biết; nút bảng nào dùng mã khác sẽ bị báo. |
-| `problems` | thuộc tính (chỉ đọc) | Kết quả kiểm tra của luồng hiện tại. |
+| `tables` | thuộc tính | Các mã quyết định đã biết, được gợi ý khi nút bảng chọn bảng của nó; khi không có `definitions`, nút bảng nào dùng mã khác sẽ bị báo. |
+| `definitions` | thuộc tính | `{ tables, paramSets?, reasonCodes? }`: mọi phiên bản của các bảng mà luồng dùng (văn bản `.stone.json` hoặc JSON đã phân tích), các bộ tham số và một danh mục mã lý do. Khi có chúng, các lỗi là những lỗi mà bộ máy luật báo khi nạp luồng. |
+| `problems` | thuộc tính (chỉ đọc) | Các lỗi của luồng hiện tại. |
+| `engineChecked()` | phương thức | Hoàn tất khi bộ máy luật đã kiểm tra xong luồng hiện tại. |
 | `fit()` | phương thức | Hiển thị luồng ở cỡ đọc được: toàn bộ nếu vừa, nếu không thì từ góc trên bên trái, nơi có nút bắt đầu. |
 | `arrange()` | phương thức | Bố trí lại mọi nút cho vừa kích thước vùng vẽ. |
 | `toJson()`, `importText(text)` | phương thức | Luồng dưới dạng văn bản `.flow.json`; thay luồng bằng một luồng đọc từ văn bản (trả về `false` và hiện lỗi nếu không đọc được). |
@@ -315,11 +320,13 @@ Biểu mẫu được tạo từ các đầu vào, với ô nhập cho tiền (s
 | `rulestone-change` | sự kiện | `detail`: `{ flow, layout, problems }`. |
 | `rulestone-export` | sự kiện | `detail`: `{ flow, json }` khi người dùng xuất luồng. Gọi `preventDefault()` để tự xử lý tệp; nếu không, trình duyệt sẽ tải tệp về. |
 
-Bảng các nút có các loại `table`, `switch`, `derive`, `model`, `split`, `end` và `flow`. Các bước kiểm tra tìm ra chu trình, nút mà nút bắt đầu không tới được, đường đi không bao giờ tới nút kết thúc, nút mô hình không có `onFailure` hoặc không ghim phiên bản, tỷ lệ phần trăm của `split` không cộng lại bằng 100, tham chiếu tới bảng không xác định, `switch` thiếu nhánh cuối, và nút `end` không gán mọi đầu ra.
+Bảng các nút có các loại `table`, `switch`, `derive`, `model`, `split` và `end`, và bảng thuộc tính sửa những trường mà bộ máy luật đọc: các `outputs` có kiểu của nút `derive` và biểu thức `set` của chúng; `mode`, `model`, `features` và `timeoutMs` (ở chế độ `invoke`), `outputs`, `valid`, `minConfidence`, `reasonCodes`, `maxReasonCodes` và `onFailure` của nút mô hình; `facts`, `as` và `version` được ghim của nút bảng; và `params` của luồng.
+
+Khi có `definitions`, vùng vẽ liệt kê các lỗi mà bộ máy luật báo khi nạp luồng cùng các bảng của nó, với cùng thông báo: lỗi của trình đọc chặt chẽ, của đồ thị, của tên, của kiểu, và các giá trị mà một nút đọc nhưng có đường đi tới nút đó không gán (xem [Kiểm tra hợp lệ](flows.md#kiểm-tra-hợp-lệ)). Nút mô hình được kiểm tra như trong kiểm thử, nên nút ở chế độ `invoke` không cần invoker. Khi không có `definitions`, vẫn thiết kế được luồng trước khi có các bảng: khi đó vùng vẽ báo lỗi của trình đọc chặt chẽ và những bước kiểm tra nó tự làm được, gồm chu trình, nút mà nút bắt đầu không tới được, đường đi không bao giờ tới nút kết thúc, nút mô hình không có `onFailure` hoặc không ghim phiên bản, tỷ lệ phần trăm của `split` không cộng lại bằng 100, tham chiếu tới bảng không xác định, và nút `end` không gán mọi đầu ra. Những trường mà bộ máy luật từ chối, như `shadow`, `kind` hay `prompt` của nút mô hình, vốn đang được lên kế hoạch, được giữ nguyên khi mở tệp và bị báo lỗi.
 
 Cho tới khi có người di chuyển một nút, vùng vẽ tự bố trí luồng theo kích thước của chính nó: một chuỗi nút dài được xuống hàng, như các dòng chữ, để toàn bộ luồng đọc được mà không cần cuộn nếu vừa. Khi vừa khung, vùng vẽ không bao giờ thu nhỏ quá mức mà chữ trên nút còn đọc được (80%); khi đó phần còn lại của một luồng lớn được xem bằng cách kéo nền, dùng phím mũi tên hoặc các nút thu phóng.
 
-**Trên trình duyệt, luồng chỉ để thiết kế.** Bộ máy luật Java đã chạy được [luồng quyết định](flows.md), nhưng bộ máy luật trên trình duyệt (`@rulestone/engine`) chưa chạy được luồng, và vùng vẽ có ghi rõ điều đó.
+**Chạy một luồng.** Đặt một `<rulestone-try-it>` cạnh vùng vẽ, đưa cho nó luồng và các bảng của luồng, và gán lại `flow` của nó sau mỗi `rulestone-change`, như [sân thử](https://rulestone.dxa.io.vn/vi/playground?tab=flow) làm.
 
 ## Kiểm tra phía máy chủ: hook validator
 
@@ -475,46 +482,52 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@rulestone/editor` (mọi phần tử) | 318.0 KiB, 92.6 KiB khi nén gzip | 209.5 KiB, 58.0 KiB khi nén gzip |
-| `./table-editor` | 270.1 KiB, 79.1 KiB khi nén gzip | 161.6 KiB, 44.4 KiB khi nén gzip |
-| `./rules-grid` | 175.8 KiB, 53.9 KiB khi nén gzip | 103.9 KiB, 29.8 KiB khi nén gzip |
-| `./condition-builder` | 155.4 KiB, 48.6 KiB khi nén gzip | 83.3 KiB, 24.4 KiB khi nén gzip |
-| `./schema-designer` | 132.2 KiB, 42.7 KiB khi nén gzip | 60.2 KiB, 18.7 KiB khi nén gzip |
-| `./flow-canvas` | 101.1 KiB, 31.0 KiB khi nén gzip | 86.1 KiB, 25.4 KiB khi nén gzip |
-| `./try-it` | 166.2 KiB, 52.6 KiB khi nén gzip | 58.8 KiB, 17.8 KiB khi nén gzip |
-| `./cel-input` | 108.9 KiB, 35.8 KiB khi nén gzip | 51.2 KiB, 15.9 KiB khi nén gzip |
+| `@rulestone/editor` (mọi phần tử) | 374.8 KiB, 109.4 KiB khi nén gzip | 216.0 KiB, 60.0 KiB khi nén gzip |
+| `./table-editor` | 324.3 KiB, 95.0 KiB khi nén gzip | 165.3 KiB, 45.5 KiB khi nén gzip |
+| `./rules-grid` | 178.1 KiB, 54.5 KiB khi nén gzip | 105.7 KiB, 30.2 KiB khi nén gzip |
+| `./condition-builder` | 157.7 KiB, 49.2 KiB khi nén gzip | 85.0 KiB, 24.9 KiB khi nén gzip |
+| `./schema-designer` | 134.5 KiB, 43.3 KiB khi nén gzip | 61.9 KiB, 19.2 KiB khi nén gzip |
+| `./flow-canvas` | 246.9 KiB, 75.7 KiB khi nén gzip | 90.4 KiB, 26.8 KiB khi nén gzip |
+| `./try-it` | 220.4 KiB, 68.4 KiB khi nén gzip | 62.6 KiB, 18.8 KiB khi nén gzip |
+| `./cel-input` | 110.7 KiB, 36.3 KiB khi nén gzip | 52.9 KiB, 16.4 KiB khi nén gzip |
 
-Riêng `@rulestone/engine` là 110.1 KiB, 35.3 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
+Riêng `@rulestone/engine` là 169.7 KiB, 52.5 KiB khi nén gzip. Vùng vẽ luồng và bảng Chạy thử tạo bộ máy luật, nên nạp cả mã luồng, nút mô hình và replay của bộ máy luật; lưới luật, trình tạo điều kiện, trình thiết kế lược đồ và ô nhập CEL không tạo bộ máy luật nào và bỏ phần mã đó ra. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
 
-## Bộ máy luật trên trình duyệt và bộ máy luật Java
+## Bộ máy luật TypeScript và bộ máy luật Java
 
-Bộ máy luật Java vẫn là bộ máy luật chính thức (engine of record): hãy dùng nó để đánh giá các quyết định trong môi trường production. Bộ máy luật trên trình duyệt dùng để phản hồi tức thì trong lúc soạn và chạy thử luật, và được xây dựng để cho đúng cùng câu trả lời.
+`@rulestone/engine`, mà các phần tử dùng, là một bộ máy luật RuleStone đầy đủ viết bằng TypeScript: nó đọc và kiểm tra bảng và [luồng quyết định](flows.md), đánh giá chúng, với nút mô hình ở chế độ `supplied` và `invoke`, ghi bản ghi quyết định, giải thích và [replay](replay.md) chúng, trên trình duyệt, Node.js 22 trở lên và các môi trường edge. Bộ máy này và bộ máy luật Java là hai bản hiện thực tương đương: cả hai cho cùng kết quả trên mọi trường hợp mà bộ kiểm thử tương thích bao phủ, và [README của bộ máy luật](../../sdk/packages/engine/README.md#known-differences) (English) liệt kê các khác biệt đã biết.
 
-Một bộ kiểm thử tương thích trong `sdk/packages/engine/test/` so sánh hai bộ máy. Dữ liệu chuẩn (fixture) của nó do bộ máy luật Java ghi ra (`SdkFixturesTest` trong `rulestone-test`), và bản build Maven sẽ thất bại nếu chúng đã cũ:
+Bộ kiểm thử tương thích trong `sdk/packages/engine/test/` so sánh hai bộ máy. Dữ liệu chuẩn (fixture) của nó do bộ máy luật Java ghi ra (`SdkFixturesTest` trong `rulestone-test`), và bản build Maven sẽ thất bại nếu chúng đã cũ:
 
 | Fixture | Nội dung được kiểm tra |
 |---|---|
 | `java-hashes.json` | Dạng chuẩn tắc và phiên bản luật của mọi bảng trong `examples/` và trong các bảng kiểm thử, cùng dạng chuẩn tắc và phiên bản của mọi bộ tham số. |
 | `java-records.json` | Bản ghi quyết định và vết thực thi của mọi ca trong mọi tệp `examples/*.stone-test.json`. |
+| `java-flow-hashes.json`, `java-flow-records.json` | Dạng chuẩn tắc và phiên bản luật của mọi luồng mẫu và các bảng của nó, cùng bản ghi quyết định và vết thực thi của mọi ca trong mọi tệp `examples/flows/*.stone-test.json`, có kết quả mô hình. |
 | `java-probes.json` | Kiểu và giá trị kết quả, hoặc chính xác lỗi, của mọi biểu thức trong `probes.json`: toán tử, macro, giới hạn số lần lặp, vị trí lỗi, số học thập phân, tiền, ngày và so khớp gần đúng. |
-| `java-invalid-tables.json` | Các lỗi được báo cho mọi bảng và bộ tham số không hợp lệ trong `invalid-tables.json`. |
+| `java-invalid-tables.json`, `java-invalid-flows.json` | Các lỗi được báo cho mọi bảng và bộ tham số không hợp lệ trong `invalid-tables.json`, và cho mọi luồng không hợp lệ trong `invalid-flows.json`. |
+| `java-explanations.json` | Phần giải thích, bằng tiếng Anh và tiếng Việt, của các bản ghi mẫu. |
+
+Mọi bản ghi Java trong các fixture này cũng replay được trong bộ máy luật TypeScript mà không có điểm khác biệt nào.
 
 Bộ kiểm thử còn kiểm tra mọi ví dụ `biểu thức` → kết quả trong [Ngôn ngữ biểu thức](expressions.md) và các ví dụ minh hoạ trong [So khớp gần đúng](fuzzy-matching.md). Số thập phân là chính xác: `Decimal` lưu một `BigInt` và một scale, và tuân theo các quy tắc của `BigDecimal` về scale, làm tròn và phép chia.
 
 Các khác biệt đã biết:
 
-- **Không hỗ trợ:** literal dạng map (`{'a': 1}`), `bytes`, `type()`, `timestamp()`, `duration()` và `string(double)`. Luật RuleStone không dùng chúng. Bộ máy luật trên trình duyệt từ chối chúng lúc biên dịch với thông báo nói rõ điều đó; Java thì chấp nhận.
+- **Không hỗ trợ:** literal dạng map (`{'a': 1}`), `bytes`, `type()`, `timestamp()`, `duration()` và `string(double)`. Luật RuleStone không dùng chúng. Bộ máy luật TypeScript từ chối chúng lúc biên dịch với thông báo nói rõ điều đó; Java thì chấp nhận.
+- **Phiên bản canary và phiên bản bóng** không được hỗ trợ; bản ghi có `routing` vẫn được đọc và replay.
 - **Lỗi cú pháp** được báo ở cùng vị trí, nhưng bằng lời khác với ANTLR.
 - **Biểu thức chính quy:** `matches()` chuyển cú pháp RE2 sang biểu thức chính quy của JavaScript. Cú pháp thông dụng cho kết quả như nhau; các cấu trúc RE2 hiếm gặp có thể khác.
-- **Unicode:** `normalizeName` và các hàm so khớp gần đúng dùng bảng Unicode của trình duyệt, còn Java dùng bảng của JDK. Chúng chỉ khác nhau ở những ký tự mới được thêm trong các phiên bản Unicode gần đây.
-- **Bản ghi quyết định** ghi tên bộ máy là `rulestone-js 0.1.0`, có độ chính xác tới mili giây ở `evaluatedAt`, và tính hash của đầu vào bằng SHA-256 thuần (không có tuỳ chọn HMAC như ở Java).
-- **Hôm nay:** khi không có `asOf`, "hôm nay" là ngày theo múi giờ của trình duyệt. Hãy đặt `asOf` để có kết quả tái lập được.
+- **Unicode:** `normalizeName` và các hàm so khớp gần đúng dùng bảng Unicode của môi trường JavaScript, còn Java dùng bảng của JDK. Chúng chỉ khác nhau ở những ký tự mới được thêm trong các phiên bản Unicode gần đây.
+- **Thông báo có nhắc tới API**, như khi thiếu invoker của mô hình, dùng tên tuỳ chọn của bản TypeScript, và lỗi của một invoker được ghi bằng `name` của lỗi thay vì tên lớp Java.
+- **Bản ghi quyết định** ghi tên bộ máy là `rulestone-js 0.1.0` và có độ chính xác tới mili giây ở `evaluatedAt`.
+- **Hôm nay:** khi không có `asOf`, "hôm nay" là ngày theo múi giờ của môi trường chạy. Hãy đặt `asOf` để có kết quả tái lập được.
 
 [README của bộ máy luật](../../sdk/packages/engine/README.md) (English) liệt kê API và mọi khác biệt một cách chi tiết.
 
 ## Hạn chế
 
 - Các gói chưa có trên npm, và tên gói có thể thay đổi khi được phát hành.
-- Bộ máy luật trên trình duyệt chưa chạy luồng; chỉ bộ máy luật Java chạy được (xem [Luồng quyết định](flows.md)). Vùng vẽ chỉ kiểm tra những gì nó kiểm tra được khi không có bộ máy luật: không có kiểm tra tên hay kiểu xuyên qua các nút.
-- Vùng vẽ đọc các giá trị của nút `derive` dưới dạng `values` (tên ánh xạ tới biểu thức), còn định dạng của bộ máy luật Java khai báo chúng cùng kiểu trong `outputs` và đặt chúng bằng `set`. Các trường của nút `flow` (`flow`, `version`) theo đề xuất; bộ máy luật Java chưa hỗ trợ nút `flow`.
+- Khi không có `definitions`, vùng vẽ luồng không kiểm tra được tên và kiểu xuyên qua các nút; hãy đưa cho nó các bảng của luồng để có các bước kiểm tra của bộ máy luật.
+- Bảng Chạy thử chỉ chạy nút mô hình của luồng ở chế độ `supplied`: nó không gọi mô hình nào.
 - Lưới luật không ảo hoá (virtualize) các dòng, nên bảng có hàng nghìn luật hiển thị chậm.

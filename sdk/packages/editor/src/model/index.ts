@@ -22,6 +22,9 @@ export type { CondNode, Group, Leaf, Quantifier, Raw, RawReason, ValueNode, Oper
 export {
   NODE_TYPES, NODE_WIDTH, NODE_HEIGHT, emptyFlow, edgesOf, allEdges, newNodeId, newNode, addNode, removeNode as removeFlowNode,
   renameNode, updateNode as updateFlowNode, connect, disconnect, checkFlow, autoLayout, layoutFor, layoutBounds, fitZoom,
-  LAYOUT_SPACING, FIT_ZOOM, flowText, parseFlow,
+  LAYOUT_SPACING, FIT_ZOOM, flowText, parseFlow, checkFlowWithEngine, readerProblems, engineFlowProblems, deriveSet,
 } from './flow.js'
-export type { NodeType, Branch, FlowNodeJson, FlowJson, FlowLayout, Edge, EdgeKind, FlowProblem, FlowProblemCode, CheckOptions, LayoutOptions } from './flow.js'
+export type {
+  NodeType, Branch, FlowNodeJson, FlowJson, FlowParamsJson, FlowDefinitions, FlowLayout, Edge, EdgeKind, FlowProblem, FlowProblemCode,
+  CheckOptions, LayoutOptions,
+} from './flow.js'

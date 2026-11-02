@@ -182,7 +182,7 @@ describe('engine', () => {
     expect(error).toBeInstanceOf(DecisionEvaluationError)
     expect((error as DecisionEvaluationError).record?.status).toBe('ERROR')
     expect((error as DecisionEvaluationError).record?.factsHash).toBeUndefined()
-    expect(() => readFacts('{ "customer": { "birthDate": "1990-02-30" }, "spend": 1.5, "x": 1 }', engine.resolve(ref).table)).toThrow(
+    expect(() => readFacts('{ "customer": { "birthDate": "1990-02-30" }, "spend": 1.5, "x": 1 }', engine.resolve(ref).definition)).toThrow(
       new InvalidFactsError([
         'customer.birthDate: expected an existing date as "yyyy-MM-dd"',
         'spend: expected money as "<amount> <CCY>", e.g. "1500000 VND"',

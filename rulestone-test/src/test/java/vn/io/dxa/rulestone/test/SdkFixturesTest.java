@@ -47,6 +47,8 @@ import vn.io.dxa.rulestone.cel.CelExpression;
 import vn.io.dxa.rulestone.cel.ExpressionEnvironment;
 import vn.io.dxa.rulestone.cel.ExpressionException;
 import vn.io.dxa.rulestone.cel.ValueType;
+import vn.io.dxa.rulestone.core.DecisionFlow;
+import vn.io.dxa.rulestone.core.DecisionFlowJson;
 import vn.io.dxa.rulestone.core.DecisionRecordJson;
 import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
@@ -314,6 +316,128 @@ class SdkFixturesTest {
             }
         }
         check("java-explanations.json", json);
+    }
+
+    /** The rule version and canonical form of every example flow and of the tables the flows use. */
+    @Test
+    void flowHashes() {
+        ObjectNode json = NODES.objectNode();
+        for (Path file : flowFiles(".stone.json")) {
+            DecisionTable table = DecisionTableJson.read(file);
+            json.putObject(file.getFileName().toString())
+                    .put("ruleVersion", ruleVersion(table))
+                    .put("canonical", DecisionTableJson.write(table));
+        }
+        for (Path file : flowFiles(DecisionFlowJson.FILE_SUFFIX)) {
+            DecisionFlow flow = DecisionFlowJson.read(file);
+            String canonical = DecisionFlowJson.write(flow);
+            json.putObject(file.getFileName().toString())
+                    .put("ruleVersion", flow.version() + "@sha256:" + sha256(canonical))
+                    .put("canonical", canonical);
+        }
+        check("java-flow-hashes.json", json);
+    }
+
+    /**
+     * The decision record and trace of every case of every example flow test file, evaluated as
+     * {@link ExamplesStoneTest} does: every model node takes its result from the case.
+     */
+    @Test
+    void flowRecords() throws IOException {
+        List<DecisionRecord> records = new ArrayList<>();
+        RuleStoneEngine engine = RuleStone.builder()
+                .clock(CLOCK)
+                .decisions(ExamplesStoneTest.allExampleTables())
+                .flows(ExamplesStoneTest.exampleFlows())
+                .paramSets(ExamplesStoneTest.exampleParamSets())
+                .suppliedModelsOnly()
+                .recordIds(() -> "fixture")
+                .auditSink(records::add)
+                .build();
+        ObjectNode json = NODES.objectNode();
+        for (Path file : flowFiles(StoneTestJson.FILE_SUFFIX)) {
+            ObjectNode cases = json.putObject(file.getFileName().toString());
+            for (StoneTestCase testCase : StoneTestJson.read(file, ExamplesStoneTest.allExampleTables(),
+                    ExamplesStoneTest.exampleFlows())) {
+                DecisionResult result = null;
+                try {
+                    result = engine.evaluate(testCase.ref(), testCase.facts());
+                } catch (RuleStoneException e) {
+                    // recorded below
+                }
+                ObjectNode entry = DecisionRecordJson.toJson(records.get(records.size() - 1));
+                entry.remove(List.of("recordId", "evaluatedAt", "engine"));
+                if (result != null) {
+                    ArrayNode trace = entry.putArray("trace");
+                    result.trace().forEach(step -> trace.addArray().add(step.ruleId()).add(step.matched()));
+                }
+                cases.set(testCase.name(), entry);
+            }
+        }
+        check("java-flow-records.json", json);
+    }
+
+    /**
+     * The problems reported for every flow in {@code invalid-flows.json}: when it is read, and when an
+     * engine is built with it, its tables, parameter sets and reason-code catalog. A definition is
+     * JSON text, or a JSON object that is written as text first.
+     */
+    @Test
+    void invalidFlows() throws IOException {
+        ArrayNode out = NODES.arrayNode();
+        for (JsonNode testCase : MAPPER.readTree(FIXTURES.resolve("invalid-flows.json").toFile())) {
+            ObjectNode entry = out.addObject().put("name", testCase.get("name").textValue());
+            List<DecisionTable> tables = new ArrayList<>();
+            for (JsonNode text : testCase.path("tables")) {
+                tables.add(DecisionTableJson.read(text(text)));
+            }
+            List<ParameterSet> sets = new ArrayList<>();
+            for (JsonNode text : testCase.path("paramSets")) {
+                sets.add(ParameterSetJson.read(text(text)));
+            }
+            ArrayNode read = entry.putArray("read");
+            List<DecisionFlow> flows = new ArrayList<>();
+            for (JsonNode text : testCase.get("flows")) {
+                try {
+                    flows.add(DecisionFlowJson.read(text(text)));
+                    read.addNull();
+                } catch (InvalidDecisionException e) {
+                    ArrayNode problems = read.addArray();
+                    e.problems().forEach(problems::add);
+                }
+            }
+            RuleStone.Builder builder = RuleStone.builder().paramSets(sets).decisions(tables).flows(flows);
+            for (JsonNode id : testCase.path("invokers")) {
+                builder.modelInvoker(id.textValue(), call -> null);
+            }
+            if (testCase.path("suppliedModelsOnly").asBoolean(false)) {
+                builder.suppliedModelsOnly();
+            }
+            if (testCase.has("reasonCodes")) {
+                builder.reasonCodeCatalog(ReasonCodeCatalogJson.read(text(testCase.get("reasonCodes"))));
+            }
+            ArrayNode build = entry.putArray("build");
+            try {
+                builder.build();
+            } catch (InvalidDecisionException e) {
+                e.problems().forEach(build::add);
+            }
+        }
+        check("java-invalid-flows.json", out);
+    }
+
+    /** A definition in a fixture: JSON text, or a JSON object written as compact text. */
+    private static String text(JsonNode node) throws IOException {
+        return node.isTextual() ? node.textValue() : JsonMapper.builder().build().writeValueAsString(node);
+    }
+
+    /** The files with {@code suffix} in examples/flows/, sorted. */
+    private static List<Path> flowFiles(String suffix) {
+        try (Stream<Path> list = Files.list(ExamplesStoneTest.FLOWS)) {
+            return list.filter(f -> f.getFileName().toString().endsWith(suffix)).sorted().toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @Test

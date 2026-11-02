@@ -1,0 +1,73 @@
+[ {
+  "name" : "a valid flow builds",
+  "read" : [ null ],
+  "build" : [ ]
+}, {
+  "name" : "invalid JSON, not an object, empty text",
+  "read" : [ [ "invalid JSON: Unexpected character ('}' (code 125)): was expecting double-quote to start field name (line 1, column 14)" ], [ "$: expected a JSON object" ], [ "$: expected a JSON object" ] ],
+  "build" : [ ]
+}, {
+  "name" : "unknown, missing and mistyped fields",
+  "read" : [ [ "$.descripton: unknown field (allowed: description, effectiveFrom, effectiveTo, id, inputs, nodes, outputs, params, start, version)", "$.id: required non-empty string", "$.version: required non-empty string", "$.effectiveFrom: expected an ISO date (yyyy-MM-dd) but got '2026-02-30'", "$.inputs: required object of name to type", "$.outputs.a: unknown type 'double' (floating point is not supported; use decimal)", "$.start: required non-empty string", "$.nodes: required non-empty object of node id to node" ], [ "$.effectiveTo: must be after effectiveFrom", "$.params: expected an object with \"set\", \"values\" and optionally \"version\"", "$.nodes: required non-empty object of node id to node" ] ],
+  "build" : [ ]
+}, {
+  "name" : "node shapes",
+  "read" : [ [ "$.nodes.a: expected a node object with a \"type\"", "$.nodes.b.type: required: table, switch, derive, model, split or end", "$.nodes.c.type: required: table, switch, derive, model, split or end", "$.nodes.d.type: flow nodes (calling another flow) are not supported yet", "$.nodes.e.type: unknown node type 'rule' (expected table, switch, derive, model, split or end)", "$.nodes.f.extra: unknown field (allowed: as, decision, description, facts, next, type, version)", "$.nodes.f.facts.x: expected a CEL expression string (string literals need inner quotes, e.g. \"'APPROVE'\")", "$.nodes.f.as: expected a string", "$.nodes.f.next: required: a node id, or an array of { \"when\", \"to\" } ending with { \"to\" }", "$.nodes.g.cases: required non-empty array of { \"when\", \"to\" } ending with { \"to\" }", "$.nodes.h.cases[0].when: required: only the last alternative may leave out \"when\"", "$.nodes.h.cases[2]: expected an object with \"to\" and, except for the last, \"when\"", "$.nodes.h.cases[3].else: unknown field (allowed: to, when)", "$.nodes.h.cases[3].when: the last alternative must have no \"when\", so that one always applies; add { \"to\": … } after it", "$.nodes.i.set: required object of name to CEL expression", "$.nodes.i.next: required non-empty node id", "$.nodes.j.key: required non-empty string", "$.nodes.j.buckets[0].percent: required whole number from 1 to 100", "$.nodes.j.buckets[1]: expected an object with \"name\", \"percent\" and \"to\"", "$.nodes.j.buckets[2].share: unknown field (allowed: name, percent, to)", "$.nodes.j.buckets[2].percent: required whole number from 1 to 100", "$.nodes.k.buckets: required non-empty array of { \"name\", \"percent\", \"to\" }", "$.nodes.l.next: unknown field (allowed: description, set, type)", "$.nodes.l.set.d: expected a CEL expression string (string literals need inner quotes, e.g. \"'APPROVE'\")", "$.nodes.m.description: expected a string", "$.nodes.m.set: required object of name to CEL expression" ] ],
+  "build" : [ ]
+}, {
+  "name" : "model node fields",
+  "read" : [ [ "$.nodes.a.kind: not supported yet: shadow models and LLM nodes are planned for a later release (see Hybrid AI decisioning)", "$.nodes.a.prompt: not supported yet: shadow models and LLM nodes are planned for a later release (see Hybrid AI decisioning)", "$.nodes.a.shadow: not supported yet: shadow models and LLM nodes are planned for a later release (see Hybrid AI decisioning)", "$.nodes.a.mode: expected \"invoke\" or \"supplied\"", "$.nodes.a.model.tag: unknown field (allowed: id, version)", "$.nodes.a.features: expected an object of name to CEL expression", "$.nodes.a.minConfidence: expected a decimal from 0 to 1, e.g. \"0.80\"", "$.nodes.a.timeoutMs: expected a whole number", "$.nodes.a.reasonCodes.f: expected a reason code string", "$.nodes.a.maxReasonCodes: expected a whole number", "$.nodes.a.onFailure.code: unknown field (allowed: reasonCode, to)", "$.nodes.a.onFailure.reasonCode: required non-empty string", "$.nodes.b.mode: required non-empty string", "$.nodes.b.model: required object { \"id\", \"version\" }", "$.nodes.b.minConfidence: expected a decimal from 0 to 1, e.g. \"0.80\"", "$.nodes.b.reasonCodes: expected an object of feature name to reason code", "$.nodes.b.onFailure: required object { \"to\", \"reasonCode\" }: where to go when the model fails, and the reason code to give", "$.nodes.c.model: required object { \"id\", \"version\" }", "$.nodes.c.timeoutMs: expected a whole number", "$.nodes.c.onFailure: required object { \"to\", \"reasonCode\" }: where to go when the model fails, and the reason code to give" ] ],
+  "build" : [ ]
+}, {
+  "name" : "graph: unknown targets, start, cycles and unreachable nodes",
+  "read" : [ null, null, null ],
+  "build" : [ "f@1 start: no node 'missing'", "f@1 nodes.a.cases[1].to: no node 'nowhere'", "g@1 nodes.b: cycle b -> c -> b; a flow must be acyclic", "g@1 nodes.u: cycle u -> w -> u; a flow must be acyclic", "h@1 nodes.lost: not reachable from start node 'a'", "h@1 nodes.lost2: not reachable from start node 'a'" ]
+}, {
+  "name" : "structure: branches, sets and splits",
+  "read" : [ [ "$.nodes.a.salt: required non-empty string", "$.nodes.a.buckets[2].name: required non-empty string" ] ],
+  "build" : [ ]
+}, {
+  "name" : "names: node ids, as names, inputs and params",
+  "read" : [ null ],
+  "build" : [ "f@1 inputs.businessDate: reserved name; every flow receives businessDate implicitly (DecisionRef.asOf, else the engine clock)", "f@1 nodes.applicant: invalid node id: 'applicant' is already the name of an input", "f@1 nodes.applicant.as: invalid name: it names the node's values in expressions, so it must be an identifier (letters, digits and '_', not starting with a digit) and not a CEL keyword", "f@1 nodes.params: invalid node id: 'params' is reserved for parameter sets, which expressions read as params.<name>", "f@1 nodes.params.as: invalid name: 'businessDate' is already the name of an input", "f@1 nodes.x1.as: 'e2' is a node id; use a name that is not", "f@1 nodes.1bad: invalid node id: it names the node's values in expressions, so it must be an identifier (letters, digits and '_', not starting with a digit) and not a CEL keyword" ]
+}, {
+  "name" : "values not set on every path",
+  "read" : [ null ],
+  "build" : [ "card@1 nodes.referred.set.decision: reads 'grade', which is not set on every path that reaches this node; a node may read only values that every path to it sets", "card@1 nodes.referred.set.limit: reads 'limit', which is not set on every path that reaches this node; a node may read only values that every path to it sets" ]
+}, {
+  "name" : "shared names",
+  "read" : [ null ],
+  "build" : [ "f@1 nodes.b.as: nodes 'a' and 'b' both publish 'g' but with different values: {v: int} and {v: string}", "f@1 nodes.c.as: nodes 'a' and 'c' both publish 'g' and can both run on one path; only nodes on alternative branches may share a name", "f@1 nodes.c.as: nodes 'b' and 'c' both publish 'g' but with different values: {v: string} and {v: int}", "f@1 nodes.c.as: nodes 'b' and 'c' both publish 'g' and can both run on one path; only nodes on alternative branches may share a name" ]
+}, {
+  "name" : "table nodes: unknown decisions, flows, versions and facts",
+  "read" : [ null, null ],
+  "build" : [ "f@1 nodes.a.decision: unknown decision 'nope'", "f@1 nodes.b.decision: 'other_flow' is a decision flow; calling another flow is not supported yet", "f@1 nodes.c.version: decision 't_versions' has no version '9'" ]
+}, {
+  "name" : "expressions: types, syntax and parameters",
+  "read" : [ null, null, null ],
+  "build" : [ "f@1 nodes.s.cases[0].when: expression must produce bool but produces int: x", "f@1 nodes.s.cases[1].when: reads params.minAge, which params.values does not declare (declared: [maxAge])", "f@1 nodes.a.set.v: ERROR: <input>:1:4: mismatched input '<EOF>' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}\n | x +\n | ...^", "f@1 nodes.a.set.w: expression must produce decimal but produces int: x", "f@1 nodes.k.key: expression must produce string but produces int: x", "f@1 nodes.e.set.d: ERROR: <input>:1:15: undeclared reference to 'nope' (in container '')\n | string(a.v) + nope\n | ..............^", "f@1 nodes.e.set.n: expression must produce int but produces string: s.taken", "g@1 nodes.e.set.d: reads params.maxAge, but no parameters are declared; declare them in \"params\"", "h@1 inputs.params: reserved name: the parameters declared in \"params\" are read as params.<name>", "h@1 params.values.bad-name: must be an identifier (a letter or '_', then letters, digits or '_') and not a reserved word", "h@1 params.set: no parameter set 'missing' is registered" ]
+}, {
+  "name" : "model nodes: contracts",
+  "read" : [ null ],
+  "build" : [ "f@1 nodes.a.model.version: must pin one exact model version, e.g. \"2.4.0\"; ranges, wildcards and \"latest\" are not allowed", "f@1 nodes.a.outputs.in: invalid output name: the valid condition reads outputs by name, so it must be an identifier (letters, digits and '_', not starting with a digit) and not a CEL keyword", "f@1 nodes.a.outputs.s: outputs must be bool, int, string, decimal, money, date or lists of them", "f@1 nodes.a.features: required in invoke mode: the values sent to the model, as feature name to expression", "f@1 nodes.a.timeoutMs: must be at least 1", "f@1 nodes.a.minConfidence: must be from 0 to 1", "f@1 nodes.a.reasonCodes.u: must be UPPER_SNAKE_CASE, e.g. HIGH_UTILISATION", "f@1 nodes.a.maxReasonCodes: must be from 1 to 10", "f@1 nodes.a.onFailure.reasonCode: must be UPPER_SNAKE_CASE, e.g. MODEL_UNAVAILABLE", "f@1 nodes.b.model.version: must pin one exact model version, e.g. \"2.4.0\"; ranges, wildcards and \"latest\" are not allowed", "f@1 nodes.b.outputs: a model node needs at least one output", "f@1 nodes.b.features: required in invoke mode: the values sent to the model, as feature name to expression", "f@1 nodes.b.timeoutMs: required in invoke mode: how long the model may take, in milliseconds", "f@1 nodes.b.model.id: no ModelInvoker registered for model 'unregistered'; register one with RuleStone.builder().modelInvoker(\"unregistered\", invoker), or build with suppliedModelsOnly() for tests", "f@1 nodes.c.model.id: must match [A-Za-z][A-Za-z0-9_.-]*", "f@1 nodes.c.model.version: must pin one exact model version, e.g. \"2.4.0\"; ranges, wildcards and \"latest\" are not allowed", "f@1 nodes.c.features: not allowed in supplied mode: the caller runs the model, so the engine sends it nothing", "f@1 nodes.c.timeoutMs: not allowed in supplied mode: the engine calls no model", "f@1 nodes.c.minConfidence: must be from 0 to 1" ]
+}, {
+  "name" : "model nodes: features, valid and what onFailure may read",
+  "read" : [ null ],
+  "build" : [ "f@1 nodes.a.features.who: expression must produce bool, int, string, decimal, money, date or a list of them, but produces rulestone.input.applicant: applicant", "f@1 nodes.a.features.bad: ERROR: <input>:1:4: mismatched input '<EOF>' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}\n | x +\n | ...^", "f@1 nodes.fail.set.d: reads 'a', which is not set on every path that reaches this node; a node may read only values that every path to it sets" ]
+}, {
+  "name" : "model nodes: no invoker unless supplied only",
+  "read" : [ null ],
+  "build" : [ ]
+}, {
+  "name" : "flow header, versions and the shared id namespace",
+  "read" : [ null, null, null, null ],
+  "build" : [ "dup@v 1 version: must be letters, digits, '.', '_' or '-'", "dup@v 1 id: a decision table has the same id; tables and flows share one id namespace", "dup@v 1 outputs.s: outputs must be bool, int, string, decimal, money, date or lists of them", "g@2: version registered more than once", "g@1 and g@2: both take effect on 2026-01-01, so neither supersedes the other; give the later version a later effectiveFrom" ]
+}, {
+  "name" : "a table that fails to compile is reported once",
+  "read" : [ null ],
+  "build" : [ "t_broken@1 rules[R].when: ERROR: <input>:1:4: mismatched input '<EOF>' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}\n | x +\n | ...^" ]
+}, {
+  "name" : "reason codes missing from the catalog",
+  "read" : [ null ],
+  "build" : [ "f@1 nodes.a.reasonCodes.device: reason code 'NEW_DEVICE' is not in the reason-code catalog", "f@1 nodes.a.onFailure.reasonCode: reason code 'FRAUD_DOWN' is not in the reason-code catalog" ]
+} ]

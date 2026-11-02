@@ -9,7 +9,17 @@
  */
 
 export { createEngine, outputJson, RuleStoneEngine, BUSINESS_DATE, ENGINE_NAME } from './engine.js'
-export type { AuditSink, CompiledDecision, DecisionRef, DecisionResult, EngineOptions, TraceStep } from './engine.js'
+export type {
+  AuditSink, CompiledDecision, DecisionRef, DecisionResult, EngineOptions, ModelsInput, TraceStep,
+} from './engine.js'
+
+export { parseDecisionFlow, writeDecisionFlow, flowVersionOf, FLOW_FILE_SUFFIX } from './flow.js'
+export type {
+  DecisionFlow, FlowNode, Branch, Bucket, TableFlowNode, SwitchFlowNode, DeriveFlowNode, ModelFlowNode, SplitFlowNode,
+  EndFlowNode, ModelMode,
+} from './flow.js'
+export { readModels, isModelFailure } from './models.js'
+export type { Attribution, ModelCall, ModelFailure, ModelInvoker, ModelResult, SuppliedModel } from './models.js'
 
 export { parseDecisionTable, writeDecisionTable, ruleVersionOf, isEffectiveOn, tableRef } from './table.js'
 export { versionProblems, versionInForce, selectVersion } from './versions.js'
@@ -23,7 +33,12 @@ export { readFacts, readValues, readValue, resultTypes, valueToJson, valuesToJso
 export type { JsonInput } from './facts.js'
 
 export { decisionRecordToJson, writeDecisionRecord } from './record.js'
-export type { DecisionRecord, ParamSetVersion, PathStep, ReasonCode } from './record.js'
+export { readDecisionRecord, InvalidRecordError } from './record-json.js'
+export { compareRecords } from './replay.js'
+export type { DecisionComparison, Difference, DifferenceKind, ModelSource } from './replay.js'
+export type {
+  DecisionRecord, ParamSetVersion, PathStep, ReasonCode, ModelStep, ModelStatus, ModelStepMode, Routing,
+} from './record.js'
 
 export {
   parseReasonCodeCatalog, writeReasonCodeCatalog, reasonCodeCatalogVersionOf, explainRecord, explainDecision,
@@ -64,5 +79,6 @@ export type { JsonNode, Writable } from './json.js'
 
 export {
   RuleStoneError, InvalidDecisionError, InvalidFactsError, DecisionNotFoundError, DecisionEvaluationError, AuditError,
+  DecisionTimeoutError,
   ExpressionError, InvalidValueError,
 } from './errors.js'

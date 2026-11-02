@@ -171,6 +171,6 @@ It throws an `AssertionError` that lists the differences.
 
 ## Limits
 
-- The browser engine of the [Editor SDK](editor-sdk.md) does not replay records yet; the Java engine is the engine of record.
+- The TypeScript engine of the [Editor SDK](editor-sdk.md) replays and re-scores records too (`engine.replay`, `engine.rescore`, `readDecisionRecord`), with the same comparison, and replays records of the Java engine.
 - Data looked up during evaluation is not recorded, because RuleStone looks nothing up: everything a decision reads is in the facts.
 - A re-score with `ModelSource.LIVE` calls today's models, which are not deterministic in general; its outcome is a measurement, not a decision.

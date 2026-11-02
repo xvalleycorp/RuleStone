@@ -1,13 +1,17 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Decision flows (.flow.json), following the design proposal in docs/hybrid-ai.md section 3:
-// the node types, their edges, editing operations, the client-side checks, and a layout for
-// the canvas. The engine cannot run flows yet; these are for designing them.
+// Decision flows (.flow.json), in the format the engine reads (docs/flows.md):
+// the node types, their edges, editing operations, the checks (the engine's own when the tables
+// are known, the editor's design checks otherwise), and a layout for the canvas.
 
+import {
+  InvalidDecisionError, createEngine, parseDecisionFlow, parseDecisionTable, parseParameterSet, parseReasonCodeCatalog,
+  type DecisionTable, type ParameterSet, type ReasonCodeCatalog,
+} from '@rulestone/engine'
 import type { TypeSpec } from './table.js'
 
-export const NODE_TYPES = ['table', 'switch', 'derive', 'model', 'split', 'end', 'flow'] as const
+export const NODE_TYPES = ['table', 'switch', 'derive', 'model', 'split', 'end'] as const
 export type NodeType = (typeof NODE_TYPES)[number]
 
 export interface Branch {
@@ -15,42 +19,59 @@ export interface Branch {
   to: string
 }
 
+/**
+ * A node as the engine reads it (docs/flows.md, "Nodes"). Fields the engine rejects, such as a
+ * model node's shadow, kind or prompt (planned) or a derive node's former values, are kept when a
+ * file is opened, so that the engine's checks can report them.
+ */
 export interface FlowNodeJson {
   type: NodeType | string
+  description?: string
   /** table: the decision id. */
   decision?: string
-  /** flow: the flow id, and optionally its version. */
-  flow?: string
+  /** table: a version of the table to always use; absent for the version in force. */
   version?: string
-  /** table, flow: explicit facts, name to expression. */
+  /** table: table input name to expression; inputs not listed receive the flow value of the same name. */
   facts?: Record<string, string>
-  /** table, model, flow: the shared name the outputs are published under. */
+  /** table, derive, model: the name the values are published under instead of the node id. */
   as?: string
-  /** table, derive, model, flow: the next node, or conditional branches with a final one without `when`. */
+  /** table, derive, model: the next node, or conditional branches with a final one without `when`. */
   next?: string | Branch[]
   /** switch: the first matching case wins; the final case has no `when`. */
   cases?: Branch[]
-  /** derive: name to expression, computed once. */
-  values?: Record<string, string>
-  /** model */
-  mode?: 'invoke' | 'supplied' | string
-  kind?: string
-  model?: { id?: string; version?: string }
-  features?: Record<string, string>
+  /** derive, model: value name to type. */
   outputs?: Record<string, TypeSpec>
+  /** derive: value name to expression; end: flow output name to expression. */
+  set?: Record<string, string>
+  /** model: invoke (the engine calls the model) or supplied (the caller passes its result). */
+  mode?: 'invoke' | 'supplied' | string
+  /** model: the model and its one exact version. */
+  model?: { id?: string; version?: string }
+  /** model, invoke mode: feature name to expression. */
+  features?: Record<string, string>
+  /** model: a condition over the outputs, by name. */
   valid?: string
-  minConfidence?: string
+  /** model: a decimal from 0 to 1, e.g. "0.70". */
+  minConfidence?: string | number
+  /** model, invoke mode: how long the model may take. */
   timeoutMs?: number
+  /** model: feature name to reason code. */
   reasonCodes?: Record<string, string>
+  /** model: how many reason codes the node gives at most, 1 to 10; 3 when absent. */
+  maxReasonCodes?: number
   onFailure?: { to?: string; reasonCode?: string }
-  shadow?: unknown[]
   /** split */
   key?: string
   salt?: string
   buckets?: { name: string; percent: number; to: string }[]
-  /** end: output name to expression. */
-  set?: Record<string, string>
   [key: string]: unknown
+}
+
+/** The parameter set a flow's expressions read, as for a table. */
+export interface FlowParamsJson {
+  set: string
+  version?: string
+  values: Record<string, TypeSpec>
 }
 
 export interface FlowJson {
@@ -61,6 +82,7 @@ export interface FlowJson {
   effectiveTo?: string
   inputs: Record<string, TypeSpec>
   outputs: Record<string, TypeSpec>
+  params?: FlowParamsJson
   start: string
   nodes: Record<string, FlowNodeJson>
   [key: string]: unknown
@@ -122,16 +144,22 @@ export function newNode(type: NodeType, flow: FlowJson): FlowNodeJson {
     case 'switch':
       return { type, cases: [] }
     case 'derive':
-      return { type, values: {} }
+      return { type, outputs: { value: 'decimal' }, set: { value: '' } }
     case 'model':
-      return { type, mode: 'invoke', model: { id: '', version: '' }, features: {}, outputs: { score: 'decimal' }, onFailure: { reasonCode: 'MODEL_UNAVAILABLE' } }
+      return {
+        type, mode: 'supplied', model: { id: '', version: '' }, outputs: { score: 'decimal' },
+        onFailure: { reasonCode: 'MODEL_UNAVAILABLE' },
+      }
     case 'split':
       return { type, key: '', salt: '', buckets: [{ name: 'champion', percent: 90, to: '' }, { name: 'challenger', percent: 10, to: '' }] }
     case 'end':
       return { type, set: Object.fromEntries(Object.keys(flow.outputs).map((o) => [o, ''])) }
-    case 'flow':
-      return { type, flow: '' }
   }
+}
+
+/** A derive node's set, following its outputs: kept expressions, and an empty one for each new value. */
+export function deriveSet(outputs: Record<string, TypeSpec>, set: Record<string, string> = {}): Record<string, string> {
+  return Object.fromEntries(Object.keys(outputs).map((name) => [name, set[name] ?? '']))
 }
 
 export function addNode(flow: FlowJson, type: NodeType, id = newNodeId(flow, type)): { flow: FlowJson; id: string } {
@@ -243,7 +271,9 @@ export function disconnect(flow: FlowJson, edge: Edge): FlowJson {
 export type FlowProblemCode =
   | 'noNodes' | 'noStart' | 'unknownStart' | 'unknownType' | 'unknownTarget' | 'emptyTarget' | 'cycle' | 'unreachable'
   | 'deadEnd' | 'noEndReachable' | 'modelNoFailure' | 'modelUnpinned' | 'splitPercent' | 'unknownTable'
-  | 'tableNoDecision' | 'switchNoDefault' | 'branchNoDefault' | 'emptyCondition' | 'endMissingOutput' | 'endUnknownOutput' | 'flowNoId'
+  | 'tableNoDecision' | 'switchNoDefault' | 'branchNoDefault' | 'emptyCondition' | 'endMissingOutput' | 'endUnknownOutput'
+  /** A problem the engine reports, in its own words, in `params.message`. */
+  | 'engine'
 
 export interface FlowProblem {
   readonly code: FlowProblemCode
@@ -259,11 +289,103 @@ export interface CheckOptions {
   readonly tables?: readonly string[]
 }
 
+/** The definitions a flow is checked and run against: the tables it uses, parameter sets and a reason-code catalog. */
+export interface FlowDefinitions {
+  /** Every version of every table the flow uses, as .stone.json text, parsed JSON or a parsed table. */
+  readonly tables: readonly (string | object)[]
+  /** Parameter sets the flow and its tables read, as .params.json text or parsed JSON. */
+  readonly paramSets?: readonly (string | object)[]
+  /** A reason-code catalog, as reason-codes.json text, parsed JSON or a parsed catalog. */
+  readonly reasonCodes?: string | object
+}
+
+/** The node an engine problem is about: `$.nodes.<id>…` when reading, `<flow>@<version> nodes.<id>…` when checking. */
+function problemNode(flow: FlowJson, problem: string): string | undefined {
+  const m = /^(?:\$\.|\S+ )nodes\.([^.[:\s]+)/.exec(problem)
+  return m && m[1]! in flow.nodes ? m[1]! : undefined
+}
+
+/** Engine problems as flow problems, without the location prefix that names the flow. */
+export function engineFlowProblems(flow: FlowJson, problems: readonly string[]): FlowProblem[] {
+  const ref = `${flow.id}@${flow.version} `
+  return problems.map((p) => {
+    const node = problemNode(flow, p)
+    const message = p.startsWith(ref) ? p.slice(ref.length) : p
+    return node === undefined
+      ? { code: 'engine' as const, severity: 'error' as const, params: { message } }
+      : { code: 'engine' as const, severity: 'error' as const, node, params: { message } }
+  })
+}
+
+/** The problems of the engine's strict .flow.json reader, or none if it reads the flow. */
+export function readerProblems(flow: FlowJson): FlowProblem[] {
+  try {
+    parseDecisionFlow(JSON.stringify(flow))
+    return []
+  } catch (e) {
+    if (e instanceof InvalidDecisionError) return engineFlowProblems(flow, e.problems)
+    throw e
+  }
+}
+
 /**
- * The checks the editor can make without the engine: the graph's shape (cycles, unreachable
- * nodes, paths that never reach an end), model nodes without onFailure, split percentages,
- * unknown table references and end nodes that do not set every output. The engine's load-time
- * checks of names and types (docs/hybrid-ai.md 3.7) are not made here.
+ * Every problem the engine reports for the flow, as when an engine is created with it and the
+ * definitions: the strict reader's, then the load-time checks of the graph, names, types and the
+ * values each node may read. Model nodes are checked as for tests (suppliedModelsOnly), so that
+ * invoke mode needs no invoker. Problems of the tables themselves are included too.
+ */
+export async function checkFlowWithEngine(flow: FlowJson, definitions: FlowDefinitions): Promise<FlowProblem[]> {
+  const read = readerProblems(flow)
+  if (read.length > 0) return read
+  const problems: string[] = []
+  const tables = []
+  for (const t of definitions.tables) {
+    try {
+      tables.push(typeof t === 'object' && (t as { rules?: unknown }).rules instanceof Array && (t as { inputs?: unknown }).inputs instanceof Map
+        ? (t as DecisionTable)
+        : parseDecisionTable(typeof t === 'string' ? t : JSON.stringify(t)))
+    } catch (e) {
+      if (!(e instanceof InvalidDecisionError)) throw e
+      problems.push(...e.problems)
+    }
+  }
+  let paramSets: ParameterSet[] = []
+  let reasonCodeCatalog: ReasonCodeCatalog | undefined
+  try {
+    paramSets = (definitions.paramSets ?? []).map((p) => parseParameterSet(typeof p === 'string' ? p : JSON.stringify(p)))
+    const catalog = definitions.reasonCodes
+    if (catalog !== undefined) {
+      reasonCodeCatalog = typeof catalog === 'object' && (catalog as { codes?: unknown }).codes instanceof Map
+        ? (catalog as ReasonCodeCatalog)
+        : parseReasonCodeCatalog(typeof catalog === 'string' ? catalog : JSON.stringify(catalog))
+    }
+  } catch (e) {
+    if (!(e instanceof InvalidDecisionError)) throw e
+    problems.push(...e.problems)
+  }
+  if (problems.length === 0) {
+    try {
+      await createEngine({
+        tables,
+        flows: [parseDecisionFlow(JSON.stringify(flow))],
+        paramSets,
+        suppliedModelsOnly: true,
+        ...(reasonCodeCatalog ? { reasonCodeCatalog } : {}),
+      })
+    } catch (e) {
+      if (!(e instanceof InvalidDecisionError)) throw e
+      problems.push(...e.problems)
+    }
+  }
+  return engineFlowProblems(flow, problems)
+}
+
+/**
+ * The checks the editor can make without the tables a flow uses: the engine's strict reader
+ * (unknown, missing and misplaced fields, branch structure), and the graph's shape (cycles,
+ * unreachable nodes, paths that never reach an end), model nodes without onFailure, split
+ * percentages, unknown table references and end nodes that do not set every output. With the
+ * tables, checkFlowWithEngine reports what the engine itself reports.
  */
 export function checkFlow(flow: FlowJson, options: CheckOptions = {}): FlowProblem[] {
   const problems: FlowProblem[] = []
@@ -300,25 +422,16 @@ export function checkFlow(flow: FlowJson, options: CheckOptions = {}): FlowProbl
         if (total !== 100) add('splitPercent', id, { total })
         break
       }
-      case 'switch': {
-        const cases = node.cases ?? []
-        if (cases.length === 0 || cases.at(-1)!.when !== undefined) add('switchNoDefault', id)
-        break
-      }
       case 'end': {
         const set = node.set ?? {}
         for (const output of Object.keys(flow.outputs)) if (!(output in set) || set[output] === '') add('endMissingOutput', id, { output })
         for (const output of Object.keys(set)) if (!(output in flow.outputs)) add('endUnknownOutput', id, { output })
         break
       }
-      case 'flow':
-        if (!node.flow) add('flowNoId', id)
-        break
     }
     for (const branch of [...(Array.isArray(node.next) ? node.next : []), ...(node.cases ?? [])]) {
       if (branch.when !== undefined && branch.when.trim() === '') add('emptyCondition', id, { target: branch.to })
     }
-    if (Array.isArray(node.next) && (node.next.length === 0 || node.next.at(-1)!.when !== undefined)) add('branchNoDefault', id)
     if (node.type !== 'end' && edges.filter((e) => e.kind !== 'failure').length === 0 && (NODE_TYPES as readonly string[]).includes(node.type)) {
       add('deadEnd', id)
     }
@@ -356,6 +469,8 @@ export function checkFlow(flow: FlowJson, options: CheckOptions = {}): FlowProbl
   for (const id of ids) {
     if (!canEnd.has(id) && !problems.some((p) => p.node === id && p.code === 'deadEnd')) add('noEndReachable', id)
   }
+  // The strict reader: unknown, missing and misplaced fields, and branches without a final default.
+  problems.push(...readerProblems(flow))
   return problems
 }
 

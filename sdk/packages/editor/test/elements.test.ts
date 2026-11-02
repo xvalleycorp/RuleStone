@@ -1,7 +1,7 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import '../src/index.js'
@@ -279,16 +279,69 @@ describe('<rulestone-table-editor>', () => {
   })
 })
 
-describe('<rulestone-flow-canvas>', () => {
-  const flow = () => parseFlow(readFileSync(join(process.cwd(), 'demo', 'card_origination.flow.json'), 'utf8'))
+/** The tables of examples/flows, as .stone.json text. */
+function flowTableTexts(): string[] {
+  const dir = join(EXAMPLES, 'flows')
+  return readdirSync(dir).filter((f) => f.endsWith('.stone.json')).map((f) => readFileSync(join(dir, f), 'utf8'))
+}
 
-  it('draws every node and edge and says that flows are design-only', async () => {
-    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: flow(), tables: ['card_policy', 'pd_to_grade', 'card_limit_matrix', 'card_limit_matrix_b'] })
-    expect($$(el, 'g.node')).toHaveLength(11)
+describe('<rulestone-try-it> with a flow', () => {
+  it('runs the flow with its tables and the model results, and shows the path, record and explanation', async () => {
+    const flow = parseFlow(readFileSync(join(EXAMPLES, 'flows', 'card_origination_scored.flow.json'), 'utf8'))
+    const el = await mount<RulestoneTryIt>('rulestone-try-it', {
+      flow,
+      tables: flowTableTexts(),
+      reasonCodes: readFileSync(join(EXAMPLES, 'reason-codes.json'), 'utf8'),
+      asOf: '2026-12-01',
+      facts: '{ "applicant": { "id": "C-2003", "age": 35, "income": "20000000 VND", "existingCustomer": true }, "bureau": { "dpd30Count12m": 0, "utilisation": "0.40" } }',
+      models: JSON.stringify({
+        fraud: { modelId: 'card_application_fraud', modelVersion: '1.2.0', outputs: { score: '0.05' } },
+        pd_behaviour: {
+          modelId: 'retail_pd_behaviour', modelVersion: '2.4.0', outputs: { pd: '0.0150' }, attributionMethod: 'SHAP',
+          attributions: [{ feature: 'utilisation', contribution: '0.0040' }],
+        },
+      }),
+    })
+    expect($(el, '.models textarea')).not.toBeNull()
+    const detail: RunDetail = await el.run()
+    await settle(el)
+    expect(detail.ok).toBe(true)
+    expect(detail.result!.output.get('decision')).toBe('APPROVE')
+    expect(detail.record!.path.map((s) => s.node)).toEqual(['policy', 'fraud', 'segment', 'pd_behaviour', 'grade', 'limit', 'approved'])
+    expect(detail.explanation!.reasons.map((r) => r.code)).toEqual(['HIGH_UTILISATION'])
+    const path = $(el, '[part="path"]')!.textContent!
+    expect(path).toContain('retail_pd_behaviour@2.4.0 OK')
+    expect(path).toContain('card_pd_grade: A')
+    expect($(el, 'pre.code')!.textContent).toContain('"mode": "supplied"')
+  })
+})
+
+describe('<rulestone-flow-canvas>', () => {
+  const flow = () => parseFlow(readFileSync(join(process.cwd(), 'demo', 'card_origination_scored.flow.json'), 'utf8'))
+
+  it('draws every node and edge and says which checks it makes', async () => {
+    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: flow(), tables: ['card_policy', 'card_pd_grade', 'card_limit'] })
+    expect($$(el, 'g.node')).toHaveLength(10)
     expect($$(el, 'path.edge').length).toBeGreaterThanOrEqual(13)
-    expect($(el, '[part="banner"]')!.textContent).toContain('Design only')
+    expect($(el, '[part="banner"]')!.textContent).toContain('Checked by the editor alone')
     expect($(el, '[part="problems"]')!.textContent).toContain('No problems')
     expect($(el, 'g.node[data-id="policy"]')!.getAttribute('aria-label')).toBe('Table node policy, start node')
+  })
+
+  it('reports the engine’s own problems once it has the tables', async () => {
+    const definitions = { tables: flowTableTexts() }
+    const f = flow()
+    f.nodes['referred']!.set = { ...f.nodes['referred']!.set, limit: 'limit.limit' }
+    const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: f, definitions })
+    await el.engineChecked()
+    expect($(el, '[part="banner"]')!.textContent).toContain('Checked by the RuleStone engine')
+    expect(el.problems.map((p) => [p.node, p.params.message])).toEqual([
+      ['referred', "nodes.referred.set.limit: reads 'limit', which is not set on every path that reaches this node; a node may read only values that every path to it sets"],
+    ])
+    expect($(el, '[part="problems"]')!.textContent).toContain("reads 'limit'")
+    el.flow = flow()
+    await el.engineChecked()
+    expect(el.problems).toEqual([])
   })
 
   it('adds nodes from the palette and connects them with the keyboard', async () => {
@@ -309,7 +362,8 @@ describe('<rulestone-flow-canvas>', () => {
   it('reports model nodes without onFailure and splits that do not add up to 100', async () => {
     const f = flow()
     delete f.nodes['pd_behaviour']!.onFailure
-    f.nodes['limit_strategy']!.buckets![0]!.percent = 80
+    f.nodes['limit']!.next = 'strategy'
+    f.nodes['strategy'] = { type: 'split', key: 'applicant.id', salt: 's', buckets: [{ name: 'a', percent: 80, to: 'approved' }, { name: 'b', percent: 10, to: 'approved' }] }
     const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', { flow: f })
     const text = $(el, '[part="problems"]')!.textContent!
     expect(text).toContain('A model node needs onFailure')
@@ -320,12 +374,12 @@ describe('<rulestone-flow-canvas>', () => {
     const el = await mount<RulestoneFlowCanvas>('rulestone-flow-canvas', {})
     expect(el.importText(JSON.stringify(flow()))).toBe(true)
     await settle(el)
-    expect($$(el, 'g.node')).toHaveLength(11)
+    expect($$(el, 'g.node')).toHaveLength(10)
     expect(JSON.parse(el.toJson())).toEqual(flow())
     const exported = events<{ json: string }>(el, 'rulestone-export')
     el.addEventListener('rulestone-export', (e) => e.preventDefault())
     $$(el, '.toolbar button')[0]!.click()
-    expect(JSON.parse(exported[0]!.json).id).toBe('card_origination')
+    expect(JSON.parse(exported[0]!.json).id).toBe('card_origination_scored')
     expect(el.importText('{ "nodes": 3 }')).toBe(false)
   })
 
@@ -374,7 +428,7 @@ describe('<rulestone-flow-canvas>', () => {
     expect(new Set(labels.map((t) => `${t.getAttribute('x')},${t.getAttribute('y')}`)).size).toBe(labels.length)
     const referred = el.layout['referred']!
     const into = labels.find((t) => Number(t.getAttribute('x')) === referred.x + 6 && Number(t.getAttribute('y')) === referred.y - 6)!
-    expect(into.textContent!.trim()).toBe('onFailure')
+    expect(into.textContent!.match(/onFailure/g)).toHaveLength(1)
     expect(into.querySelector('tspan.failure')).not.toBeNull()
   })
 
@@ -411,7 +465,7 @@ describe('<rulestone-flow-canvas>', () => {
 
   it('routes an edge to a node on the left around the nodes in between', () => {
     const layout = autoLayout(flow(), {}, { maxColumns: 3 })
-    for (const [from, to, kind] of [['pd_application', 'grade', 'next'], ['pd_behaviour', 'referred', 'failure']] as const) {
+    for (const [from, to, kind] of [['segment', 'pd_application', 'case'], ['limit', 'approved', 'next']] as const) {
       const d = backRoute({ from, to, kind }, layout)
       // The corners are the control points of the rounded path; the longest horizontal run must not cross a node.
       const corners = [...d.matchAll(/Q (-?[\d.]+) (-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])] as const)
@@ -420,7 +474,7 @@ describe('<rulestone-flow-canvas>', () => {
       const a = layout[from]!
       const b = layout[to]!
       const left = b.x - 20
-      const right = kind === 'failure' ? a.x - 20 : a.x + NODE_WIDTH + 20
+      const right = a.x + NODE_WIDTH + 20
       for (const [id, p] of Object.entries(layout)) {
         if (id === from || id === to) continue
         const crosses = p.x < Math.max(left, right) && p.x + NODE_WIDTH > Math.min(left, right) && run > p.y && run < p.y + NODE_HEIGHT

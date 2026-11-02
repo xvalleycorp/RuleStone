@@ -3,9 +3,10 @@
 
 import { css, html, nothing, svg, type PropertyDeclarations, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit'
 import {
-  FIT_ZOOM, LAYOUT_SPACING, NODE_HEIGHT, NODE_TYPES, NODE_WIDTH, addNode, allEdges, autoLayout, checkFlow, connect, disconnect,
+  FIT_ZOOM, LAYOUT_SPACING, NODE_HEIGHT, NODE_TYPES, NODE_WIDTH, addNode, allEdges, autoLayout, checkFlow, checkFlowWithEngine, connect,
+  deriveSet, disconnect,
   edgesOf, emptyFlow, flowText, layoutBounds, layoutFor, parseFlow, removeNode, renameNode, updateNode, type Branch, type Edge, type FlowJson, type FlowLayout,
-  type FlowNodeJson, type FlowProblem, type NodeType,
+  type FlowDefinitions, type FlowNodeJson, type FlowProblem, type NodeType,
 } from '../model/flow.js'
 import { PRIMITIVES, cloneJson, type TypeSpec } from '../model/table.js'
 import { RulestoneElement, define } from './base.js'
@@ -33,16 +34,17 @@ export interface FlowChangeDetail {
 }
 
 /**
- * `<rulestone-flow-canvas>`: designs a decision flow (.flow.json, the proposal in
- * docs/hybrid-ai.md section 3) on a canvas: a palette of node types, drag and drop, edges,
+ * `<rulestone-flow-canvas>`: designs a decision flow (.flow.json, the format of docs/flows.md)
+ * on a canvas: a palette of node types, drag and drop, edges,
  * pan and zoom, a properties panel and the checks the editor can make. Everything has a
- * keyboard alternative. The engine cannot run flows yet, which the canvas says.
+ * keyboard alternative. Given the tables the flow uses (`definitions`), the problems are the
+ * engine's own; run the flow with `<rulestone-try-it>`.
  *
  * Node positions are kept in `layout`, apart from the flow, whose file format has no layout.
  *
  * @fires rulestone-change - detail FlowChangeDetail, after every edit
  * @fires rulestone-export - detail `{ flow, json }`, when the user exports
- * @csspart banner - the design-only notice
+ * @csspart banner - the notice that says which checks the canvas makes
  * @csspart palette - the node palette
  * @csspart canvas - the SVG canvas
  * @csspart panel - the properties panel
@@ -54,6 +56,8 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     flow: { attribute: false },
     layout: { attribute: false },
     tables: { attribute: false },
+    definitions: { attribute: false },
+    _engineProblems: { state: true },
     _selected: { state: true },
     _view: { state: true },
     _connecting: { state: true },
@@ -69,6 +73,13 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   declare layout: FlowLayout
   /** Decision ids that table nodes may use; when set, unknown ones are reported. */
   declare tables: readonly string[] | undefined
+  /**
+   * The tables the flow uses, with parameter sets and a reason-code catalog. With them, the canvas
+   * reports the problems the engine reports when it loads the flow; without them, it makes the
+   * checks it can make alone, so that a flow can be designed before its tables exist.
+   */
+  declare definitions: FlowDefinitions | undefined
+  declare _engineProblems: readonly FlowProblem[] | undefined
   declare _selected: string | undefined
   declare _view: View
   declare _connecting: { from: string; failure: boolean } | undefined
@@ -405,6 +416,8 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     this.flow = emptyFlow()
     this.layout = {}
     this.tables = undefined
+    this.definitions = undefined
+    this._engineProblems = undefined
     this._selected = undefined
     this._view = { x: 0, y: 0, zoom: 1 }
     this._connecting = undefined
@@ -449,8 +462,37 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     }
   }
 
+  private checks = 0
+
+  /** Checks the flow with the engine, when the canvas has the definitions; the latest check wins. */
+  private async checkWithEngine(): Promise<void> {
+    const run = ++this.checks
+    const definitions = this.definitions
+    if (!definitions) {
+      if (this._engineProblems !== undefined) this._engineProblems = undefined
+      return
+    }
+    let problems: readonly FlowProblem[]
+    try {
+      problems = await checkFlowWithEngine(this.flow, definitions)
+    } catch (e) {
+      problems = [{ code: 'engine', severity: 'error', params: { message: e instanceof Error ? e.message : String(e) } }]
+    }
+    if (run === this.checks) this._engineProblems = problems
+  }
+
+  /** Resolves when the engine has checked the current flow (immediately without definitions). */
+  async engineChecked(): Promise<void> {
+    await this.updateComplete
+    await this.pendingCheck
+    await this.updateComplete
+  }
+
+  private pendingCheck: Promise<void> = Promise.resolve()
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed)
+    if (changed.has('flow') || changed.has('definitions')) this.pendingCheck = this.checkWithEngine()
     if (this.focusNode) {
       const node = this.renderRoot.querySelector<SVGGElement>(`g.node[data-id="${this.focusNode}"]`)
       this.focusNode = undefined
@@ -458,8 +500,12 @@ export class RulestoneFlowCanvas extends RulestoneElement {
     }
   }
 
-  /** The checks' result for the current flow. */
+  /**
+   * The problems of the current flow: the engine's, once it has checked the flow against the
+   * definitions; otherwise the checks the editor makes alone.
+   */
   get problems(): FlowProblem[] {
+    if (this.definitions && this._engineProblems) return [...this._engineProblems]
     return checkFlow(this.flow, this.tables ? { tables: this.tables } : {})
   }
 
@@ -480,7 +526,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   protected override render() {
     const problems = this.problems
     return html`
-      <p part="banner" class="banner" role="note">${this.t('flow.designOnly')}</p>
+      <p part="banner" class="banner" role="note">${this.t(this.definitions ? 'flow.engineChecked' : 'flow.designOnly')}</p>
       <div class="toolbar">
         <button type="button" @click=${() => this.exportJson()}>${this.t('flow.export')}</button>
         <button type="button" @click=${() => void this.copyJson()}>${this.t('common.copy')} JSON</button>
@@ -723,12 +769,21 @@ export class RulestoneFlowCanvas extends RulestoneElement {
   private renderFlowPanel(): TemplateResult {
     const f = this.flow
     const set = (patch: Partial<FlowJson>) => this.change({ ...f, ...patch })
-    const json = (key: 'inputs' | 'outputs') => html`<label class="field"><span>${this.t(`flow.fields.${key}`)}</span>
-      <textarea spellcheck="false" .value=${JSON.stringify(f[key], null, 2)} ?readonly=${this.readonly} aria-invalid=${this._fieldErrors.has(key) ? 'true' : 'false'}
+    const json = (key: 'inputs' | 'outputs' | 'params') => html`<label class="field"><span>${this.t(`flow.fields.${key}`)}</span>
+      <textarea spellcheck="false" .value=${f[key] === undefined ? '' : JSON.stringify(f[key], null, 2)} ?readonly=${this.readonly} aria-invalid=${this._fieldErrors.has(key) ? 'true' : 'false'}
         @change=${(e: Event) => {
           const errors = new Map(this._fieldErrors)
           try {
-            const value = JSON.parse((e.target as HTMLTextAreaElement).value) as unknown
+            const text = (e.target as HTMLTextAreaElement).value
+            if (key === 'params' && text.trim() === '') {
+              errors.delete(key)
+              this._fieldErrors = errors
+              const next: FlowJson = { ...f }
+              delete next.params
+              this.change(next)
+              return
+            }
+            const value = JSON.parse(text) as unknown
             if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('{ "name": "type" }')
             errors.delete(key)
             this._fieldErrors = errors
@@ -751,6 +806,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       <label class="field"><span>${this.t('flow.start')}</span>${this.targetSelect(this.t('flow.start'), f.start, (v) => set({ start: v ?? '' }))}</label>
       ${json('inputs')}
       ${json('outputs')}
+      ${json('params')}
       <p class="muted">${this.t('flow.nothingSelected')}</p>
     `
   }
@@ -798,32 +854,45 @@ export class RulestoneFlowCanvas extends RulestoneElement {
       case 'table':
         return html`${this.text(f('decision'), node.decision, (v) => set({ decision: v.trim() }), true, 'known-tables')}
           <datalist id="known-tables">${(this.tables ?? []).map((t) => html`<option value=${t}></option>`)}</datalist>
+          ${this.text(f('tableVersion'), node.version, (v) => set({ version: v.trim() }), true)}
           ${this.text(f('as'), node.as, (v) => set({ as: v.trim() }), true)}
           ${this.mapEditor(f('facts'), node.facts, (m) => set({ facts: m }))}
           ${this.nextEditor(id, node, set)}`
       case 'switch':
         return this.branchEditor(f('cases'), id, node.cases ?? [], (cases) => set({ cases }), this.t('flow.addCase'))
       case 'derive':
-        return html`${this.mapEditor(f('values'), node.values, (m) => set({ values: m }))}${this.nextEditor(id, node, set)}`
-      case 'model':
+        return html`${this.typeMapEditor(f('values'), node.outputs ?? {}, (m) => set({ outputs: m, set: deriveSet(m, node.set) }))}
+          ${this.mapEditor(f('expressions'), deriveSet(node.outputs ?? {}, node.set), (m) => set({ set: m }), true)}
+          ${this.text(f('as'), node.as, (v) => set({ as: v.trim() }), true)}
+          ${this.nextEditor(id, node, set)}`
+      case 'model': {
+        const invoke = node.mode !== 'supplied'
+        const number = (key: 'timeoutMs' | 'maxReasonCodes', min: number, max?: number) => html`<label class="field"><span>${f(key)}</span>
+            <input type="number" min=${min} max=${max ?? nothing} .value=${node[key] === undefined ? '' : String(node[key])} ?readonly=${this.readonly}
+              @change=${(e: Event) => {
+                const v = (e.target as HTMLInputElement).value
+                set({ [key]: v === '' ? undefined : Number(v) } as Partial<FlowNodeJson>)
+              }} />
+          </label>`
         return html`${this.text(f('modelId'), node.model?.id, (v) => set({ model: { ...node.model, id: v.trim() } }), true)}
           ${this.text(f('modelVersion'), node.model?.version, (v) => set({ model: { ...node.model, version: v.trim() } }), true)}
           <label class="field"><span>${f('mode')}</span>
-            <select ?disabled=${this.readonly} @change=${(e: Event) => set({ mode: (e.target as HTMLSelectElement).value })}>
-              ${['invoke', 'supplied'].map((m) => html`<option value=${m} ?selected=${node.mode === m}>${m}</option>`)}
+            <select ?disabled=${this.readonly} @change=${(e: Event) => {
+              const mode = (e.target as HTMLSelectElement).value
+              // Features and a timeout belong to invoke mode only; the engine rejects them in supplied mode.
+              set((mode === 'supplied' ? { mode, features: undefined, timeoutMs: undefined } : { mode, features: node.features ?? {}, timeoutMs: node.timeoutMs ?? 100 }) as Partial<FlowNodeJson>)
+            }}>
+              ${['supplied', 'invoke'].map((m) => html`<option value=${m} ?selected=${(node.mode ?? 'invoke') === m}>${this.t(`flow.modes.${m as 'supplied' | 'invoke'}`)}</option>`)}
             </select>
           </label>
           ${this.text(f('as'), node.as, (v) => set({ as: v.trim() }), true)}
-          ${this.mapEditor(f('features'), node.features, (m) => set({ features: m }))}
+          ${invoke ? this.mapEditor(f('features'), node.features, (m) => set({ features: m })) : nothing}
           ${this.typeMapEditor(f('modelOutputs'), node.outputs ?? {}, (m) => set({ outputs: m }))}
           ${this.text(f('valid'), node.valid, (v) => set({ valid: v }), true)}
-          <label class="field"><span>${f('timeoutMs')}</span>
-            <input type="number" min="1" .value=${node.timeoutMs === undefined ? '' : String(node.timeoutMs)} ?readonly=${this.readonly}
-              @change=${(e: Event) => {
-                const v = (e.target as HTMLInputElement).value
-                set({ timeoutMs: v === '' ? undefined : Number(v) } as Partial<FlowNodeJson>)
-              }} />
-          </label>
+          ${this.text(f('minConfidence'), node.minConfidence === undefined ? undefined : String(node.minConfidence), (v) => set({ minConfidence: v.trim() }), true)}
+          ${invoke ? number('timeoutMs', 1) : nothing}
+          ${this.mapEditor(f('reasonCodes'), node.reasonCodes, (m) => set({ reasonCodes: Object.keys(m).length === 0 ? undefined : m } as Partial<FlowNodeJson>))}
+          ${number('maxReasonCodes', 1, 10)}
           <label class="field"><span>${f('onFailure')}</span>
             ${this.targetSelect(f('onFailure'), node.onFailure?.to, (to) => {
               const onFailure = { ...(node.onFailure ?? {}) }
@@ -839,6 +908,7 @@ export class RulestoneFlowCanvas extends RulestoneElement {
             set({ onFailure })
           }, true)}
           ${this.nextEditor(id, node, set)}`
+      }
       case 'split':
         return html`${this.text(f('key'), node.key, (v) => set({ key: v }), true)}
           ${this.text(f('salt'), node.salt, (v) => set({ salt: v }), true)}
@@ -847,11 +917,6 @@ export class RulestoneFlowCanvas extends RulestoneElement {
         const entries = { ...Object.fromEntries(Object.keys(this.flow.outputs).map((o) => [o, ''])), ...(node.set ?? {}) }
         return this.mapEditor(f('set'), entries, (m) => set({ set: m }), true)
       }
-      case 'flow':
-        return html`${this.text(f('flow'), node.flow, (v) => set({ flow: v.trim() }), true)}
-          ${this.text(f('flowVersion'), node.version, (v) => set({ version: v.trim() }), true)}
-          ${this.text(f('as'), node.as, (v) => set({ as: v.trim() }), true)}
-          ${this.nextEditor(id, node, set)}`
       default:
         return html``
     }
@@ -1411,11 +1476,9 @@ function nodeDetail(node: FlowNodeJson): string {
     case 'switch':
       return `${(node.cases ?? []).length} cases`
     case 'derive':
-      return Object.keys(node.values ?? {}).join(', ')
+      return Object.keys(node.outputs ?? {}).join(', ')
     case 'end':
       return Object.values(node.set ?? {}).join(', ')
-    case 'flow':
-      return node.flow ?? ''
     default:
       return ''
   }

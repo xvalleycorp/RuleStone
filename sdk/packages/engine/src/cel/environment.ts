@@ -3,7 +3,7 @@
 
 import { ExpressionError, InvalidValueError } from '../errors.js'
 import { isCurrencyCode } from '../money.js'
-import { isPrimitive, type ValueType } from '../types.js'
+import { containsStruct, isPrimitive, type ValueType } from '../types.js'
 import { canonicalValue, checkResult, toValue, type Value } from '../values.js'
 import { analyze, formatIssues } from './analysis.js'
 import type { Expr } from './ast.js'
@@ -184,6 +184,25 @@ export class ExpressionEnvironment {
     if (valueType === undefined) {
       throw new ExpressionError(
         `a local value must produce bool, int, string, decimal, money, date, a list or a struct but produces ${typeName(type!)}: ${source}`,
+      )
+    }
+    return new CompiledExpression(this, source, valueType, ast!, type!)
+  }
+
+  /**
+   * Parses and type-checks source, whose result type is whatever it produces: one of the
+   * primitive types or a list of them, as resultType then says (ExpressionEnvironment.compile
+   * without an expected type).
+   * @throws ExpressionError if the expression is malformed or ill-typed, or produces a value with
+   *         fields, or one whose type cannot be determined
+   */
+  compileInferred(source: string): CompiledExpression {
+    const { ast, type, message } = analyze(source, this.celVariables, undefined)
+    if (message !== undefined) throw new ExpressionError(message)
+    const valueType = valueTypeOf(type!)
+    if (valueType === undefined || containsStruct(valueType)) {
+      throw new ExpressionError(
+        `expression must produce bool, int, string, decimal, money, date or a list of them, but produces ${typeName(type!)}: ${source}`,
       )
     }
     return new CompiledExpression(this, source, valueType, ast!, type!)

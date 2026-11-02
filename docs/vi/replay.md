@@ -1,6 +1,6 @@
 ---
 source: replay.md
-sourceHash: 92e4fda800e5aa7d4c2ced4c0e68b502df829fcbaec84f692300ea7698dbc3f5
+sourceHash: 03df3cf69f11f54e0398f9ecd8c941642a5491f743a97da76311addf9119ed8e
 ---
 
 # Chạy lại và chấm điểm lại
@@ -176,6 +176,6 @@ Nó ném `AssertionError` liệt kê các điểm khác biệt.
 
 ## Giới hạn
 
-- Bộ máy luật trên trình duyệt của [SDK trình soạn thảo](editor-sdk.md) chưa chạy lại được bản ghi; bộ máy luật Java là bộ máy luật chính thức (engine of record).
+- Bộ máy luật TypeScript của [SDK trình soạn thảo](editor-sdk.md) cũng replay và chấm điểm lại được bản ghi (`engine.replay`, `engine.rescore`, `readDecisionRecord`), với cùng cách so sánh, và replay được bản ghi của bộ máy luật Java.
 - Dữ liệu tra cứu trong lúc đánh giá không được ghi lại, vì RuleStone không tra cứu gì: mọi thứ một quyết định đọc đều nằm trong dữ liệu đầu vào.
 - Chấm điểm lại với `ModelSource.LIVE` gọi các mô hình hiện tại, mà nói chung không có tính tất định; kết quả của nó là một phép đo, không phải một quyết định.

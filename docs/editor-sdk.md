@@ -15,7 +15,7 @@ Try the components in the [playground](https://rulestone.dxa.io.vn/playground) o
 - [Accessibility and keyboard](#accessibility-and-keyboard)
 - [Content Security Policy](#content-security-policy)
 - [Bundle sizes](#bundle-sizes)
-- [The browser engine and the Java engine](#the-browser-engine-and-the-java-engine)
+- [The TypeScript engine and the Java engine](#the-typescript-engine-and-the-java-engine)
 - [Limitations](#limitations)
 
 ## What the SDK is
@@ -262,20 +262,23 @@ Renaming a field updates every rule expression that uses it through the type-che
 
 ### Try it panel
 
-`<rulestone-try-it>` runs a table in the browser with `@rulestone/engine`.
+`<rulestone-try-it>` runs a table, or a decision flow, in the browser with `@rulestone/engine`.
 
 | Member | Kind | Description |
 |---|---|---|
 | `table` | property | The table to run. |
+| `flow` | property | A [decision flow](flows.md) to run instead, as parsed `.flow.json`. The form then has the flow's inputs. |
+| `tables` | property | With a flow: every version of every table it uses, as `.stone.json` text or parsed JSON. |
+| `models` | property / attribute | With a flow that has model nodes: their results as JSON text, by node id, in the `models` form of a [test case](testing.md#testing-decision-flows). The panel calls no model: every model node runs in supplied mode, as in tests, and a node without a result fails with `MISSING` and takes its `onFailure` path. |
 | `paramSets` | property | The parameter sets the table reads, as `.params.json` text or parsed JSON; the version in force on `asOf` is used, and the record lists it. |
 | `reasonCodes` | property | A [reason-code catalog](explanations.md), as `reason-codes.json` text or parsed JSON. Every reason code of the table must then have a message, and the panel lists the messages of each run's reasons in the panel's locale (or the catalog's first locale); `rulestone-run` carries the `explanation`. |
 | `asOf` / `as-of` | property / attribute | The business date. Default: today, in the browser's time zone. |
 | `facts` | property / attribute | Initial facts as JSON text. |
 | `factsText` | property (read only) | The facts as they would be run, as JSON text. |
-| `run()` | method | Runs the table; resolves with the event's detail. |
+| `run()` | method | Runs the table or flow; resolves with the event's detail. |
 | `rulestone-run` | event | `detail`: `{ ok, result?, record?, recordJson?, explanation?, error?, problems?, matchedRules, evaluatedRules }`. |
 
-The form is generated from the inputs, with fields for money (amount and currency), dates, decimals, structs and lists. A JSON mode takes the facts in the same forms as `.stone-test.json` files. The result shows the outputs, reason codes, the trace, the rule version and the decision record.
+The form is generated from the inputs, with fields for money (amount and currency), dates, decimals, structs and lists. A JSON mode takes the facts in the same forms as `.stone-test.json` files. The result shows the outputs, reason codes, the explanation, the path of a flow (each node, the table version and rules of a table node, the branch taken and the model's status), the trace, the rule version and the decision record.
 
 ### CEL input
 
@@ -295,14 +298,16 @@ The form is generated from the inputs, with fields for money (amount and currenc
 
 ### Flow canvas
 
-`<rulestone-flow-canvas>` designs a decision flow (`.flow.json`, the proposal in [Hybrid AI decisioning](hybrid-ai.md#3-pattern-b-models-as-nodes-in-a-decision-flow)) on a canvas, with a palette of node types, edges, pan and zoom, a properties panel and the checks the editor can make without the engine.
+`<rulestone-flow-canvas>` designs a [decision flow](flows.md) (`.flow.json`) on a canvas, with a palette of node types, edges, pan and zoom, a properties panel and the problems the engine reports.
 
 | Member | Kind | Description |
 |---|---|---|
 | `flow` | property | The flow, as parsed `.flow.json`. |
 | `layout` | property | Node positions by id. The file format has no layout, so it is kept apart. Missing positions are laid out automatically. |
-| `tables` | property | Known decision ids; table nodes that use other ids are reported. |
-| `problems` | property (read only) | The result of the checks for the current flow. |
+| `tables` | property | Known decision ids, offered when a table node names its table; without `definitions`, table nodes that use other ids are reported. |
+| `definitions` | property | `{ tables, paramSets?, reasonCodes? }`: every version of the tables the flow uses (`.stone.json` text or parsed JSON), the parameter sets and a reason-code catalog. With them, the problems are those the engine reports when it loads the flow. |
+| `problems` | property (read only) | The problems of the current flow. |
+| `engineChecked()` | method | Resolves once the engine has checked the current flow. |
 | `fit()` | method | Shows the flow at a readable size: whole if it fits, otherwise from the top left, where the start node is. |
 | `arrange()` | method | Lays out every node again for the canvas's size. |
 | `toJson()`, `importText(text)` | methods | The flow as `.flow.json` text; replace the flow with one read from text (returns `false` and shows the error if it cannot be read). |
@@ -310,11 +315,13 @@ The form is generated from the inputs, with fields for money (amount and currenc
 | `rulestone-change` | event | `detail`: `{ flow, layout, problems }`. |
 | `rulestone-export` | event | `detail`: `{ flow, json }` when the user exports. Call `preventDefault()` to handle the file yourself; otherwise the browser downloads it. |
 
-The palette has the node types `table`, `switch`, `derive`, `model`, `split`, `end` and `flow`. The checks find cycles, nodes the start cannot reach, paths that never reach an end, model nodes without `onFailure` or a pinned version, split percentages that do not add up to 100, unknown table references, switches without a final case, and end nodes that do not set every output.
+The palette has the node types `table`, `switch`, `derive`, `model`, `split` and `end`, and the properties panel edits the fields the engine reads: a derive node's typed `outputs` and their `set` expressions; a model node's `mode`, `model`, `features` and `timeoutMs` (in invoke mode), `outputs`, `valid`, `minConfidence`, `reasonCodes`, `maxReasonCodes` and `onFailure`; a table node's `facts`, `as` and pinned `version`; and the flow's `params`.
+
+With `definitions`, the canvas lists the problems the engine reports when it loads the flow with its tables, with the same messages: the strict reader's, the graph's, names, types, and values that a node reads but some path to it does not set (see [Validation](flows.md#validation)). Model nodes are checked as for tests, so a node in invoke mode needs no invoker. Without `definitions`, a flow can still be designed before its tables exist: the canvas then reports the strict reader's problems and the checks it can make alone, which are cycles, nodes the start cannot reach, paths that never reach an end, model nodes without `onFailure` or a pinned version, split percentages that do not add up to 100, unknown table references and end nodes that do not set every output. Fields the engine rejects, such as a model node's `shadow`, `kind` or `prompt`, which are planned, are kept when a file is opened and reported.
 
 Until someone moves a node, the canvas arranges the flow for its own size: a long chain of nodes wraps into rows, like lines of text, so that the whole flow is readable without panning where it fits. Fitting never zooms out below the size at which node text stays legible (80%); a larger flow is then reached by dragging the background, the arrow keys, or the zoom buttons.
 
-**Flows are design-only in the browser.** The Java engine runs [decision flows](flows.md), but the browser engine (`@rulestone/engine`) does not run them yet, and the canvas says so.
+**Running a flow.** Put a `<rulestone-try-it>` next to the canvas, give it the flow and its tables, and set its `flow` again on each `rulestone-change`, as the [playground](https://rulestone.dxa.io.vn/playground?tab=flow) does.
 
 ## Server-side checks: the validator hook
 
@@ -470,46 +477,52 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 318.0 KiB, 92.6 KiB gzipped | 209.5 KiB, 58.0 KiB gzipped |
-| `./table-editor` | 270.1 KiB, 79.1 KiB gzipped | 161.6 KiB, 44.4 KiB gzipped |
-| `./rules-grid` | 175.8 KiB, 53.9 KiB gzipped | 103.9 KiB, 29.8 KiB gzipped |
-| `./condition-builder` | 155.4 KiB, 48.6 KiB gzipped | 83.3 KiB, 24.4 KiB gzipped |
-| `./schema-designer` | 132.2 KiB, 42.7 KiB gzipped | 60.2 KiB, 18.7 KiB gzipped |
-| `./flow-canvas` | 101.1 KiB, 31.0 KiB gzipped | 86.1 KiB, 25.4 KiB gzipped |
-| `./try-it` | 166.2 KiB, 52.6 KiB gzipped | 58.8 KiB, 17.8 KiB gzipped |
-| `./cel-input` | 108.9 KiB, 35.8 KiB gzipped | 51.2 KiB, 15.9 KiB gzipped |
+| `@rulestone/editor` (all elements) | 374.8 KiB, 109.4 KiB gzipped | 216.0 KiB, 60.0 KiB gzipped |
+| `./table-editor` | 324.3 KiB, 95.0 KiB gzipped | 165.3 KiB, 45.5 KiB gzipped |
+| `./rules-grid` | 178.1 KiB, 54.5 KiB gzipped | 105.7 KiB, 30.2 KiB gzipped |
+| `./condition-builder` | 157.7 KiB, 49.2 KiB gzipped | 85.0 KiB, 24.9 KiB gzipped |
+| `./schema-designer` | 134.5 KiB, 43.3 KiB gzipped | 61.9 KiB, 19.2 KiB gzipped |
+| `./flow-canvas` | 246.9 KiB, 75.7 KiB gzipped | 90.4 KiB, 26.8 KiB gzipped |
+| `./try-it` | 220.4 KiB, 68.4 KiB gzipped | 62.6 KiB, 18.8 KiB gzipped |
+| `./cel-input` | 110.7 KiB, 36.3 KiB gzipped | 52.9 KiB, 16.4 KiB gzipped |
 
-`@rulestone/engine` alone is 110.1 KiB, 35.3 KiB gzipped. The flow canvas does not load the engine. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
+`@rulestone/engine` alone is 169.7 KiB, 52.5 KiB gzipped. The flow canvas and Try it create engines, so they load the engine's flow, model node and replay code; the rules grid, condition builder, schema designer and CEL input create none and leave that code out. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
 
-## The browser engine and the Java engine
+## The TypeScript engine and the Java engine
 
-The Java engine remains the engine of record: evaluate production decisions with it. The browser engine is for instant feedback while editing and trying rules, and it is built to give exactly the same answers.
+`@rulestone/engine`, which the elements use, is a complete RuleStone engine in TypeScript: it reads and checks tables and [decision flows](flows.md), evaluates them, with model nodes in supplied and invoke mode, writes decision records, explains them and [replays](replay.md) them, in browsers, Node.js 22 or later and edge runtimes. It and the Java engine are equivalent implementations: both give the same results on everything the conformance suite covers, and the [engine's README](../sdk/packages/engine/README.md#known-differences) lists the known differences.
 
-A conformance suite in `sdk/packages/engine/test/` compares the two. Its fixtures are written by the Java engine (`SdkFixturesTest` in `rulestone-test`), and the Maven build fails if they are out of date:
+The conformance suite in `sdk/packages/engine/test/` compares the two. Its fixtures are written by the Java engine (`SdkFixturesTest` in `rulestone-test`), and the Maven build fails if they are out of date:
 
 | Fixture | Checked |
 |---|---|
 | `java-hashes.json` | The canonical form and rule version of every table in `examples/` and in the test tables, and the canonical form and version of every parameter set. |
 | `java-records.json` | The decision record and trace of every case of every `examples/*.stone-test.json` file. |
+| `java-flow-hashes.json`, `java-flow-records.json` | The canonical form and rule version of every example flow and its tables, and the decision record and trace of every case of every `examples/flows/*.stone-test.json` file, with model results. |
 | `java-probes.json` | The result type and value, or the exact error, of every expression in `probes.json`: operators, macros, iteration limits, error positions, decimal arithmetic, money, dates and fuzzy matching. |
-| `java-invalid-tables.json` | The problems reported for every invalid table and parameter set in `invalid-tables.json`. |
+| `java-invalid-tables.json`, `java-invalid-flows.json` | The problems reported for every invalid table and parameter set in `invalid-tables.json`, and for every invalid flow in `invalid-flows.json`. |
+| `java-explanations.json` | The explanations, in English and Vietnamese, of the example records. |
+
+Every Java record of these fixtures also replays in the TypeScript engine with no differences.
 
 The suite also checks every `expression` → result example in [Expression language](expressions.md) and the worked examples in [Fuzzy matching](fuzzy-matching.md). Decimals are exact: `Decimal` keeps a `BigInt` and a scale, and implements `BigDecimal`'s rules for scale, rounding and division.
 
 Known differences:
 
-- **Not supported:** map literals (`{'a': 1}`), `bytes`, `type()`, `timestamp()`, `duration()` and `string(double)`. RuleStone rules do not use them. The browser engine rejects them at compile time with a message that says so; Java accepts them.
+- **Not supported:** map literals (`{'a': 1}`), `bytes`, `type()`, `timestamp()`, `duration()` and `string(double)`. RuleStone rules do not use them. The TypeScript engine rejects them at compile time with a message that says so; Java accepts them.
+- **Canary and shadow versions** are not offered; records with `routing` are read and replayed.
 - **Syntax errors** are reported at the same position, in other words than ANTLR's.
 - **Regular expressions:** `matches()` translates RE2 syntax to JavaScript regular expressions. Common syntax behaves the same; exotic RE2 constructs may differ.
-- **Unicode:** `normalizeName` and the fuzzy functions use the Unicode tables of the browser, and Java those of the JDK. They differ only for characters added in recent Unicode versions.
-- **Decision records** name the engine `rulestone-js 0.1.0`, have millisecond precision in `evaluatedAt`, and hash facts with plain SHA-256 (Java's HMAC option is not offered).
-- **Today:** without `asOf`, "today" is the date in the browser's time zone. Set `asOf` for reproducible results.
+- **Unicode:** `normalizeName` and the fuzzy functions use the Unicode tables of the JavaScript runtime, and Java those of the JDK. They differ only for characters added in recent Unicode versions.
+- **Messages that name the API**, such as a missing model invoker, use the TypeScript option names, and an invoker's error is recorded by its `name` rather than a Java class name.
+- **Decision records** name the engine `rulestone-js 0.1.0` and have millisecond precision in `evaluatedAt`.
+- **Today:** without `asOf`, "today" is the date in the runtime's time zone. Set `asOf` for reproducible results.
 
 The [engine's README](../sdk/packages/engine/README.md) lists its API and every difference in detail.
 
 ## Limitations
 
 - The packages are not on npm yet, and their names may change when they are published.
-- The browser engine does not run flows; only the Java engine does (see [Decision flows](flows.md)). The canvas checks only what it can check without the engine: there are no name or type checks across nodes.
-- The canvas reads a `derive` node's values as `values` (name to expression), while the Java engine's format declares them with types in `outputs` and sets them with `set`. Its `flow` node fields (`flow`, `version`) follow the proposal; the Java engine does not support `flow` nodes yet.
+- Without `definitions`, the flow canvas cannot check names and types across nodes; give it the flow's tables for the engine's checks.
+- The Try it panel runs a flow's model nodes in supplied mode only: it calls no model.
 - The rules grid does not virtualize rows, so tables with thousands of rules render slowly.

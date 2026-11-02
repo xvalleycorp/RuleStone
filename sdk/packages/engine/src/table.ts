@@ -68,7 +68,7 @@ export interface DecisionTable {
  * This ignores other versions: a later version supersedes this one from its effectiveFrom. To
  * find the version in force, use versionInForce.
  */
-export function isEffectiveOn(table: DecisionTable, date: LocalDate): boolean {
+export function isEffectiveOn(table: { readonly effectiveFrom?: LocalDate; readonly effectiveTo?: LocalDate }, date: LocalDate): boolean {
   return (
     (table.effectiveFrom === undefined || date.compareTo(table.effectiveFrom) >= 0) &&
     (table.effectiveTo === undefined || date.compareTo(table.effectiveTo) < 0)
@@ -143,7 +143,7 @@ export class TableReader {
     }
   }
 
-  private params(root: JsonNode & { type: 'object' }): ParamsDeclaration | undefined {
+  params(root: JsonNode & { type: 'object' }): ParamsDeclaration | undefined {
     const node = root.entries.get('params')
     if (!node || node.type === 'null') return undefined
     if (node.type !== 'object') {
@@ -229,7 +229,7 @@ export class TableReader {
     return 'FIRST'
   }
 
-  private typeMap(root: JsonNode & { type: 'object' }, field: string, path = '$'): Map<string, ValueType> {
+  typeMap(root: JsonNode & { type: 'object' }, field: string, path = '$'): Map<string, ValueType> {
     const node = root.entries.get(field)
     const types = new Map<string, ValueType>()
     if (!node || node.type !== 'object') {
@@ -328,7 +328,7 @@ export function typeJson(type: ValueType): Writable {
   return sortedMap([...type.fields].map(([n, t]) => [n, typeJson(t)] as [string, Writable]))
 }
 
-function typesJson(types: ReadonlyMap<string, ValueType>): Writable {
+export function typesJson(types: ReadonlyMap<string, ValueType>): Writable {
   return sortedMap([...types].map(([n, t]) => [n, typeJson(t)] as [string, Writable]))
 }
 

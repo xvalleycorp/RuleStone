@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Playground
-description: Edit and run RuleStone decision tables in your browser with the embeddable editor components, build conditions, and design a decision flow.
+description: Edit and run RuleStone decision tables and decision flows in your browser with the embeddable editor components, and build conditions.
 ---
 
 <script setup>
@@ -13,12 +13,12 @@ import Playground from './.vitepress/playground/Playground.vue'
 
 # Playground
 
-Edit the example decision tables, run them on sample facts, build conditions with blocks and design a decision flow. These are the components of the [editor SDK](/docs/editor-sdk), which banks embed in their own web applications.
+Edit the example decision tables, run them on sample facts, build conditions with blocks, and design and run the example decision flows. These are the components of the [editor SDK](/docs/editor-sdk), which banks embed in their own web applications.
 
 ::: info Everything runs in your browser
 - Nothing you do here is sent to a server. Tables, facts and results stay in this browser. A share link carries the table in the part of the address after `#`, which browsers do not send to the server.
-- **Try it** runs the rules with the browser engine, which gives the same results as the Java engine on everything its conformance suite covers. The Java engine remains the engine of record: evaluate production decisions with it.
-- **Decision flows are design-only for now.** The canvas checks and exports flows, but no engine runs them yet.
+- **Try it** runs the rules, and the flows, with the TypeScript engine. It and the Java engine are equivalent implementations: both give the same results on everything the conformance suite covers, and the [engine README](https://github.com/xvalleycorp/RuleStone/tree/main/sdk/packages/engine#known-differences) lists the known differences.
+- **Decision flows run in the browser engine.** The canvas shows the problems the engine reports for the flow and its tables, and Try it runs it on the sample case, with the model results the case supplies.
 :::
 
 </div>

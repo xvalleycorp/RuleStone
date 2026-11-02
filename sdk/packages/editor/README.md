@@ -7,7 +7,7 @@ Visual editors for RuleStone decision tables and decision flows, as Web Componen
 > Try the elements in the [playground](https://rulestone.dxa.io.vn/playground). The [editor SDK guide](../../../docs/editor-sdk.md) covers installing, embedding and server-side checks.
 
 - **Web Components** built with [Lit](https://lit.dev) (BSD-3-Clause). They work in any framework, or none.
-- **Instant feedback** from [`@rulestone/engine`](../engine): every expression is type-checked as it is typed, with the engine's own messages and positions, and the Try it panel runs the rules in the browser. The Java engine remains the engine of record.
+- **Instant feedback** from [`@rulestone/engine`](../engine): every expression is type-checked as it is typed, with the engine's own messages and positions; the Try it panel runs tables and flows in the browser, and the flow canvas reports the engine's own problems. The TypeScript and Java engines give the same results on everything the conformance suite covers; the [engine README](../engine#known-differences) lists the known differences.
 - **The host owns persistence.** The elements make no network calls. They take data through properties and report every change through events. An optional `validator` hook lets the host add server-side checks.
 - **Accessible** (WCAG 2.1 AA): every drag and drop has a keyboard alternative, moves are announced, the grid and the trees use ARIA roles, and focus is always visible.
 - **English and Vietnamese** built in; every string can be overridden.
@@ -22,8 +22,8 @@ Visual editors for RuleStone decision tables and decision flows, as Web Componen
 | `<rulestone-rules-grid>` | `@rulestone/editor/rules-grid` | A spreadsheet-like grid with one rule per row. |
 | `<rulestone-condition-builder>` | `@rulestone/editor/condition-builder` | A condition as nested AND/OR blocks, or as CEL text. |
 | `<rulestone-schema-designer>` | `@rulestone/editor/schema-designer` | A table's inputs and outputs as trees. |
-| `<rulestone-flow-canvas>` | `@rulestone/editor/flow-canvas` | A decision-flow canvas (`.flow.json`, design only). |
-| `<rulestone-try-it>` | `@rulestone/editor/try-it` | Runs a table with facts from a form or JSON. |
+| `<rulestone-flow-canvas>` | `@rulestone/editor/flow-canvas` | A decision-flow canvas (`.flow.json`), checked by the engine when the tables are given. |
+| `<rulestone-try-it>` | `@rulestone/editor/try-it` | Runs a table, or a flow with its tables and model results, with facts from a form or JSON. |
 | `<rs-cel-input>` | `@rulestone/editor/cel-input` | A CEL text input with highlighting and autocomplete. |
 
 Importing `@rulestone/editor` defines every element. Import an element's own module to load only that element and what it uses. The model (`@rulestone/editor/model`) has the same operations without any element: table, schema, condition and flow editing, and validation.
@@ -99,9 +99,11 @@ Inputs and outputs are trees with every type: `bool`, `int`, `string`, `decimal`
 
 | Member | Kind | Description |
 |---|---|---|
-| `flow` | property | The flow, as `.flow.json` (the proposal in [docs/hybrid-ai.md](../../../docs/hybrid-ai.md) section 3). |
+| `flow` | property | The flow, as `.flow.json` (the format of [docs/flows.md](../../../docs/flows.md)). |
 | `layout` | property | Node positions by id. The file format has no layout, so it is kept apart; missing positions are laid out automatically. |
-| `tables` | property | Known decision ids; table nodes that use others are reported. |
+| `tables` | property | Known decision ids, for completion; without `definitions`, table nodes that use others are reported. |
+| `definitions` | property | `{ tables, paramSets?, reasonCodes? }`: the tables the flow uses (`.stone.json` text or parsed JSON), parameter sets and a reason-code catalog. With them, the problems are those the engine reports when it loads the flow. |
+| `problems`, `engineChecked()` | property, method | The current problems; a promise that resolves once the engine has checked the current flow. |
 | `fit()` | method | Shows the flow at a readable size: whole if it fits at a zoom where node text stays legible (80%), otherwise from the top left, where the start node is; the rest is reached by panning. |
 | `arrange()` | method | Lays out every node again for the canvas's size (the Arrange button). |
 | `toJson()`, `importText(text)`, `addAt(type)`, `connectNodes(from, to)` | methods | |
@@ -110,21 +112,24 @@ Inputs and outputs are trees with every type: `bool`, `int`, `string`, `decimal`
 
 Until a node is moved or the host sets a layout, the canvas arranges the flow for its own size: long chains wrap into rows below each other, like lines of text, so that the flow is readable without panning where it fits. The model's `layoutFor(flow, width, height)` gives the same layout.
 
-The palette has the node types `table`, `switch`, `derive`, `model`, `split`, `end` and `flow`. Checks: cycles, nodes the start cannot reach, paths that never reach an end, model nodes without `onFailure` or a pinned version, split percentages that do not add up to 100, unknown table references, switches without a final case, and end nodes that do not set every output. **The engine cannot run flows yet; the canvas says so.**
+The palette has the node types `table`, `switch`, `derive`, `model`, `split` and `end`, with the fields the engine reads: a derive node's typed `outputs` and `set`; a model node's `mode`, `model`, `features` and `timeoutMs` (invoke mode), `outputs`, `valid`, `minConfidence`, `reasonCodes`, `maxReasonCodes` and `onFailure`; a table node's `facts`, `as` and pinned `version`; and the flow's `params`. Given `definitions`, the canvas reports what the engine reports: the strict reader's problems, the graph, names, types and the values each node may read. Without them it reports the strict reader's problems and its own graph checks (cycles, nodes the start cannot reach, paths that never reach an end, model nodes without `onFailure` or a pinned version, split percentages, unknown tables, end nodes that do not set every output), so a flow can be designed before its tables exist. Fields the engine rejects, such as a model's `shadow`, `kind` or `prompt` (planned), are kept and reported.
 
 ### `<rulestone-try-it>`
 
 | Member | Kind | Description |
 |---|---|---|
 | `table` | property | The table to run. |
+| `flow` | property | A decision flow to run instead (parsed `.flow.json`); the form then has the flow's inputs. |
+| `tables` | property | With a flow: every version of every table it uses, as `.stone.json` text or parsed JSON. |
+| `models` | property / attribute | With a flow that has model nodes: their results as JSON text, by node id, as in a `.stone-test.json` case. The panel calls no model: every model node runs in supplied mode, as in tests. |
 | `paramSets` | property | The parameter sets the table reads (`.params.json` text or parsed JSON); the version in force on `asOf` is used. |
 | `reasonCodes` | property | A reason-code catalog (`reason-codes.json` text or parsed JSON): the table's reason codes are checked against it, and each run is explained with its messages. |
 | `asOf` / `as-of` | property / attribute | The business date (default today). |
 | `facts` | property / attribute | Initial facts as JSON text. |
-| `run()` | method | Runs the table; resolves with the event's detail. |
-| `rulestone-run` | event | `detail`: `{ ok, result?, record?, recordJson?, error?, problems?, matchedRules, evaluatedRules }`. |
+| `run()` | method | Runs the table or flow; resolves with the event's detail. |
+| `rulestone-run` | event | `detail`: `{ ok, result?, record?, recordJson?, explanation?, error?, problems?, matchedRules, evaluatedRules }`. |
 
-The form is generated from the inputs, with money (amount and currency), date, decimal, struct and list inputs; a JSON mode takes facts in the FactsJson forms. The result shows the outputs, reason codes, trace, rule version and the decision record JSON.
+The form is generated from the inputs, with money (amount and currency), date, decimal, struct and list inputs; a JSON mode takes facts in the FactsJson forms. The result shows the outputs, reason codes, the explanation (with a catalog), a flow's path, the trace, rule version and the decision record JSON.
 
 ## Usage
 
@@ -300,16 +305,16 @@ Minified and minified + gzipped with esbuild (`npm run size`), with Lit and the 
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 318.0 KiB min, 92.6 KiB gzip | 209.5 KiB min, 58.0 KiB gzip |
-| `./table-editor` | 270.1 KiB min, 79.1 KiB gzip | 161.6 KiB min, 44.4 KiB gzip |
-| `./rules-grid` | 175.8 KiB min, 53.9 KiB gzip | 103.9 KiB min, 29.8 KiB gzip |
-| `./condition-builder` | 155.4 KiB min, 48.6 KiB gzip | 83.3 KiB min, 24.4 KiB gzip |
-| `./schema-designer` | 132.2 KiB min, 42.7 KiB gzip | 60.2 KiB min, 18.7 KiB gzip |
-| `./flow-canvas` | 101.1 KiB min, 31.0 KiB gzip | 86.1 KiB min, 25.4 KiB gzip |
-| `./try-it` | 166.2 KiB min, 52.6 KiB gzip | 58.8 KiB min, 17.8 KiB gzip |
-| `./cel-input` | 108.9 KiB min, 35.8 KiB gzip | 51.2 KiB min, 15.9 KiB gzip |
+| `@rulestone/editor` (all elements) | 374.8 KiB min, 109.4 KiB gzip | 216.0 KiB min, 60.0 KiB gzip |
+| `./table-editor` | 324.3 KiB min, 95.0 KiB gzip | 165.3 KiB min, 45.5 KiB gzip |
+| `./rules-grid` | 178.1 KiB min, 54.5 KiB gzip | 105.7 KiB min, 30.2 KiB gzip |
+| `./condition-builder` | 157.7 KiB min, 49.2 KiB gzip | 85.0 KiB min, 24.9 KiB gzip |
+| `./schema-designer` | 134.5 KiB min, 43.3 KiB gzip | 61.9 KiB min, 19.2 KiB gzip |
+| `./flow-canvas` | 246.9 KiB min, 75.7 KiB gzip | 90.4 KiB min, 26.8 KiB gzip |
+| `./try-it` | 220.4 KiB min, 68.4 KiB gzip | 62.6 KiB min, 18.8 KiB gzip |
+| `./cel-input` | 110.7 KiB min, 36.3 KiB gzip | 52.9 KiB min, 16.4 KiB gzip |
 
-The flow canvas does not load the engine.
+The flow canvas loads the engine to check flows with it, and Try it to run them. The rules grid, condition builder, schema designer and CEL input create no engine, so they leave out the engine's flow, model and replay code.
 
 ## Development
 
@@ -323,12 +328,11 @@ npm run demo:build    # static build in demo/dist
 npm run size
 ```
 
-The demo (`demo/index.html`) loads the tables of `examples/`, the first case of their `.stone-test.json` for Try it, and the example flow of docs/hybrid-ai.md. Its query parameters select the view (`view=table|flow|builder`), `example`, `locale`, `theme`, `readonly=1` and `run=1`. It runs under a strict CSP and reports any violation in its status line.
+The demo (`demo/index.html`) loads the tables of `examples/`, the first case of their `.stone-test.json` for Try it, and `demo/card_origination_scored.flow.json`, a copy of the example flow in `examples/flows/` that a test keeps identical, checked with the tables of that folder. Its query parameters select the view (`view=table|flow|builder`), `example`, `locale`, `theme`, `readonly=1` and `run=1`. It runs under a strict CSP and reports any violation in its status line.
 
 The tests use Vitest with happy-dom: model operations (the condition ↔ CEL round trip over every condition in `examples/`, renaming, flow checks, keyboard moves) and the elements.
 
 ## Known limitations
 
-- Flows are design-only until the engine implements them; the checks are those the editor can make without the engine (no name or type checks across nodes).
-- The `derive` and `flow` node fields follow this editor's reading of the proposal (`values`, `flow`, `version`), which may change with the format.
+- Try it runs a flow's model nodes in supplied mode only: it calls no model. Applications call models through the engine's `modelInvokers`.
 - The rules grid is a table element; it does not virtualize rows, so very large tables (thousands of rules) render slowly.
