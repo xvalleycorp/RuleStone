@@ -2,7 +2,7 @@
 
 A decision flow chains decision tables and simple logic into one decision: policy knock-outs first, then segmentation, grading and a limit matrix, with a champion/challenger split where you want to test a new strategy. This page is the reference for the `.flow.json` format and for how flows are checked, evaluated and recorded.
 
-Flows are steps 2 and 3 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan). A flow can also use machine-learning models: a [model node](#model-nodes) either calls the model or takes the result the caller passes, and checks it against a typed contract. Both engines run flows, with the same results: the Java engine, and the TypeScript engine of the [Editor SDK](editor-sdk.md) (`@rulestone/engine`), for JavaScript applications and the browser.
+Flows are steps 2 and 3 of [Hybrid AI decisioning](hybrid-ai.md#9-implementation-plan). A flow can also use machine-learning models: a [model node](#model-nodes) either calls the model or takes the result the caller passes, and checks it against a typed contract. Both engines run flows, with the same results: the Java engine, and the TypeScript engine of the [Editor SDK](editor-sdk.md) (`@dxa/rulestone-engine`), for JavaScript applications and the browser.
 
 - [A first flow](#a-first-flow)
 - [Running a flow](#running-a-flow)

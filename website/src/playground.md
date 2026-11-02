@@ -37,7 +37,7 @@ The same components work in any web application, with any framework or none. The
 <!-- With a bundler such as Vite, which resolves the package import. -->
 <rulestone-table-editor locale="vi"></rulestone-table-editor>
 <script type="module">
-  import '@rulestone/editor/table-editor'
+  import '@dxa/rulestone-editor/table-editor'
 
   const editor = document.querySelector('rulestone-table-editor')
   editor.table = await (await fetch('/rules/loan_eligibility.stone.json')).json()
@@ -47,7 +47,7 @@ The same components work in any web application, with any framework or none. The
 
 ```tsx [React]
 // React 19 sets properties and listens to events on custom elements.
-import '@rulestone/editor/table-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 export function RuleEditor({ table, onSave }) {
   return (
@@ -62,7 +62,7 @@ export function RuleEditor({ table, onSave }) {
 
 ```ts [Angular]
 import { CUSTOM_ELEMENTS_SCHEMA, Component, input } from '@angular/core'
-import '@rulestone/editor/table-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 @Component({
   selector: 'app-rule-editor',
@@ -82,7 +82,7 @@ import { onMounted } from 'vue'
 const props = defineProps<{ table: object }>()
 const emit = defineEmits<{ save: [table: object] }>()
 // Client only: load the element after mounting (also under SSR, e.g. VitePress).
-onMounted(() => import('@rulestone/editor/table-editor'))
+onMounted(() => import('@dxa/rulestone-editor/table-editor'))
 </script>
 
 <template>

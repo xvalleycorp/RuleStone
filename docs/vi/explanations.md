@@ -1,6 +1,6 @@
 ---
 source: explanations.md
-sourceHash: 5aca562fb571a39fab0049e1409c7f216b0e463537a38032b5fa564ee4b783fe
+sourceHash: 717bb3d4b50e6bf86cb88e5adbf1f0c0fc6b7496e535cea4902b4952df0014f7
 ---
 
 # Giải thích quyết định
@@ -196,7 +196,7 @@ Engine không chọn đối tượng đọc: ứng dụng gửi thông báo quy�
 Bộ máy luật trên trình duyệt đọc cùng danh mục và cho cùng phần giải thích:
 
 ```js
-import { createEngine, explanationText, parseReasonCodeCatalog } from '@rulestone/engine'
+import { createEngine, explanationText, parseReasonCodeCatalog } from '@dxa/rulestone-engine'
 
 const engine = await createEngine({
   tables,

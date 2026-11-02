@@ -44,6 +44,6 @@ jobs:
       - name: Tests (engine conformance suite and editor components)
         run: npm test
       - name: Editor demo build
-        run: npm run demo:build --workspace @rulestone/editor
+        run: npm run demo:build --workspace @dxa/rulestone-editor
       - name: Bundle size
         run: npm run size

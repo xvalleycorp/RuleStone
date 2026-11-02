@@ -2,7 +2,7 @@
   Copyright 2026 The RuleStone Authors
   SPDX-License-Identifier: Apache-2.0
 
-  The playground: the @rulestone/editor components, running in the visitor's browser on the
+  The playground: the @dxa/rulestone-editor components, running in the visitor's browser on the
   repository's example tables and the example decision flow. The components are loaded on the
   client only, when the page mounts (VitePress also renders pages at build time, where there is
   no DOM for custom elements). They follow the site's language and light or dark appearance.
@@ -14,12 +14,12 @@ import { data } from './examples.data';
 import { MESSAGES, fill } from './messages';
 import { MAX_ENCODED, ShareError, decodeShare, encodeShare } from './share';
 
-type Engine = typeof import('@rulestone/engine');
-type Model = typeof import('@rulestone/editor/model');
-type TableEditor = import('@rulestone/editor').RulestoneTableEditor;
-type ConditionBuilder = import('@rulestone/editor').RulestoneConditionBuilder;
-type FlowCanvas = import('@rulestone/editor').RulestoneFlowCanvas;
-type TryIt = import('@rulestone/editor').RulestoneTryIt;
+type Engine = typeof import('@dxa/rulestone-engine');
+type Model = typeof import('@dxa/rulestone-editor/model');
+type TableEditor = import('@dxa/rulestone-editor').RulestoneTableEditor;
+type ConditionBuilder = import('@dxa/rulestone-editor').RulestoneConditionBuilder;
+type FlowCanvas = import('@dxa/rulestone-editor').RulestoneFlowCanvas;
+type TryIt = import('@dxa/rulestone-editor').RulestoneTryIt;
 type Tab = 'table' | 'builder' | 'flow';
 type Notice = { kind: 'info' | 'success' | 'error'; text: string };
 
@@ -331,16 +331,16 @@ async function load(which: Tab): Promise<void> {
   try {
     if (which === 'table') {
       const [engineModule, modelModule] = await Promise.all([
-        import('@rulestone/engine'),
-        import('@rulestone/editor/model'),
-        import('@rulestone/editor/table-editor'),
+        import('@dxa/rulestone-engine'),
+        import('@dxa/rulestone-editor/model'),
+        import('@dxa/rulestone-editor/table-editor'),
       ]);
       engine.value = engineModule;
       model.value = modelModule;
     } else if (which === 'builder') {
-      await import('@rulestone/editor/condition-builder');
+      await import('@dxa/rulestone-editor/condition-builder');
     } else {
-      await Promise.all([import('@rulestone/editor/flow-canvas'), import('@rulestone/editor/try-it')]);
+      await Promise.all([import('@dxa/rulestone-editor/flow-canvas'), import('@dxa/rulestone-editor/try-it')]);
     }
   } catch (e) {
     loadError.value = fill(m.value.loadFailed, { message: e instanceof Error ? e.message : String(e) });

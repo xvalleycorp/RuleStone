@@ -7,7 +7,7 @@ import {
   writeDecisionTable, writeJson,
   writeParameterSet, writeReasonCodeCatalog, type DecisionRecord, type DecisionResult, type Explanation, type ReasonCodeCatalog,
   type RuleStoneEngine, type Writable, type DecisionFlow, type DecisionTable,
-} from '@rulestone/engine'
+} from '@dxa/rulestone-engine'
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
 import { emptyForm, factsJson, formFromJson, formValueAt, reconcileForm, setFormValue, type FormValue, type FormValues } from '../model/facts.js'
 import { describeType } from '../model/schema.js'
@@ -48,7 +48,7 @@ export function prettyJson(value: Writable, indent = ''): string {
 }
 
 /**
- * `<rulestone-try-it>`: runs a decision table in the browser with `@rulestone/engine`. The facts
+ * `<rulestone-try-it>`: runs a decision table in the browser with `@dxa/rulestone-engine`. The facts
  * come from a form generated from the inputs (typed money, date, struct and list inputs) or
  * from raw JSON; the panel shows the outputs, reason codes, trace and decision record, and, given a
  * reason-code catalog in `reasonCodes`, the explanation of the decision.

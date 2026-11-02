@@ -6,7 +6,7 @@
 // never rewritten. Every node keeps the text it was read from; printing an unedited node
 // gives that text back exactly, and printing an edited one gives canonical CEL.
 
-import { analyzeExpression, codePointIndex, type Expr } from '@rulestone/engine'
+import { analyzeExpression, codePointIndex, type Expr } from '@dxa/rulestone-engine'
 import type { TypeSpec } from './table.js'
 
 export type ValueNode = (

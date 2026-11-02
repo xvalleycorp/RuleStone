@@ -191,7 +191,7 @@ The engine does not choose the audience: the application that sends the notice d
 The browser engine reads the same catalog and gives the same explanations:
 
 ```js
-import { createEngine, explanationText, parseReasonCodeCatalog } from '@rulestone/engine'
+import { createEngine, explanationText, parseReasonCodeCatalog } from '@dxa/rulestone-engine'
 
 const engine = await createEngine({
   tables,

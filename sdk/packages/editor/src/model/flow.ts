@@ -8,7 +8,7 @@
 import {
   InvalidDecisionError, createEngine, parseDecisionFlow, parseDecisionTable, parseParameterSet, parseReasonCodeCatalog,
   type DecisionTable, type ParameterSet, type ReasonCodeCatalog,
-} from '@rulestone/engine'
+} from '@dxa/rulestone-engine'
 import type { TypeSpec } from './table.js'
 
 export const NODE_TYPES = ['table', 'switch', 'derive', 'model', 'split', 'end'] as const

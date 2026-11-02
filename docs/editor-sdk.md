@@ -24,14 +24,14 @@ The SDK is two npm packages in the [`sdk/`](../sdk/) folder of the repository:
 
 | Package | Content |
 |---|---|
-| `@rulestone/engine` | The rules engine in TypeScript: the strict `.stone.json` reader, type-checked CEL with exact `decimal`, `money` and `date` types, versioned evaluation and decision records. It has no runtime dependencies. |
-| `@rulestone/editor` | The editors as Web Components built with [Lit](https://lit.dev): the table editor, rules grid, condition builder, schema designer, Try it panel, CEL input and the decision-flow canvas. It uses the engine for type checks and Try it. |
+| `@dxa/rulestone-engine` | The rules engine in TypeScript, for applications as well as the editors: decision tables and flows, type-checked CEL with exact `decimal`, `money` and `date` types, versioned evaluation, decision records, explanations and replay. Expressions alone are in `@dxa/rulestone-engine/cel`, and `.stone-test.json` test files in `@dxa/rulestone-engine/testing`. It has no runtime dependencies. |
+| `@dxa/rulestone-editor` | The editors as Web Components built with [Lit](https://lit.dev): the table editor, rules grid, condition builder, schema designer, Try it panel, CEL input and the decision-flow canvas. It uses the engine for type checks and Try it. |
 
 Web Components work in every framework (React, Angular, Vue) and without one. The elements make no network calls: the host page gives them data through properties and receives every change through events.
 
 The SDK is for embedding. The [web editor](editor.md) (`rulestone-editor`) is a separate, complete application with its own Java server that edits the `.stone.json` files of a directory. Use the web editor to edit a rules repository directly; use the SDK to put editing into an existing system, such as a loan origination or product configuration application, with its own storage, sign-in and approval workflow.
 
-Both packages are licensed under Apache-2.0. They are private for now, and their names are provisional until they are published to npm.
+Both packages are licensed under Apache-2.0 and will be published to npm under the `@dxa` scope. Until then they are private.
 
 ## Install and build
 
@@ -42,7 +42,7 @@ git clone https://github.com/xvalleycorp/RuleStone.git
 cd RuleStone/sdk
 npm ci
 npm run build    # the engine, then the editor, into packages/*/dist
-npm pack --workspace @rulestone/engine --workspace @rulestone/editor
+npm pack --workspace @dxa/rulestone-engine --workspace @dxa/rulestone-editor
 ```
 
 `npm pack` writes `rulestone-engine-0.1.0.tgz` and `rulestone-editor-0.1.0.tgz`. Install both in your application in one command, so that the editor finds the engine:
@@ -55,15 +55,15 @@ The packages are ES modules with TypeScript types, for a bundler such as Vite, w
 
 | Import | Defines |
 |---|---|
-| `@rulestone/editor` | Every element, and exports the classes, the model and the strings |
-| `@rulestone/editor/table-editor` | `<rulestone-table-editor>` and the elements it contains |
-| `@rulestone/editor/rules-grid` | `<rulestone-rules-grid>` |
-| `@rulestone/editor/condition-builder` | `<rulestone-condition-builder>` |
-| `@rulestone/editor/schema-designer` | `<rulestone-schema-designer>` |
-| `@rulestone/editor/try-it` | `<rulestone-try-it>` |
-| `@rulestone/editor/cel-input` | `<rs-cel-input>` |
-| `@rulestone/editor/flow-canvas` | `<rulestone-flow-canvas>` |
-| `@rulestone/editor/model` | No element: table, schema, condition and flow operations and validation, for your own user interface or tests |
+| `@dxa/rulestone-editor` | Every element, and exports the classes, the model and the strings |
+| `@dxa/rulestone-editor/table-editor` | `<rulestone-table-editor>` and the elements it contains |
+| `@dxa/rulestone-editor/rules-grid` | `<rulestone-rules-grid>` |
+| `@dxa/rulestone-editor/condition-builder` | `<rulestone-condition-builder>` |
+| `@dxa/rulestone-editor/schema-designer` | `<rulestone-schema-designer>` |
+| `@dxa/rulestone-editor/try-it` | `<rulestone-try-it>` |
+| `@dxa/rulestone-editor/cel-input` | `<rs-cel-input>` |
+| `@dxa/rulestone-editor/flow-canvas` | `<rulestone-flow-canvas>` |
+| `@dxa/rulestone-editor/model` | No element: table, schema, condition and flow operations and validation, for your own user interface or tests |
 
 ## Use it in your application
 
@@ -75,7 +75,7 @@ Every example below shows the table editor with a table the host has loaded, and
 <rulestone-table-editor locale="vi"></rulestone-table-editor>
 
 <script type="module">
-  import '@rulestone/editor/table-editor'
+  import '@dxa/rulestone-editor/table-editor'
 
   const editor = document.querySelector('rulestone-table-editor')
   editor.table = await (await fetch('/rules/loan_eligibility.stone.json')).json()
@@ -92,7 +92,7 @@ Every example below shows the table editor with a table the host has loaded, and
 React 19 sets properties on custom elements and listens to their events:
 
 ```tsx
-import '@rulestone/editor/table-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 export function RuleEditor({ table, onSave }: Props) {
   return (
@@ -109,8 +109,8 @@ With React 18, set the property and the listener through a ref:
 
 ```tsx
 import { useEffect, useRef } from 'react'
-import type { RulestoneTableEditor } from '@rulestone/editor'
-import '@rulestone/editor/table-editor'
+import type { RulestoneTableEditor } from '@dxa/rulestone-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 export function RuleEditor({ table, onSave }: Props) {
   const ref = useRef<RulestoneTableEditor>(null)
@@ -131,7 +131,7 @@ In TypeScript, declare the tags you use in `JSX.IntrinsicElements`.
 
 ```ts
 import { CUSTOM_ELEMENTS_SCHEMA, Component } from '@angular/core'
-import '@rulestone/editor/table-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 @Component({
   selector: 'app-rule-editor',
@@ -164,7 +164,7 @@ Pass objects as properties with `.prop`. With server-side rendering (Nuxt, ViteP
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 const table = ref({ /* loaded by the host */ })
-onMounted(() => import('@rulestone/editor/table-editor'))
+onMounted(() => import('@dxa/rulestone-editor/table-editor'))
 </script>
 
 <template>
@@ -262,7 +262,7 @@ Renaming a field updates every rule expression that uses it through the type-che
 
 ### Try it panel
 
-`<rulestone-try-it>` runs a table, or a decision flow, in the browser with `@rulestone/engine`.
+`<rulestone-try-it>` runs a table, or a decision flow, in the browser with `@dxa/rulestone-engine`.
 
 | Member | Kind | Description |
 |---|---|---|
@@ -372,7 +372,7 @@ The host owns persistence. The elements never fetch or store anything:
 - **Reading the current state:** call `getTable()` at any time, and `validate()` to wait for a fresh result.
 - **Flows:** save `flow` as the `.flow.json` file and `layout` next to it if you want positions to stay; `rulestone-change` carries both.
 
-To write the file, use `tableText(table)` from `@rulestone/editor/model`. It writes the fields in the order of the `.stone.json` format, two spaces per level, so that saved files diff cleanly in Git.
+To write the file, use `tableText(table)` from `@dxa/rulestone-editor/model`. It writes the fields in the order of the `.stone.json` format, two spaces per level, so that saved files diff cleanly in Git.
 
 ## Theming
 
@@ -436,7 +436,7 @@ The elements have English and Vietnamese strings built in. `locale` chooses one;
 Override strings for the whole page with `registerMessages`, or for one element with its `messages` property:
 
 ```ts
-import { registerMessages } from '@rulestone/editor'
+import { registerMessages } from '@dxa/rulestone-editor'
 registerMessages('vi', { grid: { addRule: 'Thêm luật mới' } })   // for every element on the page
 editor.messages = { tryIt: { run: 'Chạy' } }                       // for one element
 ```
@@ -477,7 +477,7 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 374.8 KiB, 109.4 KiB gzipped | 216.0 KiB, 60.0 KiB gzipped |
+| `@dxa/rulestone-editor` (all elements) | 374.8 KiB, 109.4 KiB gzipped | 216.0 KiB, 60.0 KiB gzipped |
 | `./table-editor` | 324.3 KiB, 95.0 KiB gzipped | 165.3 KiB, 45.5 KiB gzipped |
 | `./rules-grid` | 178.1 KiB, 54.5 KiB gzipped | 105.7 KiB, 30.2 KiB gzipped |
 | `./condition-builder` | 157.7 KiB, 49.2 KiB gzipped | 85.0 KiB, 24.9 KiB gzipped |
@@ -486,11 +486,11 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 | `./try-it` | 220.4 KiB, 68.4 KiB gzipped | 62.6 KiB, 18.8 KiB gzipped |
 | `./cel-input` | 110.7 KiB, 36.3 KiB gzipped | 52.9 KiB, 16.4 KiB gzipped |
 
-`@rulestone/engine` alone is 169.7 KiB, 52.5 KiB gzipped. The flow canvas and Try it create engines, so they load the engine's flow, model node and replay code; the rules grid, condition builder, schema designer and CEL input create none and leave that code out. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
+`@dxa/rulestone-engine` alone is 158.9 KiB, 49.3 KiB gzipped; its `/cel` entry point is 56.6 KiB, 19.0 KiB gzipped. The flow canvas and Try it create engines, so they load the engine's flow, model node and replay code; the rules grid, condition builder, schema designer and CEL input create none and leave that code out. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
 
 ## The TypeScript engine and the Java engine
 
-`@rulestone/engine`, which the elements use, is a complete RuleStone engine in TypeScript: it reads and checks tables and [decision flows](flows.md), evaluates them, with model nodes in supplied and invoke mode, writes decision records, explains them and [replays](replay.md) them, in browsers, Node.js 22 or later and edge runtimes. It and the Java engine are equivalent implementations: both give the same results on everything the conformance suite covers, and the [engine's README](../sdk/packages/engine/README.md#known-differences) lists the known differences.
+`@dxa/rulestone-engine`, which the elements use, is a complete RuleStone engine in TypeScript: it reads and checks tables and [decision flows](flows.md), evaluates them, with model nodes in supplied and invoke mode, writes decision records, explains them and [replays](replay.md) them, in browsers, Node.js 22 or later and edge runtimes. It and the Java engine are equivalent implementations: both give the same results on everything the conformance suite covers, and the [engine's README](../sdk/packages/engine/README.md#known-differences) lists the known differences.
 
 The conformance suite in `sdk/packages/engine/test/` compares the two. Its fixtures are written by the Java engine (`SdkFixturesTest` in `rulestone-test`), and the Maven build fails if they are out of date:
 
@@ -522,7 +522,7 @@ The [engine's README](../sdk/packages/engine/README.md) lists its API and every 
 
 ## Limitations
 
-- The packages are not on npm yet, and their names may change when they are published.
+- The packages are not on npm yet; build them from the repository.
 - Without `definitions`, the flow canvas cannot check names and types across nodes; give it the flow's tables for the engine's checks.
 - The Try it panel runs a flow's model nodes in supplied mode only: it calls no model.
 - The rules grid does not virtualize rows, so tables with thousands of rules render slowly.

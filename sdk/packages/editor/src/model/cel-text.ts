@@ -4,7 +4,7 @@
 // CEL text support for the lightweight CEL input: a tolerant tokenizer for highlighting (it
 // never fails, whatever the text) and autocomplete driven by the engine's type checker.
 
-import { analyzeExpression, formatCelType, functionCatalog, type CelType, type ValueType } from '@rulestone/engine'
+import { analyzeExpression, formatCelType, functionCatalog, type CelType, type ValueType } from '@dxa/rulestone-engine'
 
 export { tokenize } from './cel-tokens.js'
 export type { Token, TokenKind } from './cel-tokens.js'

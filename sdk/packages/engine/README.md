@@ -1,20 +1,22 @@
-# @rulestone/engine
+# @dxa/rulestone-engine
 
 RuleStone in TypeScript: decision tables and decision flows for JavaScript and TypeScript applications, such as Node.js services, edge workers and front ends, without Java. This package reads `.stone.json` tables and `.flow.json` flows strictly, type-checks their CEL expressions, evaluates them with exact `decimal`, `money` and `date` types, calls or receives machine-learning model results in flows, records every decision, and replays recorded decisions.
 
 The TypeScript engine and the Java engine are equivalent implementations. Both give the same results on everything the conformance suite covers: rule versions, outputs, reason codes, traces, decision records, explanations, replays and error messages. The [known differences](#known-differences) are listed below.
 
-> The package is private while its npm name is decided. Its name, `@rulestone/engine`, is provisional.
+> The package will be published to npm as `@dxa/rulestone-engine`; until then it is private and built from the repository.
+>
+> Entry points: `@dxa/rulestone-engine` (the engine), `@dxa/rulestone-engine/cel` (expressions and the `decimal`, `money` and `date` types alone, as Java's `rulestone-cel`) and `@dxa/rulestone-engine/testing` (`.stone-test.json` files, as Java's `rulestone-test`), so that production code does not load the test reader.
 
 - No runtime dependencies. Numbers use the native `BigInt`.
 - ESM, TypeScript types included, and safe to tree-shake (`sideEffects: false`).
 - Runs in current browsers, Node.js 22 or later and edge runtimes, with no DOM. Hashing uses WebCrypto (`crypto.subtle`), which browsers provide only on secure (HTTPS or localhost) pages; timeouts use `performance.now()`.
-- **Size:** 169.7 KiB minified, 52.5 KiB minified and gzipped, for the whole package (`npm run size`). Flows, model nodes and replay are part of `createEngine`, so every application that creates an engine loads them; elements that only check expressions do not.
+- **Size** (`npm run size`), minified and minified + gzipped: the main entry point 158.9 KiB and 49.3 KiB, `/cel` 56.6 KiB and 19.0 KiB, `/testing` 32.9 KiB and 11.2 KiB. Flows, model nodes and replay are part of `createEngine`, so every application that creates an engine loads them; elements that only check expressions do not.
 
 ## Usage
 
 ```ts
-import { createEngine, parseDecisionTable, outputJson, writeDecisionRecord } from '@rulestone/engine'
+import { createEngine, parseDecisionTable, outputJson, writeDecisionRecord } from '@dxa/rulestone-engine'
 
 const engine = await createEngine({
   tables: [parseDecisionTable(cardFeeJson)],   // every version of every decision
@@ -40,7 +42,7 @@ writeDecisionRecord(result.record)   // one line of JSON, as DecisionRecordJson.
 A [decision flow](../../../docs/flows.md) is registered with every table it uses, and evaluated by id like a table:
 
 ```ts
-import { createEngine, parseDecisionFlow, parseDecisionTable, type ModelInvoker } from '@rulestone/engine'
+import { createEngine, parseDecisionFlow, parseDecisionTable, type ModelInvoker } from '@dxa/rulestone-engine'
 
 const behaviourModel: ModelInvoker = async (call) => {
   // call.features: Map { 'utilisation' => Decimal 0.40, 'dpd30Count12m' => 0n }; call.timeoutMs: at most 80
@@ -70,7 +72,7 @@ Model nodes in `supplied` mode take their result from the third argument of `eva
 ### Replay and re-score
 
 ```ts
-import { readDecisionRecord } from '@rulestone/engine'
+import { readDecisionRecord } from '@dxa/rulestone-engine'
 
 const record = readDecisionRecord(line)                      // a record of either engine, from an audit log
 const replayed = await engine.replay(record, facts)          // the recorded versions, date, parameters and model results
@@ -102,7 +104,7 @@ rescored.differences                                         // [{ kind: 'OUTPUT
 | `valueToJson`, `valuesToJson`, `writeValues`, `outputJson` | Values to their JSON forms, with decimals as plain-notation strings. |
 | `parseReasonCodeCatalog`, `writeReasonCodeCatalog`, `reasonCodeCatalogVersionOf` | The strict `reason-codes.json` reader, the canonical form and the exact version of a [reason-code catalog](../../../docs/explanations.md), as `ReasonCodeCatalogJson`. Given to `createEngine` as `reasonCodeCatalog`, it is checked against the reason codes of every table and model node with Java's messages. |
 | `engine.explain(record, locale)`, `explainDecision`, `explanationText`, `writeExplanation` | The [explanation](../../../docs/explanations.md) of a record in one locale, as text and JSON, byte for byte as Java's `Explanations` writes them, for tables and flows. |
-| `parseStoneTests`, `checkStoneTestCase` | Reads `.stone-test.json` files, with flows' `models` and expected `path`, and checks their cases, as `StoneTestJson` and `StoneTestCase.check` do. |
+| `parseStoneTests`, `checkStoneTestCase` (from `@dxa/rulestone-engine/testing`) | Reads `.stone-test.json` files, with flows' `models` and expected `path`, and checks their cases, as `StoneTestJson` and `StoneTestCase.check` do. |
 | `ExpressionEnvironment` | Compiles and evaluates single expressions, as the Java class of that name. |
 | `analyzeExpression(source, { variables, expected? })` | For editors: parses and type-checks an expression without throwing, and returns the typed syntax tree, every problem with its position (in code points and as a UTF-16 index, line and column) and the engine's message. Every node has its source span (`start`, `end`, including enclosing parentheses); selections also give `fieldPos`. `compile` uses the same analysis. |
 | `localValueTypes(inputs, locals, params?)` | For editors: the inferred types of a table's local values (`let`) that compile, to pass to `analyzeExpression` with the inputs; `params` are the declared parameters, which local values read as `params.<name>`. |

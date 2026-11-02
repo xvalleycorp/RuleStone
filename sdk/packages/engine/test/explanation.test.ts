@@ -3,9 +3,9 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  StoneTestFailure, checkStoneTestCase, createEngine, explainDecision, explanationText, parseDecisionTable,
-  parseReasonCodeCatalog, parseStoneTests, writeExplanation,
+  createEngine, explainDecision, explanationText, parseDecisionTable, parseReasonCodeCatalog, writeExplanation,
 } from '../src/index.js'
+import { StoneTestFailure, checkStoneTestCase, parseStoneTests } from '../src/testing.js'
 
 const TABLE = parseDecisionTable(`{
   "id": "loan", "version": "1", "hitPolicy": "FIRST",

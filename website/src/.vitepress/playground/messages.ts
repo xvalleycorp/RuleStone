@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Strings of the playground's own controls. The components bring their own strings
-// (@rulestone/editor, English and Vietnamese). Vietnamese terms follow docs/vi/GLOSSARY.md.
+// (@dxa/rulestone-editor, English and Vietnamese). Vietnamese terms follow docs/vi/GLOSSARY.md.
 
 const en = {
   tabs: 'Playground views',

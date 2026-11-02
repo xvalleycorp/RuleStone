@@ -7,7 +7,7 @@
 import {
   BUSINESS_DATE, PARAMS, analyzeExpression, codePointIndex, inputStructName, localValueTypes, structOf, typeFromSpec, typeToSpec,
   type Expr, type TypeSpec as EngineTypeSpec, type ValueType,
-} from '@rulestone/engine'
+} from '@dxa/rulestone-engine'
 import { PRIMITIVES, orderTable, type RuleJson, type TableJson, type TypeSpec } from './table.js'
 
 /** A field: input or output names, then struct field names, with '[]' for the elements of a list. */

@@ -1,13 +1,13 @@
-# @rulestone/editor
+# @dxa/rulestone-editor
 
 Visual editors for RuleStone decision tables and decision flows, as Web Components. Banks embed them in their own web applications (Angular, React, Vue or plain HTML) so that analysts can build decision tables and rules visually, with drag and drop, instead of typing JSON.
 
-> The package is private while its npm name is decided. Its name, `@rulestone/editor`, is provisional.
+> The package will be published to npm as `@dxa/rulestone-editor`; until then it is private and built from the repository.
 >
 > Try the elements in the [playground](https://rulestone.dxa.io.vn/playground). The [editor SDK guide](../../../docs/editor-sdk.md) covers installing, embedding and server-side checks.
 
 - **Web Components** built with [Lit](https://lit.dev) (BSD-3-Clause). They work in any framework, or none.
-- **Instant feedback** from [`@rulestone/engine`](../engine): every expression is type-checked as it is typed, with the engine's own messages and positions; the Try it panel runs tables and flows in the browser, and the flow canvas reports the engine's own problems. The TypeScript and Java engines give the same results on everything the conformance suite covers; the [engine README](../engine#known-differences) lists the known differences.
+- **Instant feedback** from [`@dxa/rulestone-engine`](../engine): every expression is type-checked as it is typed, with the engine's own messages and positions; the Try it panel runs tables and flows in the browser, and the flow canvas reports the engine's own problems. The TypeScript and Java engines give the same results on everything the conformance suite covers; the [engine README](../engine#known-differences) lists the known differences.
 - **The host owns persistence.** The elements make no network calls. They take data through properties and report every change through events. An optional `validator` hook lets the host add server-side checks.
 - **Accessible** (WCAG 2.1 AA): every drag and drop has a keyboard alternative, moves are announced, the grid and the trees use ARIA roles, and focus is always visible.
 - **English and Vietnamese** built in; every string can be overridden.
@@ -18,15 +18,15 @@ Visual editors for RuleStone decision tables and decision flows, as Web Componen
 
 | Element | Module | Purpose |
 |---|---|---|
-| `<rulestone-table-editor>` | `@rulestone/editor/table-editor` | The complete decision table editor: metadata, schema designer, rules grid, problems panel and Try it panel. |
-| `<rulestone-rules-grid>` | `@rulestone/editor/rules-grid` | A spreadsheet-like grid with one rule per row. |
-| `<rulestone-condition-builder>` | `@rulestone/editor/condition-builder` | A condition as nested AND/OR blocks, or as CEL text. |
-| `<rulestone-schema-designer>` | `@rulestone/editor/schema-designer` | A table's inputs and outputs as trees. |
-| `<rulestone-flow-canvas>` | `@rulestone/editor/flow-canvas` | A decision-flow canvas (`.flow.json`), checked by the engine when the tables are given. |
-| `<rulestone-try-it>` | `@rulestone/editor/try-it` | Runs a table, or a flow with its tables and model results, with facts from a form or JSON. |
-| `<rs-cel-input>` | `@rulestone/editor/cel-input` | A CEL text input with highlighting and autocomplete. |
+| `<rulestone-table-editor>` | `@dxa/rulestone-editor/table-editor` | The complete decision table editor: metadata, schema designer, rules grid, problems panel and Try it panel. |
+| `<rulestone-rules-grid>` | `@dxa/rulestone-editor/rules-grid` | A spreadsheet-like grid with one rule per row. |
+| `<rulestone-condition-builder>` | `@dxa/rulestone-editor/condition-builder` | A condition as nested AND/OR blocks, or as CEL text. |
+| `<rulestone-schema-designer>` | `@dxa/rulestone-editor/schema-designer` | A table's inputs and outputs as trees. |
+| `<rulestone-flow-canvas>` | `@dxa/rulestone-editor/flow-canvas` | A decision-flow canvas (`.flow.json`), checked by the engine when the tables are given. |
+| `<rulestone-try-it>` | `@dxa/rulestone-editor/try-it` | Runs a table, or a flow with its tables and model results, with facts from a form or JSON. |
+| `<rs-cel-input>` | `@dxa/rulestone-editor/cel-input` | A CEL text input with highlighting and autocomplete. |
 
-Importing `@rulestone/editor` defines every element. Import an element's own module to load only that element and what it uses. The model (`@rulestone/editor/model`) has the same operations without any element: table, schema, condition and flow editing, and validation.
+Importing `@dxa/rulestone-editor` defines every element. Import an element's own module to load only that element and what it uses. The model (`@dxa/rulestone-editor/model`) has the same operations without any element: table, schema, condition and flow editing, and validation.
 
 Every element has these attributes and properties:
 
@@ -137,7 +137,7 @@ The form is generated from the inputs, with money (amount and currency), date, d
 
 ```html
 <script type="module">
-  import '@rulestone/editor/table-editor'
+  import '@dxa/rulestone-editor/table-editor'
 
   const editor = document.querySelector('rulestone-table-editor')
   editor.table = await (await fetch('/rules/loan_eligibility.stone.json')).json()   // the host loads
@@ -152,7 +152,7 @@ The form is generated from the inputs, with money (amount and currency), date, d
 React 19 passes properties to custom elements and listens to their events directly:
 
 ```tsx
-import '@rulestone/editor/table-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 export function RuleEditor({ table, onSave }: Props) {
   return (
@@ -183,7 +183,7 @@ return <rulestone-table-editor ref={ref} locale="vi" />
 
 ```ts
 import { CUSTOM_ELEMENTS_SCHEMA, Component } from '@angular/core'
-import '@rulestone/editor/table-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 @Component({
   selector: 'app-rule-editor',
@@ -214,7 +214,7 @@ Pass objects as properties with `.prop` (or Vue's automatic property binding for
 import { onMounted, ref } from 'vue'
 const table = ref(/* … */)
 // In VitePress, import the elements on the client only: pages are also rendered at build time.
-onMounted(() => import('@rulestone/editor/table-editor'))
+onMounted(() => import('@dxa/rulestone-editor/table-editor'))
 </script>
 
 <template>
@@ -237,7 +237,7 @@ Moves and other changes are announced through a polite live region.
 ## Strings
 
 ```ts
-import { registerMessages } from '@rulestone/editor'
+import { registerMessages } from '@dxa/rulestone-editor'
 registerMessages('vi', { grid: { addRule: 'Thêm luật mới' } })   // for every element on the page
 editor.messages = { tryIt: { run: 'Chạy' } }                       // for one element
 ```
@@ -305,7 +305,7 @@ Minified and minified + gzipped with esbuild (`npm run size`), with Lit and the 
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 374.8 KiB min, 109.4 KiB gzip | 216.0 KiB min, 60.0 KiB gzip |
+| `@dxa/rulestone-editor` (all elements) | 374.8 KiB min, 109.4 KiB gzip | 216.0 KiB min, 60.0 KiB gzip |
 | `./table-editor` | 324.3 KiB min, 95.0 KiB gzip | 165.3 KiB min, 45.5 KiB gzip |
 | `./rules-grid` | 178.1 KiB min, 54.5 KiB gzip | 105.7 KiB min, 30.2 KiB gzip |
 | `./condition-builder` | 157.7 KiB min, 49.2 KiB gzip | 85.0 KiB min, 24.9 KiB gzip |

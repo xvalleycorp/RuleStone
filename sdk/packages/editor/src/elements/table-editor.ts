@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
-import { InvalidDecisionError, typeToSpec, valueToPlain, type ParameterSet } from '@rulestone/engine'
+import { InvalidDecisionError, typeToSpec, valueToPlain, type ParameterSet } from '@dxa/rulestone-engine'
 import {
   HIT_POLICIES, PRIMITIVES, cloneJson, deleteLocal, newLocalName, newParamName, normalizeTable, setLocal, setParams,
   tableText, updateTable, type ParamsJson, type TableJson, type TypeSpec,

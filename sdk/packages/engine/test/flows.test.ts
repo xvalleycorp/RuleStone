@@ -9,11 +9,12 @@
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
-  InvalidDecisionError, checkStoneTestCase, createEngine, decisionRecordToJson, explanationText, flowVersionOf,
-  parseDecisionFlow, parseDecisionTable, parseParameterSet, parseReasonCodeCatalog, parseStoneTests, ruleVersionOf,
-  writeDecisionFlow, writeDecisionTable, writeExplanation, writeJson, type DecisionFlow, type DecisionRecord,
-  type ModelInvoker, type ParameterSet, type RuleStoneEngine,
+  InvalidDecisionError, createEngine, decisionRecordToJson, explanationText, flowVersionOf, parseDecisionFlow,
+  parseDecisionTable, parseParameterSet, parseReasonCodeCatalog, ruleVersionOf, writeDecisionFlow, writeDecisionTable,
+  writeExplanation, writeJson, type DecisionFlow, type DecisionRecord, type ModelInvoker, type ParameterSet,
+  type RuleStoneEngine,
 } from '../src/index.js'
+import { checkStoneTestCase, parseStoneTests } from '../src/testing.js'
 import { FLOWS, exampleCatalog, exampleFlowEngine, exampleFlows, exampleTables, files, fixture, flowTables, read } from './helpers.js'
 
 const hashes = fixture<Record<string, { ruleVersion: string; canonical: string }>>('java-flow-hashes.json')

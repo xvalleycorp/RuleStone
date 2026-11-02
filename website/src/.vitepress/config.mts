@@ -123,10 +123,10 @@ export default defineConfig({
     resolve: {
       alias: [
         // The playground uses the SDK packages from their sources.
-        { find: /^@rulestone\/engine$/, replacement: sdk('engine/src/index.ts') },
-        { find: /^@rulestone\/editor$/, replacement: sdk('editor/src/index.ts') },
-        { find: /^@rulestone\/editor\/model$/, replacement: sdk('editor/src/model/index.ts') },
-        { find: /^@rulestone\/editor\/([a-z-]+)$/, replacement: sdk('editor/src/elements/$1.ts') },
+        { find: /^@dxa\/rulestone-engine$/, replacement: sdk('engine/src/index.ts') },
+        { find: /^@dxa\/rulestone-editor$/, replacement: sdk('editor/src/index.ts') },
+        { find: /^@dxa\/rulestone-editor\/model$/, replacement: sdk('editor/src/model/index.ts') },
+        { find: /^@dxa\/rulestone-editor\/([a-z-]+)$/, replacement: sdk('editor/src/elements/$1.ts') },
         // Replace the default theme's language switchers with ones that show flags.
         {
           find: /^.*\/VPNavBarTranslations\.vue$/,

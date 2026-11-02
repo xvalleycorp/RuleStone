@@ -1,5 +1,5 @@
 {
-  "name": "@rulestone/engine",
+  "name": "@dxa/rulestone-engine",
   "private": true,
   "version": "0.1.0",
   "description": "RuleStone decision tables and flows in TypeScript: strict .stone.json and .flow.json readers, type-checked CEL with exact decimal, money and date types, model nodes, decision records and replay, with the same results as the Java engine.",
@@ -12,6 +12,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./cel": {
+      "types": "./dist/cel.d.ts",
+      "import": "./dist/cel.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js"
     }
   },
   "files": [

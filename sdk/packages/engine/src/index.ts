@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * RuleStone decision tables in the browser: the same results as the Java engine for every
- * table, test case and documented expression that the conformance suite covers.
+ * The RuleStone decision engine for JavaScript and TypeScript, in Node.js and browsers: decision
+ * tables and flows, parameter sets, model nodes, decision records, explanations and replay, with
+ * the same results as the Java engine on everything the conformance suite covers.
+ *
+ * Expressions alone are also available from `@dxa/rulestone-engine/cel`, and test files from
+ * `@dxa/rulestone-engine/testing`.
  *
  * @packageDocumentation
  */
@@ -47,9 +51,6 @@ export {
 export type {
   ReasonCodeCatalog, Explanation, ExplanationReason, ExplanationStep, ExplainableRecord, RankedAttribution, Direction,
 } from './explanation.js'
-
-export { parseStoneTests, checkStoneTestCase, StoneTestFailure, InvalidStoneTestError } from './stone-test.js'
-export type { StoneTestCase, StoneTestOutcome } from './stone-test.js'
 
 export {
   ExpressionEnvironment, CompiledExpression, Bindings, DEFAULT_MAX_ITERATIONS, LocalValueError, isValidName,

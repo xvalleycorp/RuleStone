@@ -1,13 +1,13 @@
 ---
 source: flows.md
-sourceHash: 2b9f7073010ee6c3d9be3d2cd481e660d5665f9e9fb2fe7647979413b49133ef
+sourceHash: d6f7e22c4e29570541a227d04e8abbdb16e43dc93ebaa89ef127073a0a36f422
 ---
 
 # Luồng quyết định
 
 Một luồng quyết định (decision flow) nối các bảng quyết định và một số logic đơn giản thành một quyết định: luật loại trừ (knock-out) của chính sách chạy trước, sau đó là phân khúc, xếp hạng và ma trận hạn mức, kèm một phép chia champion/challenger (so sánh phiên bản đang chạy với phiên bản thử thách) ở nơi bạn muốn thử một chiến lược mới. Trang này là tài liệu tham khảo cho định dạng `.flow.json` và cho cách luồng được kiểm tra, đánh giá và ghi lại.
 
-Luồng là bước 2 và 3 của [Ra quyết định AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai). Luồng còn có thể dùng mô hình học máy: một [nút mô hình](#nút-mô-hình) hoặc gọi mô hình, hoặc nhận kết quả mà bên gọi truyền vào, rồi kiểm tra kết quả theo một hợp đồng có kiểu. Cả hai bộ máy luật đều chạy được luồng, với cùng kết quả: bộ máy luật Java, và bộ máy luật TypeScript của [SDK trình soạn thảo](editor-sdk.md) (`@rulestone/engine`), dành cho ứng dụng JavaScript và trình duyệt.
+Luồng là bước 2 và 3 của [Ra quyết định AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai). Luồng còn có thể dùng mô hình học máy: một [nút mô hình](#nút-mô-hình) hoặc gọi mô hình, hoặc nhận kết quả mà bên gọi truyền vào, rồi kiểm tra kết quả theo một hợp đồng có kiểu. Cả hai bộ máy luật đều chạy được luồng, với cùng kết quả: bộ máy luật Java, và bộ máy luật TypeScript của [SDK trình soạn thảo](editor-sdk.md) (`@dxa/rulestone-engine`), dành cho ứng dụng JavaScript và trình duyệt.
 
 - [Một luồng đầu tiên](#một-luồng-đầu-tiên)
 - [Chạy một luồng](#chạy-một-luồng)

@@ -5,7 +5,7 @@
 // JSON text in the FactsJson forms (money "1500000 VND", dates "2026-11-01", decimals as
 // strings). The JSON is assembled as text, so numbers never pass through floating point.
 
-import { parseJson, type JsonNode } from '@rulestone/engine'
+import { parseJson, type JsonNode } from '@dxa/rulestone-engine'
 import type { TypeSpec } from './table.js'
 
 export type FormValue =

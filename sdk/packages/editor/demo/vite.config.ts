@@ -12,7 +12,7 @@ export default defineConfig({
   root: here('.'),
   base: './',
   resolve: {
-    alias: { '@rulestone/engine': here('../../engine/src/index.ts') },
+    alias: { '@dxa/rulestone-engine': here('../../engine/src/index.ts') },
   },
   server: {
     fs: { allow: [here('../../../../')] },

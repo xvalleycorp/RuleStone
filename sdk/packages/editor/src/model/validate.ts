@@ -8,7 +8,7 @@ import {
   InvalidDecisionError, analyzeExpression, createEngine, parseDecisionTable, parseParameterSet, ruleVersionOf,
   writeDecisionTable,
   type DecisionTable, type ExpressionIssue, type ParameterSet, type ValueType,
-} from '@rulestone/engine'
+} from '@dxa/rulestone-engine'
 import { tableVariables, valueTypeOf } from './schema.js'
 import type { TableJson, TypeSpec } from './table.js'
 

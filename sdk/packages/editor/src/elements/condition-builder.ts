@@ -1,7 +1,7 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { currencyTable, type ValueType } from '@rulestone/engine'
+import { currencyTable, type ValueType } from '@dxa/rulestone-engine'
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
 import {
   defaultValue, fieldSpec, findNode, findParent, indent, insertNode, moveBy, moveNode, newGroup, newLeaf, newQuantifier,

@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: cced85ec5406826b70a203d1703a785539e7b03ae9188cbb258159794a6527b6
+sourceHash: 3d93c5b7df3e2ff9d3c15bb42d775de70799287105b45a36612cb55db336bb49
 ---
 
 # SDK trình soạn thảo
@@ -29,14 +29,14 @@ SDK gồm hai gói npm trong thư mục [`sdk/`](../../sdk/) của repository:
 
 | Gói | Nội dung |
 |---|---|
-| `@rulestone/engine` | Bộ máy luật viết bằng TypeScript: trình đọc `.stone.json` chặt chẽ, CEL được kiểm tra kiểu với các kiểu chính xác `decimal`, `money` và `date`, đánh giá theo phiên bản và bản ghi quyết định. Gói không có thư viện phụ thuộc lúc chạy. |
-| `@rulestone/editor` | Các trình soạn thảo dưới dạng Web Component, xây dựng bằng [Lit](https://lit.dev): trình soạn thảo bảng, lưới luật, trình tạo điều kiện, trình thiết kế đầu vào và đầu ra, bảng Chạy thử, ô nhập CEL và vùng vẽ luồng quyết định. Gói dùng bộ máy luật để kiểm tra kiểu và để Chạy thử. |
+| `@dxa/rulestone-engine` | Bộ máy luật viết bằng TypeScript, dành cho ứng dụng cũng như cho các trình soạn thảo: bảng quyết định và luồng quyết định, CEL được kiểm tra kiểu với các kiểu chính xác `decimal`, `money` và `date`, đánh giá theo phiên bản, bản ghi quyết định, giải thích quyết định và chạy lại (replay). Riêng biểu thức có trong `@dxa/rulestone-engine/cel`, còn tệp kiểm thử `.stone-test.json` có trong `@dxa/rulestone-engine/testing`. Gói không có thư viện phụ thuộc lúc chạy. |
+| `@dxa/rulestone-editor` | Các trình soạn thảo dưới dạng Web Component, xây dựng bằng [Lit](https://lit.dev): trình soạn thảo bảng, lưới luật, trình tạo điều kiện, trình thiết kế đầu vào và đầu ra, bảng Chạy thử, ô nhập CEL và vùng vẽ luồng quyết định. Gói dùng bộ máy luật để kiểm tra kiểu và để Chạy thử. |
 
 Web Component dùng được trong mọi framework (React, Angular, Vue) và cả khi không dùng framework. Các phần tử không gọi mạng: trang chủ quản (host) đưa dữ liệu cho chúng qua thuộc tính (property) và nhận mọi thay đổi qua sự kiện.
 
 SDK dùng để nhúng. [Trình soạn thảo web](editor.md) (`rulestone-editor`) là một ứng dụng hoàn chỉnh riêng, có máy chủ Java của riêng nó, dùng để sửa các tệp `.stone.json` trong một thư mục. Hãy dùng trình soạn thảo web để sửa trực tiếp một kho luật; dùng SDK để đưa chức năng soạn luật vào một hệ thống sẵn có, chẳng hạn ứng dụng khởi tạo khoản vay hoặc cấu hình sản phẩm, vốn có cách lưu trữ, đăng nhập và quy trình phê duyệt riêng.
 
-Cả hai gói được cấp phép theo Apache-2.0. Hiện chúng chưa công khai, và tên gói là tạm thời cho tới khi được phát hành lên npm.
+Cả hai gói được cấp phép theo Apache-2.0 và sẽ được phát hành lên npm dưới scope `@dxa`. Cho tới lúc đó, chúng chưa công khai.
 
 ## Cài đặt và build
 
@@ -47,7 +47,7 @@ git clone https://github.com/xvalleycorp/RuleStone.git
 cd RuleStone/sdk
 npm ci
 npm run build    # the engine, then the editor, into packages/*/dist
-npm pack --workspace @rulestone/engine --workspace @rulestone/editor
+npm pack --workspace @dxa/rulestone-engine --workspace @dxa/rulestone-editor
 ```
 
 `npm pack` tạo ra `rulestone-engine-0.1.0.tgz` và `rulestone-editor-0.1.0.tgz`. Cài cả hai vào ứng dụng của bạn trong cùng một lệnh, để trình soạn thảo tìm thấy bộ máy luật:
@@ -60,15 +60,15 @@ Các gói là ES module kèm kiểu TypeScript, dành cho một bundler như Vit
 
 | Import | Định nghĩa |
 |---|---|
-| `@rulestone/editor` | Mọi phần tử; xuất các lớp, mô hình và chuỗi giao diện |
-| `@rulestone/editor/table-editor` | `<rulestone-table-editor>` và các phần tử bên trong nó |
-| `@rulestone/editor/rules-grid` | `<rulestone-rules-grid>` |
-| `@rulestone/editor/condition-builder` | `<rulestone-condition-builder>` |
-| `@rulestone/editor/schema-designer` | `<rulestone-schema-designer>` |
-| `@rulestone/editor/try-it` | `<rulestone-try-it>` |
-| `@rulestone/editor/cel-input` | `<rs-cel-input>` |
-| `@rulestone/editor/flow-canvas` | `<rulestone-flow-canvas>` |
-| `@rulestone/editor/model` | Không có phần tử nào: các thao tác trên bảng, đầu vào và đầu ra, điều kiện và luồng, cùng việc kiểm tra hợp lệ, để bạn tự làm giao diện hoặc viết kiểm thử |
+| `@dxa/rulestone-editor` | Mọi phần tử; xuất các lớp, mô hình và chuỗi giao diện |
+| `@dxa/rulestone-editor/table-editor` | `<rulestone-table-editor>` và các phần tử bên trong nó |
+| `@dxa/rulestone-editor/rules-grid` | `<rulestone-rules-grid>` |
+| `@dxa/rulestone-editor/condition-builder` | `<rulestone-condition-builder>` |
+| `@dxa/rulestone-editor/schema-designer` | `<rulestone-schema-designer>` |
+| `@dxa/rulestone-editor/try-it` | `<rulestone-try-it>` |
+| `@dxa/rulestone-editor/cel-input` | `<rs-cel-input>` |
+| `@dxa/rulestone-editor/flow-canvas` | `<rulestone-flow-canvas>` |
+| `@dxa/rulestone-editor/model` | Không có phần tử nào: các thao tác trên bảng, đầu vào và đầu ra, điều kiện và luồng, cùng việc kiểm tra hợp lệ, để bạn tự làm giao diện hoặc viết kiểm thử |
 
 ## Dùng trong ứng dụng của bạn
 
@@ -80,7 +80,7 @@ Mỗi ví dụ dưới đây hiển thị trình soạn thảo bảng với mộ
 <rulestone-table-editor locale="vi"></rulestone-table-editor>
 
 <script type="module">
-  import '@rulestone/editor/table-editor'
+  import '@dxa/rulestone-editor/table-editor'
 
   const editor = document.querySelector('rulestone-table-editor')
   editor.table = await (await fetch('/rules/loan_eligibility.stone.json')).json()
@@ -97,7 +97,7 @@ Mỗi ví dụ dưới đây hiển thị trình soạn thảo bảng với mộ
 React 19 gán thuộc tính cho custom element và lắng nghe sự kiện của chúng:
 
 ```tsx
-import '@rulestone/editor/table-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 export function RuleEditor({ table, onSave }: Props) {
   return (
@@ -114,8 +114,8 @@ Với React 18, gán thuộc tính và trình lắng nghe qua một ref:
 
 ```tsx
 import { useEffect, useRef } from 'react'
-import type { RulestoneTableEditor } from '@rulestone/editor'
-import '@rulestone/editor/table-editor'
+import type { RulestoneTableEditor } from '@dxa/rulestone-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 export function RuleEditor({ table, onSave }: Props) {
   const ref = useRef<RulestoneTableEditor>(null)
@@ -136,7 +136,7 @@ Trong TypeScript, hãy khai báo các thẻ bạn dùng trong `JSX.IntrinsicElem
 
 ```ts
 import { CUSTOM_ELEMENTS_SCHEMA, Component } from '@angular/core'
-import '@rulestone/editor/table-editor'
+import '@dxa/rulestone-editor/table-editor'
 
 @Component({
   selector: 'app-rule-editor',
@@ -169,7 +169,7 @@ Truyền đối tượng dưới dạng thuộc tính bằng `.prop`. Khi có re
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 const table = ref({ /* loaded by the host */ })
-onMounted(() => import('@rulestone/editor/table-editor'))
+onMounted(() => import('@dxa/rulestone-editor/table-editor'))
 </script>
 
 <template>
@@ -267,7 +267,7 @@ Bộ chọn trường liệt kê các đầu vào, các giá trị cục bộ, c
 
 ### Bảng Chạy thử
 
-`<rulestone-try-it>` chạy một bảng, hoặc một luồng quyết định, ngay trong trình duyệt bằng `@rulestone/engine`.
+`<rulestone-try-it>` chạy một bảng, hoặc một luồng quyết định, ngay trong trình duyệt bằng `@dxa/rulestone-engine`.
 
 | Thành phần | Loại | Mô tả |
 |---|---|---|
@@ -377,7 +377,7 @@ editor.validator = async (table, local) => {
 - **Đọc trạng thái hiện tại:** gọi `getTable()` bất cứ lúc nào, và `validate()` để chờ một kết quả mới.
 - **Luồng:** lưu `flow` thành tệp `.flow.json`, và lưu `layout` bên cạnh nếu muốn giữ vị trí các nút; `rulestone-change` mang cả hai.
 
-Để ghi tệp, hãy dùng `tableText(table)` từ `@rulestone/editor/model`. Hàm này ghi các trường theo thứ tự của định dạng `.stone.json`, thụt lề hai dấu cách mỗi cấp, để các tệp đã lưu diff gọn gàng trong Git.
+Để ghi tệp, hãy dùng `tableText(table)` từ `@dxa/rulestone-editor/model`. Hàm này ghi các trường theo thứ tự của định dạng `.stone.json`, thụt lề hai dấu cách mỗi cấp, để các tệp đã lưu diff gọn gàng trong Git.
 
 ## Giao diện
 
@@ -441,7 +441,7 @@ Các phần tử có sẵn chuỗi tiếng Anh và tiếng Việt. `locale` ch�
 Ghi đè chuỗi cho cả trang bằng `registerMessages`, hoặc cho một phần tử bằng thuộc tính `messages` của nó:
 
 ```ts
-import { registerMessages } from '@rulestone/editor'
+import { registerMessages } from '@dxa/rulestone-editor'
 registerMessages('vi', { grid: { addRule: 'Thêm luật mới' } })   // for every element on the page
 editor.messages = { tryIt: { run: 'Chạy' } }                       // for one element
 ```
@@ -482,7 +482,7 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@rulestone/editor` (mọi phần tử) | 374.8 KiB, 109.4 KiB khi nén gzip | 216.0 KiB, 60.0 KiB khi nén gzip |
+| `@dxa/rulestone-editor` (mọi phần tử) | 374.8 KiB, 109.4 KiB khi nén gzip | 216.0 KiB, 60.0 KiB khi nén gzip |
 | `./table-editor` | 324.3 KiB, 95.0 KiB khi nén gzip | 165.3 KiB, 45.5 KiB khi nén gzip |
 | `./rules-grid` | 178.1 KiB, 54.5 KiB khi nén gzip | 105.7 KiB, 30.2 KiB khi nén gzip |
 | `./condition-builder` | 157.7 KiB, 49.2 KiB khi nén gzip | 85.0 KiB, 24.9 KiB khi nén gzip |
@@ -491,11 +491,11 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 | `./try-it` | 220.4 KiB, 68.4 KiB khi nén gzip | 62.6 KiB, 18.8 KiB khi nén gzip |
 | `./cel-input` | 110.7 KiB, 36.3 KiB khi nén gzip | 52.9 KiB, 16.4 KiB khi nén gzip |
 
-Riêng `@rulestone/engine` là 169.7 KiB, 52.5 KiB khi nén gzip. Vùng vẽ luồng và bảng Chạy thử tạo bộ máy luật, nên nạp cả mã luồng, nút mô hình và replay của bộ máy luật; lưới luật, trình tạo điều kiện, trình thiết kế lược đồ và ô nhập CEL không tạo bộ máy luật nào và bỏ phần mã đó ra. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
+Riêng `@dxa/rulestone-engine` là 158.9 KiB, 49.3 KiB khi nén gzip; entry point `/cel` của nó là 56.6 KiB, 19.0 KiB khi nén gzip. Vùng vẽ luồng và bảng Chạy thử tạo bộ máy luật, nên nạp cả mã luồng, nút mô hình và replay của bộ máy luật; lưới luật, trình tạo điều kiện, trình thiết kế lược đồ và ô nhập CEL không tạo bộ máy luật nào và bỏ phần mã đó ra. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
 
 ## Bộ máy luật TypeScript và bộ máy luật Java
 
-`@rulestone/engine`, mà các phần tử dùng, là một bộ máy luật RuleStone đầy đủ viết bằng TypeScript: nó đọc và kiểm tra bảng và [luồng quyết định](flows.md), đánh giá chúng, với nút mô hình ở chế độ `supplied` và `invoke`, ghi bản ghi quyết định, giải thích và [replay](replay.md) chúng, trên trình duyệt, Node.js 22 trở lên và các môi trường edge. Bộ máy này và bộ máy luật Java là hai bản hiện thực tương đương: cả hai cho cùng kết quả trên mọi trường hợp mà bộ kiểm thử tương thích bao phủ, và [README của bộ máy luật](../../sdk/packages/engine/README.md#known-differences) (English) liệt kê các khác biệt đã biết.
+`@dxa/rulestone-engine`, mà các phần tử dùng, là một bộ máy luật RuleStone đầy đủ viết bằng TypeScript: nó đọc và kiểm tra bảng và [luồng quyết định](flows.md), đánh giá chúng, với nút mô hình ở chế độ `supplied` và `invoke`, ghi bản ghi quyết định, giải thích và [replay](replay.md) chúng, trên trình duyệt, Node.js 22 trở lên và các môi trường edge. Bộ máy này và bộ máy luật Java là hai bản hiện thực tương đương: cả hai cho cùng kết quả trên mọi trường hợp mà bộ kiểm thử tương thích bao phủ, và [README của bộ máy luật](../../sdk/packages/engine/README.md#known-differences) (English) liệt kê các khác biệt đã biết.
 
 Bộ kiểm thử tương thích trong `sdk/packages/engine/test/` so sánh hai bộ máy. Dữ liệu chuẩn (fixture) của nó do bộ máy luật Java ghi ra (`SdkFixturesTest` trong `rulestone-test`), và bản build Maven sẽ thất bại nếu chúng đã cũ:
 
@@ -527,7 +527,7 @@ Các khác biệt đã biết:
 
 ## Hạn chế
 
-- Các gói chưa có trên npm, và tên gói có thể thay đổi khi được phát hành.
+- Các gói chưa có trên npm; hãy build từ repository.
 - Khi không có `definitions`, vùng vẽ luồng không kiểm tra được tên và kiểu xuyên qua các nút; hãy đưa cho nó các bảng của luồng để có các bước kiểm tra của bộ máy luật.
 - Bảng Chạy thử chỉ chạy nút mô hình của luồng ở chế độ `supplied`: nó không gọi mô hình nào.
 - Lưới luật không ảo hoá (virtualize) các dòng, nên bảng có hàng nghìn luật hiển thị chậm.

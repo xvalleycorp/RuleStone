@@ -3,7 +3,7 @@
 
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { analyzeExpression, type Expr } from '@rulestone/engine'
+import { analyzeExpression, type Expr } from '@dxa/rulestone-engine'
 import type { TableJson } from '../src/model/table.js'
 
 /** The repository root; tests run in the package directory. */

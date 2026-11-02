@@ -16,7 +16,7 @@
     "useDefineForClassFields": false,
     "skipLibCheck": true,
     "types": ["node"],
-    "paths": { "@rulestone/engine": ["../engine/src/index.ts"] }
+    "paths": { "@dxa/rulestone-engine": ["../engine/src/index.ts"] }
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "demo/**/*.ts", "vitest.config.ts"]
 }

@@ -7,9 +7,11 @@
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
-  Decimal, DecisionNotFoundError, InvalidRecordError, LocalDate, Money, createEngine, parseDecisionFlow, parseDecisionTable,
-  parseStoneTests, readDecisionRecord, writeDecisionRecord, type DecisionTable, type ModelInvoker, type RuleStoneEngine,
+  Decimal, DecisionNotFoundError, InvalidRecordError, LocalDate, Money, createEngine, parseDecisionFlow,
+  parseDecisionTable, readDecisionRecord, writeDecisionRecord, type DecisionTable, type ModelInvoker,
+  type RuleStoneEngine,
 } from '../src/index.js'
+import { parseStoneTests } from '../src/testing.js'
 import { EXAMPLES, FLOWS, exampleEngine, exampleFlowEngine, exampleFlows, exampleTables, files, fixture, flowTables, read } from './helpers.js'
 
 const flowRecords = fixture<Record<string, Record<string, Record<string, unknown>>>>('java-flow-records.json')

@@ -8,12 +8,12 @@
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
-  LocalDate, RuleStoneError, checkStoneTestCase, decisionRecordToJson, explainDecision, explanationText,
-  parameterSetVersionOf, parseDecisionTable, parseParameterSet, parseStoneTests, reasonCodeCatalogVersionOf, ruleVersionOf,
-  writeDecisionTable, writeExplanation, writeJson, writeParameterSet, writeReasonCodeCatalog, type DecisionRecord,
-  type DecisionTable, type ExplainableRecord, type ParamSetVersion, type RankedAttribution, type RuleStoneEngine,
-  type StoneTestCase, type Value,
+  LocalDate, RuleStoneError, decisionRecordToJson, explainDecision, explanationText, parameterSetVersionOf,
+  parseDecisionTable, parseParameterSet, reasonCodeCatalogVersionOf, ruleVersionOf, writeDecisionTable,
+  writeExplanation, writeJson, writeParameterSet, writeReasonCodeCatalog, type DecisionRecord, type DecisionTable,
+  type ExplainableRecord, type ParamSetVersion, type RankedAttribution, type RuleStoneEngine, type Value,
 } from '../src/index.js'
+import { checkStoneTestCase, parseStoneTests, type StoneTestCase } from '../src/testing.js'
 import { EXAMPLES, FIXTURES, exampleCatalog, exampleEngine, exampleTables, files, fixture, read } from './helpers.js'
 
 const hashes = fixture<Record<string, { ruleVersion: string; canonical: string }>>('java-hashes.json')

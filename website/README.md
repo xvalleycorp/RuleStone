@@ -39,10 +39,10 @@ The VitePress development server has known advisories that only affect the local
 
 ## Playground
 
-`/playground` (and `/vi/playground`) embeds the components of [`@rulestone/editor`](../sdk/packages/editor/) on the tables of [`examples/`](../examples/) and the example flow of [`docs/hybrid-ai.md`](../docs/hybrid-ai.md):
+`/playground` (and `/vi/playground`) embeds the components of [`@dxa/rulestone-editor`](../sdk/packages/editor/) on the tables of [`examples/`](../examples/) and the example flow of [`docs/hybrid-ai.md`](../docs/hybrid-ai.md):
 
 - `src/.vitepress/playground/examples.data.ts` reads those files when the site is built (a VitePress data loader), with one case of each `.stone-test.json` as sample facts. The examples are never copied by hand; the build fails if a featured example or its test case is missing.
-- `Playground.vue` loads the SDK only on that page, after mounting (pages are also rendered at build time, where custom elements cannot run). `config.mts` resolves `@rulestone/engine` and `@rulestone/editor` to the SDK's sources and tells Vue that `rulestone-*` and `rs-*` tags are custom elements.
+- `Playground.vue` loads the SDK only on that page, after mounting (pages are also rendered at build time, where custom elements cannot run). `config.mts` resolves `@dxa/rulestone-engine` and `@dxa/rulestone-editor` to the SDK's sources and tells Vue that `rulestone-*` and `rs-*` tags are custom elements.
 - Everything runs in the visitor's browser. Share links carry the table compressed (`CompressionStream`, deflate) and base64url-encoded after `#table=`; a link is size-limited, and its content is read with the engine's strict `.stone.json` reader, never executed. The last edit of each example is kept in `localStorage`, for that browser only.
 
 ## Translations

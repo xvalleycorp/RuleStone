@@ -1,6 +1,6 @@
 ---
 source: hybrid-ai.md
-sourceHash: dee7b00cd3bd5c809a4ff1db11f574d923d2ab28c8ece3a48a9d5a6af070031d
+sourceHash: b97cdd7cbf540bf7f7d2bab363ad856ebd03c16af79b9fc927a3d33f01895f41
 ---
 
 # Ra quyết định AI lai
@@ -466,7 +466,7 @@ Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử
    - **Phiên bản canary và phiên bản bóng** áp dụng cho một luồng theo id của luồng; bên trong luồng, canary và phiên bản bóng của các bảng mà luồng dùng không được áp dụng.
    - **Đầu ra không luật nào đặt** thì vắng mặt, như với bảng: đọc một đầu ra như vậy làm việc đánh giá thất bại, nên luồng kiểm tra chúng bằng `has()`.
    - **Loại nút được dành riêng.** Nút `model` và `flow` bị từ chối vì chưa được hỗ trợ, nên việc bổ sung chúng về sau không thay đổi luồng hay mã băm hiện có nào. Chưa bước nào trong kế hoạch này lên lịch cho nút `flow` (luồng con).
-   - Luồng dùng chung không gian `id` với bảng. Bộ máy luật TypeScript (`@rulestone/engine`) cũng chạy được luồng, với cùng các bước kiểm tra, kết quả và bản ghi; bộ kiểm thử tương thích kiểm tra điều này với các fixture do bộ máy luật Java ghi.
+   - Luồng dùng chung không gian `id` với bảng. Bộ máy luật TypeScript (`@dxa/rulestone-engine`) cũng chạy được luồng, với cùng các bước kiểm tra, kết quả và bản ghi; bộ kiểm thử tương thích kiểm tra điều này với các fixture do bộ máy luật Java ghi.
 3. **Nút mô hình.** *Đã xong.* Thêm `ModelInvoker`, `ModelResult`, các chế độ `invoke` và `supplied`, xử lý lỗi, và mã lý do từ attribution. Thêm đối tượng `models` vào định dạng kiểm thử và cho các bên gọi JSON dựa trên `FactsJson` (Temporal, Camunda, trình soạn thảo). Xem [Nút mô hình](flows.md#nút-mô-hình) và [Luồng có nút mô hình](testing.md#luồng-có-nút-mô-hình). Những điểm trang này còn để ngỏ đã được quyết định như sau:
    - **Giao diện.** `ModelInvoker`, `ModelCall`, `ModelResult` (cùng `ModelResult.Attribution`), `ModelException`, `ModelStatus` và `SuppliedModel` nằm trong `rulestone-api`. Invoker được đăng ký theo id mô hình bằng `RuleStone.builder().modelInvoker(id, invoker)` thay cho một `ModelRegistry`. `ModelCall` cho biết thời gian được phép dưới dạng `Duration`, `timeout()`, thay cho một mốc `Instant`, vì engine đo thời gian bằng đồng hồ đơn điệu. `ModelResult` nêu tên `attributionMethod` của nó. `ModelException` là một `RuleStoneException`, như mọi ngoại lệ của RuleStone.
    - **Các trường của nút** là các trường ở [3.4](#34-hợp-đồng-của-nút-mô-hình), trừ `shadow` và `kind`, sẽ được thêm ở bước 7: tệp nào dùng chúng bị từ chối vì chưa được hỗ trợ. `features` và `timeoutMs` là bắt buộc ở chế độ `invoke` và không được dùng ở chế độ `supplied`. `onFailure` cần cả `to` và `reasonCode`. `maxReasonCodes`, từ 1 tới 10 và mặc định là 3, đặt số mã lý do tối đa mà một nút đưa ra. Một phiên bản được ghim là đúng một phiên bản: khoảng phiên bản, ký tự đại diện như `2.x`, và `latest` đều bị từ chối. Đặc trưng không có kiểu khai báo; mỗi biểu thức phải cho ra một kiểu nguyên thuỷ hoặc một danh sách của chúng. `valid` đọc các đầu ra theo tên, và không gì khác.

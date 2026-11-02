@@ -4,7 +4,7 @@
 /**
  * Embeddable visual editors for RuleStone decision tables and decision flows, as Web
  * Components. Importing this module defines every element; import a single element's module
- * (for example `@rulestone/editor/rules-grid`) to load only that one.
+ * (for example `@dxa/rulestone-editor/rules-grid`) to load only that one.
  *
  * @packageDocumentation
  */

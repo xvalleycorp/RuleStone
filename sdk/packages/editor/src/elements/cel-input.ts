@@ -1,7 +1,7 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { analyzeExpression, type ExpressionIssue, type ValueType } from '@rulestone/engine'
+import { analyzeExpression, type ExpressionIssue, type ValueType } from '@dxa/rulestone-engine'
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues } from 'lit'
 import { completionsAt, type Completion } from '../model/cel-text.js'
 import { RulestoneElement, define, highlight } from './base.js'

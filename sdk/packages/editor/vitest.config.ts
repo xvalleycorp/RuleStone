@@ -7,7 +7,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   resolve: {
     // Tests run against the engine's sources, so they need no build first.
-    alias: { '@rulestone/engine': fileURLToPath(new URL('../engine/src/index.ts', import.meta.url)) },
+    alias: { '@dxa/rulestone-engine': fileURLToPath(new URL('../engine/src/index.ts', import.meta.url)) },
   },
   test: {
     include: ['test/**/*.test.ts'],

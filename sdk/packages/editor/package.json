@@ -1,5 +1,5 @@
 {
-  "name": "@rulestone/editor",
+  "name": "@dxa/rulestone-editor",
   "private": true,
   "version": "0.1.0",
   "description": "Embeddable visual editors for RuleStone decision tables and decision flows, as Web Components: rules grid, condition builder, schema designer, flow canvas and a Try it panel that runs rules in the browser.",
@@ -64,7 +64,7 @@
     "demo:build": "vite build --config demo/vite.config.ts"
   },
   "dependencies": {
-    "@rulestone/engine": "0.1.0",
+    "@dxa/rulestone-engine": "0.1.0",
     "lit": "3.3.3"
   },
   "devDependencies": {
