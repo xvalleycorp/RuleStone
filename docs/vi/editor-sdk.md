@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: e329b59aa4f6ba8a7fa75ac647fb2fd542d9019e7ebc3c479ac18151b695d44d
+sourceHash: cced85ec5406826b70a203d1703a785539e7b03ae9188cbb258159794a6527b6
 ---
 
 # SDK trình soạn thảo
@@ -482,13 +482,13 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@rulestone/editor` (mọi phần tử) | 374.7 KiB, 109.4 KiB khi nén gzip | 215.9 KiB, 60.0 KiB khi nén gzip |
+| `@rulestone/editor` (mọi phần tử) | 374.8 KiB, 109.4 KiB khi nén gzip | 216.0 KiB, 60.0 KiB khi nén gzip |
 | `./table-editor` | 324.3 KiB, 95.0 KiB khi nén gzip | 165.3 KiB, 45.5 KiB khi nén gzip |
 | `./rules-grid` | 178.1 KiB, 54.5 KiB khi nén gzip | 105.7 KiB, 30.2 KiB khi nén gzip |
 | `./condition-builder` | 157.7 KiB, 49.2 KiB khi nén gzip | 85.0 KiB, 24.9 KiB khi nén gzip |
 | `./schema-designer` | 134.5 KiB, 43.3 KiB khi nén gzip | 61.9 KiB, 19.2 KiB khi nén gzip |
 | `./flow-canvas` | 246.9 KiB, 75.7 KiB khi nén gzip | 90.4 KiB, 26.8 KiB khi nén gzip |
-| `./try-it` | 220.4 KiB, 68.3 KiB khi nén gzip | 62.5 KiB, 18.8 KiB khi nén gzip |
+| `./try-it` | 220.4 KiB, 68.4 KiB khi nén gzip | 62.6 KiB, 18.8 KiB khi nén gzip |
 | `./cel-input` | 110.7 KiB, 36.3 KiB khi nén gzip | 52.9 KiB, 16.4 KiB khi nén gzip |
 
 Riêng `@rulestone/engine` là 169.7 KiB, 52.5 KiB khi nén gzip. Vùng vẽ luồng và bảng Chạy thử tạo bộ máy luật, nên nạp cả mã luồng, nút mô hình và replay của bộ máy luật; lưới luật, trình tạo điều kiện, trình thiết kế lược đồ và ô nhập CEL không tạo bộ máy luật nào và bỏ phần mã đó ra. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.

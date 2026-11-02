@@ -305,13 +305,13 @@ Minified and minified + gzipped with esbuild (`npm run size`), with Lit and the 
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 374.7 KiB min, 109.4 KiB gzip | 215.9 KiB min, 60.0 KiB gzip |
+| `@rulestone/editor` (all elements) | 374.8 KiB min, 109.4 KiB gzip | 216.0 KiB min, 60.0 KiB gzip |
 | `./table-editor` | 324.3 KiB min, 95.0 KiB gzip | 165.3 KiB min, 45.5 KiB gzip |
 | `./rules-grid` | 178.1 KiB min, 54.5 KiB gzip | 105.7 KiB min, 30.2 KiB gzip |
 | `./condition-builder` | 157.7 KiB min, 49.2 KiB gzip | 85.0 KiB min, 24.9 KiB gzip |
 | `./schema-designer` | 134.5 KiB min, 43.3 KiB gzip | 61.9 KiB min, 19.2 KiB gzip |
 | `./flow-canvas` | 246.9 KiB min, 75.7 KiB gzip | 90.4 KiB min, 26.8 KiB gzip |
-| `./try-it` | 220.4 KiB min, 68.3 KiB gzip | 62.5 KiB min, 18.8 KiB gzip |
+| `./try-it` | 220.4 KiB min, 68.4 KiB gzip | 62.6 KiB min, 18.8 KiB gzip |
 | `./cel-input` | 110.7 KiB min, 36.3 KiB gzip | 52.9 KiB min, 16.4 KiB gzip |
 
 The flow canvas loads the engine to check flows with it, and Try it to run them. The rules grid, condition builder, schema designer and CEL input create no engine, so they leave out the engine's flow, model and replay code.

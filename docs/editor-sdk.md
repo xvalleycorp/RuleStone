@@ -477,13 +477,13 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 374.7 KiB, 109.4 KiB gzipped | 215.9 KiB, 60.0 KiB gzipped |
+| `@rulestone/editor` (all elements) | 374.8 KiB, 109.4 KiB gzipped | 216.0 KiB, 60.0 KiB gzipped |
 | `./table-editor` | 324.3 KiB, 95.0 KiB gzipped | 165.3 KiB, 45.5 KiB gzipped |
 | `./rules-grid` | 178.1 KiB, 54.5 KiB gzipped | 105.7 KiB, 30.2 KiB gzipped |
 | `./condition-builder` | 157.7 KiB, 49.2 KiB gzipped | 85.0 KiB, 24.9 KiB gzipped |
 | `./schema-designer` | 134.5 KiB, 43.3 KiB gzipped | 61.9 KiB, 19.2 KiB gzipped |
 | `./flow-canvas` | 246.9 KiB, 75.7 KiB gzipped | 90.4 KiB, 26.8 KiB gzipped |
-| `./try-it` | 220.4 KiB, 68.3 KiB gzipped | 62.5 KiB, 18.8 KiB gzipped |
+| `./try-it` | 220.4 KiB, 68.4 KiB gzipped | 62.6 KiB, 18.8 KiB gzipped |
 | `./cel-input` | 110.7 KiB, 36.3 KiB gzipped | 52.9 KiB, 16.4 KiB gzipped |
 
 `@rulestone/engine` alone is 169.7 KiB, 52.5 KiB gzipped. The flow canvas and Try it create engines, so they load the engine's flow, model node and replay code; the rules grid, condition builder, schema designer and CEL input create none and leave that code out. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
