@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
  * @param version       an exact version label
  * @param asOfVariable  the variable holding the business date
  * @param modelsVariable the variable holding supplied model results
+ * @param correlationIdVariable the variable holding the correlation id
  * @param resultVariable the variable the result is written to
  * @param failOnNoMatch whether "no rule matched" throws the BPMN error
  * @param errorCode     the BPMN error code
@@ -25,6 +26,7 @@ record DecisionTask(
         Optional<String> version,
         Optional<String> asOfVariable,
         Optional<String> modelsVariable,
+        Optional<String> correlationIdVariable,
         String resultVariable,
         boolean failOnNoMatch,
         String errorCode) {
@@ -51,7 +53,8 @@ record DecisionTask(
                 .orElse(false);
         String errorCode = header(headers, RuleStoneHeaders.ERROR_CODE).orElse(defaultErrorCode);
         return new DecisionTask(decisionId, header(headers, RuleStoneHeaders.VERSION), asOfVariable,
-                header(headers, RuleStoneHeaders.MODELS_VARIABLE), resultVariable, failOnNoMatch, errorCode);
+                header(headers, RuleStoneHeaders.MODELS_VARIABLE),
+                header(headers, RuleStoneHeaders.CORRELATION_ID_VARIABLE), resultVariable, failOnNoMatch, errorCode);
     }
 
     private static Optional<String> header(Map<String, String> headers, String name) {

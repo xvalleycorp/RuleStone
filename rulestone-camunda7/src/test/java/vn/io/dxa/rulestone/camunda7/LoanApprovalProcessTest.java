@@ -74,7 +74,7 @@ class LoanApprovalProcessTest {
 
         assertThat(waitingAt(instance)).isEqualTo("Disburse");
         Map<String, Object> decision = decision(instance);
-        assertThat(decision).containsOnlyKeys("output", "reasonCodes", "matchedRules", "ruleVersion", "matched");
+        assertThat(decision).containsOnlyKeys("output", "reasonCodes", "matchedRules", "ruleVersion", "matched", "recordId");
         assertThat(output(instance)).containsEntry("decision", "APPROVE");
         assertThat(output(instance).get("limit")).isEqualTo(new BigDecimal("309000000"));
         assertThat(decision.get("matchedRules")).isEqualTo(List.of("R4"));

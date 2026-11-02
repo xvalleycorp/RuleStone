@@ -115,7 +115,27 @@ class RuleStoneJobHandlerTest {
         assertThat(decision.get("reasonCodes").toString()).isEqualTo("[]");
         assertThat(decision.get("matched").asBoolean()).isTrue();
         assertThat(decision.get("ruleVersion").asText()).matches("3@sha256:[0-9a-f]{64}");
-        assertThat(fieldNames(decision)).containsExactly("output", "reasonCodes", "matchedRules", "ruleVersion", "matched");
+        assertThat(fieldNames(decision)).containsExactly("output", "reasonCodes", "matchedRules", "ruleVersion", "matched",
+                "recordId");
+        assertThat(decision.get("recordId").asText()).isNotBlank();
+    }
+
+    @Test
+    void theCorrelationIdVariableReachesTheRecordAndTheResult() throws Exception {
+        handler.handle(client.client, job(headers(RuleStoneHeaders.CORRELATION_ID_VARIABLE, "applicationNo"),
+                loanVariables("\"25750000\"", "\"5000000\"").replace("\"note\": null", "\"applicationNo\": \"LOAN-1\"")));
+
+        JsonNode decision = completed().get("decision");
+        assertThat(decision.get("correlationId").asText()).isEqualTo("LOAN-1");
+    }
+
+    @Test
+    void aMissingCorrelationIdVariableIsABpmnError() {
+        handler.handle(client.client, job(headers(RuleStoneHeaders.CORRELATION_ID_VARIABLE, "applicationNo"),
+                loanVariables("\"25750000\"", "\"5000000\"")));
+
+        assertThat(bpmnError(RuleStoneHeaders.DEFAULT_ERROR_CODE))
+                .isEqualTo("RuleStone task: correlation id variable 'applicationNo' is missing");
     }
 
     private static List<String> fieldNames(JsonNode node) {
@@ -376,7 +396,8 @@ class RuleStoneJobHandlerTest {
                 RuleStoneHeaders.VERSION, " ", RuleStoneHeaders.ERROR_CODE, ""), "DEFAULT_CODE");
 
         assertThat(task).isEqualTo(new DecisionTask("loan_eligibility", java.util.Optional.empty(),
-                java.util.Optional.empty(), java.util.Optional.empty(), "decision", false, "DEFAULT_CODE"));
+                java.util.Optional.empty(), java.util.Optional.empty(), java.util.Optional.empty(), "decision", false,
+                "DEFAULT_CODE"));
     }
 
     // --- unexpected failures -----------------------------------------------------------------
