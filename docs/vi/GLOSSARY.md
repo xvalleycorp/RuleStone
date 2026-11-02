@@ -227,7 +227,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | condition builder | trình tạo điều kiện | `<rulestone-condition-builder>`, đúng như chuỗi trong các thành phần. |
 | conformance suite | bộ kiểm thử tương thích | Bộ kiểm thử so sánh bộ máy luật trên trình duyệt với bộ máy luật Java. |
 | element (Web Component) | phần tử | "Phần tử `<rulestone-table-editor>`". |
-| engine of record | bộ máy luật chính thức (engine of record) | Bộ máy luật Java, dùng cho quyết định trong môi trường production. |
+| equivalent engines | hai bộ máy luật tương đương | Bộ máy luật Java và bộ máy luật TypeScript cho cùng kết quả trên mọi thứ bộ kiểm thử tương thích bao quát. Không dùng "bộ máy luật chính thức" cho riêng bộ máy luật Java. |
 | event | sự kiện | Tên sự kiện (`rulestone-change`) giữ nguyên. |
 | export, import (a file) | xuất, nhập (tệp) | |
 | fit (zoom to fit) | vừa khung | Nút "Fit" của vùng vẽ luồng. |

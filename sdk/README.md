@@ -9,7 +9,7 @@ JavaScript and TypeScript packages for running and editing RuleStone decisions w
 
 The [playground](https://rulestone.dxa.io.vn/playground) on the website runs these components on the example tables, and the [editor SDK guide](../docs/editor-sdk.md) explains how to embed them.
 
-The Java engine remains the engine of record. The browser engine is for instant feedback. Its conformance suite runs every example table, every example test case and the documented expressions against fixtures written by the Java engine. See the [engine README](packages/engine/README.md#conformance).
+The TypeScript engine and the Java engine are equivalent implementations. The conformance suite keeps them identical: it runs every example table, flow and test case, the documented expressions and the decision records against fixtures written by the Java engine. See the [engine README](packages/engine/README.md#conformance).
 
 ## Working on the SDK
 

@@ -1,6 +1,6 @@
 ---
 source: testing.md
-sourceHash: b4f19c8f617f300ad1a00c444f1f1608c866e2912a357b5207c82eebaca6bb56
+sourceHash: f362dd5774dfce86a16a1911b04741f49d5b44ec17a95d7de06205a1e315ef2d
 ---
 
 # Kiểm thử bảng quyết định
@@ -349,6 +349,16 @@ RuleStoneEngine engine = RuleStone.builder()
 ```
 
 Một ca kiểm thử kỳ vọng phần giải thích sẽ thất bại với engine không có danh mục.
+
+## Bản ghi mẫu
+
+Ca kiểm thử kiểm tra những gì luật cần quyết định. Để kiểm tra rằng một bản phát hành vẫn tái tạo được các quyết định đã đưa ra, hãy giữ một vài bản ghi quyết định đã review cùng với luật và khẳng định rằng chúng replay được, bằng `ReplayCheck`:
+
+```java
+ReplayCheck.assertReplays(engine, Path.of("golden/loan-2027-000042.record.json"), facts);
+```
+
+Nó ném `AssertionError` liệt kê các khác biệt. Xem [Bản ghi mẫu trong kiểm thử](replay.md#bản-ghi-mẫu-trong-kiểm-thử).
 
 ## Assertion dạng fluent trong Java
 

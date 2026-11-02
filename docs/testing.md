@@ -345,6 +345,16 @@ RuleStoneEngine engine = RuleStone.builder()
 
 A case that expects an explanation fails on an engine without a catalog.
 
+## Golden records
+
+Test cases check what rules should decide. To check that a release still reproduces decisions already made, keep a few reviewed decision records with the rules and assert that they replay, with `ReplayCheck`:
+
+```java
+ReplayCheck.assertReplays(engine, Path.of("golden/loan-2027-000042.record.json"), facts);
+```
+
+It throws an `AssertionError` that lists the differences. See [Golden records in tests](replay.md#golden-records-in-tests).
+
 ## Fluent assertions in Java
 
 `DecisionCheck` checks one evaluation with a fluent API. It throws `AssertionError`, so it works with JUnit, TestNG or any other framework:
