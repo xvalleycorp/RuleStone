@@ -33,6 +33,9 @@ export { readFacts, readValues, readValue, resultTypes, valueToJson, valuesToJso
 export type { JsonInput } from './facts.js'
 
 export { decisionRecordToJson, writeDecisionRecord } from './record.js'
+export { readDecisionRecord, InvalidRecordError } from './record-json.js'
+export { compareRecords } from './replay.js'
+export type { DecisionComparison, Difference, DifferenceKind, ModelSource } from './replay.js'
 export type {
   DecisionRecord, ParamSetVersion, PathStep, ReasonCode, ModelStep, ModelStatus, ModelStepMode, Routing,
 } from './record.js'

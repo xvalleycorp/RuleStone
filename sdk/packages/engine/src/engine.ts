@@ -20,6 +20,7 @@ import { readModels, type ModelInvoker, type SuppliedModel } from './models.js'
 import { compileParameterSets, type ParameterSet, type Registry } from './params.js'
 import type { DecisionRecord, ModelStep, ReasonCode } from './record.js'
 import type { DecisionTable } from './table.js'
+import { replay, rescore, type DecisionComparison, type ModelSource } from './replay.js'
 import { selectVersion, versionProblems } from './versions.js'
 import {
   MISSING_CATALOG, explainRecord, missingReasonCodes, reasonCodeCatalogVersionOf,
@@ -348,6 +349,35 @@ export class RuleStoneEngine {
     }
     await this.audit(result.record)
     return result
+  }
+
+  /**
+   * Evaluates again exactly what a record names, as RuleStoneEngine.replay: its version, business date
+   * and parameter set versions, the version of each table step and the recorded model results, and
+   * compares the new record with it. Nothing is written to the audit sinks and no model is called.
+   * The record can come from either engine, e.g. through readDecisionRecord.
+   * @throws DecisionNotFoundError if a version the record names is not registered with exactly its hash
+   * @throws RangeError if the record names no version, or model results are given
+   */
+  replay(record: DecisionRecord, facts: FactsInput, models?: ModelsInput): Promise<DecisionComparison> {
+    return replay(this, record, facts, models)
+  }
+
+  /**
+   * Evaluates a recorded decision with another version, date or parameters, as RuleStoneEngine.rescore,
+   * with the recorded model results ('RECORDED') or today's models ('LIVE'), and compares the result
+   * with the record. The facts hash is checked with the recorded version. Nothing is written to the
+   * audit sinks.
+   * @throws RangeError if the target names another decision
+   */
+  rescore(
+    record: DecisionRecord,
+    facts: FactsInput,
+    target: DecisionRef | string,
+    source: ModelSource,
+    models?: ModelsInput,
+  ): Promise<DecisionComparison> {
+    return rescore(this, record, facts, target, source, models)
   }
 
   /** @internal a new attempt for a reference, with a fresh record id and the clock read once */

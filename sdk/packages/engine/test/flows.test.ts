@@ -12,39 +12,15 @@ import {
   InvalidDecisionError, checkStoneTestCase, createEngine, decisionRecordToJson, explanationText, flowVersionOf,
   parseDecisionFlow, parseDecisionTable, parseParameterSet, parseReasonCodeCatalog, parseStoneTests, ruleVersionOf,
   writeDecisionFlow, writeDecisionTable, writeExplanation, writeJson, type DecisionFlow, type DecisionRecord,
-  type DecisionTable, type ModelInvoker, type ParameterSet, type RuleStoneEngine,
+  type ModelInvoker, type ParameterSet, type RuleStoneEngine,
 } from '../src/index.js'
-import { EXAMPLES, exampleCatalog, exampleParamSets, exampleTables, files, fixture, read } from './helpers.js'
+import { FLOWS, exampleCatalog, exampleFlowEngine, exampleFlows, exampleTables, files, fixture, flowTables, read } from './helpers.js'
 
-const FLOWS = join(EXAMPLES, 'flows')
 const hashes = fixture<Record<string, { ruleVersion: string; canonical: string }>>('java-flow-hashes.json')
 const records = fixture<Record<string, Record<string, Record<string, unknown>>>>('java-flow-records.json')
 const explanations = fixture<{ files: Record<string, Record<string, Record<string, { json: string; text: string }>>> }>(
   'java-explanations.json',
 )
-
-export function flowTables(): DecisionTable[] {
-  return files(FLOWS, '.stone.json').map((f) => parseDecisionTable(read(join(FLOWS, f))))
-}
-
-export function exampleFlows(): DecisionFlow[] {
-  return files(FLOWS, '.flow.json').map((f) => parseDecisionFlow(read(join(FLOWS, f))))
-}
-
-/** The engine of the example flow tests, as ExamplesStoneTest builds it in Java. */
-export function exampleFlowEngine(): Promise<RuleStoneEngine> {
-  return createEngine({
-    tables: [...exampleTables(), ...flowTables()],
-    flows: exampleFlows(),
-    paramSets: exampleParamSets(),
-    suppliedModelsOnly: true,
-    clock: () => new Date('2026-12-01T03:00:00Z'),
-    timeZone: 'Asia/Ho_Chi_Minh',
-    recordIds: () => 'fixture',
-    reasonCodeCatalog: exampleCatalog(),
-    requireReasonCodeCatalog: true,
-  })
-}
 
 /** The record as the fixture holds it: without the id, the instant and the engine name. */
 function comparable(record: DecisionRecord, trace?: readonly { ruleId: string; matched: boolean }[]): unknown {
