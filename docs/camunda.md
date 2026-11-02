@@ -64,7 +64,7 @@ Then select a task, choose **Change element → RuleStone decision**, and fill i
 
 ```xml
 <bpmn:serviceTask id="CheckEligibility" name="Check eligibility"
-                  zeebe:modelerTemplate="vn.io.dxa.rulestone.decision" zeebe:modelerTemplateVersion="1">
+                  zeebe:modelerTemplate="vn.io.dxa.rulestone.decision" zeebe:modelerTemplateVersion="2">
   <bpmn:extensionElements>
     <zeebe:taskDefinition type="rulestone:decision" retries="3" />
     <zeebe:taskHeaders>

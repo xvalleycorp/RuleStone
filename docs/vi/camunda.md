@@ -1,6 +1,6 @@
 ---
 source: camunda.md
-sourceHash: 19f60e076f149e0123ca8f383bc75bcf488e4f9bbc6791497669f440339e14c4
+sourceHash: 4f1cd7f298154a614307a82b376b07be98519c6fc6f45c14d3ae6d5227be53b9
 ---
 
 # Tích hợp Camunda
@@ -69,7 +69,7 @@ Sau đó chọn một task, chọn **Change element → RuleStone decision**, v�
 
 ```xml
 <bpmn:serviceTask id="CheckEligibility" name="Check eligibility"
-                  zeebe:modelerTemplate="vn.io.dxa.rulestone.decision" zeebe:modelerTemplateVersion="1">
+                  zeebe:modelerTemplate="vn.io.dxa.rulestone.decision" zeebe:modelerTemplateVersion="2">
   <bpmn:extensionElements>
     <zeebe:taskDefinition type="rulestone:decision" retries="3" />
     <zeebe:taskHeaders>
