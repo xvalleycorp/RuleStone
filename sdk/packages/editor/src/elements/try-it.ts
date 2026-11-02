@@ -3,14 +3,16 @@
 
 import {
   InvalidDecisionError, InvalidFactsError, JsonSyntaxError, LocalDate, RuleStoneError, createEngine, currencyTable,
-  decisionRecordToJson, isEffectiveOn, parseDecisionTable, parseReasonCodeCatalog, valueToJson, writeDecisionTable, writeJson,
+  decisionRecordToJson, isEffectiveOn, parseDecisionFlow, parseDecisionTable, parseReasonCodeCatalog, valueToJson, writeDecisionFlow,
+  writeDecisionTable, writeJson,
   writeParameterSet, writeReasonCodeCatalog, type DecisionRecord, type DecisionResult, type Explanation, type ReasonCodeCatalog,
-  type RuleStoneEngine, type Writable,
+  type RuleStoneEngine, type Writable, type DecisionFlow, type DecisionTable,
 } from '@rulestone/engine'
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
 import { emptyForm, factsJson, formFromJson, formValueAt, reconcileForm, setFormValue, type FormValue, type FormValues } from '../model/facts.js'
 import { describeType } from '../model/schema.js'
 import { readParamSets } from '../model/validate.js'
+import type { FlowJson } from '../model/flow.js'
 import { normalizeTable, type TableJson, type TypeSpec } from '../model/table.js'
 import { RulestoneElement, define, today } from './base.js'
 
@@ -59,6 +61,9 @@ export class RulestoneTryIt extends RulestoneElement {
   static override properties: PropertyDeclarations = {
     ...RulestoneElement.properties,
     table: { attribute: false },
+    flow: { attribute: false },
+    tables: { attribute: false },
+    models: { type: String },
     paramSets: { attribute: false },
     reasonCodes: { attribute: false },
     asOf: { type: String, attribute: 'as-of' },
@@ -73,6 +78,19 @@ export class RulestoneTryIt extends RulestoneElement {
   }
 
   declare table: TableJson
+  /**
+   * A decision flow to run instead of the table. The facts are the flow's inputs; the tables the flow
+   * uses go in `tables`, and the results of its model nodes in `models`.
+   */
+  declare flow: FlowJson | undefined
+  /** With a flow: every version of every table it uses, as .stone.json text or parsed JSON. */
+  declare tables: readonly (string | object)[] | undefined
+  /**
+   * With a flow that has model nodes: their results as JSON text, by node id, as in a .stone-test.json
+   * case. The panel runs model nodes as tests do (suppliedModelsOnly): it calls no model, also for
+   * nodes in invoke mode.
+   */
+  declare models: string | undefined
   /**
    * The parameter sets the table reads, as .params.json text or parsed JSON: every version, so
    * that the business date selects one as the engine does.
@@ -218,6 +236,9 @@ export class RulestoneTryIt extends RulestoneElement {
   constructor() {
     super()
     this.table = normalizeTable({})
+    this.flow = undefined
+    this.tables = undefined
+    this.models = undefined
     this.paramSets = undefined
     this.reasonCodes = undefined
     this.asOf = today()
@@ -232,14 +253,14 @@ export class RulestoneTryIt extends RulestoneElement {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (changed.has('table')) {
-      this._form = Object.keys(this._form).length === 0 ? emptyForm(this.table.inputs) : reconcileForm(this._form, this.table.inputs)
-      if (this._mode === 'form') this._json = factsJson(this._form, this.table.inputs)
+    if (changed.has('table') || changed.has('flow')) {
+      this._form = Object.keys(this._form).length === 0 ? emptyForm(this.inputs) : reconcileForm(this._form, this.inputs)
+      if (this._mode === 'form') this._json = factsJson(this._form, this.inputs)
     }
     if (changed.has('facts') && this.facts !== undefined) {
       this._json = this.facts
       try {
-        this._form = formFromJson(this.facts, this.table.inputs)
+        this._form = formFromJson(this.facts, this.inputs)
         this._jsonError = undefined
       } catch (e) {
         this._mode = 'json'
@@ -248,19 +269,29 @@ export class RulestoneTryIt extends RulestoneElement {
     }
   }
 
+  /** The inputs of what the panel runs: the flow's, if it has one, else the table's. */
+  get inputs(): Record<string, TypeSpec> {
+    return this.flow ? this.flow.inputs : this.table.inputs
+  }
+
+  /** Whether the flow has model nodes, whose results the panel takes in `models`. */
+  private get hasModels(): boolean {
+    return this.flow !== undefined && Object.values(this.flow.nodes).some((n) => n.type === 'model')
+  }
+
   /** The facts as JSON text, as they would be run. */
   get factsText(): string {
-    return this._mode === 'json' ? this._json : factsJson(this._form, this.table.inputs)
+    return this._mode === 'json' ? this._json : factsJson(this._form, this.inputs)
   }
 
   private setMode(mode: 'form' | 'json'): void {
     if (mode === this._mode) return
     if (mode === 'json') {
-      this._json = factsJson(this._form, this.table.inputs)
+      this._json = factsJson(this._form, this.inputs)
       this._jsonError = undefined
     } else {
       try {
-        this._form = formFromJson(this._json, this.table.inputs)
+        this._form = formFromJson(this._json, this.inputs)
         this._jsonError = undefined
       } catch (e) {
         this._jsonError = this.t('tryIt.invalidJson', { message: e instanceof JsonSyntaxError ? `${e.line}:${e.column}` : String(e) })
@@ -271,6 +302,7 @@ export class RulestoneTryIt extends RulestoneElement {
   }
 
   private async compile(): Promise<RuleStoneEngine | undefined> {
+    if (this.flow) return this.compileFlow(this.flow)
     let parsed
     try {
       parsed = parseDecisionTable(JSON.stringify(this.table))
@@ -317,7 +349,46 @@ export class RulestoneTryIt extends RulestoneElement {
     }
   }
 
-  /** Runs the table with the current facts. Resolves with what the rulestone-run event carries. */
+  /** An engine with the flow and its tables, model nodes reading their results from `models`. */
+  private async compileFlow(flow: FlowJson): Promise<RuleStoneEngine | undefined> {
+    let parsed: DecisionFlow
+    let tables: DecisionTable[]
+    let paramSets
+    let reasonCodeCatalog: ReasonCodeCatalog | undefined
+    try {
+      parsed = parseDecisionFlow(JSON.stringify(flow))
+      tables = (this.tables ?? []).map((t) => parseDecisionTable(typeof t === 'string' ? t : JSON.stringify(t)))
+      paramSets = readParamSets(this.paramSets)
+      reasonCodeCatalog = readCatalog(this.reasonCodes)
+    } catch (e) {
+      if (e instanceof InvalidDecisionError) {
+        this._tableProblems = e.problems
+        return undefined
+      }
+      throw e
+    }
+    const key = [
+      writeDecisionFlow(parsed), ...tables.map(writeDecisionTable), ...paramSets.map(writeParameterSet),
+      reasonCodeCatalog ? writeReasonCodeCatalog(reasonCodeCatalog) : '',
+    ].join('\n')
+    if (this.engine?.key === key) return this.engine.engine
+    try {
+      const engine = await createEngine({
+        tables, flows: [parsed], paramSets, suppliedModelsOnly: true, ...(reasonCodeCatalog ? { reasonCodeCatalog } : {}),
+      })
+      this.engine = { key, engine, catalog: reasonCodeCatalog }
+      this._tableProblems = []
+      return engine
+    } catch (e) {
+      if (e instanceof InvalidDecisionError) {
+        this._tableProblems = e.problems
+        return undefined
+      }
+      throw e
+    }
+  }
+
+  /** Runs the table, or the flow, with the current facts. Resolves with what the rulestone-run event carries. */
   async run(): Promise<RunDetail> {
     this._running = true
     let detail: RunDetail
@@ -326,9 +397,11 @@ export class RulestoneTryIt extends RulestoneElement {
       if (!engine) {
         detail = { ok: false, error: this.t('tryIt.invalidTable', { n: this._tableProblems.length }), problems: this._tableProblems, matchedRules: [], evaluatedRules: [] }
       } else {
-        const ref = { id: this.table.id, version: this.table.version, asOf: this.asOf || today() }
+        const what = this.flow ?? this.table
+        const ref = { id: what.id, version: what.version, asOf: this.asOf || today() }
         try {
-          const result = await engine.evaluateJson(ref, this.factsText)
+          const models = this.hasModels && this.models !== undefined && this.models.trim() !== '' ? this.models : undefined
+          const result = await engine.evaluateJson(ref, this.factsText, models)
           detail = {
             ok: true,
             result,
@@ -371,11 +444,11 @@ export class RulestoneTryIt extends RulestoneElement {
   }
 
   protected override render() {
-    const inputs = Object.entries(this.table.inputs)
+    const inputs = Object.entries(this.inputs)
     const date = LocalDate.parse(this.asOf)
     let notEffective = false
     try {
-      const parsed = parseDecisionTable(JSON.stringify(this.table))
+      const parsed = this.flow ? parseDecisionFlow(JSON.stringify(this.flow)) : parseDecisionTable(JSON.stringify(this.table))
       notEffective = date !== undefined && !isEffectiveOn(parsed, date)
     } catch {
       // Problems are shown when the user runs the table.
@@ -407,6 +480,18 @@ export class RulestoneTryIt extends RulestoneElement {
             ? html`<p class="muted">${this.t('tryIt.noInputs')}</p>`
             : inputs.map(([name, spec]) => this.renderValue([name], name, spec, false))}
       </div>
+      ${this.hasModels
+        ? html`<label class="models">${this.t('tryIt.models')}
+            <textarea
+              class="json"
+              spellcheck="false"
+              .value=${this.models ?? ''}
+              placeholder='{ "fraud": { "modelId": "…", "modelVersion": "…", "outputs": { … } } }'
+              @input=${(e: Event) => (this.models = (e.target as HTMLTextAreaElement).value)}
+            ></textarea>
+          </label>
+          <p class="muted note">${this.t('tryIt.modelsHelp')}</p>`
+        : nothing}
       ${this.renderResult()}
       ${this.liveRegion()}
     `
@@ -500,6 +585,7 @@ export class RulestoneTryIt extends RulestoneElement {
             <h4>${this.t('tryIt.reasonCodes')}</h4>
             <p class="mono">${result.reasonCodes.length === 0 ? this.t('common.none') : result.reasonCodes.join(', ')}</p>
             ${run.explanation ? this.renderExplanation(run.explanation) : nothing}
+            ${this.flow ? this.renderPath(result.record) : nothing}
             <h4>${this.t('tryIt.trace')}</h4>
             <ol class="trace">
               ${result.trace.map((step) => html`<li>
@@ -518,6 +604,20 @@ export class RulestoneTryIt extends RulestoneElement {
         : nothing}
       <p class="muted note">${this.t('tryIt.engineNote')}</p>
     </section>`
+  }
+
+  /** The nodes a flow visited: the table and rules of a table node, the branch taken, a model's status. */
+  private renderPath(record: DecisionRecord): TemplateResult {
+    return html`<h4>${this.t('tryIt.path')}</h4>
+      <ol class="items path" part="path">
+        ${record.path.map((step) => {
+          let detail = ''
+          if (step.type === 'table') detail = `${step.decision ?? ''}: ${step.matchedRules.length === 0 ? '—' : step.matchedRules.join(', ')}`
+          else if (step.taken !== undefined) detail = `→ ${step.taken}`
+          else if (step.model) detail = `${step.model.id}@${step.model.version} ${step.model.status}`
+          return html`<li><span class="mono">${step.node}</span> <span class="muted">${step.type}</span> ${detail}</li>`
+        })}
+      </ol>`
   }
 
   private renderExplanation(explanation: Explanation): TemplateResult {

@@ -1,35 +1,42 @@
 // Copyright 2026 The RuleStone Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  FIT_ZOOM, LAYOUT_SPACING, NODE_HEIGHT, NODE_WIDTH, addNode, allEdges, autoLayout, checkFlow, connect, disconnect, fitZoom,
+  FIT_ZOOM, LAYOUT_SPACING, NODE_HEIGHT, NODE_WIDTH, addNode, allEdges, autoLayout, checkFlow, checkFlowWithEngine, connect,
+  disconnect, fitZoom,
   layoutBounds, layoutFor, parseFlow, removeFlowNode, renameNode, type FlowJson, type FlowLayout,
 } from '../src/model/index.js'
 import { REPO } from './helpers.js'
 
-const DEMO_FLOW = join(process.cwd(), 'demo', 'card_origination.flow.json')
+const DEMO_FLOW = join(process.cwd(), 'demo', 'card_origination_scored.flow.json')
 
 function origination(): FlowJson {
   return parseFlow(readFileSync(DEMO_FLOW, 'utf8'))
 }
 
-const TABLES = ['card_policy', 'pd_to_grade', 'card_limit_matrix', 'card_limit_matrix_b']
+const TABLES = ['card_policy', 'card_pd_grade', 'card_limit']
+const FLOWS = join(REPO, 'examples', 'flows')
 
 function codes(flow: FlowJson, tables = TABLES) {
   return checkFlow(flow, { tables }).map((p) => [p.code, p.node ?? null, p.params])
 }
 
+/** The tables of examples/flows, which the example flows use. */
+function definitions() {
+  return { tables: readdirSync(FLOWS).filter((f) => f.endsWith('.stone.json')).map((f) => readFileSync(join(FLOWS, f), 'utf8')) }
+}
+
 describe('flow checks', () => {
-  it('accept the example flow of docs/hybrid-ai.md', () => {
+  it('accept the example flow of examples/flows', () => {
     expect(codes(origination())).toEqual([])
   })
 
   it('find cycles', () => {
     const flow = origination()
-    flow.nodes['grade']!.next = 'segment'
+    flow.nodes['grade']!.next = [{ when: "grade.riskGrade == 'D'", to: 'referred' }, { to: 'segment' }]
     expect(codes(flow).filter(([c]) => c === 'cycle').map(([, n]) => n)).toEqual(['segment', 'pd_behaviour', 'pd_application', 'grade'])
   })
 
@@ -37,7 +44,7 @@ describe('flow checks', () => {
     const flow = origination()
     flow.nodes['orphan'] = { type: 'end', set: { decision: "'X'", riskGrade: "'X'", limit: 'money(0, "VND")' } }
     flow.nodes['grade']!.next = 'stuck'
-    flow.nodes['stuck'] = { type: 'derive', values: { x: '1' } }
+    flow.nodes['stuck'] = { type: 'derive', outputs: { x: 'int' }, set: { x: '1' } }
     expect(codes(flow)).toEqual(expect.arrayContaining([
       ['unreachable', 'orphan', {}],
       ['deadEnd', 'stuck', {}],
@@ -49,13 +56,14 @@ describe('flow checks', () => {
     const flow = origination()
     delete flow.nodes['pd_behaviour']!.onFailure
     flow.nodes['pd_application']!.model = { id: 'retail_pd_application' }
-    flow.nodes['limit_strategy']!.buckets![1]!.percent = 20
-    flow.nodes['grade']!.decision = 'pd_to_grde'
-    expect(codes(flow)).toEqual([
+    flow.nodes['grade']!.decision = 'card_pd_grde'
+    flow.nodes['limit']!.next = 'strategy'
+    flow.nodes['strategy'] = { type: 'split', key: 'applicant.id', salt: 's', buckets: [{ name: 'a', percent: 90, to: 'approved' }, { name: 'b', percent: 20, to: 'approved' }] }
+    expect(codes(flow).filter(([c]) => c !== 'engine')).toEqual([
       ['modelNoFailure', 'pd_behaviour', {}],
       ['modelUnpinned', 'pd_application', {}],
-      ['unknownTable', 'grade', { decision: 'pd_to_grde' }],
-      ['splitPercent', 'limit_strategy', { total: 110 }],
+      ['unknownTable', 'grade', { decision: 'card_pd_grde' }],
+      ['splitPercent', 'strategy', { total: 110 }],
     ])
   })
 
@@ -64,16 +72,43 @@ describe('flow checks', () => {
     flow.start = 'nowhere'
     flow.nodes['segment']!.cases = [{ when: 'applicant.existingCustomer', to: 'pd_behaviour' }]
     flow.nodes['approved']!.set = { decision: "'APPROVE'", bonus: '1' }
-    flow.nodes['grade']!.next = 'gone'
+    flow.nodes['limit']!.next = 'gone'
     const found = codes(flow)
     expect(found).toEqual(expect.arrayContaining([
       ['unknownStart', null, { target: 'nowhere' }],
-      ['switchNoDefault', 'segment', {}],
+      ['engine', 'segment', { message: '$.nodes.segment.cases[0].when: the last alternative must have no "when", so that one always applies; add { "to": … } after it' }],
       ['endMissingOutput', 'approved', { output: 'riskGrade' }],
       ['endMissingOutput', 'approved', { output: 'limit' }],
       ['endUnknownOutput', 'approved', { output: 'bonus' }],
-      ['unknownTarget', 'grade', { target: 'gone' }],
+      ['unknownTarget', 'limit', { target: 'gone' }],
     ]))
+  })
+
+  it('report what the engine reads strictly, also without the tables', () => {
+    const flow = origination()
+    flow.nodes['derived'] = { type: 'derive', values: { x: '1' }, next: 'approved' }
+    flow.nodes['fraud']!.shadow = [{ id: 'fraud_v2', version: '1' }]
+    const engine = checkFlow(flow, { tables: TABLES }).filter((p) => p.code === 'engine').map((p) => [p.node, p.params.message])
+    expect(engine).toEqual([
+      ['fraud', '$.nodes.fraud.shadow: not supported yet: shadow models and LLM nodes are planned for a later release (see Hybrid AI decisioning)'],
+      ['derived', '$.nodes.derived.values: unknown field (allowed: as, description, next, outputs, set, type)'],
+      ['derived', '$.nodes.derived.outputs: required object of name to type'],
+      ['derived', '$.nodes.derived.set: required object of name to CEL expression'],
+    ])
+  })
+
+  it('report the problems the engine reports when the tables are known', async () => {
+    expect(await checkFlowWithEngine(origination(), definitions())).toEqual([])
+    const flow = origination()
+    flow.nodes['referred']!.set = { ...flow.nodes['referred']!.set, limit: 'limit.limit' }
+    flow.nodes['grade']!.facts = { pd: 'score.pd', extra: '1' }
+    expect(await checkFlowWithEngine(flow, definitions())).toEqual([
+      { code: 'engine', severity: 'error', node: 'grade', params: { message: "nodes.grade.facts.extra: not an input of decision 'card_pd_grade' (inputs: [pd])" } },
+      {
+        code: 'engine', severity: 'error', node: 'referred',
+        params: { message: "nodes.referred.set.limit: reads 'limit', which is not set on every path that reaches this node; a node may read only values that every path to it sets" },
+      },
+    ])
   })
 })
 
@@ -81,16 +116,16 @@ describe('flow editing', () => {
   it('adds, connects, renames and removes nodes, keeping edges consistent', () => {
     let flow = origination()
     const added = addNode(flow, 'derive')
-    flow = connect(added.flow, 'grade', added.id)
-    expect(flow.nodes['grade']!.next).toEqual([{ when: '', to: 'derive1' }, { to: 'limit_strategy' }])
-    expect(codes(flow)).toEqual(expect.arrayContaining([['emptyCondition', 'grade', { target: 'derive1' }], ['deadEnd', 'derive1', {}]]))
+    flow = connect(added.flow, 'limit', added.id)
+    expect(flow.nodes['limit']!.next).toEqual([{ when: '', to: 'derive1' }, { to: 'approved' }])
+    expect(codes(flow)).toEqual(expect.arrayContaining([['emptyCondition', 'limit', { target: 'derive1' }], ['deadEnd', 'derive1', {}]]))
     flow = renameNode(flow, 'derive1', 'dti')
-    expect(flow.nodes['grade']!.next).toEqual([{ when: '', to: 'dti' }, { to: 'limit_strategy' }])
-    const edge = allEdges(flow).find((e) => e.from === 'grade' && e.to === 'dti')!
+    expect(flow.nodes['limit']!.next).toEqual([{ when: '', to: 'dti' }, { to: 'approved' }])
+    const edge = allEdges(flow).find((e) => e.from === 'limit' && e.to === 'dti')!
     flow = disconnect(flow, edge)
-    expect(flow.nodes['grade']!.next).toBe('limit_strategy')
-    flow = removeFlowNode(flow, 'limit_strategy')
-    expect(flow.nodes['grade']!.next).toBeUndefined()
+    expect(flow.nodes['limit']!.next).toBe('approved')
+    flow = removeFlowNode(flow, 'approved')
+    expect(flow.nodes['limit']!.next).toBeUndefined()
     flow = renameNode(flow, 'policy', 'knockouts')
     expect(flow.start).toBe('knockouts')
     flow = connect(flow, 'pd_behaviour', 'rejected', true)
@@ -108,10 +143,10 @@ describe('flow editing', () => {
     const layout = autoLayout(origination(), {}, { maxColumns: 3 })
     const columns = new Set(Object.values(layout).map((p) => p.x))
     expect(columns.size).toBe(3)
-    // policy, segment and the models fill the first row; grade starts the second, at the left.
-    expect(layout['grade']!.x).toBe(layout['policy']!.x)
-    expect(layout['grade']!.y).toBeGreaterThan(layout['pd_application']!.y + NODE_HEIGHT)
-    expect(layout['approved']!.y).toBeGreaterThan(layout['limit_challenger']!.y + NODE_HEIGHT)
+    // policy, fraud and segment fill the first row; the models start the second, at the left.
+    expect(layout['pd_behaviour']!.x).toBe(layout['policy']!.x)
+    expect(layout['pd_behaviour']!.y).toBeGreaterThan(layout['referred']!.y + NODE_HEIGHT)
+    expect(layout['approved']!.y).toBeGreaterThan(layout['limit']!.y + NODE_HEIGHT)
     expect(noOverlaps(layout)).toBe(true)
   })
 
@@ -128,13 +163,11 @@ describe('flow editing', () => {
     const layout = layoutFor(origination(), 358, 420)
     const b = layoutBounds(layout)!
     expect((b.width + 2 * LAYOUT_SPACING.margin) * FIT_ZOOM.min).toBeLessThanOrEqual(358)
-    expect(Object.keys(layout)).toHaveLength(11)
+    expect(Object.keys(layout)).toHaveLength(10)
   })
 
-  it('is the same flow as the example in docs/hybrid-ai.md', () => {
-    const doc = readFileSync(join(REPO, 'docs', 'hybrid-ai.md'), 'utf8')
-    const block = [...doc.matchAll(/```json\n([\s\S]*?)\n```/g)].map((m) => m[1]!).find((b) => b.includes('"id": "card_origination"') && b.includes('"nodes"'))
-    expect(JSON.parse(block!)).toEqual(origination())
+  it('is a copy of examples/flows/card_origination_scored.flow.json', () => {
+    expect(readFileSync(DEMO_FLOW, 'utf8')).toBe(readFileSync(join(FLOWS, 'card_origination_scored.flow.json'), 'utf8'))
   })
 })
 

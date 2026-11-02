@@ -68,7 +68,7 @@ export interface DecisionTable {
  * This ignores other versions: a later version supersedes this one from its effectiveFrom. To
  * find the version in force, use versionInForce.
  */
-export function isEffectiveOn(table: DecisionTable, date: LocalDate): boolean {
+export function isEffectiveOn(table: { readonly effectiveFrom?: LocalDate; readonly effectiveTo?: LocalDate }, date: LocalDate): boolean {
   return (
     (table.effectiveFrom === undefined || date.compareTo(table.effectiveFrom) >= 0) &&
     (table.effectiveTo === undefined || date.compareTo(table.effectiveTo) < 0)

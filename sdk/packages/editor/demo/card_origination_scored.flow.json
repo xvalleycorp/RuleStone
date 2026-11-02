@@ -1,0 +1,75 @@
+{
+  "id": "card_origination_scored",
+  "version": "1",
+  "description": "Credit card origination with models: a fraud score that the caller supplies, then a probability of default from one of two models, with a referral whenever a model fails",
+  "effectiveFrom": "2026-11-01",
+  "inputs": {
+    "applicant": { "id": "string", "age": "int", "income": "money", "existingCustomer": "bool" },
+    "bureau": { "dpd30Count12m": "int", "utilisation": "decimal" }
+  },
+  "outputs": { "decision": "string", "limit": "money", "riskGrade": "string" },
+  "start": "policy",
+  "nodes": {
+    "policy": {
+      "type": "table", "decision": "card_policy",
+      "next": [ { "when": "policy.decision == 'REJECT'", "to": "rejected" }, { "to": "fraud" } ]
+    },
+    "fraud": {
+      "type": "model", "mode": "supplied",
+      "model": { "id": "card_application_fraud", "version": "1.2.0" },
+      "outputs": { "score": "decimal" },
+      "valid": "score >= decimal(0) && score <= decimal(1)",
+      "reasonCodes": { "deviceAgeDays": "NEW_DEVICE", "addressMismatch": "ADDRESS_MISMATCH" },
+      "onFailure": { "to": "referred", "reasonCode": "FRAUD_SCORE_UNAVAILABLE" },
+      "next": [ { "when": "fraud.score >= decimal('0.80')", "to": "referred" }, { "to": "segment" } ]
+    },
+    "segment": {
+      "type": "switch",
+      "cases": [ { "when": "applicant.existingCustomer", "to": "pd_behaviour" }, { "to": "pd_application" } ]
+    },
+    "pd_behaviour": {
+      "type": "model", "mode": "invoke", "as": "score",
+      "model": { "id": "retail_pd_behaviour", "version": "2.4.0" },
+      "features": { "utilisation": "bureau.utilisation", "dpd30Count12m": "bureau.dpd30Count12m" },
+      "outputs": { "pd": "decimal" },
+      "valid": "pd >= decimal(0) && pd <= decimal(1)",
+      "timeoutMs": 80,
+      "reasonCodes": { "utilisation": "HIGH_UTILISATION", "dpd30Count12m": "RECENT_DELINQUENCY" },
+      "onFailure": { "to": "referred", "reasonCode": "MODEL_UNAVAILABLE" },
+      "next": "grade"
+    },
+    "pd_application": {
+      "type": "model", "mode": "invoke", "as": "score",
+      "model": { "id": "retail_pd_application", "version": "3.1.0" },
+      "features": { "age": "applicant.age", "utilisation": "bureau.utilisation" },
+      "outputs": { "pd": "decimal" },
+      "valid": "pd >= decimal(0) && pd <= decimal(1)",
+      "minConfidence": "0.70",
+      "timeoutMs": 80,
+      "reasonCodes": { "utilisation": "HIGH_UTILISATION", "age": "THIN_CREDIT_FILE" },
+      "maxReasonCodes": 1,
+      "onFailure": { "to": "referred", "reasonCode": "MODEL_UNAVAILABLE" },
+      "next": "grade"
+    },
+    "grade": {
+      "type": "table", "decision": "card_pd_grade",
+      "facts": { "pd": "score.pd" },
+      "next": [ { "when": "grade.riskGrade == 'D'", "to": "referred" }, { "to": "limit" } ]
+    },
+    "limit": {
+      "type": "table", "decision": "card_limit",
+      "facts": {
+        "riskGrade": "grade.riskGrade",
+        "annualIncome": "applicant.income * 12",
+        "strategy": "'champion'"
+      },
+      "next": "approved"
+    },
+    "approved": { "type": "end", "set": {
+      "decision": "'APPROVE'", "riskGrade": "grade.riskGrade", "limit": "limit.limit" } },
+    "referred": { "type": "end", "set": {
+      "decision": "'REFER'", "riskGrade": "'N/A'", "limit": "money(0, applicant.income.currency())" } },
+    "rejected": { "type": "end", "set": {
+      "decision": "'REJECT'", "riskGrade": "'N/A'", "limit": "money(0, applicant.income.currency())" } }
+  }
+}
