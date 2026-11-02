@@ -15,6 +15,7 @@ The module offers three tools:
 - [Running test files with JUnit 5](#running-test-files-with-junit-5)
 - [Rule coverage](#rule-coverage)
 - [Testing decision flows](#testing-decision-flows)
+- [Testing explanations](#testing-explanations)
 - [Fluent assertions in Java](#fluent-assertions-in-java)
 - [Recommended practice for banks](#recommended-practice-for-banks)
 
@@ -105,6 +106,7 @@ A table that reads parameters is tested against the parameter sets the engine is
 | `matchedRules` | Exactly these rules matched, in evaluation order. `[]` means none. For a flow, the rules of every table node, in order. |
 | `path` | For a flow: exactly these nodes were visited, in order, from the start node to the end node. For a table, the path is the decision id alone. |
 | `ruleVersion` | The version used: `"3"` accepts any content of version 3; `"3@sha256:…"` (the full `ruleVersion` of a result) accepts only that exact content. |
+| `explanation` | The explanation of the record in one locale, with the engine's reason-code catalog: see [Testing explanations](#testing-explanations). |
 | `error` | The evaluation fails with a `RuleStoneException` whose message contains this text, e.g. `"division by zero"`, `"balance: missing input"` or `"no version of decision 'loan_eligibility' is effective on 2025-12-31"`. Cannot be combined with the other fields. |
 
 ### Values
@@ -155,7 +157,7 @@ As for decision tables, unknown and duplicate keys are errors, so that a misspel
 
 ```
 invalid test file loan_eligibility.v3.stone-test.json (1 problem):
-  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, matchedRules, output, path, reasonCodes, ruleVersion)
+  - $.cases[0].expect.matchedRule: unknown field (allowed: error, exactOutput, explanation, matchedRules, output, path, reasonCodes, ruleVersion)
 ```
 
 ## Running test files with JUnit 5
@@ -309,6 +311,39 @@ RuleStoneEngine engine = RuleStone.builder().decisions(tables).flows(flows).supp
 ```
 
 Coverage counts two kinds of branch for a model node, which always has both: each target of its `next`, and its `onFailure` path, written `pd_behaviour -> referred (onFailure)`. The `onFailure` branch counts only when the model failed, even if `next` leads to the same node, so every model node needs a case in which its model fails.
+
+## Testing explanations
+
+When the engine has a [reason-code catalog](explanations.md), a case can also check the [explanation](explanations.md#explaining-a-decision) of its record in one locale. This case, from [`examples/credit_limit_increase.stone-test.json`](../examples/credit_limit_increase.stone-test.json), checks the Vietnamese message that a rejected customer reads:
+
+```json
+"expect": {
+  "output": { "decision": "REJECT" }, "reasonCodes": ["DTI_HIGH"], "matchedRules": ["DTI_HIGH"],
+  "explanation": {
+    "locale": "vi",
+    "reasons": ["DTI_HIGH"],
+    "messages": ["Tổng số tiền trả nợ hằng tháng của quý khách quá cao so với thu nhập."]
+  }
+}
+```
+
+| Field | Checks |
+|---|---|
+| `locale` | Required. The locale to explain the record in; the catalog must have it. |
+| `reasons` | Exactly these reason codes, in this order, and each has a message in the locale. |
+| `messages` | Exactly these messages, in this order. |
+
+Give `reasons`, `messages` or both. Build the engine under test with the catalog, as in production; `requireReasonCodeCatalog()` then also fails the build when a code of a table or flow has no message, which checks the whole catalog before any case runs:
+
+```java
+RuleStoneEngine engine = RuleStone.builder()
+        .decisions(tables)
+        .reasonCodeCatalog(ReasonCodeCatalogJson.read(Path.of("rules/reason-codes.json")))
+        .requireReasonCodeCatalog()
+        .build();
+```
+
+A case that expects an explanation fails on an engine without a catalog.
 
 ## Fluent assertions in Java
 

@@ -66,6 +66,7 @@ export class RulestoneTableEditor extends RulestoneElement {
     ...RulestoneElement.properties,
     table: { attribute: false },
     paramSets: { attribute: false },
+    reasonCodes: { attribute: false },
     validator: { attribute: false },
     asOf: { type: String, attribute: 'as-of' },
     facts: { type: String },
@@ -83,6 +84,11 @@ export class RulestoneTableEditor extends RulestoneElement {
    * Parameters tab shows their values, and Try it binds the version in force on its date.
    */
   declare paramSets: readonly (string | object)[] | undefined
+  /**
+   * A reason-code catalog for the Try it panel, as reason-codes.json text or parsed JSON: the panel
+   * then explains each run with the catalog's messages.
+   */
+  declare reasonCodes: string | object | undefined
   /** Optional async server-side validation; see TableValidator. */
   declare validator: TableValidator | undefined
   /** The business date the Try it panel starts with. */
@@ -273,6 +279,7 @@ export class RulestoneTableEditor extends RulestoneElement {
     this.table = normalizeTable({ id: 'new_decision', version: '1', hitPolicy: 'FIRST', inputs: {}, outputs: {}, rules: [{ id: 'R1', when: 'true' }] })
     this.validator = undefined
     this.paramSets = undefined
+    this.reasonCodes = undefined
     this.asOf = undefined
     this.facts = undefined
     this._tab = 'rules'
@@ -395,6 +402,7 @@ export class RulestoneTableEditor extends RulestoneElement {
           <rulestone-try-it
             .table=${this.table}
             .paramSets=${this.paramSets}
+            .reasonCodes=${this.reasonCodes}
             .asOf=${this.asOf ?? ''}
             .facts=${this.facts}
             .locale=${this.effectiveLocale}

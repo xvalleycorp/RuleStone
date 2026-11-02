@@ -49,7 +49,11 @@
         "exactOutput": true,
         "reasonCodes": ["HIGH_UTILISATION"],
         "matchedRules": ["PASS", "A", "A"],
-        "path": ["policy", "fraud", "segment", "pd_behaviour", "grade", "limit", "approved"]
+        "path": ["policy", "fraud", "segment", "pd_behaviour", "grade", "limit", "approved"],
+        "explanation": {
+          "locale": "en",
+          "messages": ["Your credit utilisation is high compared with your limits."]
+        }
       }
     },
     {

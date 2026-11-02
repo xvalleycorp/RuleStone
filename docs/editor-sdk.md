@@ -200,6 +200,7 @@ The **Local values** tab lists each local value as a name and a CEL expression, 
 |---|---|---|
 | `table` | property | The table as parsed `.stone.json`, a plain object. The editor works on a copy and never changes the host's object. |
 | `paramSets` | property | The parameter sets the table may read: every version of each, as `.params.json` text or parsed JSON. The table's `params` are checked against them as the engine checks them, the Parameters tab shows their values, and Try it uses the version in force on its date. Without them, a table that declares `params` reports its set as not registered. |
+| `reasonCodes` | property | A [reason-code catalog](explanations.md) for the Try it panel, as `reason-codes.json` text or parsed JSON: the panel then explains each run. |
 | `validator` | property | Optional `async (table, localResult) => HostProblem[]` for server-side checks. See [the validator hook](#server-side-checks-the-validator-hook). |
 | `asOf` / `as-of` | property / attribute | The business date the Try it panel starts with (`yyyy-MM-dd`). Default: today. |
 | `facts` | property / attribute | Facts for the Try it panel as JSON text, in the forms of a `.stone-test.json` case. |
@@ -267,11 +268,12 @@ Renaming a field updates every rule expression that uses it through the type-che
 |---|---|---|
 | `table` | property | The table to run. |
 | `paramSets` | property | The parameter sets the table reads, as `.params.json` text or parsed JSON; the version in force on `asOf` is used, and the record lists it. |
+| `reasonCodes` | property | A [reason-code catalog](explanations.md), as `reason-codes.json` text or parsed JSON. Every reason code of the table must then have a message, and the panel lists the messages of each run's reasons in the panel's locale (or the catalog's first locale); `rulestone-run` carries the `explanation`. |
 | `asOf` / `as-of` | property / attribute | The business date. Default: today, in the browser's time zone. |
 | `facts` | property / attribute | Initial facts as JSON text. |
 | `factsText` | property (read only) | The facts as they would be run, as JSON text. |
 | `run()` | method | Runs the table; resolves with the event's detail. |
-| `rulestone-run` | event | `detail`: `{ ok, result?, record?, recordJson?, error?, problems?, matchedRules, evaluatedRules }`. |
+| `rulestone-run` | event | `detail`: `{ ok, result?, record?, recordJson?, explanation?, error?, problems?, matchedRules, evaluatedRules }`. |
 
 The form is generated from the inputs, with fields for money (amount and currency), dates, decimals, structs and lists. A JSON mode takes the facts in the same forms as `.stone-test.json` files. The result shows the outputs, reason codes, the trace, the rule version and the decision record.
 
@@ -468,16 +470,16 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@rulestone/editor` (all elements) | 312.5 KiB, 91.1 KiB gzipped | 208.1 KiB, 57.6 KiB gzipped |
-| `./table-editor` | 264.5 KiB, 77.5 KiB gzipped | 160.1 KiB, 44.0 KiB gzipped |
-| `./rules-grid` | 175.6 KiB, 53.8 KiB gzipped | 103.7 KiB, 29.7 KiB gzipped |
-| `./condition-builder` | 155.1 KiB, 48.5 KiB gzipped | 83.0 KiB, 24.3 KiB gzipped |
-| `./schema-designer` | 131.9 KiB, 42.6 KiB gzipped | 60.0 KiB, 18.7 KiB gzipped |
-| `./flow-canvas` | 100.9 KiB, 30.9 KiB gzipped | 85.9 KiB, 25.3 KiB gzipped |
-| `./try-it` | 160.7 KiB, 51.0 KiB gzipped | 57.4 KiB, 17.4 KiB gzipped |
-| `./cel-input` | 108.7 KiB, 35.8 KiB gzipped | 50.9 KiB, 15.9 KiB gzipped |
+| `@rulestone/editor` (all elements) | 318.0 KiB, 92.6 KiB gzipped | 209.5 KiB, 58.0 KiB gzipped |
+| `./table-editor` | 270.1 KiB, 79.1 KiB gzipped | 161.6 KiB, 44.4 KiB gzipped |
+| `./rules-grid` | 175.8 KiB, 53.9 KiB gzipped | 103.9 KiB, 29.8 KiB gzipped |
+| `./condition-builder` | 155.4 KiB, 48.6 KiB gzipped | 83.3 KiB, 24.4 KiB gzipped |
+| `./schema-designer` | 132.2 KiB, 42.7 KiB gzipped | 60.2 KiB, 18.7 KiB gzipped |
+| `./flow-canvas` | 101.1 KiB, 31.0 KiB gzipped | 86.1 KiB, 25.4 KiB gzipped |
+| `./try-it` | 166.2 KiB, 52.6 KiB gzipped | 58.8 KiB, 17.8 KiB gzipped |
+| `./cel-input` | 108.9 KiB, 35.8 KiB gzipped | 51.2 KiB, 15.9 KiB gzipped |
 
-`@rulestone/engine` alone is 101.1 KiB, 32.5 KiB gzipped. The flow canvas does not load the engine. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
+`@rulestone/engine` alone is 110.1 KiB, 35.3 KiB gzipped. The flow canvas does not load the engine. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
 
 ## The browser engine and the Java engine
 

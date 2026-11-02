@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: b67ec3382b5aedae4d7a188d8344d2df2b09bf023639182266de60f09c0ba08c
+sourceHash: b849ecaee16b960d8f9dc2e1f946ceb3da6a75dde199c994bc756df3ae677781
 ---
 
 # SDK trình soạn thảo
@@ -205,6 +205,7 @@ Thẻ **Giá trị cục bộ** liệt kê mỗi giá trị cục bộ dưới d
 |---|---|---|
 | `table` | thuộc tính | Bảng dưới dạng `.stone.json` đã phân tích, một đối tượng thuần. Trình soạn thảo làm việc trên một bản sao và không bao giờ thay đổi đối tượng của ứng dụng chủ. |
 | `paramSets` | thuộc tính | Các bộ tham số mà bảng có thể đọc: mọi phiên bản của mỗi bộ, dạng văn bản `.params.json` hoặc JSON đã phân tích. `params` của bảng được kiểm tra với chúng như engine kiểm tra, thẻ Tham số hiển thị giá trị của chúng, và Chạy thử dùng phiên bản có hiệu lực vào ngày của nó. Nếu không có, một bảng khai báo `params` sẽ báo bộ tham số của nó chưa được đăng ký. |
+| `reasonCodes` | thuộc tính | Một [danh mục mã lý do](explanations.md) cho bảng Chạy thử, dạng văn bản `reason-codes.json` hoặc JSON đã phân tích: khi đó bảng giải thích mỗi lần chạy. |
 | `validator` | thuộc tính | Hàm tuỳ chọn `async (table, localResult) => HostProblem[]` cho các bước kiểm tra phía máy chủ. Xem [hook validator](#kiểm-tra-phía-máy-chủ-hook-validator). |
 | `asOf` / `as-of` | thuộc tính / attribute | Ngày nghiệp vụ mà bảng Chạy thử bắt đầu (`yyyy-MM-dd`). Mặc định: hôm nay. |
 | `facts` | thuộc tính / attribute | Dữ liệu đầu vào cho bảng Chạy thử dưới dạng văn bản JSON, theo các dạng của một ca kiểm thử `.stone-test.json`. |
@@ -272,11 +273,12 @@ Bộ chọn trường liệt kê các đầu vào, các giá trị cục bộ, c
 |---|---|---|
 | `table` | thuộc tính | Bảng cần chạy. |
 | `paramSets` | thuộc tính | Các bộ tham số mà bảng đọc, dạng văn bản `.params.json` hoặc JSON đã phân tích; phiên bản có hiệu lực vào `asOf` được dùng, và bản ghi liệt kê nó. |
+| `reasonCodes` | thuộc tính | Một [danh mục mã lý do](explanations.md), dạng văn bản `reason-codes.json` hoặc JSON đã phân tích. Khi đó mọi mã lý do của bảng phải có nội dung, và bảng liệt kê nội dung các lý do của mỗi lần chạy theo locale của bảng (hoặc locale đầu tiên của danh mục); `rulestone-run` mang theo `explanation`. |
 | `asOf` / `as-of` | thuộc tính / attribute | Ngày nghiệp vụ. Mặc định: hôm nay, theo múi giờ của trình duyệt. |
 | `facts` | thuộc tính / attribute | Dữ liệu đầu vào ban đầu dưới dạng văn bản JSON. |
 | `factsText` | thuộc tính (chỉ đọc) | Dữ liệu đầu vào sẽ được chạy, dưới dạng văn bản JSON. |
 | `run()` | phương thức | Chạy bảng; trả về `detail` của sự kiện. |
-| `rulestone-run` | sự kiện | `detail`: `{ ok, result?, record?, recordJson?, error?, problems?, matchedRules, evaluatedRules }`. |
+| `rulestone-run` | sự kiện | `detail`: `{ ok, result?, record?, recordJson?, explanation?, error?, problems?, matchedRules, evaluatedRules }`. |
 
 Biểu mẫu được tạo từ các đầu vào, với ô nhập cho tiền (số tiền và đơn vị tiền tệ), ngày, số thập phân, struct và danh sách. Chế độ JSON nhận dữ liệu đầu vào theo cùng các dạng như tệp `.stone-test.json`. Kết quả hiển thị các đầu ra, mã lý do, vết thực thi (trace), phiên bản luật và bản ghi quyết định.
 
@@ -473,16 +475,16 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@rulestone/editor` (mọi phần tử) | 312.5 KiB, 91.1 KiB khi nén gzip | 208.1 KiB, 57.6 KiB khi nén gzip |
-| `./table-editor` | 264.5 KiB, 77.5 KiB khi nén gzip | 160.1 KiB, 44.0 KiB khi nén gzip |
-| `./rules-grid` | 175.6 KiB, 53.8 KiB khi nén gzip | 103.7 KiB, 29.7 KiB khi nén gzip |
-| `./condition-builder` | 155.1 KiB, 48.5 KiB khi nén gzip | 83.0 KiB, 24.3 KiB khi nén gzip |
-| `./schema-designer` | 131.9 KiB, 42.6 KiB khi nén gzip | 60.0 KiB, 18.7 KiB khi nén gzip |
-| `./flow-canvas` | 100.9 KiB, 30.9 KiB khi nén gzip | 85.9 KiB, 25.3 KiB khi nén gzip |
-| `./try-it` | 160.7 KiB, 51.0 KiB khi nén gzip | 57.4 KiB, 17.4 KiB khi nén gzip |
-| `./cel-input` | 108.7 KiB, 35.8 KiB khi nén gzip | 50.9 KiB, 15.9 KiB khi nén gzip |
+| `@rulestone/editor` (mọi phần tử) | 318.0 KiB, 92.6 KiB khi nén gzip | 209.5 KiB, 58.0 KiB khi nén gzip |
+| `./table-editor` | 270.1 KiB, 79.1 KiB khi nén gzip | 161.6 KiB, 44.4 KiB khi nén gzip |
+| `./rules-grid` | 175.8 KiB, 53.9 KiB khi nén gzip | 103.9 KiB, 29.8 KiB khi nén gzip |
+| `./condition-builder` | 155.4 KiB, 48.6 KiB khi nén gzip | 83.3 KiB, 24.4 KiB khi nén gzip |
+| `./schema-designer` | 132.2 KiB, 42.7 KiB khi nén gzip | 60.2 KiB, 18.7 KiB khi nén gzip |
+| `./flow-canvas` | 101.1 KiB, 31.0 KiB khi nén gzip | 86.1 KiB, 25.4 KiB khi nén gzip |
+| `./try-it` | 166.2 KiB, 52.6 KiB khi nén gzip | 58.8 KiB, 17.8 KiB khi nén gzip |
+| `./cel-input` | 108.9 KiB, 35.8 KiB khi nén gzip | 51.2 KiB, 15.9 KiB khi nén gzip |
 
-Riêng `@rulestone/engine` là 101.1 KiB, 32.5 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
+Riêng `@rulestone/engine` là 110.1 KiB, 35.3 KiB khi nén gzip. Vùng vẽ luồng không nạp bộ máy luật. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
 
 ## Bộ máy luật trên trình duyệt và bộ máy luật Java
 

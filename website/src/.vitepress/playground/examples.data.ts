@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Build-time data for the playground: the example tables of the repository's examples/
-// folder, one case of each table's .stone-test.json as sample facts, and the example
+// folder, one case of each table's .stone-test.json as sample facts, the examples' reason-code
+// catalog, and the example
 // decision flow of docs/hybrid-ai.md. They are read when the site is built, so the playground
 // always shows the same files as the repository, and nothing is copied by hand.
 
@@ -26,6 +27,8 @@ export interface PlaygroundData {
   examples: PlaygroundExample[];
   /** Every .params.json parameter set of examples/, as written, for the tables that read them. */
   paramSets: string[];
+  /** examples/reason-codes.json, the reason-code catalog that explains the examples' decisions. */
+  reasonCodes: string;
   /** The card_origination flow of docs/hybrid-ai.md, section 3.2. */
   flow: string;
 }
@@ -54,6 +57,7 @@ export default {
     '../../../../examples/*.stone.json',
     '../../../../examples/*.stone-test.json',
     '../../../../examples/*.params.json',
+    '../../../../examples/reason-codes.json',
     '../../../../docs/hybrid-ai.md',
   ],
   load(files: string[]): PlaygroundData {
@@ -94,6 +98,10 @@ export default {
 
     const paramSets = read('.params.json').sort().map((f) => readFileSync(f, 'utf8'));
 
-    return { examples, paramSets, flow: flow + '\n' };
+    const catalog = read('reason-codes.json')[0];
+    if (!catalog) throw new Error('examples/reason-codes.json is missing (website playground)');
+    const reasonCodes = readFileSync(catalog, 'utf8');
+
+    return { examples, paramSets, reasonCodes, flow: flow + '\n' };
   },
 };

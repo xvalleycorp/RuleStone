@@ -129,4 +129,43 @@
   "read" : [ null, null, null, null, null, null, null, null ],
   "readParams" : [ null, null ],
   "build" : [ "all@1 inputs.params: reserved name: the parameters declared in \"params\" are read as params.<name>", "all@1 params.values.bad-name: must be an identifier (a letter or '_', then letters, digits or '_') and not a reserved word", "all@1 params.values.st: parameters must be bool, int, string, decimal, money, date or lists of them", "all@1 params.values.b: declared decimal but parameter set s@2 has it as int", "all@1 params.values.c: parameter set s@2 has no parameter 'c'", "all@1 let.q: reads params.q, which params.values does not declare (declared: [a, b, c, bad-name, st])", "all@1 rules[R].when: reads params.y, params.z, which params.values does not declare (declared: [a, b, c, bad-name, st])", "unknown@1 params.set: no parameter set 'nope' is registered", "pinned@1 params.version: parameter set 's' has no version '9'", "undeclared@1 let.y: reads params.limit, but no parameters are declared; declare them in \"params\"", "undeclared@1 rules[R].when: reads params.a, params.b, but no parameters are declared; declare them in \"params\"", "undeclared@1 rules[S].when: reads params, but no parameters are declared; declare them in \"params\"", "empty@1 params.values: declare at least one parameter", "empty@1 rules[R].when: reads params.a, which params.values does not declare (declared: [])", "wrong_types@1 params.values.b: declared int but parameter set s@1 has it as decimal", "wrong_types@1 rules[R].when: expression must produce bool but produces int: params.a + 1" ]
+}, {
+  "name" : "reason codes: reading a catalog reports every problem",
+  "read" : [ ],
+  "readReasonCodes" : [ "$.extra: unknown field (allowed: codes, description, locales, version)", "$.version: must be letters, digits, '.', '_' or '-'", "$.locales[1]: must be a language tag such as en, vi or en-GB", "$.locales[2]: duplicate locale 'en'", "$.codes.dti_high: must be UPPER_SNAKE_CASE, e.g. DTI_HIGH", "$.codes.A.en: must not start or end with spaces", "$.codes.A.fr: locale not declared in $.locales", "$.codes.B.en: must not contain '{' or '}', which are reserved for placeholders", "$.codes.C.en: must be one line of text, without control characters", "$.codes.D: expected an object of locale to message", "$.codes.E.en: expected a string", "$.codes.F.en: must not be blank", "$.codes.G.en: must be one line of text, without control characters" ],
+  "build" : [ ]
+}, {
+  "name" : "reason codes: missing locales and fields",
+  "read" : [ ],
+  "readReasonCodes" : [ "$.codes.A.vi: required: the message in vi", "$.codes.B.en: required: the message in en" ],
+  "build" : [ ]
+}, {
+  "name" : "reason codes: no locales and no codes",
+  "read" : [ ],
+  "readReasonCodes" : [ "$.version: required non-empty string", "$.locales: required non-empty array of language tags, e.g. [\"en\", \"vi\"]", "$.codes: required object of reason code to { locale: message }" ],
+  "build" : [ ]
+}, {
+  "name" : "reason codes: invalid JSON",
+  "read" : [ ],
+  "readReasonCodes" : [ "invalid JSON: Unexpected character ('}' (code 125)): was expecting double-quote to start field name (line 1, column 37)" ],
+  "build" : [ ]
+}, {
+  "name" : "reason codes: duplicate keys",
+  "read" : [ ],
+  "readReasonCodes" : [ "invalid JSON: Duplicate field 'en' (line 1, column 68)" ],
+  "build" : [ ]
+}, {
+  "name" : "reason codes: every reason code of every table needs a message",
+  "read" : [ null, null ],
+  "readReasonCodes" : null,
+  "build" : [ "t@1 rules[R2].reasonCode: reason code 'UNKNOWN' is not in the reason-code catalog", "u@2 rules[A].reasonCode: reason code 'ALSO_UNKNOWN' is not in the reason-code catalog" ]
+}, {
+  "name" : "reason codes: a required catalog must be registered",
+  "read" : [ null ],
+  "build" : [ "reason-code catalog: required, but none is registered" ]
+}, {
+  "name" : "reason codes: a registered catalog satisfies the requirement",
+  "read" : [ null ],
+  "readReasonCodes" : null,
+  "build" : [ ]
 } ]

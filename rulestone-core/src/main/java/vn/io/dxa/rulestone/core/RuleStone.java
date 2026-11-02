@@ -44,6 +44,9 @@ import vn.io.dxa.rulestone.cel.ExpressionEnvironment;
  */
 public final class RuleStone {
 
+    /** The problem reported when a reason-code catalog is required but none is registered. */
+    static final String MISSING_CATALOG = "reason-code catalog: required, but none is registered";
+
     private RuleStone() {}
 
     public static Builder builder() {
@@ -69,6 +72,8 @@ public final class RuleStone {
         private Executor shadowExecutor = Runnable::run;
         private final Map<String, ModelInvoker> modelInvokers = new LinkedHashMap<>();
         private boolean suppliedModelsOnly;
+        private ReasonCodeCatalog reasonCodeCatalog;
+        private boolean requireReasonCodeCatalog;
 
         private Builder() {}
 
@@ -149,6 +154,35 @@ public final class RuleStone {
          */
         public Builder suppliedModelsOnly() {
             this.suppliedModelsOnly = true;
+            return this;
+        }
+
+        /**
+         * Registers the reviewed messages of reason codes, for explanations with
+         * {@link RuleStoneEngine#explain}. {@link #build()} then checks that every reason code that a
+         * registered table or flow can give has a message, in every locale of the catalog: the
+         * {@code reasonCode} of every rule, and the {@code reasonCodes} and {@code onFailure} reason
+         * code of every {@code model} node. A catalog is optional unless
+         * {@link #requireReasonCodeCatalog()} is called.
+         *
+         * @throws IllegalArgumentException if a catalog is already registered
+         */
+        public Builder reasonCodeCatalog(ReasonCodeCatalog catalog) {
+            Objects.requireNonNull(catalog, "catalog");
+            if (reasonCodeCatalog != null) {
+                throw new IllegalArgumentException("a reason-code catalog is already registered");
+            }
+            this.reasonCodeCatalog = catalog;
+            return this;
+        }
+
+        /**
+         * Makes {@link #build()} fail unless a reason-code catalog is registered, so that every
+         * decision the engine makes can be explained with reviewed messages, as adverse-action
+         * notices need.
+         */
+        public Builder requireReasonCodeCatalog() {
+            this.requireReasonCodeCatalog = true;
             return this;
         }
 
@@ -289,8 +323,8 @@ public final class RuleStone {
         /**
          * @throws InvalidDecisionException listing every problem in every registered parameter set,
          *         table and flow, including inconsistent versions (see {@link DecisionVersions#problems}),
-         *         parameters that some version of their set does not declare alike, and canaries or
-         *         shadows of unknown versions
+         *         parameters that some version of their set does not declare alike, canaries or
+         *         shadows of unknown versions, and reason codes missing from the reason-code catalog
          */
         public RuleStoneEngine build() {
             List<String> problems = new ArrayList<>();
@@ -323,6 +357,11 @@ public final class RuleStone {
             Map<String, Executable> shadows = new HashMap<>();
             shadowVersions.forEach((id, version) -> route("shadow", id, version, byId, problems)
                     .ifPresent(d -> shadows.put(id, d)));
+            if (reasonCodeCatalog != null) {
+                problems.addAll(Explanations.missingCodes(tables, flows, reasonCodeCatalog));
+            } else if (requireReasonCodeCatalog) {
+                problems.add(MISSING_CATALOG);
+            }
             if (!problems.isEmpty()) {
                 throw new InvalidDecisionException(problems);
             }
@@ -336,7 +375,8 @@ public final class RuleStone {
                 return id;
             };
             return new DefaultRuleStoneEngine(byId, clock, auditSinks, new FactsHasher(factsHashKey), checkedIds,
-                    timeout, nanoTime, new DefaultRuleStoneEngine.Routes(canaries, shadows, shadowExecutor));
+                    timeout, nanoTime, new DefaultRuleStoneEngine.Routes(canaries, shadows, shadowExecutor),
+                    Optional.ofNullable(reasonCodeCatalog));
         }
 
         /** The compiled {@code version} of decision {@code id}, or a problem if it was never registered. */

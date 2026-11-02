@@ -46,6 +46,7 @@ export const LOCALES = {
       'fuzzy-matching.md': 'So khớp gần đúng',
       'java-api.md': 'Java API',
       'testing.md': 'Kiểm thử',
+      'explanations.md': 'Giải thích quyết định',
       'temporal.md': 'Tích hợp Temporal',
       'editor.md': 'Trình soạn thảo web',
       'editor-sdk.md': 'SDK trình soạn thảo',

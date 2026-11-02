@@ -10,7 +10,7 @@ import type {
 } from '../src/index.js'
 import { FIT_ZOOM, LAYOUT_SPACING, NODE_HEIGHT, NODE_WIDTH, autoLayout, parseFlow, type TableJson } from '../src/model/index.js'
 import { backRoute } from '../src/elements/flow-canvas.js'
-import { $, $$, exampleTable, settle } from './helpers.js'
+import { $, $$, EXAMPLES, exampleTable, settle } from './helpers.js'
 
 afterEach(() => document.body.replaceChildren())
 
@@ -171,6 +171,33 @@ describe('<rulestone-try-it>', () => {
     expect($(el, '[part="result"] table')!.textContent).toContain('"240000000"')
     expect(detail.recordJson).toContain('"status": "OK"')
     expect(detail.recordJson).toContain('"businessDate": "2026-11-15"')
+  })
+
+  it('explains each run in its locale when given a reason-code catalog', async () => {
+    const reasonCodes = readFileSync(join(EXAMPLES, 'reason-codes.json'), 'utf8')
+    const el = await mount<RulestoneTryIt>('rulestone-try-it', {
+      table: exampleTable('loan_eligibility.v3.stone.json'),
+      reasonCodes,
+      locale: 'vi',
+      asOf: '2026-11-15',
+      facts: JSON.stringify({ applicant: { age: 30, monthlyIncome: '20000000', monthlyDebt: '12000000', segment: 'RETAIL', blacklisted: false }, amount: '100000000' }),
+    })
+    const detail = await el.run()
+    await settle(el)
+    expect(detail.explanation!.locale).toBe('vi')
+    expect(detail.explanation!.reasons.map((r) => r.code)).toEqual(['DTI_HIGH'])
+    expect($(el, '[part="explanation"]')!.textContent).toContain('Tổng số tiền trả nợ hằng tháng của quý khách quá cao so với thu nhập.')
+    el.locale = 'en'
+    expect((await el.run()).explanation!.reasons[0]!.message).toBe('Your monthly debt payments are too high compared with your income.')
+    el.reasonCodes = '{ "version": "1", "locales": ["en"], "codes": {} }'
+    const invalid = await el.run()
+    expect(invalid.ok).toBe(false)
+    expect(invalid.problems).toEqual([
+      "loan_eligibility@3 rules[R1].reasonCode: reason code 'UNDERAGE' is not in the reason-code catalog",
+      "loan_eligibility@3 rules[R2].reasonCode: reason code 'BLACKLISTED' is not in the reason-code catalog",
+      "loan_eligibility@3 rules[R3].reasonCode: reason code 'DTI_HIGH' is not in the reason-code catalog",
+      "loan_eligibility@3 rules[R5].reasonCode: reason code 'AMOUNT_ABOVE_LIMIT' is not in the reason-code catalog",
+    ])
   })
 
   it('generates a typed form from the inputs and reports facts that do not fit', async () => {

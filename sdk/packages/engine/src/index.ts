@@ -25,6 +25,14 @@ export type { JsonInput } from './facts.js'
 export { decisionRecordToJson, writeDecisionRecord } from './record.js'
 export type { DecisionRecord, ParamSetVersion, PathStep, ReasonCode } from './record.js'
 
+export {
+  parseReasonCodeCatalog, writeReasonCodeCatalog, reasonCodeCatalogVersionOf, explainRecord, explainDecision,
+  explanationToJson, writeExplanation, explanationText, REASON_CODES_FILE,
+} from './explanation.js'
+export type {
+  ReasonCodeCatalog, Explanation, ExplanationReason, ExplanationStep, ExplainableRecord, RankedAttribution, Direction,
+} from './explanation.js'
+
 export { parseStoneTests, checkStoneTestCase, StoneTestFailure, InvalidStoneTestError } from './stone-test.js'
 export type { StoneTestCase, StoneTestOutcome } from './stone-test.js'
 

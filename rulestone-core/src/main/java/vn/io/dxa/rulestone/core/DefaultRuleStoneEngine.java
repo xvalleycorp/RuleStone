@@ -28,6 +28,7 @@ import vn.io.dxa.rulestone.api.DecisionRecord.Status;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionResult;
 import vn.io.dxa.rulestone.api.DecisionTimeoutException;
+import vn.io.dxa.rulestone.api.Explanation;
 import vn.io.dxa.rulestone.api.Facts;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.api.RuleStoneException;
@@ -59,10 +60,12 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
     private final Optional<Duration> timeout;
     private final LongSupplier nanoTime;
     private final Routes routes;
+    private final Optional<ReasonCodeCatalog> catalog;
+    private final String catalogVersion;
 
     DefaultRuleStoneEngine(Map<String, List<Executable>> decisions, Clock clock, List<AuditSink> sinks,
                            FactsHasher hasher, Supplier<String> recordIds, Optional<Duration> timeout,
-                           LongSupplier nanoTime, Routes routes) {
+                           LongSupplier nanoTime, Routes routes, Optional<ReasonCodeCatalog> catalog) {
         this.decisions = Map.copyOf(decisions);
         this.clock = clock;
         this.sinks = List.copyOf(sinks);
@@ -71,6 +74,15 @@ final class DefaultRuleStoneEngine implements RuleStoneEngine {
         this.timeout = timeout;
         this.nanoTime = nanoTime;
         this.routes = routes;
+        this.catalog = catalog;
+        this.catalogVersion = catalog.map(ReasonCodeCatalogJson::exactVersion).orElse(null);
+    }
+
+    @Override
+    public Explanation explain(DecisionRecord record, String locale) {
+        ReasonCodeCatalog reasons = catalog.orElseThrow(() -> new UnsupportedOperationException(
+                "this engine has no reason-code catalog; build it with RuleStone.builder().reasonCodeCatalog(...)"));
+        return Explanations.explain(record, reasons, catalogVersion, locale);
     }
 
     @Override

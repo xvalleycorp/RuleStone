@@ -24,6 +24,8 @@ import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
 import vn.io.dxa.rulestone.core.ParameterSet;
 import vn.io.dxa.rulestone.core.ParameterSetJson;
+import vn.io.dxa.rulestone.core.ReasonCodeCatalog;
+import vn.io.dxa.rulestone.core.ReasonCodeCatalogJson;
 import vn.io.dxa.rulestone.core.RuleStone;
 
 /**
@@ -53,6 +55,11 @@ class ExamplesStoneTest {
         return files(EXAMPLES, ParameterSetJson.FILE_SUFFIX).stream().map(ParameterSetJson::read).toList();
     }
 
+    /** The reason-code catalog of the examples, {@code examples/reason-codes.json}. */
+    static ReasonCodeCatalog exampleCatalog() {
+        return ReasonCodeCatalogJson.read(EXAMPLES.resolve(ReasonCodeCatalogJson.FILE_NAME));
+    }
+
     /** Every {@code *.flow.json} flow in {@code examples/flows/}. */
     static List<DecisionFlow> exampleFlows() {
         return files(FLOWS, DecisionFlowJson.FILE_SUFFIX).stream().map(DecisionFlowJson::read).toList();
@@ -68,7 +75,8 @@ class ExamplesStoneTest {
 
     /**
      * The example tables and flows, with the clock fixed so that cases without {@code asOf} are
-     * reproducible, and every model node reading its result from the case.
+     * reproducible, every model node reading its result from the case, and the examples' catalog
+     * required, so that every reason code of the examples has a message in English and Vietnamese.
      */
     static RuleStoneEngine exampleEngine() {
         return RuleStone.builder()
@@ -77,6 +85,8 @@ class ExamplesStoneTest {
                 .flows(exampleFlows())
                 .paramSets(exampleParamSets())
                 .suppliedModelsOnly()   // the model results come from the test cases
+                .reasonCodeCatalog(exampleCatalog())
+                .requireReasonCodeCatalog()
                 .build();
     }
 

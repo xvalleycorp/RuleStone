@@ -8,10 +8,13 @@
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
-  RuleStoneError, checkStoneTestCase, decisionRecordToJson, parameterSetVersionOf, parseDecisionTable, parseParameterSet,
-  parseStoneTests, ruleVersionOf, writeDecisionTable, writeJson, writeParameterSet, type DecisionRecord, type DecisionTable, type RuleStoneEngine, type StoneTestCase,
+  LocalDate, RuleStoneError, checkStoneTestCase, decisionRecordToJson, explainDecision, explanationText,
+  parameterSetVersionOf, parseDecisionTable, parseParameterSet, parseStoneTests, reasonCodeCatalogVersionOf, ruleVersionOf,
+  writeDecisionTable, writeExplanation, writeJson, writeParameterSet, writeReasonCodeCatalog, type DecisionRecord,
+  type DecisionTable, type ExplainableRecord, type ParamSetVersion, type RankedAttribution, type RuleStoneEngine,
+  type StoneTestCase, type Value,
 } from '../src/index.js'
-import { EXAMPLES, FIXTURES, exampleEngine, exampleTables, files, fixture, read } from './helpers.js'
+import { EXAMPLES, FIXTURES, exampleCatalog, exampleEngine, exampleTables, files, fixture, read } from './helpers.js'
 
 const hashes = fixture<Record<string, { ruleVersion: string; canonical: string }>>('java-hashes.json')
 const records = fixture<Record<string, Record<string, Record<string, unknown>>>>('java-records.json')
@@ -124,4 +127,85 @@ describe('example test files', () => {
       (e: unknown) => e instanceof RuleStoneError && e.record?.status === 'ERROR' && e.record.version === undefined,
     )
   })
+})
+
+interface JavaExplanation {
+  readonly record?: Record<string, unknown>
+  readonly [locale: string]: { readonly json: string; readonly text: string } | Record<string, unknown> | undefined
+}
+const explanations = fixture<{
+  catalog: { file: string; version: string; canonical: string }
+  files: Record<string, Record<string, JavaExplanation>>
+}>('java-explanations.json')
+
+/** A Java record from DecisionRecordJson, as an explanation reads it: ints as bigint, other values as their JSON strings. */
+function recordFromJson(json: Record<string, unknown>): ExplainableRecord {
+  const value = (v: unknown): Value =>
+    typeof v === 'number' ? BigInt(v) : Array.isArray(v) ? v.map(value) : (v as Value)
+  const path = (json.path as Record<string, unknown>[]).map((step) => {
+    const model = step.model as { id: string; version: string } | undefined
+    return {
+      node: step.node as string,
+      type: step.type as string,
+      ...(step.decision !== undefined ? { decision: step.decision as string } : {}),
+      ...(step.version !== undefined ? { version: step.version as string } : {}),
+      ...(step.matchedRules !== undefined ? { matchedRules: step.matchedRules as string[] } : {}),
+      ...(step.taken !== undefined ? { taken: step.taken as string } : {}),
+      ...(model
+        ? { model: { id: model.id, version: model.version, status: step.status as string, attributions: (step.attributions ?? []) as RankedAttribution[] } }
+        : {}),
+    }
+  })
+  return {
+    recordId: json.recordId as string,
+    ...(json.correlationId !== undefined ? { correlationId: json.correlationId as string } : {}),
+    decision: json.decision as string,
+    ...(json.version !== undefined ? { version: json.version as string } : {}),
+    ...(json.params !== undefined ? { params: json.params as ParamSetVersion[] } : {}),
+    businessDate: LocalDate.parse(json.businessDate as string)!,
+    status: json.status as 'OK' | 'ERROR' | 'TIMEOUT',
+    output: new Map(Object.entries(json.output as Record<string, unknown>).map(([k, v]) => [k, value(v)])),
+    reasonCodes: json.reasonCodes as { code: string; source: string }[],
+    path,
+  }
+}
+
+describe('explanations', () => {
+  let engine: RuleStoneEngine
+  let tables: DecisionTable[]
+  beforeAll(async () => {
+    tables = exampleTables()
+    engine = await exampleEngine(tables)
+  })
+
+  it('reads the catalog with the Java canonical form and version', async () => {
+    const catalog = exampleCatalog()
+    expect(writeReasonCodeCatalog(catalog)).toBe(explanations.catalog.canonical)
+    expect(await reasonCodeCatalogVersionOf(catalog)).toBe(explanations.catalog.version)
+    expect(engine.reasonCodeCatalogVersion).toBe(explanations.catalog.version)
+  })
+
+  for (const [file, cases] of Object.entries(explanations.files)) {
+    describe(file, () => {
+      for (const [name, entry] of Object.entries(cases)) {
+        it(name, async () => {
+          let record: ExplainableRecord
+          if (entry.record) {
+            record = recordFromJson(entry.record)
+          } else {
+            const testCase = parseStoneTests(read(join(EXAMPLES, file)), file, tables).find((c) => c.name === name)!
+            const outcome = await checkStoneTestCase(engine, testCase)
+            record = outcome.result?.record ?? outcome.error!.record!
+          }
+          for (const locale of exampleCatalog().locales) {
+            const expected = entry[locale] as { json: string; text: string }
+            const explanation = engine.explain(record, locale)
+            expect(writeExplanation(explanation)).toBe(expected.json)
+            expect(explanationText(explanation)).toBe(expected.text)
+            expect(writeExplanation(await explainDecision(record, exampleCatalog(), locale))).toBe(expected.json)
+          }
+        })
+      }
+    })
+  }
 })

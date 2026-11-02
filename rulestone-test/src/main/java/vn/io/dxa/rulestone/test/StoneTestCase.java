@@ -43,13 +43,23 @@ public final class StoneTestCase {
     private final Optional<List<String>> matchedRules;
     private final Optional<List<String>> path;
     private final Optional<String> ruleVersion;
+    private final Optional<ExplanationExpectation> explanation;
     private final Optional<String> error;
+
+    /**
+     * What the explanation of the result in {@code locale} must hold.
+     *
+     * @param locale   the locale to explain the record in
+     * @param reasons  the reason codes, in order, each of which must have a message
+     * @param messages the messages of the reasons, in order
+     */
+    record ExplanationExpectation(String locale, Optional<List<String>> reasons, Optional<List<String>> messages) {}
 
     StoneTestCase(String source, String decision, String name, Optional<String> description,
                   Optional<String> version, Optional<LocalDate> asOf, Map<String, String> params, Facts facts,
                   Map<String, Object> output, boolean exactOutput, Optional<List<String>> reasonCodes,
                   Optional<List<String>> matchedRules, Optional<List<String>> path, Optional<String> ruleVersion,
-                  Optional<String> error) {
+                  Optional<ExplanationExpectation> explanation, Optional<String> error) {
         this.source = Objects.requireNonNull(source, "source");
         this.decision = Objects.requireNonNull(decision, "decision");
         this.name = Objects.requireNonNull(name, "name");
@@ -64,6 +74,7 @@ public final class StoneTestCase {
         this.matchedRules = matchedRules.map(List::copyOf);
         this.path = path.map(List::copyOf);
         this.ruleVersion = ruleVersion;
+        this.explanation = explanation;
         this.error = error;
     }
 
@@ -207,6 +218,7 @@ public final class StoneTestCase {
         matchedRules.flatMap(rules -> Expectations.matchedRules(actual, rules)).ifPresent(problems::add);
         path.flatMap(nodes -> Expectations.path(actual, nodes)).ifPresent(problems::add);
         ruleVersion.flatMap(v -> Expectations.ruleVersion(actual, v)).ifPresent(problems::add);
+        explanation.ifPresent(expected -> problems.addAll(Expectations.explanation(engine, actual, expected)));
         if (!problems.isEmpty()) {
             throw failed(result, problems, null);
         }

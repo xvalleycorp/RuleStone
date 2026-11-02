@@ -4,8 +4,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   AuditError, Decimal, DecisionEvaluationError, DecisionNotFoundError, InvalidDecisionError, InvalidFactsError, LocalDate,
-  Money, createEngine, decisionRecordToJson, outputJson, parseDecisionTable, parseParameterSet, readFacts,
-  writeDecisionRecord, writeJson, type DecisionRecord, type DecisionTable, type ParameterSet,
+  Money, createEngine, decisionRecordToJson, outputJson, parseDecisionTable, parseParameterSet, parseReasonCodeCatalog,
+  readFacts, writeDecisionRecord, writeJson, type DecisionRecord, type DecisionTable, type ParameterSet,
+  type ReasonCodeCatalog,
 } from '../src/index.js'
 import { exampleEngine, fixture } from './helpers.js'
 
@@ -13,11 +14,14 @@ interface InvalidCase {
   name: string
   tables: string[]
   paramSets?: string[]
+  reasonCodes?: string
+  requireReasonCodes?: boolean
 }
 interface JavaInvalid {
   name: string
   read: (string[] | null)[]
   readParams?: (string[] | null)[]
+  readReasonCodes?: string[] | null
   build: string[]
 }
 
@@ -56,9 +60,25 @@ describe('invalid tables report the problems Java reports', () => {
         })
         expect(readParams).toEqual(expected.readParams)
       }
+      let reasonCodeCatalog: ReasonCodeCatalog | undefined
+      if (testCase.reasonCodes !== undefined) {
+        let readReasonCodes: readonly string[] | null = null
+        try {
+          reasonCodeCatalog = parseReasonCodeCatalog(testCase.reasonCodes)
+        } catch (e) {
+          if (!(e instanceof InvalidDecisionError)) throw e
+          readReasonCodes = e.problems
+        }
+        expect(readReasonCodes).toEqual(expected.readReasonCodes)
+      }
       let build: readonly string[] = []
       try {
-        await createEngine({ tables, paramSets })
+        await createEngine({
+          tables,
+          paramSets,
+          ...(reasonCodeCatalog ? { reasonCodeCatalog } : {}),
+          ...(testCase.requireReasonCodes ? { requireReasonCodeCatalog: true } : {}),
+        })
       } catch (e) {
         if (!(e instanceof InvalidDecisionError)) throw e
         build = e.problems

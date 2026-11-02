@@ -1,8 +1,8 @@
 # Hybrid AI decisioning
 
-> Status: **design proposal**, partly implemented · Last updated: 2026-10-30
+> Status: **design proposal**, partly implemented · Last updated: 2026-11-02
 >
-> Steps 1 to 3 of the [implementation plan](#9-implementation-plan) are **available**: every evaluation produces a decision record (see [Decision records and auditing](java-api.md#decision-records-and-auditing)), decision flows run in the Java engine (see [Decision flows](flows.md)), and flows use models through model nodes in `invoke` and `supplied` mode (see [Model nodes](flows.md#model-nodes)). Everything else on this page is a proposal for review and will change before it ships.
+> Steps 1 to 4 of the [implementation plan](#9-implementation-plan) are **available**: every evaluation produces a decision record (see [Decision records and auditing](java-api.md#decision-records-and-auditing)), decision flows run in the Java engine (see [Decision flows](flows.md)), flows use models through model nodes in `invoke` and `supplied` mode (see [Model nodes](flows.md#model-nodes)), and records are explained with a reason-code catalog (see [Explanations](explanations.md)). Everything else on this page is a proposal for review and will change before it ships.
 
 This page specifies how RuleStone combines machine-learning models with rules, and how every decision explains itself. It covers three things:
 
@@ -330,7 +330,7 @@ Keeping values out of the default record means it can be written to ordinary log
   }
   ```
 
-  Explanations for customers and staff are built from the catalog **deterministically**. An LLM may rephrase them later for tone, using the masked record as its only input, but the codes stay the source of truth. This is the existing "decision explanation" pattern in the [architecture](architecture.md#7-ai-integration-planned).
+  Explanations for customers and staff are built from the catalog **deterministically**. An LLM may rephrase them later for tone, using the masked record as its only input, but the codes stay the source of truth. This is the existing "decision explanation" pattern in the [architecture](architecture.md#7-ai-integration-planned). *Available:* the catalog that shipped also declares its `version` and `locales`; see [Explanations](explanations.md).
 
 ### 4.5 Replay and re-scoring
 
@@ -472,7 +472,14 @@ Each step is a separate, reviewable change with its own tests and documentation.
    - **Testing.** `.stone-test.json` cases give results in `models`, as in [section 6](#6-testing-flows-that-use-models). `RuleStone.builder().suppliedModelsOnly()` runs every model node in `supplied` mode, for tests and for replay. Coverage counts the `onFailure` path of each model node as a branch, written `pd -> referred (onFailure)`.
    - **Determinism and replay.** `supplied` mode is deterministic. For `invoke` mode, replay (step 5) needs each model step's status, outputs and confidence, and the ranks and directions of its attributions, which give the same reason codes. It will rebuild the results from the record and run the flow with `suppliedModelsOnly()`.
    - **JSON callers.** `FactsJson.readModels` reads the `models` object. The Temporal activity (`DecisionRequest.models`), the Camunda 8 worker and the Camunda 7 delegate (`modelsVariable`) and the editor's evaluate endpoint (`models`) accept it, but they still evaluate decision tables only. Evaluating flows through them is left for later.
-4. **Explanations.** Add the reason-code catalog with EN/VI messages and a deterministic explanation renderer.
+4. **Explanations.** *Done.* Add the reason-code catalog with EN/VI messages and a deterministic explanation renderer. See [Explanations](explanations.md) and [Testing explanations](testing.md#testing-explanations). Points this page left open were decided as follows:
+   - **Catalog format.** `reason-codes.json` wraps the codes of [4.4](#44-reason-codes-and-human-readable-explanations) in an object with a required `version`, an optional `description` and the declared `locales`, so that the file can be versioned and checked: every code has a message in exactly those locales. It is read strictly, with every problem reported together, as tables are.
+   - **Versioning.** A catalog has an exact version, `<version>@sha256:<hash of the canonical form>`, as tables and parameter sets have, and every explanation names it. A catalog has no effective dates and no id: an engine has one catalog. No existing table, flow or parameter set hash changes.
+   - **Messages** are one line of plain text. There are no placeholders yet; `{` and `}` are rejected so that placeholders for output values can be added later without changing existing catalogs. There is one message per code and locale, not separate customer and staff texts: messages for fraud, AML and model failures are written for staff, because disclosing an alert to a customer can amount to tipping off.
+   - **Load-time check.** `RuleStone.builder().reasonCodeCatalog(catalog)` makes the build check every reason code a registered table or flow can give: rule `reasonCode`s, and model nodes' `reasonCodes` and `onFailure` codes. A catalog is optional; `requireReasonCodeCatalog()` makes it mandatory.
+   - **Renderer.** `RuleStoneEngine.explain(record, locale)` and `Explanations.explain(record, catalog, locale)` build an `Explanation` (in `rulestone-api`) from the record and the catalog only: the outcome (the record's outputs), the reasons with their messages, the steps with table versions, matched rules, branches and model attributions by rank and direction, and the parameter set versions. The facts hash, model outputs, confidence, latency and failure details are left out. `Explanations.text` and `Explanations.write` render it as text, with English and Vietnamese headings built in, and as JSON. A locale is a plain language tag, never the JVM default.
+   - **Browser engine.** It reads catalogs, checks them in `createEngine` and renders the same text and JSON, byte for byte, including records of flows that the Java engine wrote; `java-explanations.json` checks this. The editor's Try it panel takes a catalog in `reasonCodes`.
+   - **Testing.** A `.stone-test.json` case can expect `"explanation": { "locale", "reasons", "messages" }`.
 5. **Replay and re-score.** Add these APIs, and extend the Temporal and Camunda integrations to carry record ids.
 6. **Adapters.** Build `rulestone-model-http` first, then `rulestone-model-scorecard`, then `rulestone-model-onnx`.
 7. **Shadow models, LLM nodes, and the flow canvas in the editor.**

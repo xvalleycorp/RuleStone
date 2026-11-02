@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: ba621c54abda243f413bb2c543c23348d4f5be3397146b637db139b6c60084e2
+sourceHash: f309242dc33f1a696aa5bfb70e2ff8591516b0af29ea54bb860870ca3cc2fdbb
 ---
 
 # Java API
@@ -311,6 +311,17 @@ DecisionResult result = engine.evaluate(
 **Hãy dùng khoá.** Nếu không có `factsHashKey`, hash là SHA-256 thông thường. Khi đó, ai có được bản ghi có thể thử đoán các đầu vào ít biến thể, như ngày sinh, rồi so với hash. Khi có khoá, hash là HMAC-SHA256 (`hmac-sha256:…`), và chỉ người giữ khoá mới làm được việc đó. Hãy dùng cùng một khoá ở mọi nơi kiểm chứng bản ghi.
 
 **Sink phải thành công.** Các sink chạy đồng bộ trên luồng đang đánh giá. Nếu một sink ném lỗi, việc đánh giá thất bại với `AuditException` và bên gọi không nhận được kết quả: một quyết định không bao giờ được trả về khi bản ghi của nó chưa được chấp nhận. Sink nào không được làm chậm quyết định có thể chuyển bản ghi vào hàng đợi riêng của nó. Khi việc đánh giá đã thất bại và một sink cũng lỗi, bên gọi nhận exception ban đầu, kèm `AuditException` dưới dạng exception bị nén (suppressed).
+
+### Giải thích bản ghi
+
+Với một [danh mục mã lý do](explanations.md), engine giải thích bất kỳ bản ghi nào bằng lời, theo ngôn ngữ của khách hàng: kết quả, các lý do kèm nội dung đã duyệt, và căn cứ ra quyết định. Hãy tạo engine với `reasonCodeCatalog(...)`, việc này cũng kiểm tra rằng mọi mã lý do của mọi bảng và luồng đều có nội dung, rồi gọi `explain`:
+
+```java
+Explanation explanation = engine.explain(result.record(), "vi");
+String notice = Explanations.text(explanation);
+```
+
+Như bản ghi, phần giải thích không chứa giá trị đầu vào nào. Xem [Giải thích quyết định](explanations.md).
 
 ### Đẩy bản ghi lên Kafka
 

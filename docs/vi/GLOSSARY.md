@@ -21,13 +21,17 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | effective date; effective from / to | ngày hiệu lực; hiệu lực từ / đến | |
 | effective dating | hiệu lực theo ngày | |
 | evaluate | đánh giá | "Đánh giá một quyết định", "luật không được đánh giá". |
+| explanation (of a decision) | giải thích, phần giải thích (quyết định) | Phần giải thích dựng từ bản ghi quyết định và danh mục mã lý do; tên trang "Giải thích quyết định". |
 | hit policy | hit policy | Giữ nguyên; giải thích là "chính sách khớp luật": cách chọn kết quả khi nhiều luật cùng khớp. |
+| locale | locale (ngôn ngữ) | Giữ nguyên; thẻ ngôn ngữ như `en`, `vi`. |
 | match (a rule matches) | khớp (luật khớp) | |
+| message (of a reason code) | nội dung (thông điệp) | Văn bản đã duyệt của một mã lý do trong danh mục. |
 | overlap (versions, rows) | chồng lấn | |
 | parameter | tham số | Giá trị nghiệp vụ mà luật đọc bằng `params.<tên>`. |
 | parameter set | bộ tham số | Tệp `.params.json` chứa các tham số, có phiên bản và ngày hiệu lực như bảng. |
 | pin (a version) | cố định (phiên bản) | Một bảng cố định phiên bản bộ tham số bằng `"version"` trong `params`. |
 | reason code | mã lý do | Bản thân mã (`DTI_HIGH`) giữ nguyên. |
+| reason-code catalog | danh mục mã lý do | Tệp `reason-codes.json` chứa nội dung đã duyệt của từng mã lý do theo từng ngôn ngữ. |
 | row (of a decision table) | dòng | |
 | rule | luật | Không dùng "quy tắc" cho rule của bảng quyết định. |
 | rule set | tập luật | |
@@ -141,6 +145,7 @@ Bảng thuật ngữ dùng cho bản dịch tiếng Việt, để mọi trang d�
 | segregation of duties | phân tách nhiệm vụ | |
 | tamper-evident | chống giả mạo | |
 | transfer fee | phí chuyển tiền | |
+| tipping off | tiết lộ thông tin (tipping off) | Cho khách hàng biết về cảnh báo nghi ngờ hoặc báo cáo AML; bị pháp luật cấm. |
 | transliteration | chuyển tự | |
 | underwriting | thẩm định tín dụng | |
 | unsecured (consumer) loan | khoản vay (tiêu dùng) tín chấp | |

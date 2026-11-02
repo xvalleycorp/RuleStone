@@ -3,8 +3,9 @@
 
 import {
   InvalidDecisionError, InvalidFactsError, JsonSyntaxError, LocalDate, RuleStoneError, createEngine, currencyTable,
-  decisionRecordToJson, isEffectiveOn, parseDecisionTable, valueToJson, writeDecisionTable, writeJson, writeParameterSet,
-  type DecisionRecord, type DecisionResult, type RuleStoneEngine, type Writable,
+  decisionRecordToJson, isEffectiveOn, parseDecisionTable, parseReasonCodeCatalog, valueToJson, writeDecisionTable, writeJson,
+  writeParameterSet, writeReasonCodeCatalog, type DecisionRecord, type DecisionResult, type Explanation, type ReasonCodeCatalog,
+  type RuleStoneEngine, type Writable,
 } from '@rulestone/engine'
 import { css, html, nothing, type PropertyDeclarations, type PropertyValues, type TemplateResult } from 'lit'
 import { emptyForm, factsJson, formFromJson, formValueAt, reconcileForm, setFormValue, type FormValue, type FormValues } from '../model/facts.js'
@@ -22,6 +23,8 @@ export interface RunDetail {
   readonly record?: DecisionRecord
   /** The decision record as JSON text, as DecisionRecordJson writes it. */
   readonly recordJson?: string
+  /** The explanation of the record, when the panel has a reason-code catalog. */
+  readonly explanation?: Explanation
   readonly error?: string
   readonly problems?: readonly string[]
   /** Ids of the matched rules, and of every rule evaluated (the trace), for highlighting. */
@@ -45,7 +48,8 @@ export function prettyJson(value: Writable, indent = ''): string {
 /**
  * `<rulestone-try-it>`: runs a decision table in the browser with `@rulestone/engine`. The facts
  * come from a form generated from the inputs (typed money, date, struct and list inputs) or
- * from raw JSON; the panel shows the outputs, reason codes, trace and decision record.
+ * from raw JSON; the panel shows the outputs, reason codes, trace and decision record, and, given a
+ * reason-code catalog in `reasonCodes`, the explanation of the decision.
  *
  * @fires rulestone-run - detail RunDetail, after every run
  * @csspart form - the facts form
@@ -56,6 +60,7 @@ export class RulestoneTryIt extends RulestoneElement {
     ...RulestoneElement.properties,
     table: { attribute: false },
     paramSets: { attribute: false },
+    reasonCodes: { attribute: false },
     asOf: { type: String, attribute: 'as-of' },
     facts: { type: String },
     _form: { state: true },
@@ -73,6 +78,12 @@ export class RulestoneTryIt extends RulestoneElement {
    * that the business date selects one as the engine does.
    */
   declare paramSets: readonly (string | object)[] | undefined
+  /**
+   * A reason-code catalog, as reason-codes.json text, parsed JSON or a parsed catalog. With one, every
+   * reason code of the table must have a message, and the panel explains each run in the panel's
+   * locale, or the catalog's first locale if it has no messages in it.
+   */
+  declare reasonCodes: string | object | undefined
   /** The business date, yyyy-MM-dd; default today. */
   declare asOf: string
   /** Initial facts as JSON text, e.g. from a .stone-test.json case. */
@@ -85,7 +96,7 @@ export class RulestoneTryIt extends RulestoneElement {
   declare _running: boolean
   declare _tableProblems: readonly string[]
 
-  private engine: { key: string; engine: RuleStoneEngine } | undefined
+  private engine: { key: string; engine: RuleStoneEngine; catalog: ReasonCodeCatalog | undefined } | undefined
 
   static override styles = [
     ...RulestoneElement.styles,
@@ -208,6 +219,7 @@ export class RulestoneTryIt extends RulestoneElement {
     super()
     this.table = normalizeTable({})
     this.paramSets = undefined
+    this.reasonCodes = undefined
     this.asOf = today()
     this.facts = undefined
     this._form = {}
@@ -279,11 +291,21 @@ export class RulestoneTryIt extends RulestoneElement {
       }
       throw e
     }
-    const key = [writeDecisionTable(parsed), ...paramSets.map(writeParameterSet)].join('\n')
+    let reasonCodeCatalog: ReasonCodeCatalog | undefined
+    try {
+      reasonCodeCatalog = readCatalog(this.reasonCodes)
+    } catch (e) {
+      if (e instanceof InvalidDecisionError) {
+        this._tableProblems = e.problems.map((p) => `reasonCodes ${p}`)
+        return undefined
+      }
+      throw e
+    }
+    const key = [writeDecisionTable(parsed), ...paramSets.map(writeParameterSet), reasonCodeCatalog ? writeReasonCodeCatalog(reasonCodeCatalog) : ''].join('\n')
     if (this.engine?.key === key) return this.engine.engine
     try {
-      const engine = await createEngine({ tables: [parsed], paramSets })
-      this.engine = { key, engine }
+      const engine = await createEngine({ tables: [parsed], paramSets, ...(reasonCodeCatalog ? { reasonCodeCatalog } : {}) })
+      this.engine = { key, engine, catalog: reasonCodeCatalog }
       this._tableProblems = []
       return engine
     } catch (e) {
@@ -312,6 +334,7 @@ export class RulestoneTryIt extends RulestoneElement {
             result,
             record: result.record,
             recordJson: prettyJson(decisionRecordToJson(result.record)),
+            ...this.explain(engine, result.record),
             matchedRules: result.matchedRules,
             evaluatedRules: result.trace.map((t) => t.ruleId),
           }
@@ -335,6 +358,16 @@ export class RulestoneTryIt extends RulestoneElement {
     this.emit('rulestone-run', detail)
     this.announce(detail.ok ? this.t('tryIt.matchedAnnounce', { n: detail.matchedRules.length }) : this.t('tryIt.error'))
     return detail
+  }
+
+  /** The explanation of a record in the panel's locale, if the engine has a catalog. */
+  private explain(engine: RuleStoneEngine, record: DecisionRecord): { explanation?: Explanation } {
+    const catalog = this.engine?.engine === engine ? this.engine.catalog : undefined
+    if (!catalog) return {}
+    const locales = catalog.locales
+    const wanted = this.effectiveLocale
+    const locale = locales.find((l) => l === wanted) ?? locales.find((l) => l.split('-')[0] === wanted.split('-')[0]) ?? locales[0]!
+    return { explanation: engine.explain(record, locale) }
   }
 
   protected override render() {
@@ -466,6 +499,7 @@ export class RulestoneTryIt extends RulestoneElement {
                 </table>`}
             <h4>${this.t('tryIt.reasonCodes')}</h4>
             <p class="mono">${result.reasonCodes.length === 0 ? this.t('common.none') : result.reasonCodes.join(', ')}</p>
+            ${run.explanation ? this.renderExplanation(run.explanation) : nothing}
             <h4>${this.t('tryIt.trace')}</h4>
             <ol class="trace">
               ${result.trace.map((step) => html`<li>
@@ -485,6 +519,23 @@ export class RulestoneTryIt extends RulestoneElement {
       <p class="muted note">${this.t('tryIt.engineNote')}</p>
     </section>`
   }
+
+  private renderExplanation(explanation: Explanation): TemplateResult {
+    return html`<h4>${this.t('tryIt.explanation')}</h4>
+      ${explanation.reasons.length === 0
+        ? html`<p class="muted">${this.t('common.none')}</p>`
+        : html`<ol class="items" part="explanation" lang=${explanation.locale}>
+            ${explanation.reasons.map((r) => html`<li>${r.message ?? r.code} <span class="muted mono">${r.code}</span></li>`)}
+          </ol>`}
+      <p class="muted note">${this.t('tryIt.explanationLocale', { locale: explanation.locale, catalog: explanation.catalog })}</p>`
+  }
+}
+
+/** A catalog given as text, parsed JSON or an already parsed catalog. @throws InvalidDecisionError */
+function readCatalog(catalog: string | object | undefined): ReasonCodeCatalog | undefined {
+  if (catalog === undefined) return undefined
+  if (typeof catalog === 'object' && (catalog as { codes?: unknown }).codes instanceof Map) return catalog as ReasonCodeCatalog
+  return parseReasonCodeCatalog(typeof catalog === 'string' ? catalog : JSON.stringify(catalog))
 }
 
 define('rulestone-try-it', RulestoneTryIt)
