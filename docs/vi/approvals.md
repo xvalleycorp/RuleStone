@@ -1,13 +1,13 @@
 ---
 source: approvals.md
-sourceHash: fcbbee2bbae36f3c927bc51bd3b2adf4a47550f5772cb3e953a8cdbb22090b1e
+sourceHash: 1e1ac3cc2b7ad9e3f1c4f1869f6facde1133f47996530e52b18da62443838840
 ---
 
 # Phê duyệt
 
 Một engine được tạo với `requireApproved` chỉ nạp nội dung đã được một người khác với các tác giả của nó phê duyệt. Một phê duyệt là một **văn bản phê duyệt** (approval statement) có chữ ký, nêu chính xác mã băm nội dung của mọi bảng, luồng, bộ tham số và danh mục mã lý do mà nó bao phủ. Engine tự tính mọi mã băm từ nội dung nó nạp, kiểm chứng chữ ký bằng một khoá trong cấu hình của chính nó, và từ chối khởi tạo nếu có gì đó chưa được bao phủ, nếu một người duyệt đồng thời là người lập, hoặc nếu số người duyệt quá ít.
 
-Đây là bước 1 của [thiết kế quản trị](governance.md#11-kế-hoạch-triển-khai). Tính năng đã có trong bộ máy luật Java và bộ máy luật TypeScript, hai bộ máy báo cùng các vấn đề bằng cùng câu chữ. Bản phát hành, giao diện kho luật và dịch vụ quản trị sẽ đến ở các bước sau; trong lúc chờ, một job CI có thể cấp các văn bản phê duyệt (xem [Cấp văn bản phê duyệt từ CI](#cấp-văn-bản-phê-duyệt-từ-ci)).
+Đây là bước 1 của [thiết kế quản trị](governance.md#11-kế-hoạch-triển-khai). Tính năng đã có trong bộ máy luật Java và bộ máy luật TypeScript, hai bộ máy báo cùng các vấn đề bằng cùng câu chữ. [Bản phát hành](releases.md), bước 2, bổ sung việc xác định những phiên bản đã duyệt nào được engine nạp; dịch vụ quản trị sẽ đến ở một bước sau. Trong lúc chờ, một job CI có thể cấp các văn bản phê duyệt (xem [Cấp văn bản phê duyệt từ CI](#cấp-văn-bản-phê-duyệt-từ-ci)).
 
 - [Ví dụ](#ví-dụ)
 - [Engine kiểm tra những gì](#engine-kiểm-tra-những-gì)
@@ -257,7 +257,7 @@ Files.writeString(Path.of("rules/approvals/PR-1234.approval.jws"), ApprovalIssue
 
 ## Giới hạn
 
-- **Tính đầy đủ và chống quay lui cần bản phát hành.** `requireApproved` chứng minh rằng mọi phiên bản được nạp đều đã được duyệt, nhưng không chứng minh rằng engine nạp đủ mọi phiên bản cần nạp, hay rằng một phiên bản đã bị huỷ không được nạp lại. Bản phát hành có chữ ký với số thứ tự tăng dần sẽ lấp cả hai khoảng trống; đó là bước 2 của [thiết kế quản trị](governance.md#38-bản-phát-hành).
+- **Tính đầy đủ và chống quay lui cần bản phát hành.** `requireApproved` chứng minh rằng mọi phiên bản được nạp đều đã được duyệt, nhưng không chứng minh rằng engine nạp đủ mọi phiên bản cần nạp, hay rằng một phiên bản đã bị huỷ không được nạp lại. [Bản phát hành](releases.md) có chữ ký với số thứ tự tăng dần lấp cả hai khoảng trống: hãy thêm `requireRelease`.
 - **Mỗi văn bản một chữ ký.** Bên cấp, dịch vụ quản trị hoặc job CI, ký thay cho những người duyệt. Chữ ký riêng của từng người duyệt (tuần tự hoá JWS JSON) là một tuỳ chọn cho sau này.
 - **Phiên bản canary và shadow** là các phiên bản đã đăng ký, nên cần được duyệt như mọi phiên bản khác.
 - **Phê duyệt khẩn cấp** được kiểm tra như mọi phê duyệt khác: cần một người duyệt không phải người lập và ít nhất `minApprovers` người duyệt. Phê duyệt bổ sung sau đó là việc của dịch vụ quản trị.

@@ -487,6 +487,8 @@ DecisionResult evaluate(DecisionRef ref, Facts facts) {
 
 Because `build()` validates everything first, an invalid change never replaces working rules, and a request never sees a half-loaded rule set. A request that started on the old engine finishes on it.
 
+`RepositoryReloader` does this for rules read from a `RuleRepository`, such as a directory or a Git checkout, when a newer signed release appears; see [Releases](releases.md#reloading).
+
 ## Canary and shadow versions
 
 Before a new version of a decision takes over, you can run it on live traffic without changing a single answer (shadow), then let it answer for a small share of the requests (canary):

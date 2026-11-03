@@ -15,16 +15,18 @@ import {
 } from './executable.js'
 import { readFacts, writeValues, type JsonInput } from './facts.js'
 import { APPROVAL_CATALOG_ID, type ApprovalArtifact, type ApprovalVerifier, type NamedApproval } from './approvals.js'
-import { flowVersionOf, type DecisionFlow } from './flow.js'
+import { flowVersionOf, parseDecisionFlow, type DecisionFlow } from './flow.js'
 import { CompiledFlow, compileFlow, type Models } from './flow-engine.js'
 import { readModels, type ModelInvoker, type SuppliedModel } from './models.js'
-import { compileParameterSets, parameterSetVersionOf, type ParameterSet, type Registry } from './params.js'
+import { compileParameterSets, parameterSetVersionOf, parseParameterSet, type ParameterSet, type Registry } from './params.js'
+import type { Release } from './releases.js'
+import type { RepositorySnapshot } from './repository.js'
 import type { DecisionRecord, ModelStep, ReasonCode } from './record.js'
-import { ruleVersionOf, type DecisionTable } from './table.js'
+import { parseDecisionTable, ruleVersionOf, type DecisionTable } from './table.js'
 import { replay, rescore, type DecisionComparison, type ModelSource } from './replay.js'
 import { selectVersion, versionProblems } from './versions.js'
 import {
-  MISSING_CATALOG, explainRecord, missingReasonCodes, reasonCodeCatalogVersionOf,
+  MISSING_CATALOG, explainRecord, missingReasonCodes, parseReasonCodeCatalog, reasonCodeCatalogVersionOf,
   type ExplainableRecord, type Explanation, type ReasonCodeCatalog,
 } from './explanation.js'
 import type { Value } from './values.js'
@@ -78,7 +80,7 @@ export type ModelsInput = ReadonlyMap<string, SuppliedModel> | { readonly [node:
 
 export interface EngineOptions {
   /** Every version of every decision table; the engine selects one per request. */
-  readonly tables: Iterable<DecisionTable>
+  readonly tables?: Iterable<DecisionTable>
   /** Every version of every decision flow, which use the tables; see parseDecisionFlow. */
   readonly flows?: Iterable<DecisionFlow>
   /** Every version of every parameter set that the tables and flows read; see parseParameterSet. */
@@ -134,6 +136,31 @@ export interface EngineOptions {
    * named by their file name, or bare text, named approvals[i] by position.
    */
   readonly approvals?: Iterable<string | NamedApproval>
+  /**
+   * The id under which approval statements and releases name the reason-code catalog, which has no id
+   * of its own; default 'reason-codes'. A repository names it.
+   */
+  readonly reasonCodeCatalogId?: string
+  /**
+   * Fail unless a signed release of this target (see release and snapshot) verifies with the keys of
+   * requireApproved, which is then required, and lists exactly the tables, flows, parameter sets and
+   * catalog given, at the exact versions the engine computed, every version of a decision together;
+   * its sequence must not be lower than that of lastAcceptedRelease and, when it follows that release
+   * directly, its previous must be that release's hash. Without it, a release is ignored. As
+   * RuleStone.Builder.requireRelease. The release's canary and shadow versions are checked as in the
+   * Java engine, but this engine does not route traffic to them.
+   */
+  readonly requireRelease?: string
+  /** The signed release, in JWS compact serialization: the text of a .release.jws file, named by its file name, or bare text. */
+  readonly release?: string | NamedApproval
+  /** The release that this engine's predecessor accepted, or that a store kept, verified; see requireRelease. */
+  readonly lastAcceptedRelease?: Release
+  /**
+   * Everything a repository returned for one target: its tables, flows, parameter sets and catalog, read
+   * here and added to those given, its approval statements and its release. Content that cannot be read
+   * is reported with every other problem, named by its source.
+   */
+  readonly snapshot?: RepositorySnapshot
 }
 
 /** A compiled version of a decision table or flow. */
@@ -155,12 +182,20 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
   if (options.timeoutMs !== undefined) checkTimeout(options.timeoutMs)
   if (options.factsHashKey !== undefined && options.factsHashKey.length < 16) throw new RangeError('factsHashKey must be at least 16 bytes')
   const maxIterations = options.maxIterations ?? 10_000
-  const problems: string[] = []
-  const paramSets = [...(options.paramSets ?? [])]
+  if (options.snapshot && options.release !== undefined) throw new TypeError('a release is already registered')
+  if (options.requireRelease !== undefined) {
+    if (!options.requireApproved) throw new TypeError('requireRelease needs requireApproved, whose keys verify the release')
+    if (options.lastAcceptedRelease && options.lastAcceptedRelease.target !== options.requireRelease) {
+      throw new TypeError(`the last accepted release is for target '${options.lastAcceptedRelease.target}', not '${options.requireRelease}'`)
+    }
+  }
+  const content = readSnapshot(options)
+  const problems: string[] = [...content.problems]
+  const paramSets = [...(options.paramSets ?? []), ...content.paramSets]
   const registry: Registry = await compileParameterSets(paramSets, problems)
   const compiledTables = new Map<string, CompiledTable[]>()
   const registered = new Map<string, DecisionTable[]>()
-  const tables = [...options.tables]
+  const tables = [...(options.tables ?? []), ...content.tables]
   for (const table of tables) {
     if (!registered.has(table.id)) registered.set(table.id, [])
     registered.get(table.id)!.push(table)
@@ -171,7 +206,7 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
     }
   }
   for (const versions of compiledTables.values()) problems.push(...versionProblems(versions.map((c) => c.table)))
-  const flows = [...(options.flows ?? [])]
+  const flows = [...(options.flows ?? []), ...content.flows]
   const byId = new Map<string, Compiled[]>()
   for (const [id, versions] of compiledTables) byId.set(id, [...versions])
   const invokers = options.modelInvokers instanceof Map ? options.modelInvokers : new Map(Object.entries(options.modelInvokers ?? {}))
@@ -191,24 +226,64 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
     }
   }
   for (const versions of flowVersions.values()) problems.push(...versionProblems(versions))
-  if (options.reasonCodeCatalog) problems.push(...missingReasonCodes(tables, options.reasonCodeCatalog, flows))
+  const reasonCodeCatalog = content.catalog ?? options.reasonCodeCatalog
+  const catalogId = content.catalogId ?? options.reasonCodeCatalogId ?? APPROVAL_CATALOG_ID
+  if (reasonCodeCatalog) problems.push(...missingReasonCodes(tables, reasonCodeCatalog, flows))
   else if (options.requireReasonCodeCatalog) problems.push(MISSING_CATALOG)
+  const loaded = options.requireApproved ? await approvalArtifacts(paramSets, tables, flows, reasonCodeCatalog, catalogId) : []
   if (options.requireApproved) {
-    const approvals = [...(options.approvals ?? [])].map((a, i) => (typeof a === 'string' ? { name: `approvals[${i}]`, jws: a } : a))
-    problems.push(...(await options.requireApproved.approvalProblems(approvals, await approvalArtifacts(paramSets, tables, flows, options.reasonCodeCatalog))))
+    const approvals = [...(options.approvals ?? []), ...(options.snapshot?.approvals ?? [])]
+      .map((a, i) => (typeof a === 'string' ? { name: `approvals[${i}]`, jws: a } : a))
+    problems.push(...(await options.requireApproved.approvalProblems(approvals, loaded)))
+  }
+  if (options.requireRelease !== undefined) {
+    const release = options.snapshot?.release ?? (typeof options.release === 'string' ? { jws: options.release } : options.release)
+    problems.push(...(await options.requireApproved!.releaseProblems(options.requireRelease, release, options.lastAcceptedRelease, loaded)))
   }
   if (problems.length > 0) {
     throw new InvalidDecisionError(problems)
   }
-  const catalog = options.reasonCodeCatalog
-    ? { catalog: options.reasonCodeCatalog, version: await reasonCodeCatalogVersionOf(options.reasonCodeCatalog) }
+  const catalog = reasonCodeCatalog
+    ? { catalog: reasonCodeCatalog, version: await reasonCodeCatalogVersionOf(reasonCodeCatalog) }
     : undefined
   return new RuleStoneEngine(byId, registry, options, catalog)
+}
+
+/** The content of options.snapshot, read, as RuleStone.Builder.snapshot reads it. */
+function readSnapshot(options: EngineOptions): {
+  tables: DecisionTable[]; flows: DecisionFlow[]; paramSets: ParameterSet[]; catalog?: ReasonCodeCatalog; catalogId?: string
+  problems: string[]
+} {
+  const content = { tables: [] as DecisionTable[], flows: [] as DecisionFlow[], paramSets: [] as ParameterSet[], problems: [] as string[] }
+  let catalog: { catalog: ReasonCodeCatalog; id: string } | undefined
+  for (const artifact of options.snapshot?.artifacts ?? []) {
+    try {
+      switch (artifact.kind) {
+        case 'table':
+          content.tables.push(parseDecisionTable(artifact.content))
+          break
+        case 'flow':
+          content.flows.push(parseDecisionFlow(artifact.content))
+          break
+        case 'params':
+          content.paramSets.push(parseParameterSet(artifact.content))
+          break
+        case 'catalog':
+          if (catalog || options.reasonCodeCatalog) content.problems.push(`${artifact.source}: a reason-code catalog is already registered`)
+          else catalog = { catalog: parseReasonCodeCatalog(artifact.content), id: artifact.id }
+      }
+    } catch (e) {
+      if (!(e instanceof InvalidDecisionError)) throw e
+      for (const p of e.problems) content.problems.push(`${artifact.source}: ${p}`)
+    }
+  }
+  return { ...content, ...(catalog ? { catalog: catalog.catalog, catalogId: catalog.id } : {}) }
 }
 
 /** The registered artifacts at their exact versions, in the order problems list them, as Approvals.artifacts. */
 async function approvalArtifacts(
   sets: readonly ParameterSet[], tables: readonly DecisionTable[], flows: readonly DecisionFlow[], catalog: ReasonCodeCatalog | undefined,
+  catalogId: string,
 ): Promise<ApprovalArtifact[]> {
   const artifacts = new Map<string, ApprovalArtifact>()
   const add = (artifact: ApprovalArtifact) => {
@@ -217,7 +292,7 @@ async function approvalArtifacts(
   for (const s of sets) add({ kind: 'params', id: s.id, label: s.version, exactVersion: await parameterSetVersionOf(s) })
   for (const t of tables) add({ kind: 'table', id: t.id, label: t.version, exactVersion: await ruleVersionOf(t) })
   for (const f of flows) add({ kind: 'flow', id: f.id, label: f.version, exactVersion: await flowVersionOf(f) })
-  if (catalog) add({ kind: 'catalog', id: APPROVAL_CATALOG_ID, label: catalog.version, exactVersion: await reasonCodeCatalogVersionOf(catalog) })
+  if (catalog) add({ kind: 'catalog', id: catalogId, label: catalog.version, exactVersion: await reasonCodeCatalogVersionOf(catalog) })
   return [...artifacts.values()]
 }
 

@@ -14,6 +14,7 @@
 | [Explanations](explanations.md) | Explain decisions in the customer's language with a reviewed reason-code catalog, and check that every reason code has a message. |
 | [Replay and re-score](replay.md) | Reproduce a recorded decision exactly from its record and the original facts, and compare it with another version, other parameters or today's models. |
 | [Approvals](approvals.md) | Load only approved content: signed approval statements bound to content hashes, four-eyes and a minimum number of approvers, checked when the engine is built. |
+| [Releases](releases.md) | Load exactly the approved versions of a signed release, refuse rollbacks, take canary and shadow versions from it; the `RuleRepository` interface, files and Git, and hot reload. |
 | [Web editor](editor.md) | Create and edit decision tables in the browser, try them on sample facts and save `.stone.json` files. |
 | [Editor SDK](editor-sdk.md) | Embed the visual editors in your own web application, with React, Angular, Vue or plain HTML, and run rules in the browser. |
 | [Temporal integration](temporal.md) | Evaluate decisions from Temporal workflows, as activities or inside workflow code with pinned rule versions. |

@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: 936f9a8fa692609430490798dfac82aa00e5d89c360acb4b578edb89bb2180b0
+sourceHash: b479db1a0478612f2b31450e149b7cd606f31a4fe7c9bd83995e8398c027442a
 ---
 
 # Java API
@@ -491,6 +491,8 @@ DecisionResult evaluate(DecisionRef ref, Facts facts) {
 ```
 
 Vì `build()` kiểm tra mọi thứ trước, một thay đổi không hợp lệ không bao giờ thay thế được bộ luật đang chạy tốt, và một yêu cầu không bao giờ thấy tập luật nạp dở dang. Yêu cầu nào đã bắt đầu trên engine cũ thì kết thúc trên engine cũ.
+
+`RepositoryReloader` làm việc này cho các luật đọc từ một `RuleRepository`, chẳng hạn một thư mục hoặc một bản checkout Git, khi có một bản phát hành có chữ ký mới hơn; xem [Bản phát hành](releases.md#nạp-lại).
 
 ## Phiên bản canary và phiên bản bóng
 

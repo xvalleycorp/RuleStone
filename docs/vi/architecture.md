@@ -1,6 +1,6 @@
 ---
 source: architecture.md
-sourceHash: 30ae28c51a09fca5d45e6904836a6abf880701ca0acbf2887d19d0f0601d609f
+sourceHash: 6ba96b4563ff655eb79e6f856e135060ded454cda6f3a2b339e8e6c9d77410cd
 ---
 
 # Kiến trúc RuleStone
@@ -132,7 +132,7 @@ result.trace();        // which rules were evaluated and which matched; no input
 | Tất định, tái lập được | Phiên bản bất biến kèm mã băm nội dung. Không có I/O trong biểu thức. `asOf` cố định ngày nghiệp vụ; luật không bao giờ đọc đồng hồ hệ thống. | đã có |
 | Tiền chính xác | `BigDecimal` xuyên suốt; số dấu phẩy động bị từ chối trong luật và trong đầu vào. | đã có |
 | Hiệu lực theo ngày | Mỗi phiên bản có `effectiveFrom` và `effectiveTo` tuỳ chọn; phiên bản mới thay thế phiên bản trước từ `effectiveFrom` của nó, nên các phiên bản đã công bố không bao giờ bị sửa; ngày tháng mâu thuẫn bị từ chối; một quyết định cho ngày X có thể chạy lại với bộ luật có hiệu lực vào ngày X. | đã có |
-| Phân tách nhiệm vụ (maker-checker) | Vòng đời luật `DRAFT → SUBMITTED → APPROVED → ACTIVE → RETIRED`; người lập và người duyệt phải khác nhau, được kiểm soát ở tầng quản trị (governance). Một engine được tạo với `requireApproved()` chỉ nạp nội dung được bao phủ bởi một [văn bản phê duyệt](approvals.md) có chữ ký mà người duyệt không phải người lập (đã có); vòng đời và dịch vụ quản trị là dự kiến. | một phần |
+| Phân tách nhiệm vụ (maker-checker) | Vòng đời luật `DRAFT → SUBMITTED → APPROVED → ACTIVE → RETIRED`; người lập và người duyệt phải khác nhau, được kiểm soát ở tầng quản trị (governance). Một engine được tạo với `requireApproved()` chỉ nạp nội dung được bao phủ bởi một [văn bản phê duyệt](approvals.md) có chữ ký mà người duyệt không phải người lập, và với `requireRelease()` chỉ nạp đúng các phiên bản của một [bản phát hành](releases.md) có chữ ký (đã có); vòng đời và dịch vụ quản trị là dự kiến. | một phần |
 | Kiểm toán chống giả mạo | Bản ghi kiểm toán liên kết bằng chuỗi băm, có thể ký số, chứa đầu vào đã che, phiên bản luật, vết thực thi và kết quả. | dự kiến |
 | Khả năng giải thích | Mã lý do tường minh cùng vết thực thi có cấu trúc; AI chỉ diễn đạt lại vết thực thi. Một bản ghi quyết định cho mọi quyết định, gồm cả phiên bản, đầu ra và attribution của mô hình, được đặc tả trong [Ra quyết định AI lai](hybrid-ai.md#4-bản-ghi-quyết-định). | đã có (mã lý do, vết thực thi, bản ghi quyết định cho bảng) |
 | Bảo vệ dữ liệu cá nhân | Không có giá trị đầu vào trong vết thực thi hay thông báo ngoại lệ (đã có). `DataMasker` bật mặc định cho bản ghi kiểm toán (dự kiến). | một phần |
@@ -210,7 +210,7 @@ Mọi lỗi trong một định nghĩa luật đã được báo cáo cùng lúc
 2. **M1 — Lõi** *(đang thực hiện)*
    - Đã xong: bảng quyết định với `FIRST`, `UNIQUE` và `COLLECT`; định dạng `.stone.json` chặt chẽ; mã băm nội dung; hiệu lực theo ngày, trong đó phiên bản mới thay thế phiên bản trước; các kiểu `decimal`, `money` và `date`; so khớp tên gần đúng; đầu vào kiểu struct và danh sách có kiểu; vết thực thi; bản ghi quyết định với `AuditSink`; thời gian chờ tối đa; phiên bản canary và phiên bản bóng; `rulestone-test`; báo cáo cùng lúc mọi lỗi trong định nghĩa; cấp phép, SBOM và tài liệu; luồng quyết định với các nút `table`, `switch`, `derive`, `split` và `end` (bước 2 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)); [bộ tham số, hàm tổng hợp và giá trị cục bộ](parameters.md).
    - Còn lại: lịch làm việc.
-3. **M2 — Quản trị** *(đã bắt đầu)*: [văn bản phê duyệt](approvals.md) có chữ ký và `requireApproved()` trong cả hai bộ máy luật đã xong (bước 1 của [kế hoạch quản trị](governance.md#11-kế-hoạch-triển-khai)). Còn lại: bản phát hành, maker-checker trong một dịch vụ quản trị, kiểm toán liên kết bằng chuỗi băm, kho luật JDBC và audit sink JDBC.
+3. **M2 — Quản trị** *(đã bắt đầu)*: [văn bản phê duyệt](approvals.md) có chữ ký và `requireApproved()` (bước 1 của [kế hoạch quản trị](governance.md#11-kế-hoạch-triển-khai)), cùng [bản phát hành](releases.md) có chữ ký, `requireRelease()`, giao diện `RuleRepository` cho tệp và Git, và công cụ nạp lại (bước 2) đã xong trong cả hai bộ máy luật. Còn lại: maker-checker trong một dịch vụ quản trị, kiểm toán liên kết bằng chuỗi băm, kho luật JDBC và audit sink JDBC.
 4. **M3 — Tích hợp** *(đã bắt đầu)*: đã xong Temporal, Camunda 7 và 8, và audit sink Kafka. Còn lại: Spring Boot starter, máy chủ REST/gRPC, khả năng quan sát (Micrometer, OpenTelemetry), bộ xử lý Kafka.
 5. **M4 — Phân tích và AI** *(đã bắt đầu)*: nút mô hình, [giải thích quyết định](explanations.md) bằng danh mục mã lý do, và [chạy lại và chấm điểm lại](replay.md) các quyết định đã ghi (bước 3 đến 5 của [kế hoạch AI lai](hybrid-ai.md#9-kế-hoạch-triển-khai)) đã xong. Còn lại: phân tích tĩnh, cú pháp văn bản `.stone`, các adapter mô hình (bước 6 và 7), trợ lý soạn luật, máy chủ MCP.
 6. **M5 — Mô phỏng** *(đã bắt đầu)*: đã xong phiên bản bóng và canary trên lưu lượng thật, và trình soạn thảo web cho bảng. Còn lại: kiểm thử ngược và champion/challenger trên dữ liệu lịch sử, soạn luồng vượt ra ngoài phần thiết kế.

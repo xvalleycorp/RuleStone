@@ -78,7 +78,9 @@ import vn.io.dxa.rulestone.core.RuleStone;
  *       of every case of every example flow test file, with the record, and of two cases of every
  *       example table test file: the first with reason codes and the first without;</li>
  *   <li>{@code java-approvals.json}: signed approval statements, with the trusted keys, and the
- *       problems an engine built with {@code requireApproved} reports for each case.</li>
+ *       problems an engine built with {@code requireApproved} reports for each case;</li>
+ *   <li>{@code java-releases.json}: signed releases, with the release accepted before, and the
+ *       problems an engine built with {@code requireRelease} reports for each case.</li>
  * </ul>
  *
  * <p>After changing the engine, the examples or the probes, regenerate them with
@@ -472,6 +474,15 @@ class SdkFixturesTest {
     @Test
     void approvals() throws IOException {
         check("java-approvals.json", new ApprovalFixtures().write());
+    }
+
+    /**
+     * The problems an engine built with {@code requireApproved} and {@code requireRelease} reports for
+     * signed releases; see {@link ReleaseFixtures}.
+     */
+    @Test
+    void releases() throws IOException {
+        check("java-releases.json", new ReleaseFixtures().write());
     }
 
     /** Result types tried in order for a probe without a type, as ExpressionsDocTest does. */

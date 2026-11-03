@@ -5,13 +5,14 @@
 // requireApproved, as rulestone-test's ApprovalIssuer in Java.
 
 import {
-  APPROVAL_CATALOG_ID, APPROVAL_JWS_TYPE, ApprovalVerifier, base64urlEncode, writeApprovalStatement,
+  APPROVAL_CATALOG_ID, APPROVAL_JWS_TYPE, RELEASE_JWS_TYPE, ApprovalVerifier, base64urlEncode, writeApprovalStatement,
   type ApprovalAlgorithm, type ApprovalStatement, type ApprovalSubject,
 } from './approvals.js'
 import { reasonCodeCatalogVersionOf, type ReasonCodeCatalog } from './explanation.js'
 import { flowVersionOf, type DecisionFlow } from './flow.js'
 import { writeJson } from './json.js'
 import { parameterSetVersionOf, type ParameterSet } from './params.js'
+import { writeRelease, type Release, type ReleaseEntry, type ReleaseState } from './releases.js'
 import { ruleVersionOf, type DecisionTable } from './table.js'
 
 /**
@@ -60,6 +61,12 @@ export class ApprovalIssuer {
     return this.sign(header, writeApprovalStatement(statement))
   }
 
+  /** Signs a release, with typ 'rulestone-release+jws'. */
+  issueRelease(release: Release): Promise<string> {
+    const header = writeJson({ alg: this.algorithm, kid: this.kid, typ: RELEASE_JWS_TYPE })
+    return this.sign(header, writeRelease(release))
+  }
+
   /** Signs any header and payload text as they are, for tests of malformed statements. */
   async sign(header: string, payload: string): Promise<string> {
     const encoder = new TextEncoder()
@@ -85,4 +92,14 @@ export async function approvalSubjects(artifacts: {
     subjects.push({ kind: 'catalog', id: APPROVAL_CATALOG_ID, version: await reasonCodeCatalogVersionOf(artifacts.reasonCodeCatalog) })
   }
   return subjects
+}
+
+/**
+ * The entries that list the exact content of every table, flow, parameter set and catalog given, in that
+ * order, in one state: for releases issued in tests, as ApprovalIssuer.ReleaseBuilder in Java.
+ */
+export async function releaseEntries(
+  artifacts: Parameters<typeof approvalSubjects>[0], state: ReleaseState = 'ACTIVE',
+): Promise<ReleaseEntry[]> {
+  return (await approvalSubjects(artifacts)).map((s) => ({ ...s, state }))
 }

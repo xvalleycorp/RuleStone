@@ -2,7 +2,7 @@
 
 An engine built with `requireApproved` loads only content that someone other than its authors approved. An approval is a signed **approval statement** that names the exact content hash of every table, flow, parameter set and reason-code catalog it covers. The engine computes every hash itself from the content it loads, verifies the signature with a key from its own configuration, and refuses to build if anything is not covered, if an approver is also a maker, or if too few approvers are named.
 
-This is step 1 of the [governance design](governance.md#11-implementation-plan). It is available in the Java engine and in the TypeScript engine, which give the same problems in the same words. Releases, the repository interface and the governance service follow in later steps; until then, a CI job can issue the statements (see [Issuing statements from CI](#issuing-statements-from-ci)).
+This is step 1 of the [governance design](governance.md#11-implementation-plan). It is available in the Java engine and in the TypeScript engine, which give the same problems in the same words. [Releases](releases.md), step 2, add which approved versions an engine loads; the governance service follows in a later step. Until then, a CI job can issue the statements (see [Issuing statements from CI](#issuing-statements-from-ci)).
 
 - [Example](#example)
 - [What the engine checks](#what-the-engine-checks)
@@ -252,7 +252,7 @@ Files.writeString(Path.of("rules/approvals/PR-1234.approval.jws"), ApprovalIssue
 
 ## Limits
 
-- **Completeness and rollback need releases.** `requireApproved` proves that every loaded version was approved, not that the engine loads every version it should, nor that a cancelled version is not loaded again. Signed releases with a growing sequence number close both gaps; they are step 2 of the [governance design](governance.md#38-releases).
+- **Completeness and rollback need releases.** `requireApproved` proves that every loaded version was approved, not that the engine loads every version it should, nor that a cancelled version is not loaded again. Signed [releases](releases.md) with a growing sequence number close both gaps: add `requireRelease`.
 - **One signature per statement.** The issuer, a governance service or a CI job, signs for the approvers. Signatures by each approver (JWS JSON serialization) are an option for later.
 - **Canary and shadow versions** are registered versions, so they need approval like any other.
 - **Emergency approvals** are checked like any other: they need an approver who is not a maker and at least `minApprovers` approvers. Their post-approval is the governance service's business.

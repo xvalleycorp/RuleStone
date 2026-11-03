@@ -77,11 +77,19 @@ export type { ValueType, PrimitiveType, ListType, StructType, TypeSpec } from '.
 
 export {
   ApprovalVerifier, parseApprovalStatement, writeApprovalStatement, APPROVAL_STATEMENT_TYPE, APPROVAL_JWS_TYPE,
-  APPROVAL_FILE_SUFFIX, APPROVAL_CATALOG_ID,
+  APPROVAL_FILE_SUFFIX, APPROVAL_CATALOG_ID, RELEASE_JWS_TYPE,
 } from './approvals.js'
 export type {
   ApprovalAlgorithm, ApprovalStatement, ApprovalSubject, ApprovalVerifierOptions, Approver, ArtifactKind, NamedApproval,
 } from './approvals.js'
+
+export { parseRelease, writeRelease, releaseHash, RELEASE_TYPE, RELEASE_FILE_SUFFIX, MAX_SEQUENCE } from './releases.js'
+export type { Release, ReleaseEntry, ReleaseRoute, ReleaseState, RouteKind } from './releases.js'
+
+export { InMemoryRuleRepository, MemoryReleaseStore, RepositoryReloader } from './repository.js'
+export type {
+  RuleRepository, RepositoryArtifact, RepositorySnapshot, ReleaseStore, RepositoryReloaderOptions,
+} from './repository.js'
 
 export { parseJson, writeJson, JsonSyntaxError } from './json.js'
 export type { JsonNode, Writable } from './json.js'

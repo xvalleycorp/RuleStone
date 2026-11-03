@@ -40,10 +40,12 @@ import vn.io.dxa.rulestone.core.ParameterSet;
 import vn.io.dxa.rulestone.core.ParameterSetJson;
 import vn.io.dxa.rulestone.core.ReasonCodeCatalog;
 import vn.io.dxa.rulestone.core.ReasonCodeCatalogJson;
+import vn.io.dxa.rulestone.core.Release;
+import vn.io.dxa.rulestone.core.ReleaseJson;
 import vn.io.dxa.rulestone.core.VersionedDefinition;
 
 /**
- * Issues signed approval statements, for tests of engines built with
+ * Issues signed approval statements and releases, for tests of engines built with
  * {@link vn.io.dxa.rulestone.core.RuleStone.Builder#requireApproved}, and for a CI job that approves
  * the content of a reviewed pull request before a governance service exists.
  *
@@ -167,6 +169,17 @@ public final class ApprovalIssuer {
         }
     }
 
+    /** Signs {@code release}: JWS compact serialization of its canonical form, with {@code typ} {@value ApprovalVerifier#RELEASE_TYPE}. */
+    public String issue(Release release) {
+        Map<String, String> header = new TreeMap<>(Map.of(
+                "alg", algorithm, "kid", kid, "typ", ApprovalVerifier.RELEASE_TYPE));
+        try {
+            return sign(HEADER_WRITER.writeValueAsString(header), ReleaseJson.write(release));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     /**
      * Signs any header and payload text as they are, without checking either: for tests of how an
      * engine refuses malformed statements, such as a forbidden header or a payload that is not
@@ -189,6 +202,23 @@ public final class ApprovalIssuer {
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("cannot sign with key '" + kid + "'", e);
         }
+    }
+
+    /** Starts release {@code sequence} of {@code target}. */
+    public static ReleaseBuilder release(String target, long sequence) {
+        return new ReleaseBuilder(target, sequence);
+    }
+
+    /** The exact version of a table, flow or parameter set, and its kind. */
+    private static ApprovalStatement.Subject subject(VersionedDefinition definition) {
+        if (definition instanceof DecisionTable table) {
+            return new ApprovalStatement.Subject(ArtifactKind.TABLE, table.id(), DecisionTableJson.exactVersion(table));
+        }
+        if (definition instanceof DecisionFlow flow) {
+            return new ApprovalStatement.Subject(ArtifactKind.FLOW, flow.id(), DecisionFlowJson.exactVersion(flow));
+        }
+        ParameterSet set = (ParameterSet) definition;
+        return new ApprovalStatement.Subject(ArtifactKind.PARAMS, set.id(), ParameterSetJson.exactVersion(set));
     }
 
     /** Starts a statement for change set {@code changeSet}. */
@@ -226,14 +256,8 @@ public final class ApprovalIssuer {
 
         /** Approves the exact content of a table, flow or parameter set version. */
         public StatementBuilder covering(VersionedDefinition definition) {
-            if (definition instanceof DecisionTable table) {
-                return subject(ArtifactKind.TABLE, table.id(), DecisionTableJson.exactVersion(table));
-            }
-            if (definition instanceof DecisionFlow flow) {
-                return subject(ArtifactKind.FLOW, flow.id(), DecisionFlowJson.exactVersion(flow));
-            }
-            ParameterSet set = (ParameterSet) definition;
-            return subject(ArtifactKind.PARAMS, set.id(), ParameterSetJson.exactVersion(set));
+            ApprovalStatement.Subject subject = ApprovalIssuer.subject(definition);
+            return subject(subject.kind(), subject.id(), subject.version());
         }
 
         /** Approves the exact content of a reason-code catalog, named {@value ApprovalStatement#CATALOG_ID}. */
@@ -303,6 +327,87 @@ public final class ApprovalIssuer {
                     : UUID.nameUUIDFromBytes(changeSet.getBytes(StandardCharsets.UTF_8)).toString();
             return new ApprovalStatement(id, changeSet, subjects, makers, list, policy, emergency,
                     postApprovalDue, issuer, issuedAt, logEntry);
+        }
+    }
+
+    /**
+     * Builds a {@link Release}. By default it is issued now, to the second; a release after the first
+     * needs {@link #previous}.
+     */
+    public static final class ReleaseBuilder {
+
+        private final String target;
+        private final long sequence;
+        private Optional<String> previous = Optional.empty();
+        private final List<Release.Entry> artifacts = new ArrayList<>();
+        private final List<Release.Route> routing = new ArrayList<>();
+        private String issuedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString();
+
+        private ReleaseBuilder(String target, long sequence) {
+            this.target = Objects.requireNonNull(target, "target");
+            this.sequence = sequence;
+        }
+
+        /** Chains to {@code previous}, which must be release {@code sequence - 1}. */
+        public ReleaseBuilder previous(Release previous) {
+            return previous(ReleaseJson.hash(previous));
+        }
+
+        /** Chains to the release with this hash, {@code sha256:<hex>}, given as is. */
+        public ReleaseBuilder previous(String hash) {
+            this.previous = Optional.of(Objects.requireNonNull(hash, "hash"));
+            return this;
+        }
+
+        /** Lists the exact content of a table, flow or parameter set version as {@code ACTIVE}. */
+        public ReleaseBuilder active(VersionedDefinition definition) {
+            ApprovalStatement.Subject subject = subject(definition);
+            return artifact(subject.kind(), subject.id(), subject.version(), Release.State.ACTIVE);
+        }
+
+        /** Lists the exact content of a table, flow or parameter set version as {@code RETIRED}, still loaded for replay. */
+        public ReleaseBuilder retired(VersionedDefinition definition) {
+            ApprovalStatement.Subject subject = subject(definition);
+            return artifact(subject.kind(), subject.id(), subject.version(), Release.State.RETIRED);
+        }
+
+        /** Lists the exact content of a reason-code catalog as {@code ACTIVE}, named {@value ApprovalStatement#CATALOG_ID}. */
+        public ReleaseBuilder active(ReasonCodeCatalog catalog) {
+            return artifact(ArtifactKind.CATALOG, ApprovalStatement.CATALOG_ID, ReasonCodeCatalogJson.exactVersion(catalog),
+                    Release.State.ACTIVE);
+        }
+
+        /** Lists an exact version, {@code <label>@sha256:<hex>}, given as is. */
+        public ReleaseBuilder artifact(ArtifactKind kind, String id, String exactVersion, Release.State state) {
+            artifacts.add(new Release.Entry(kind, id, exactVersion, state));
+            return this;
+        }
+
+        /** Routes {@code share} of the traffic of a table or flow to this version, which must also be listed. */
+        public ReleaseBuilder canary(VersionedDefinition definition, double share) {
+            ApprovalStatement.Subject subject = subject(definition);
+            return route(Release.Route.canary(subject.id(), subject.version(), share));
+        }
+
+        /** Runs this version of a table or flow in shadow, which must also be listed. */
+        public ReleaseBuilder shadow(VersionedDefinition definition) {
+            ApprovalStatement.Subject subject = subject(definition);
+            return route(Release.Route.shadow(subject.id(), subject.version()));
+        }
+
+        public ReleaseBuilder route(Release.Route route) {
+            routing.add(Objects.requireNonNull(route, "route"));
+            return this;
+        }
+
+        /** When the release is issued, e.g. {@code 2026-11-20T07:45:00Z}. */
+        public ReleaseBuilder issuedAt(String issuedAt) {
+            this.issuedAt = Objects.requireNonNull(issuedAt, "issuedAt");
+            return this;
+        }
+
+        public Release build() {
+            return new Release(target, sequence, previous, artifacts, routing, issuedAt);
         }
     }
 }

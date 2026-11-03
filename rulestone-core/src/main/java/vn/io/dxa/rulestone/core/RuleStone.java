@@ -32,6 +32,7 @@ import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionRef;
 import vn.io.dxa.rulestone.api.DecisionTimeoutException;
 import vn.io.dxa.rulestone.api.ModelInvoker;
+import vn.io.dxa.rulestone.api.RuleRepository;
 import vn.io.dxa.rulestone.api.RuleStoneEngine;
 import vn.io.dxa.rulestone.cel.ExpressionEnvironment;
 
@@ -55,6 +56,9 @@ public final class RuleStone {
 
     /** The suffix of signed approval statement files, e.g. {@code CHG-2026-0042.approval.jws}. */
     public static final String APPROVAL_FILE_SUFFIX = ".approval.jws";
+
+    /** The suffix of signed release files, e.g. {@code retail-credit-prod.release.jws}. */
+    public static final String RELEASE_FILE_SUFFIX = ".release.jws";
 
     private RuleStone() {}
 
@@ -85,6 +89,11 @@ public final class RuleStone {
         private boolean requireReasonCodeCatalog;
         private ApprovalVerifier approvalVerifier;
         private final List<Approvals.Named> approvals = new ArrayList<>();
+        private String catalogId = ApprovalStatement.CATALOG_ID;
+        private String releaseTarget;
+        private Approvals.Named release;
+        private Release acceptedRelease;
+        private final List<String> loadProblems = new ArrayList<>();
 
         private Builder() {}
 
@@ -203,7 +212,7 @@ public final class RuleStone {
          * {@link #approvals}) that {@code verifier} verifies, whose subject names its kind, id,
          * version label and the content hash the engine computed itself, in which no approver is a
          * maker, and which names at least {@link ApprovalVerifier#minApprovers()} approvers. Every
-         * registered statement must verify. A catalog is named {@value ApprovalStatement#CATALOG_ID}.
+         * registered statement must verify. A catalog is named by {@link #reasonCodeCatalogId}.
          *
          * <p>Without this call, registered statements are ignored and the engine loads any content,
          * for development and tests.
@@ -244,6 +253,99 @@ public final class RuleStone {
                 throw new UncheckedIOException(e);
             }
             return this;
+        }
+
+        /**
+         * The id under which approval statements and releases name the registered reason-code
+         * catalog, which has no id of its own; by default {@value ApprovalStatement#CATALOG_ID}. A
+         * repository names it, so that several catalogs for several engines can be governed side by side.
+         */
+        public Builder reasonCodeCatalogId(String id) {
+            Objects.requireNonNull(id, "id");
+            if (id.isBlank()) {
+                throw new IllegalArgumentException("the catalog id must not be empty");
+            }
+            this.catalogId = id;
+            return this;
+        }
+
+        /**
+         * Makes {@link #build()} fail unless a signed {@link Release} of {@code target} is registered
+         * (see {@link #release} and {@link #snapshot}) that the verifier of {@link #requireApproved}
+         * verifies, and that lists exactly the registered tables, flows, parameter sets and catalog at
+         * the exact versions the engine computed, every version of a decision together. Its sequence
+         * must not be lower than that of the {@link #lastAcceptedRelease} and, when it follows that
+         * release directly, its {@code previous} must be that release's hash. Canary and shadow
+         * versions then come from the release's routing, each to a listed {@code ACTIVE} version, and
+         * cannot be set with {@link #canary} or {@link #shadow}.
+         *
+         * <p>Without this call, a registered release is ignored.
+         *
+         * @param target the deployed application or decision service this engine belongs to
+         */
+        public Builder requireRelease(String target) {
+            this.releaseTarget = Objects.requireNonNull(target, "target");
+            return this;
+        }
+
+        /** Registers the signed release, in JWS compact serialization, which problems name {@code release}. */
+        public Builder release(String jws) {
+            return release(null, jws);
+        }
+
+        /**
+         * Registers the signed release, which problems name {@code release <name>}, e.g. by its file name.
+         *
+         * @throws IllegalArgumentException if a release is already registered
+         */
+        public Builder release(String name, String jws) {
+            Approvals.Named named = new Approvals.Named(name, Objects.requireNonNull(jws, "jws"));
+            if (release != null) {
+                throw new IllegalArgumentException("a release is already registered");
+            }
+            this.release = named;
+            return this;
+        }
+
+        /**
+         * The release that this engine's predecessor accepted, or that a local cache kept: with
+         * {@link #requireRelease}, an older release is refused, a release with the same sequence must be
+         * the same release, and the release that directly follows must name its hash as {@code previous}.
+         * Pass a release that was verified, e.g. with {@link ApprovalVerifier#verifyRelease}.
+         */
+        public Builder lastAcceptedRelease(Release accepted) {
+            this.acceptedRelease = Objects.requireNonNull(accepted, "accepted");
+            return this;
+        }
+
+        /**
+         * Registers everything a repository returned for one target: every table, flow, parameter set
+         * and catalog (under the id the repository gives it), the approval statements and the
+         * release. Content that cannot be read is reported by {@link #build()}, named by its source.
+         */
+        public Builder snapshot(RuleRepository.Snapshot snapshot) {
+            Objects.requireNonNull(snapshot, "snapshot");
+            for (RuleRepository.Artifact artifact : snapshot.artifacts()) {
+                try {
+                    switch (artifact.kind()) {
+                        case TABLE -> decision(DecisionTableJson.read(artifact.content()));
+                        case FLOW -> flow(DecisionFlowJson.read(artifact.content()));
+                        case PARAMS -> paramSet(ParameterSetJson.read(artifact.content()));
+                        case CATALOG -> {
+                            if (reasonCodeCatalog != null) {
+                                loadProblems.add(artifact.source() + ": a reason-code catalog is already registered");
+                            } else {
+                                reasonCodeCatalog(ReasonCodeCatalogJson.read(artifact.content()));
+                                reasonCodeCatalogId(artifact.id());
+                            }
+                        }
+                    }
+                } catch (InvalidDecisionException e) {
+                    e.problems().forEach(p -> loadProblems.add(artifact.source() + ": " + p));
+                }
+            }
+            snapshot.approvals().forEach(a -> approval(a.name(), a.jws()));
+            return release(snapshot.release().name(), snapshot.release().jws());
         }
 
         /** Upper bound on iterations of any comprehension in a rule; see {@link ExpressionEnvironment}. */
@@ -384,12 +486,43 @@ public final class RuleStone {
          * @throws InvalidDecisionException listing every problem in every registered parameter set,
          *         table and flow, including inconsistent versions (see {@link DecisionVersions#problems}),
          *         parameters that some version of their set does not declare alike, canaries or
-         *         shadows of unknown versions, reason codes missing from the reason-code catalog, and,
+         *         shadows of unknown versions, reason codes missing from the reason-code catalog,
          *         with {@link #requireApproved}, statements that do not verify and artifacts that
-         *         no acceptable statement covers
+         *         no acceptable statement covers, and, with {@link #requireRelease}, a release that does
+         *         not verify, is older than the last accepted one or does not list exactly what is registered
+         * @throws IllegalStateException if {@link #requireRelease} is used without {@link #requireApproved},
+         *         with {@link #canary} or {@link #shadow}, or with a last accepted release of another target
          */
         public RuleStoneEngine build() {
-            List<String> problems = new ArrayList<>();
+            List<String> problems = new ArrayList<>(loadProblems);
+            Map<String, String> canaryVersions = new LinkedHashMap<>(this.canaryVersions);
+            Map<String, Double> canaryShares = new HashMap<>(this.canaryShares);
+            Map<String, String> shadowVersions = new LinkedHashMap<>(this.shadowVersions);
+            List<String> releaseProblems = List.of();
+            if (releaseTarget != null) {
+                if (approvalVerifier == null) {
+                    throw new IllegalStateException("requireRelease needs requireApproved, whose keys verify the release");
+                }
+                if (!canaryVersions.isEmpty() || !shadowVersions.isEmpty()) {
+                    throw new IllegalStateException(
+                            "with requireRelease, canary and shadow versions come from the release's routing");
+                }
+                if (acceptedRelease != null && !acceptedRelease.target().equals(releaseTarget)) {
+                    throw new IllegalStateException("the last accepted release is for target '"
+                            + acceptedRelease.target() + "', not '" + releaseTarget + "'");
+                }
+                Releases.Outcome outcome = Releases.check(approvalVerifier, releaseTarget, release, acceptedRelease,
+                        Approvals.artifacts(paramSets, tables, flows, reasonCodeCatalog, catalogId));
+                releaseProblems = outcome.problems();
+                for (Release.Route route : outcome.routes()) {
+                    if (route.kind() == Release.RouteKind.CANARY) {
+                        canaryVersions.put(route.decision(), route.label());
+                        canaryShares.put(route.decision(), route.share().getAsDouble());
+                    } else {
+                        shadowVersions.put(route.decision(), route.label());
+                    }
+                }
+            }
             Parameters.Registry parameterSets = Parameters.Registry.compile(paramSets, problems);
             Map<String, List<CompiledDecision>> compiledTables = new LinkedHashMap<>();
             Map<String, List<DecisionTable>> registered = new LinkedHashMap<>();
@@ -426,8 +559,9 @@ public final class RuleStone {
             }
             if (approvalVerifier != null) {
                 problems.addAll(Approvals.problems(approvalVerifier, approvals,
-                        Approvals.artifacts(paramSets, tables, flows, reasonCodeCatalog)));
+                        Approvals.artifacts(paramSets, tables, flows, reasonCodeCatalog, catalogId)));
             }
+            problems.addAll(releaseProblems);
             if (!problems.isEmpty()) {
                 throw new InvalidDecisionException(problems);
             }

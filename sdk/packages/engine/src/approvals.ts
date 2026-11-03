@@ -11,12 +11,15 @@ import { LocalDate } from './date.js'
 import { javaIsBlank } from './decimal.js'
 import { InvalidDecisionError } from './errors.js'
 import { JsonSyntaxError, parseJson, writeJson, type JsonNode, type Writable } from './json.js'
+import { readRelease, releaseProblems, writeRelease, type Release } from './releases.js'
 import { TableReader, sortedMap } from './table.js'
 
 /** The type field of an approval statement. */
 export const APPROVAL_STATEMENT_TYPE = 'rulestone.approval'
 /** The typ header of a signed approval statement. */
 export const APPROVAL_JWS_TYPE = 'rulestone-approval+jws'
+/** The typ header of a signed release. */
+export const RELEASE_JWS_TYPE = 'rulestone-release+jws'
 /** The suffix of signed approval statement files, e.g. CHG-2026-0042.approval.jws. */
 export const APPROVAL_FILE_SUFFIX = '.approval.jws'
 /** The id under which subjects name an engine's reason-code catalog, which has no id of its own. */
@@ -64,7 +67,8 @@ export interface NamedApproval {
   readonly jws: string
 }
 
-const KINDS: readonly ArtifactKind[] = ['table', 'flow', 'params', 'catalog']
+/** @internal */
+export const KINDS: readonly ArtifactKind[] = ['table', 'flow', 'params', 'catalog']
 const SUPPORTED: readonly ApprovalAlgorithm[] = ['EdDSA', 'ES256']
 const STATEMENT_FIELDS = [
   'type', 'approvalId', 'changeSet', 'subjects', 'makers', 'approvers', 'policy', 'emergency', 'postApprovalDue', 'issuer',
@@ -73,8 +77,10 @@ const STATEMENT_FIELDS = [
 const SUBJECT_FIELDS = ['kind', 'id', 'version']
 const APPROVER_FIELDS = ['principal', 'role', 'at']
 const HEADER_FIELDS = ['alg', 'kid', 'typ']
-const EXACT_VERSION = /^[^@\s]+@sha256:[0-9a-f]{64}$/
-const HASH = /^sha256:[0-9a-f]{64}$/
+/** @internal */
+export const EXACT_VERSION = /^[^@\s]+@sha256:[0-9a-f]{64}$/
+/** @internal */
+export const HASH = /^sha256:[0-9a-f]{64}$/
 const INSTANT = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d{1,9})?Z$/
 const BASE64URL = /^[A-Za-z0-9_-]*$/
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
@@ -230,7 +236,8 @@ function readApprovers(root: JsonObject, reader: TableReader): Approver[] {
   return approvers
 }
 
-function checkInstant(text: string, path: string, reader: TableReader): void {
+/** @internal */
+export function checkInstant(text: string, path: string, reader: TableReader): void {
   const m = INSTANT.exec(text)
   if (!m || !LocalDate.ofValid(Number(m[1]), Number(m[2]), Number(m[3]))) {
     reader.problem(path, 'expected a UTC instant such as 2026-11-20T07:41:02Z')
@@ -258,8 +265,8 @@ export interface ApprovalArtifact {
   readonly exactVersion: string
 }
 
-interface Checked {
-  readonly statement?: ApprovalStatement
+interface Checked<T = ApprovalStatement> {
+  readonly value?: T
   readonly problems: readonly string[]
 }
 
@@ -308,12 +315,35 @@ export class ApprovalVerifier {
    */
   async verify(jws: string): Promise<ApprovalStatement> {
     const checked = await this.check(jws)
-    if (!checked.statement) throw new InvalidDecisionError(checked.problems)
-    return checked.statement
+    if (!checked.value) throw new InvalidDecisionError(checked.problems)
+    return checked.value
+  }
+
+  /**
+   * Verifies one signed release, with the same keys and algorithms as statements: its header, whose
+   * typ must be 'rulestone-release+jws', its signature, and its payload, which must be a valid release
+   * in canonical form. What it lists is checked by createEngine with requireRelease, not here.
+   * @throws InvalidDecisionError listing the problems
+   */
+  async verifyRelease(jws: string): Promise<Release> {
+    const checked = await this.checkRelease(jws)
+    if (!checked.value) throw new InvalidDecisionError(checked.problems)
+    return checked.value
   }
 
   /** @internal */
-  async check(jws: string): Promise<Checked> {
+  check(jws: string): Promise<Checked> {
+    return this.checkJws(jws, APPROVAL_JWS_TYPE, readStatement, writeApprovalStatement)
+  }
+
+  /** @internal */
+  checkRelease(jws: string): Promise<Checked<Release>> {
+    return this.checkJws(jws, RELEASE_JWS_TYPE, readRelease, writeRelease)
+  }
+
+  private async checkJws<T>(
+    jws: string, type: string, read: (root: JsonNode) => T, write: (value: T) => string,
+  ): Promise<Checked<T>> {
     const parts = jws.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, '').split('.')
     if (parts.length !== 3 || parts[0] === '' || parts[1] === '' || !parts.every((p) => BASE64URL.test(p) && p.length % 4 !== 1)) {
       return failed("not a JWS compact serialization (three base64url parts separated by '.')")
@@ -325,7 +355,7 @@ export class ApprovalVerifier {
       if (!HEADER_FIELDS.includes(name)) problems.push(`header parameter '${name}' is not allowed`)
     }
     const typ = header.entries.get('typ')
-    if (typ?.type !== 'string' || typ.value !== APPROVAL_JWS_TYPE) problems.push(`header typ must be '${APPROVAL_JWS_TYPE}'`)
+    if (typ?.type !== 'string' || typ.value !== type) problems.push(`header typ must be '${type}'`)
     const alg = header.entries.get('alg')
     if (alg?.type !== 'string') problems.push('header alg is required')
     else if (!(this.allowed as readonly string[]).includes(alg.value)) {
@@ -348,15 +378,15 @@ export class ApprovalVerifier {
     const payload = utf8(parts[1]!)
     const root = payload === undefined ? undefined : json(payload)
     if (root?.type !== 'object') return failed('payload is not a JSON object')
-    let statement: ApprovalStatement
+    let value: T
     try {
-      statement = readStatement(root)
+      value = read(root)
     } catch (e) {
       if (e instanceof InvalidDecisionError) return { problems: e.problems }
       throw e
     }
-    if (writeApprovalStatement(statement) !== payload) return failed('payload is not in canonical form')
-    return { statement, problems: [] }
+    if (write(value) !== payload) return failed('payload is not in canonical form')
+    return { value, problems: [] }
   }
 
   /**
@@ -369,7 +399,7 @@ export class ApprovalVerifier {
     const verified: ApprovalStatement[] = []
     for (const approval of approvals) {
       const checked = await this.check(approval.jws)
-      if (checked.statement) verified.push(checked.statement)
+      if (checked.value) verified.push(checked.value)
       for (const p of checked.problems) problems.push(`approval ${approval.name}: ${p}`)
     }
     for (const artifact of artifacts) {
@@ -397,13 +427,26 @@ export class ApprovalVerifier {
     }
     return problems
   }
+
+  /**
+   * The problems of requireRelease, as the Java Releases.check; called by createEngine so that release
+   * code stays out of bundles that use no verifier.
+   * @internal
+   */
+  async releaseProblems(
+    target: string, release: { readonly name?: string; readonly jws: string } | undefined, accepted: Release | undefined,
+    loaded: readonly ApprovalArtifact[],
+  ): Promise<string[]> {
+    return (await releaseProblems(this, target, release, accepted, loaded)).problems
+  }
 }
 
-function failed(problem: string): Checked {
+function failed<T>(problem: string): Checked<T> {
   return { problems: [problem] }
 }
 
-function artifactRef(artifact: ApprovalArtifact): string {
+/** How problems name an artifact, e.g. retail_credit@8 (parameter set). @internal */
+export function artifactRef(artifact: ApprovalArtifact): string {
   const ref = `${artifact.id}@${artifact.label}`
   switch (artifact.kind) {
     case 'table':
@@ -458,6 +501,22 @@ function json(text: string | undefined): JsonNode | undefined {
   if (text === undefined) return undefined
   try {
     return parseJson(text, { failOnTrailingTokens: false })
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * The payload of a JWS compact serialization read as a release without verifying anything, or
+ * undefined if it is not one: for a repository that selects the content a release lists.
+ * @internal
+ */
+export function unverifiedRelease(jws: string): Release | undefined {
+  const parts = jws.trim().split('.')
+  if (parts.length !== 3 || !BASE64URL.test(parts[1]!) || parts[1]!.length % 4 === 1) return undefined
+  const root = json(utf8(parts[1]!))
+  try {
+    return root ? readRelease(root) : undefined
   } catch {
     return undefined
   }
