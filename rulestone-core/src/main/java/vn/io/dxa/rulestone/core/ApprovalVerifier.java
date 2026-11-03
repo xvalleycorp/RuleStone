@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 /**
@@ -50,11 +51,16 @@ import java.util.regex.Pattern;
  * statements cover the exact content of every registered artifact, that no approver is a maker
  * and that at least {@link #minApprovers()} approvers are named. A verifier is immutable and
  * thread-safe.
+ *
+ * <p>The same verifier, with the same keys and algorithms, verifies signed {@link Release releases}
+ * ({@link #verifyRelease}), whose header has {@code typ} {@value #RELEASE_TYPE}.
  */
 public final class ApprovalVerifier {
 
     /** The {@code typ} header of a signed approval statement. */
     public static final String TYPE = "rulestone-approval+jws";
+    /** The {@code typ} header of a signed {@link Release}. */
+    public static final String RELEASE_TYPE = "rulestone-release+jws";
     /** EdDSA with Ed25519 (RFC 8037). */
     public static final String EDDSA = "EdDSA";
     /** ECDSA with P-256 and SHA-256, the signature as R and S of 32 bytes each (RFC 7518). */
@@ -95,22 +101,46 @@ public final class ApprovalVerifier {
      * @throws InvalidDecisionException listing the problems; messages never contain the payload
      */
     public ApprovalStatement verify(String jws) {
-        Checked checked = check(jws);
-        if (checked.statement().isEmpty()) {
+        Checked<ApprovalStatement> checked = check(jws);
+        if (checked.value().isEmpty()) {
             throw new InvalidDecisionException(checked.problems());
         }
-        return checked.statement().get();
+        return checked.value().get();
     }
 
-    /** A verified statement, or the problems that prevent verifying it. */
-    record Checked(Optional<ApprovalStatement> statement, List<String> problems) {
+    /**
+     * Verifies one signed release, with the same keys and algorithms as statements: its header, whose
+     * {@code typ} must be {@value #RELEASE_TYPE}, its signature, and its payload, which must be a
+     * valid {@link Release} in the canonical form of {@link ReleaseJson#write}. What the release lists
+     * is checked against the loaded content by {@link RuleStone.Builder#requireRelease}, not here.
+     *
+     * @throws InvalidDecisionException listing the problems; messages never contain the payload
+     */
+    public Release verifyRelease(String jws) {
+        Checked<Release> checked = checkRelease(jws);
+        if (checked.value().isEmpty()) {
+            throw new InvalidDecisionException(checked.problems());
+        }
+        return checked.value().get();
+    }
 
-        static Checked failed(String problem) {
-            return new Checked(Optional.empty(), List.of(problem));
+    /** A verified payload, or the problems that prevent verifying it. */
+    record Checked<T>(Optional<T> value, List<String> problems) {
+
+        static <T> Checked<T> failed(String problem) {
+            return new Checked<>(Optional.empty(), List.of(problem));
         }
     }
 
-    Checked check(String jws) {
+    Checked<ApprovalStatement> check(String jws) {
+        return check(jws, TYPE, ApprovalStatementJson::statement, ApprovalStatementJson::write);
+    }
+
+    Checked<Release> checkRelease(String jws) {
+        return check(jws, RELEASE_TYPE, ReleaseJson::release, ReleaseJson::write);
+    }
+
+    private <T> Checked<T> check(String jws, String type, Function<JsonNode, T> reader, Function<T, String> writer) {
         Objects.requireNonNull(jws, "jws");
         String[] parts = jws.replaceAll("^[ \t\r\n]+|[ \t\r\n]+$", "").split("\\.", -1);
         if (parts.length != 3 || parts[0].isEmpty() || parts[1].isEmpty()
@@ -128,8 +158,8 @@ public final class ApprovalVerifier {
             }
         });
         JsonNode typ = header.get("typ");
-        if (typ == null || !typ.isTextual() || !typ.textValue().equals(TYPE)) {
-            problems.add("header typ must be '" + TYPE + "'");
+        if (typ == null || !typ.isTextual() || !typ.textValue().equals(type)) {
+            problems.add("header typ must be '" + type + "'");
         }
         JsonNode alg = header.get("alg");
         if (alg == null || !alg.isTextual()) {
@@ -149,7 +179,7 @@ public final class ApprovalVerifier {
             }
         }
         if (!problems.isEmpty()) {
-            return new Checked(Optional.empty(), problems);
+            return new Checked<>(Optional.empty(), problems);
         }
         if (!key.algorithm().equals(alg.textValue())) {
             return Checked.failed("key '" + kid.textValue() + "' is an " + key.algorithm() + " key, not "
@@ -163,16 +193,34 @@ public final class ApprovalVerifier {
         if (root == null || !root.isObject()) {
             return Checked.failed("payload is not a JSON object");
         }
-        ApprovalStatement statement;
+        T value;
         try {
-            statement = ApprovalStatementJson.statement(root);
+            value = reader.apply(root);
         } catch (InvalidDecisionException e) {
-            return new Checked(Optional.empty(), e.problems());
+            return new Checked<>(Optional.empty(), e.problems());
         }
-        if (!ApprovalStatementJson.write(statement).equals(payload.get())) {
+        if (!writer.apply(value).equals(payload.get())) {
             return Checked.failed("payload is not in canonical form");
         }
-        return new Checked(Optional.of(statement), List.of());
+        return new Checked<>(Optional.of(value), List.of());
+    }
+
+    /**
+     * The payload of a JWS compact serialization, read as a release without verifying anything, or
+     * empty if it is not one. For a repository that selects the content a release lists; the engine
+     * verifies the release before trusting it.
+     */
+    static Optional<Release> unverifiedRelease(String jws) {
+        String[] parts = jws.strip().split("\\.", -1);
+        if (parts.length != 3 || !BASE64URL.matcher(parts[1]).matches() || parts[1].length() % 4 == 1) {
+            return Optional.empty();
+        }
+        JsonNode root = utf8(parts[1]).map(ApprovalVerifier::parse).orElse(null);
+        try {
+            return root == null ? Optional.empty() : Optional.of(ReleaseJson.release(root));
+        } catch (InvalidDecisionException e) {
+            return Optional.empty();
+        }
     }
 
     private static boolean signatureVerifies(TrustedKey key, String[] parts) {

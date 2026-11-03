@@ -2,7 +2,7 @@
 
 > Status: **design proposal**, partly implemented · Last updated: 2026-11-03
 >
-> Step 1 of the [implementation plan](#11-implementation-plan) is **available** in both engines: approval statements and `requireApproved()` (see [Approvals](approvals.md)). Everything else on this page is the design for the rest of milestone M2 of the [roadmap](architecture.md#9-roadmap): releases, the governance service with its hash-chained audit log, the JDBC repository and the JDBC audit sink. It is for review and will change before it ships.
+> Steps 1 and 2 of the [implementation plan](#11-implementation-plan) are **available** in both engines: approval statements and `requireApproved()` (see [Approvals](approvals.md)), and signed releases with `requireRelease()`, the `RuleRepository` interface with its files and Git implementation, and the reload helper (see [Releases](releases.md)). Everything else on this page is the design for the rest of milestone M2 of the [roadmap](architecture.md#9-roadmap): the governance service with its hash-chained audit log, the JDBC repository and the JDBC audit sink. It is for review and will change before it ships.
 
 A bank may change a credit limit in seconds only if it can show, years later, who wrote the change, who approved it, that the approved text is exactly the text that ran, and that nobody altered the history since. RuleStone already makes every version immutable and identified by a content hash, and records which version made each decision. This page adds the missing half: an approval that binds to the content hash, an engine that refuses unapproved content, and a tamper-evident log of every governance event.
 
@@ -364,7 +364,7 @@ Writing drafts, submissions and events is the governance service's business, thr
 
 | Implementation | Module | Status |
 |---|---|---|
-| Files and Git | `rulestone-core` | Files are read today without governance; M2 adds approvals and releases as files |
+| Files and Git | `rulestone-core` | Available: `FileRuleRepository`, with approvals and releases as files (see [Releases](releases.md#repositories)) |
 | JDBC | `rulestone-repository-jdbc` | M2 target: PostgreSQL, Oracle, SQL Server |
 | S3-compatible object storage | `rulestone-repository-s3` | Later |
 
@@ -497,6 +497,8 @@ RepositoryReloader reloader = RepositoryReloader.builder(repository, "retail-cre
 
 A release that fails verification or validation is never swapped in; the previous engine keeps running. Because releases are signed, the last one loaded can also be cached on local disk and used at start-up when the repository is unreachable, which keeps the existing guarantee that decisions do not depend on the repository being up.
 
+Step 2 implements the helper as `RepositoryReloader` in both engines, with a `reloadIfNewer()` call and optional polling (see [Reloading](releases.md#reloading)). Its cache keeps the last accepted release, signed, so that a restarted engine refuses an older release; caching the content as well, for start-up while the repository is unreachable, is left to the JDBC step.
+
 ### 5.5 A JDBC audit sink for decision records
 
 `rulestone-audit-jdbc` writes each `DecisionRecord` as one insert-only row:
@@ -592,7 +594,7 @@ The TypeScript engine (`@dxa/rulestone-engine`) is a first-class engine for Node
 | `ApprovalWorkflow`, `PrincipalResolver`, Camunda workflow | yes | no |
 | Editor authentication and review screens | standalone editor | review elements in the SDK; sign-in stays with the host |
 
-A new conformance fixture, `java-approvals.json`, written by the Java engine, lists statements and releases with the expected result: valid, a tampered hash, a wrong or unknown key, `alg: none`, an embedded key, a maker who approves, too few approvers, an old release sequence. The TypeScript engine must give the same verdict and the same problem text.
+Two conformance fixtures, `java-approvals.json` and `java-releases.json`, written by the Java engine, list statements and releases with the expected result: valid, a tampered hash, a wrong or unknown key, `alg: none`, an embedded key, a maker who approves, too few approvers, an old release sequence, a broken chain, unlisted and missing versions, and routing to unlisted or retired versions. The TypeScript engine must give the same verdict and the same problem text.
 
 An engine in a browser verifies approvals so that a preview or a pre-check uses approved rules, but a browser is not a trust boundary: decisions that matter are made, or made again, by a server-side engine.
 
@@ -644,7 +646,7 @@ Two controls remain the bank's: configuring production engines with `requireAppr
 Each step is a separate, reviewable change with tests and documentation in English and Vietnamese. Steps 1 and 2 are in both engines, with conformance fixtures.
 
 1. **Approval statements and `requireApproved()`.** *Done.* See [Approvals](approvals.md). The statement format, JWS verification with `EdDSA` and `ES256`, trusted keys, hash binding, four-eyes and `minApprovers` checks, approvals read from files. `java-approvals.json` for the TypeScript engine. This delivers enforcement first: a bank can issue statements from a CI job and refuse unapproved content before any governance service exists.
-2. **Releases and the `RuleRepository` SPI.** The release format with `sequence` and `previous`, routing in releases, the read-only repository interface with the files and Git implementation, the reload helper and the local cache of the last release.
+2. **Releases and the `RuleRepository` SPI.** *Done.* See [Releases](releases.md). The release format with `sequence` and `previous`, signed like approvals with `typ` `rulestone-release+jws`; `requireRelease()`, which loads exactly the listed versions, refuses older releases and broken chains, and takes canary and shadow versions from the release; the read-only `RuleRepository` interface with `FileRuleRepository` for files and Git checkouts; `RepositoryReloader` and the local cache of the last accepted release. `java-releases.json` for the TypeScript engine, which verifies routing but does not route.
 3. **The governance service core** (`rulestone-governance`): lifecycle, change sets, policies and tiers, separation of duties, emergency changes, the `PrincipalResolver` and `Signer` SPIs, an in-memory store, the hash-chained log and the `verify` tool.
 4. **JDBC.** `rulestone-repository-jdbc` with the DDL for PostgreSQL, Oracle and SQL Server, tested against each database, and `rulestone-audit-jdbc` with optional batch sealing.
 5. **Anchoring.** Signed checkpoint export, an RFC 3161 timestamp client behind an SPI, and `ANCHORED` events.

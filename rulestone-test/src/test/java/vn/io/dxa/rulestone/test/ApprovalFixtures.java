@@ -65,7 +65,7 @@ final class ApprovalFixtures {
     private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
     private static final String TYP = ApprovalVerifier.TYPE;
 
-    private final Map<String, JsonNode> keys = new LinkedHashMap<>();
+    final Map<String, JsonNode> keys = new LinkedHashMap<>();
     private final List<DecisionTable> tables = TABLES.stream().map(f -> DecisionTableJson.read(REPO.resolve(f))).toList();
     private final List<DecisionFlow> flows = FLOWS.stream().map(f -> DecisionFlowJson.read(REPO.resolve(f))).toList();
     private final List<ParameterSet> sets = PARAM_SETS.stream().map(f -> ParameterSetJson.read(REPO.resolve(f))).toList();
@@ -278,7 +278,7 @@ final class ApprovalFixtures {
     }
 
     /** An issuer with the private key {@code keyKid} that names itself {@code headerKid}; ES256 nonces are seeded. */
-    private ApprovalIssuer issuer(String keyKid, String headerKid) {
+    ApprovalIssuer issuer(String keyKid, String headerKid) {
         JsonNode key = keys.get(keyKid);
         try {
             boolean ed = key.get("alg").textValue().equals(ApprovalVerifier.EDDSA);
@@ -302,7 +302,7 @@ final class ApprovalFixtures {
         }
     }
 
-    private static String base64(String text) {
+    static String base64(String text) {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(text.getBytes(StandardCharsets.UTF_8));
     }
 }

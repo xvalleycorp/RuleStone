@@ -11,4 +11,4 @@
 
 export { parseStoneTests, checkStoneTestCase, StoneTestFailure, InvalidStoneTestError } from './stone-test.js'
 export type { StoneTestCase, StoneTestOutcome } from './stone-test.js'
-export { ApprovalIssuer, approvalSubjects } from './approval-issuer.js'
+export { ApprovalIssuer, approvalSubjects, releaseEntries } from './approval-issuer.js'

@@ -39,9 +39,12 @@ final class Approvals {
         }
     }
 
-    /** The registered artifacts, in the order problems list them: parameter sets, tables, flows, the catalog. */
+    /**
+     * The registered artifacts, in the order problems list them: parameter sets, tables, flows, the
+     * catalog, named {@code catalogId}.
+     */
     static List<Artifact> artifacts(Collection<ParameterSet> sets, Collection<DecisionTable> tables,
-                                    Collection<DecisionFlow> flows, ReasonCodeCatalog catalog) {
+                                    Collection<DecisionFlow> flows, ReasonCodeCatalog catalog, String catalogId) {
         Set<Artifact> artifacts = new LinkedHashSet<>();
         sets.forEach(s -> artifacts.add(new Artifact(ArtifactKind.PARAMS, s.id(), s.version(),
                 ParameterSetJson.exactVersion(s))));
@@ -50,7 +53,7 @@ final class Approvals {
         flows.forEach(f -> artifacts.add(new Artifact(ArtifactKind.FLOW, f.id(), f.version(),
                 DecisionFlowJson.exactVersion(f))));
         if (catalog != null) {
-            artifacts.add(new Artifact(ArtifactKind.CATALOG, ApprovalStatement.CATALOG_ID, catalog.version(),
+            artifacts.add(new Artifact(ArtifactKind.CATALOG, catalogId, catalog.version(),
                     ReasonCodeCatalogJson.exactVersion(catalog)));
         }
         return List.copyOf(artifacts);
@@ -64,8 +67,8 @@ final class Approvals {
         List<String> problems = new ArrayList<>();
         List<ApprovalStatement> verified = new ArrayList<>();
         for (Named approval : approvals) {
-            ApprovalVerifier.Checked checked = verifier.check(approval.jws());
-            checked.statement().ifPresent(verified::add);
+            ApprovalVerifier.Checked<ApprovalStatement> checked = verifier.check(approval.jws());
+            checked.value().ifPresent(verified::add);
             checked.problems().forEach(p -> problems.add("approval " + approval.name() + ": " + p));
         }
         for (Artifact artifact : artifacts) {

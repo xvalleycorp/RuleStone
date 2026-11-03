@@ -1,6 +1,6 @@
 ---
 source: README.md
-sourceHash: 066d6ca0a4b02c9b7398baf2a48dc5d5418702ec598eb4352fba185171d48228
+sourceHash: 5529ed11ae45342b0a674a19ddb79234f7e07f18d7d586808fc2f149f4d8b801
 ---
 
 # Tài liệu RuleStone
@@ -21,6 +21,7 @@ sourceHash: 066d6ca0a4b02c9b7398baf2a48dc5d5418702ec598eb4352fba185171d48228
 | [Giải thích quyết định](explanations.md) | Giải thích quyết định bằng ngôn ngữ của khách hàng với một danh mục mã lý do đã được duyệt, và kiểm tra rằng mọi mã lý do đều có nội dung. |
 | [Chạy lại và chấm điểm lại](replay.md) | Tái lập chính xác một quyết định đã ghi từ bản ghi của nó và dữ liệu đầu vào gốc, và so sánh nó với một phiên bản khác, bộ tham số khác hoặc các mô hình hiện tại. |
 | [Phê duyệt](approvals.md) | Chỉ nạp nội dung đã được duyệt: văn bản phê duyệt có chữ ký gắn với mã băm nội dung, nguyên tắc bốn mắt và số người duyệt tối thiểu, được kiểm tra khi engine được tạo. |
+| [Bản phát hành](releases.md) | Nạp đúng các phiên bản đã duyệt của một bản phát hành có chữ ký, từ chối quay lui, lấy phiên bản canary và bóng từ đó; giao diện `RuleRepository`, tệp và Git, và nạp lại nóng. |
 | [Trình soạn thảo web](editor.md) | Tạo và sửa bảng quyết định trên trình duyệt, thử với các fact mẫu và lưu tệp `.stone.json`. |
 | [SDK trình soạn thảo](editor-sdk.md) | Nhúng các trình soạn thảo trực quan vào ứng dụng web của bạn, với React, Angular, Vue hoặc HTML thuần, và chạy luật ngay trong trình duyệt. |
 | [Tích hợp Temporal](temporal.md) | Đánh giá quyết định từ workflow Temporal, dưới dạng activity hoặc ngay trong mã workflow với phiên bản luật được ghim. |

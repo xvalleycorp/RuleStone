@@ -31,7 +31,8 @@ public final class ApprovalStatementJson {
     /** An exact version: {@code <label>@sha256:<64 lower-case hex digits>}. */
     static final Pattern EXACT_VERSION = Pattern.compile("[^@\\s]+@sha256:[0-9a-f]{64}");
 
-    private static final Pattern HASH = Pattern.compile("sha256:[0-9a-f]{64}");
+    /** A hash: {@code sha256:<64 lower-case hex digits>}. */
+    static final Pattern HASH = Pattern.compile("sha256:[0-9a-f]{64}");
     private static final Pattern INSTANT = Pattern.compile(
             "(\\d{4})-(\\d{2})-(\\d{2})T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d{1,9})?Z");
     private static final Set<String> STATEMENT_FIELDS = Set.of("type", "approvalId", "changeSet", "subjects", "makers",
@@ -205,7 +206,7 @@ public final class ApprovalStatementJson {
     }
 
     /** Checks that {@code text} is a UTC instant such as {@code 2026-11-20T07:41:02Z}. */
-    private static void instant(String text, String path, DecisionTableJson.Reader reader) {
+    static void instant(String text, String path, DecisionTableJson.Reader reader) {
         Matcher m = INSTANT.matcher(text);
         boolean valid = m.matches();
         if (valid) {
