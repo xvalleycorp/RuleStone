@@ -1,6 +1,6 @@
 ---
 source: governance.md
-sourceHash: ea2ea40027e07ac8c32b004cedd6c835aab3f2bf043e3cfb0c9bc16d3e6a3e6c
+sourceHash: ebdf41dd3df7e48b34e5944873c287f8b1a719b982a44e8767de2bfaf156d69a
 ---
 
 # Quản trị luật
@@ -170,11 +170,12 @@ Phê duyệt bổ sung quá hạn được dịch vụ quản trị đưa ra th�
 
 ```java
 RuleStoneEngine engine = RuleStone.builder()
-        .repository(repository)                  // tables, flows, parameter sets, catalog, approvals, release
+        .snapshot(repository.load("retail-credit-prod")) // tables, flows, parameter sets, catalog, approvals, release
         .requireApproved(ApprovalVerifier.builder()
                 .trustedKey("gov-2026", publicKey)       // the governance service's signing key
                 .minApprovers(1)                         // a floor the engine checks itself
                 .build())
+        .requireRelease("retail-credit-prod")
         .build();
 ```
 

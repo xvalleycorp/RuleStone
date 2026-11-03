@@ -165,11 +165,12 @@ An overdue post-approval is raised by the governance service as an alert and sho
 
 ```java
 RuleStoneEngine engine = RuleStone.builder()
-        .repository(repository)                  // tables, flows, parameter sets, catalog, approvals, release
+        .snapshot(repository.load("retail-credit-prod")) // tables, flows, parameter sets, catalog, approvals, release
         .requireApproved(ApprovalVerifier.builder()
                 .trustedKey("gov-2026", publicKey)       // the governance service's signing key
                 .minApprovers(1)                         // a floor the engine checks itself
                 .build())
+        .requireRelease("retail-credit-prod")
         .build();
 ```
 
