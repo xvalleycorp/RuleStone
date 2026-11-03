@@ -76,7 +76,9 @@ import vn.io.dxa.rulestone.core.RuleStone;
  *       set and reason-code catalog in {@code invalid-tables.json};</li>
  *   <li>{@code java-explanations.json}: the explanation, in English and Vietnamese, of the record
  *       of every case of every example flow test file, with the record, and of two cases of every
- *       example table test file: the first with reason codes and the first without.</li>
+ *       example table test file: the first with reason codes and the first without;</li>
+ *   <li>{@code java-approvals.json}: signed approval statements, with the trusted keys, and the
+ *       problems an engine built with {@code requireApproved} reports for each case.</li>
  * </ul>
  *
  * <p>After changing the engine, the examples or the probes, regenerate them with
@@ -461,6 +463,15 @@ class SdkFixturesTest {
             }
         }
         check("java-version-selection.json", out);
+    }
+
+    /**
+     * The problems an engine built with {@code requireApproved} reports for signed approval
+     * statements; see {@link ApprovalFixtures}.
+     */
+    @Test
+    void approvals() throws IOException {
+        check("java-approvals.json", new ApprovalFixtures().write());
     }
 
     /** Result types tried in order for a probe without a type, as ExpressionsDocTest does. */

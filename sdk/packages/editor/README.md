@@ -305,13 +305,13 @@ Minified and minified + gzipped with esbuild (`npm run size`), with Lit and the 
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@dxa/rulestone-editor` (all elements) | 375.2 KiB min, 109.5 KiB gzip | 216.4 KiB min, 60.1 KiB gzip |
-| `./table-editor` | 324.6 KiB min, 95.1 KiB gzip | 165.7 KiB min, 45.5 KiB gzip |
+| `@dxa/rulestone-editor` (all elements) | 376.1 KiB min, 109.7 KiB gzip | 216.4 KiB min, 60.1 KiB gzip |
+| `./table-editor` | 325.3 KiB min, 95.3 KiB gzip | 165.7 KiB min, 45.5 KiB gzip |
 | `./rules-grid` | 178.4 KiB min, 54.5 KiB gzip | 106.0 KiB min, 30.3 KiB gzip |
 | `./condition-builder` | 158.0 KiB min, 49.3 KiB gzip | 85.3 KiB min, 24.9 KiB gzip |
 | `./schema-designer` | 134.8 KiB min, 43.3 KiB gzip | 62.2 KiB min, 19.2 KiB gzip |
-| `./flow-canvas` | 247.3 KiB min, 75.8 KiB gzip | 90.8 KiB min, 26.9 KiB gzip |
-| `./try-it` | 220.7 KiB min, 68.4 KiB gzip | 62.9 KiB min, 18.8 KiB gzip |
+| `./flow-canvas` | 247.9 KiB min, 76.1 KiB gzip | 90.8 KiB min, 26.9 KiB gzip |
+| `./try-it` | 221.4 KiB min, 68.6 KiB gzip | 62.9 KiB min, 18.8 KiB gzip |
 | `./cel-input` | 110.9 KiB min, 36.4 KiB gzip | 53.2 KiB min, 16.5 KiB gzip |
 
 The flow canvas loads the engine to check flows with it, and Try it to run them. The rules grid, condition builder, schema designer and CEL input create no engine, so they leave out the engine's flow, model and replay code.

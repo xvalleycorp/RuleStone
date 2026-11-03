@@ -94,6 +94,11 @@ public final class DecisionTableJson {
         }
     }
 
+    /** The table's rule version: {@code <version>@sha256:<hash of the canonical form>}, e.g. {@code 3@sha256:…}. */
+    public static String exactVersion(DecisionTable table) {
+        return table.version() + "@sha256:" + CompiledDecision.sha256(write(table));
+    }
+
     /**
      * Writes the canonical form: compact, keys sorted, absent optionals omitted. Two tables
      * with the same content always produce the same text, which is what the content hash

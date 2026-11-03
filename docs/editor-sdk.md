@@ -477,16 +477,16 @@ Minified, and minified and gzipped, with esbuild (`npm run size` in each package
 
 | Entry point | With Lit and the engine | Editor code only |
 |---|---|---|
-| `@dxa/rulestone-editor` (all elements) | 375.2 KiB, 109.5 KiB gzipped | 216.4 KiB, 60.1 KiB gzipped |
-| `./table-editor` | 324.6 KiB, 95.1 KiB gzipped | 165.7 KiB, 45.5 KiB gzipped |
+| `@dxa/rulestone-editor` (all elements) | 376.1 KiB, 109.7 KiB gzipped | 216.4 KiB, 60.1 KiB gzipped |
+| `./table-editor` | 325.3 KiB, 95.3 KiB gzipped | 165.7 KiB, 45.5 KiB gzipped |
 | `./rules-grid` | 178.4 KiB, 54.5 KiB gzipped | 106.0 KiB, 30.3 KiB gzipped |
 | `./condition-builder` | 158.0 KiB, 49.3 KiB gzipped | 85.3 KiB, 24.9 KiB gzipped |
 | `./schema-designer` | 134.8 KiB, 43.3 KiB gzipped | 62.2 KiB, 19.2 KiB gzipped |
-| `./flow-canvas` | 247.3 KiB, 75.8 KiB gzipped | 90.8 KiB, 26.9 KiB gzipped |
-| `./try-it` | 220.7 KiB, 68.4 KiB gzipped | 62.9 KiB, 18.8 KiB gzipped |
+| `./flow-canvas` | 247.9 KiB, 76.1 KiB gzipped | 90.8 KiB, 26.9 KiB gzipped |
+| `./try-it` | 221.4 KiB, 68.6 KiB gzipped | 62.9 KiB, 18.8 KiB gzipped |
 | `./cel-input` | 110.9 KiB, 36.4 KiB gzipped | 53.2 KiB, 16.5 KiB gzipped |
 
-`@dxa/rulestone-engine` alone is 158.9 KiB, 49.3 KiB gzipped; its `/cel` entry point is 56.6 KiB, 19.0 KiB gzipped. The flow canvas and Try it create engines, so they load the engine's flow, model node and replay code; the rules grid, condition builder, schema designer and CEL input create none and leave that code out. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
+`@dxa/rulestone-engine` alone is 168.0 KiB, 52.6 KiB gzipped; its `/cel` entry point is 56.6 KiB, 19.0 KiB gzipped. The flow canvas and Try it create engines, so they load the engine's flow, model node and replay code; the rules grid, condition builder, schema designer and CEL input create none and leave that code out. Lit is shared when several elements are on a page, and a bundler splits what each page loads.
 
 ## The TypeScript engine and the Java engine
 

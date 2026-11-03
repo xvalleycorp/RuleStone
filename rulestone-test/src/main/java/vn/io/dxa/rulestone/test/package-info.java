@@ -16,6 +16,8 @@
  *       no passing test has matched.</li>
  *   <li>{@link vn.io.dxa.rulestone.test.ReplayCheck}: asserts that recorded decisions, such as golden
  *       records, still replay exactly.</li>
+ *   <li>{@link vn.io.dxa.rulestone.test.ApprovalIssuer}: signs approval statements, for tests of
+ *       engines built with {@code requireApproved}.</li>
  * </ul>
  *
  * <p>Use this module with test scope. Only {@code StoneTests} needs JUnit, which the module

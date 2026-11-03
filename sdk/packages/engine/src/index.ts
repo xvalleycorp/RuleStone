@@ -6,8 +6,8 @@
  * tables and flows, parameter sets, model nodes, decision records, explanations and replay, with
  * the same results as the Java engine on everything the conformance suite covers.
  *
- * Expressions alone are also available from `@dxa/rulestone-engine/cel`, and test files from
- * `@dxa/rulestone-engine/testing`.
+ * Expressions alone are also available from `@dxa/rulestone-engine/cel`, and test files and an
+ * issuer of approval statements for tests from `@dxa/rulestone-engine/testing`.
  *
  * @packageDocumentation
  */
@@ -74,6 +74,14 @@ export { UInt, valuesEqual } from './values.js'
 export type { Value, StructValue } from './values.js'
 export { listOf, structOf, typeFromSpec, typeToSpec, typeToString, typesEqual } from './types.js'
 export type { ValueType, PrimitiveType, ListType, StructType, TypeSpec } from './types.js'
+
+export {
+  ApprovalVerifier, parseApprovalStatement, writeApprovalStatement, APPROVAL_STATEMENT_TYPE, APPROVAL_JWS_TYPE,
+  APPROVAL_FILE_SUFFIX, APPROVAL_CATALOG_ID,
+} from './approvals.js'
+export type {
+  ApprovalAlgorithm, ApprovalStatement, ApprovalSubject, ApprovalVerifierOptions, Approver, ArtifactKind, NamedApproval,
+} from './approvals.js'
 
 export { parseJson, writeJson, JsonSyntaxError } from './json.js'
 export type { JsonNode, Writable } from './json.js'

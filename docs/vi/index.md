@@ -1,6 +1,6 @@
 ---
 source: README.md
-sourceHash: 9888343b70f0baf830be184ce691a55979fc5a0e1a748b409a2cd8c1f4c25b02
+sourceHash: 066d6ca0a4b02c9b7398baf2a48dc5d5418702ec598eb4352fba185171d48228
 ---
 
 # Tài liệu RuleStone
@@ -20,6 +20,7 @@ sourceHash: 9888343b70f0baf830be184ce691a55979fc5a0e1a748b409a2cd8c1f4c25b02
 | [Kiểm thử](testing.md) | Kiểm thử bảng quyết định và luồng quyết định: ca kiểm thử bằng JSON, tích hợp JUnit 5, độ bao phủ luật và nút, và assertion dạng fluent. |
 | [Giải thích quyết định](explanations.md) | Giải thích quyết định bằng ngôn ngữ của khách hàng với một danh mục mã lý do đã được duyệt, và kiểm tra rằng mọi mã lý do đều có nội dung. |
 | [Chạy lại và chấm điểm lại](replay.md) | Tái lập chính xác một quyết định đã ghi từ bản ghi của nó và dữ liệu đầu vào gốc, và so sánh nó với một phiên bản khác, bộ tham số khác hoặc các mô hình hiện tại. |
+| [Phê duyệt](approvals.md) | Chỉ nạp nội dung đã được duyệt: văn bản phê duyệt có chữ ký gắn với mã băm nội dung, nguyên tắc bốn mắt và số người duyệt tối thiểu, được kiểm tra khi engine được tạo. |
 | [Trình soạn thảo web](editor.md) | Tạo và sửa bảng quyết định trên trình duyệt, thử với các fact mẫu và lưu tệp `.stone.json`. |
 | [SDK trình soạn thảo](editor-sdk.md) | Nhúng các trình soạn thảo trực quan vào ứng dụng web của bạn, với React, Angular, Vue hoặc HTML thuần, và chạy luật ngay trong trình duyệt. |
 | [Tích hợp Temporal](temporal.md) | Đánh giá quyết định từ workflow Temporal, dưới dạng activity hoặc ngay trong mã workflow với phiên bản luật được ghim. |
@@ -33,7 +34,7 @@ sourceHash: 9888343b70f0baf830be184ce691a55979fc5a0e1a748b409a2cd8c1f4c25b02
 | [Kiến trúc](architecture.md) | Mục tiêu, nguyên tắc thiết kế, các mô-đun, các chế độ tích hợp, yêu cầu của ngân hàng, tích hợp AI và lộ trình. |
 | [Ra quyết định AI lai](hybrid-ai.md) | Đề xuất thiết kế: điểm số của mô hình làm đầu vào cho luật, mô hình là nút trong luồng quyết định, và bản ghi quyết định giải thích mọi quyết định. |
 | [Tham số, hàm tổng hợp và giá trị cục bộ](parameters.md) | Đề xuất thiết kế: bộ tham số cho các ngưỡng của chính sách, hàm tổng hợp trên danh sách, và giá trị cục bộ trong bảng. |
-| [Quản trị luật](governance.md) | Đề xuất thiết kế: phê duyệt maker-checker gắn với mã băm nội dung, bản phát hành có chữ ký, nhật ký kiểm toán dạng chuỗi băm, và lưu trữ JDBC. |
+| [Quản trị luật](governance.md) | Đề xuất thiết kế, đã triển khai một phần: phê duyệt maker-checker gắn với mã băm nội dung, bản phát hành có chữ ký, nhật ký kiểm toán dạng chuỗi băm, và lưu trữ JDBC. |
 
 ## Dự án
 

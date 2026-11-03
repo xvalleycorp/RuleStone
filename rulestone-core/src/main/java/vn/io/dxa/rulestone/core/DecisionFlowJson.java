@@ -102,6 +102,11 @@ public final class DecisionFlowJson {
         }
     }
 
+    /** The flow's rule version: {@code <version>@sha256:<hash of the canonical form>}, e.g. {@code 3@sha256:…}. */
+    public static String exactVersion(DecisionFlow flow) {
+        return flow.version() + "@sha256:" + CompiledDecision.sha256(write(flow));
+    }
+
     /**
      * Writes the canonical form: compact, keys sorted, absent optionals omitted, and a single
      * unconditional {@code next} written as the node id. Two flows with the same content always

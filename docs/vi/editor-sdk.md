@@ -1,6 +1,6 @@
 ---
 source: editor-sdk.md
-sourceHash: a4a2e7850b606dc5f722d09cc1ae0ed8a484cb1ba903f1e95912753848f10edd
+sourceHash: 5ad744ff51e28ff1e06bc6443c745bf798625df1032da1355254d6d94c9d8b11
 ---
 
 # SDK trình soạn thảo
@@ -482,16 +482,16 @@ Kích thước sau khi rút gọn (minify), và sau khi rút gọn rồi nén gz
 
 | Điểm vào | Gồm Lit và bộ máy luật | Chỉ mã của trình soạn thảo |
 |---|---|---|
-| `@dxa/rulestone-editor` (mọi phần tử) | 375.2 KiB, 109.5 KiB khi nén gzip | 216.4 KiB, 60.1 KiB khi nén gzip |
-| `./table-editor` | 324.6 KiB, 95.1 KiB khi nén gzip | 165.7 KiB, 45.5 KiB khi nén gzip |
+| `@dxa/rulestone-editor` (mọi phần tử) | 376.1 KiB, 109.7 KiB khi nén gzip | 216.4 KiB, 60.1 KiB khi nén gzip |
+| `./table-editor` | 325.3 KiB, 95.3 KiB khi nén gzip | 165.7 KiB, 45.5 KiB khi nén gzip |
 | `./rules-grid` | 178.4 KiB, 54.5 KiB khi nén gzip | 106.0 KiB, 30.3 KiB khi nén gzip |
 | `./condition-builder` | 158.0 KiB, 49.3 KiB khi nén gzip | 85.3 KiB, 24.9 KiB khi nén gzip |
 | `./schema-designer` | 134.8 KiB, 43.3 KiB khi nén gzip | 62.2 KiB, 19.2 KiB khi nén gzip |
-| `./flow-canvas` | 247.3 KiB, 75.8 KiB khi nén gzip | 90.8 KiB, 26.9 KiB khi nén gzip |
-| `./try-it` | 220.7 KiB, 68.4 KiB khi nén gzip | 62.9 KiB, 18.8 KiB khi nén gzip |
+| `./flow-canvas` | 247.9 KiB, 76.1 KiB khi nén gzip | 90.8 KiB, 26.9 KiB khi nén gzip |
+| `./try-it` | 221.4 KiB, 68.6 KiB khi nén gzip | 62.9 KiB, 18.8 KiB khi nén gzip |
 | `./cel-input` | 110.9 KiB, 36.4 KiB khi nén gzip | 53.2 KiB, 16.5 KiB khi nén gzip |
 
-Riêng `@dxa/rulestone-engine` là 158.9 KiB, 49.3 KiB khi nén gzip; entry point `/cel` của nó là 56.6 KiB, 19.0 KiB khi nén gzip. Vùng vẽ luồng và bảng Chạy thử tạo bộ máy luật, nên nạp cả mã luồng, nút mô hình và replay của bộ máy luật; lưới luật, trình tạo điều kiện, trình thiết kế lược đồ và ô nhập CEL không tạo bộ máy luật nào và bỏ phần mã đó ra. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
+Riêng `@dxa/rulestone-engine` là 168.0 KiB, 52.6 KiB khi nén gzip; entry point `/cel` của nó là 56.6 KiB, 19.0 KiB khi nén gzip. Vùng vẽ luồng và bảng Chạy thử tạo bộ máy luật, nên nạp cả mã luồng, nút mô hình và replay của bộ máy luật; lưới luật, trình tạo điều kiện, trình thiết kế lược đồ và ô nhập CEL không tạo bộ máy luật nào và bỏ phần mã đó ra. Lit được dùng chung khi có nhiều phần tử trên một trang, và bundler tách ra những gì mỗi trang cần nạp.
 
 ## Bộ máy luật TypeScript và bộ máy luật Java
 

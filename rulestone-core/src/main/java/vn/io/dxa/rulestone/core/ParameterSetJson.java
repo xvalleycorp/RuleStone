@@ -98,6 +98,11 @@ public final class ParameterSetJson {
         }
     }
 
+    /** The set's exact version: {@code <version>@sha256:<hash of the canonical form>}, e.g. {@code 3@sha256:…}. */
+    public static String exactVersion(ParameterSet set) {
+        return set.version() + "@sha256:" + CompiledDecision.sha256(write(set));
+    }
+
     /**
      * Writes the canonical form: compact, keys sorted, absent optionals omitted, values in the
      * {@link FactsJson} forms. The content hash in the set's version, e.g. {@code 7@sha256:…}, is
