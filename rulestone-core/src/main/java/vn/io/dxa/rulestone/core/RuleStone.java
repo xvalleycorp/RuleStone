@@ -5,6 +5,11 @@
 
 package vn.io.dxa.rulestone.core;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -21,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import vn.io.dxa.rulestone.api.AuditSink;
 import vn.io.dxa.rulestone.api.DecisionRecord;
 import vn.io.dxa.rulestone.api.DecisionRef;
@@ -46,6 +52,9 @@ public final class RuleStone {
 
     /** The problem reported when a reason-code catalog is required but none is registered. */
     static final String MISSING_CATALOG = "reason-code catalog: required, but none is registered";
+
+    /** The suffix of signed approval statement files, e.g. {@code CHG-2026-0042.approval.jws}. */
+    public static final String APPROVAL_FILE_SUFFIX = ".approval.jws";
 
     private RuleStone() {}
 
@@ -74,6 +83,8 @@ public final class RuleStone {
         private boolean suppliedModelsOnly;
         private ReasonCodeCatalog reasonCodeCatalog;
         private boolean requireReasonCodeCatalog;
+        private ApprovalVerifier approvalVerifier;
+        private final List<Approvals.Named> approvals = new ArrayList<>();
 
         private Builder() {}
 
@@ -183,6 +194,55 @@ public final class RuleStone {
          */
         public Builder requireReasonCodeCatalog() {
             this.requireReasonCodeCatalog = true;
+            return this;
+        }
+
+        /**
+         * Makes {@link #build()} fail unless every registered table, flow, parameter set and
+         * reason-code catalog is covered by a signed approval statement (see {@link #approval} and
+         * {@link #approvals}) that {@code verifier} verifies, whose subject names its kind, id,
+         * version label and the content hash the engine computed itself, in which no approver is a
+         * maker, and which names at least {@link ApprovalVerifier#minApprovers()} approvers. Every
+         * registered statement must verify. A catalog is named {@value ApprovalStatement#CATALOG_ID}.
+         *
+         * <p>Without this call, registered statements are ignored and the engine loads any content,
+         * for development and tests.
+         */
+        public Builder requireApproved(ApprovalVerifier verifier) {
+            this.approvalVerifier = Objects.requireNonNull(verifier, "verifier");
+            return this;
+        }
+
+        /**
+         * Registers a signed approval statement, in JWS compact serialization. Problems name it
+         * {@code approvals[i]}, by its position among the registered statements.
+         */
+        public Builder approval(String jws) {
+            return approval("approvals[" + approvals.size() + "]", jws);
+        }
+
+        /** Registers a signed approval statement, which problems name {@code name}, e.g. its file name. */
+        public Builder approval(String name, String jws) {
+            approvals.add(new Approvals.Named(Objects.requireNonNull(name, "name"), Objects.requireNonNull(jws, "jws")));
+            return this;
+        }
+
+        /**
+         * Registers every {@code *.approval.jws} file in {@code dir}, in file name order, each named
+         * by its file name. Subdirectories are not read.
+         *
+         * @throws UncheckedIOException if the directory or a file cannot be read
+         */
+        public Builder approvals(Path dir) {
+            Objects.requireNonNull(dir, "dir");
+            try (Stream<Path> files = Files.list(dir)) {
+                for (Path file : files.filter(f -> f.getFileName().toString().endsWith(APPROVAL_FILE_SUFFIX)
+                        && Files.isRegularFile(f)).sorted().toList()) {
+                    approval(file.getFileName().toString(), Files.readString(file, StandardCharsets.UTF_8));
+                }
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
             return this;
         }
 
@@ -324,7 +384,9 @@ public final class RuleStone {
          * @throws InvalidDecisionException listing every problem in every registered parameter set,
          *         table and flow, including inconsistent versions (see {@link DecisionVersions#problems}),
          *         parameters that some version of their set does not declare alike, canaries or
-         *         shadows of unknown versions, and reason codes missing from the reason-code catalog
+         *         shadows of unknown versions, reason codes missing from the reason-code catalog, and,
+         *         with {@link #requireApproved}, statements that do not verify and artifacts that
+         *         no acceptable statement covers
          */
         public RuleStoneEngine build() {
             List<String> problems = new ArrayList<>();
@@ -361,6 +423,10 @@ public final class RuleStone {
                 problems.addAll(Explanations.missingCodes(tables, flows, reasonCodeCatalog));
             } else if (requireReasonCodeCatalog) {
                 problems.add(MISSING_CATALOG);
+            }
+            if (approvalVerifier != null) {
+                problems.addAll(Approvals.problems(approvalVerifier, approvals,
+                        Approvals.artifacts(paramSets, tables, flows, reasonCodeCatalog)));
             }
             if (!problems.isEmpty()) {
                 throw new InvalidDecisionException(problems);

@@ -48,6 +48,7 @@ export const LOCALES = {
       'testing.md': 'Kiểm thử',
       'explanations.md': 'Giải thích quyết định',
       'replay.md': 'Chạy lại và chấm điểm lại',
+      'approvals.md': 'Phê duyệt',
       'temporal.md': 'Tích hợp Temporal',
       'editor.md': 'Trình soạn thảo web',
       'editor-sdk.md': 'SDK trình soạn thảo',

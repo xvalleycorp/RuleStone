@@ -1,8 +1,8 @@
 # Governance
 
-> Status: **design proposal** · Last updated: 2026-11-02
+> Status: **design proposal**, partly implemented · Last updated: 2026-11-03
 >
-> Nothing on this page is implemented yet. It is the design for milestone M2 of the [roadmap](architecture.md#9-roadmap): maker-checker, a hash-chained audit log, the JDBC repository and the JDBC audit sink. It is for review and will change before it ships.
+> Step 1 of the [implementation plan](#11-implementation-plan) is **available** in both engines: approval statements and `requireApproved()` (see [Approvals](approvals.md)). Everything else on this page is the design for the rest of milestone M2 of the [roadmap](architecture.md#9-roadmap): releases, the governance service with its hash-chained audit log, the JDBC repository and the JDBC audit sink. It is for review and will change before it ships.
 
 A bank may change a credit limit in seconds only if it can show, years later, who wrote the change, who approved it, that the approved text is exactly the text that ran, and that nobody altered the history since. RuleStone already makes every version immutable and identified by a content hash, and records which version made each decision. This page adds the missing half: an approval that binds to the content hash, an engine that refuses unapproved content, and a tamper-evident log of every governance event.
 
@@ -643,7 +643,7 @@ Two controls remain the bank's: configuring production engines with `requireAppr
 
 Each step is a separate, reviewable change with tests and documentation in English and Vietnamese. Steps 1 and 2 are in both engines, with conformance fixtures.
 
-1. **Approval statements and `requireApproved()`.** The statement format, JWS verification with `EdDSA` and `ES256`, trusted keys, hash binding, four-eyes and `minApprovers` checks, approvals read from files. `java-approvals.json` for the TypeScript engine. This delivers enforcement first: a bank can issue statements from a CI job and refuse unapproved content before any governance service exists.
+1. **Approval statements and `requireApproved()`.** *Done.* See [Approvals](approvals.md). The statement format, JWS verification with `EdDSA` and `ES256`, trusted keys, hash binding, four-eyes and `minApprovers` checks, approvals read from files. `java-approvals.json` for the TypeScript engine. This delivers enforcement first: a bank can issue statements from a CI job and refuse unapproved content before any governance service exists.
 2. **Releases and the `RuleRepository` SPI.** The release format with `sequence` and `previous`, routing in releases, the read-only repository interface with the files and Git implementation, the reload helper and the local cache of the last release.
 3. **The governance service core** (`rulestone-governance`): lifecycle, change sets, policies and tiers, separation of duties, emergency changes, the `PrincipalResolver` and `Signer` SPIs, an in-memory store, the hash-chained log and the `verify` tool.
 4. **JDBC.** `rulestone-repository-jdbc` with the DDL for PostgreSQL, Oracle and SQL Server, tested against each database, and `rulestone-audit-jdbc` with optional batch sealing.

@@ -14,12 +14,13 @@ import {
   type Executable, type FactsInput, type MonotonicClock, type Overrides, type TraceStep,
 } from './executable.js'
 import { readFacts, writeValues, type JsonInput } from './facts.js'
-import type { DecisionFlow } from './flow.js'
+import { APPROVAL_CATALOG_ID, type ApprovalArtifact, type ApprovalVerifier, type NamedApproval } from './approvals.js'
+import { flowVersionOf, type DecisionFlow } from './flow.js'
 import { CompiledFlow, compileFlow, type Models } from './flow-engine.js'
 import { readModels, type ModelInvoker, type SuppliedModel } from './models.js'
-import { compileParameterSets, type ParameterSet, type Registry } from './params.js'
+import { compileParameterSets, parameterSetVersionOf, type ParameterSet, type Registry } from './params.js'
 import type { DecisionRecord, ModelStep, ReasonCode } from './record.js'
-import type { DecisionTable } from './table.js'
+import { ruleVersionOf, type DecisionTable } from './table.js'
 import { replay, rescore, type DecisionComparison, type ModelSource } from './replay.js'
 import { selectVersion, versionProblems } from './versions.js'
 import {
@@ -120,6 +121,19 @@ export interface EngineOptions {
   readonly timeoutMs?: number
   /** The monotonic clock timeouts and model latencies are measured with, in milliseconds; default performance.now. For tests. */
   readonly monotonicClock?: MonotonicClock
+  /**
+   * Fail unless every table, flow, parameter set and reason-code catalog is covered by a signed
+   * approval statement (see approvals) that this verifier verifies, whose subject names its kind,
+   * id, version label and the content hash the engine computed itself, in which no approver is a
+   * maker, and which names at least minApprovers approvers. Every statement given must verify.
+   * Without it, approvals are ignored. As RuleStone.Builder.requireApproved.
+   */
+  readonly requireApproved?: ApprovalVerifier
+  /**
+   * Signed approval statements, in JWS compact serialization: the text of .approval.jws files,
+   * named by their file name, or bare text, named approvals[i] by position.
+   */
+  readonly approvals?: Iterable<string | NamedApproval>
 }
 
 /** A compiled version of a decision table or flow. */
@@ -142,7 +156,8 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
   if (options.factsHashKey !== undefined && options.factsHashKey.length < 16) throw new RangeError('factsHashKey must be at least 16 bytes')
   const maxIterations = options.maxIterations ?? 10_000
   const problems: string[] = []
-  const registry: Registry = await compileParameterSets(options.paramSets ?? [], problems)
+  const paramSets = [...(options.paramSets ?? [])]
+  const registry: Registry = await compileParameterSets(paramSets, problems)
   const compiledTables = new Map<string, CompiledTable[]>()
   const registered = new Map<string, DecisionTable[]>()
   const tables = [...options.tables]
@@ -178,6 +193,10 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
   for (const versions of flowVersions.values()) problems.push(...versionProblems(versions))
   if (options.reasonCodeCatalog) problems.push(...missingReasonCodes(tables, options.reasonCodeCatalog, flows))
   else if (options.requireReasonCodeCatalog) problems.push(MISSING_CATALOG)
+  if (options.requireApproved) {
+    const approvals = [...(options.approvals ?? [])].map((a, i) => (typeof a === 'string' ? { name: `approvals[${i}]`, jws: a } : a))
+    problems.push(...(await options.requireApproved.approvalProblems(approvals, await approvalArtifacts(paramSets, tables, flows, options.reasonCodeCatalog))))
+  }
   if (problems.length > 0) {
     throw new InvalidDecisionError(problems)
   }
@@ -185,6 +204,21 @@ export async function createEngine(options: EngineOptions): Promise<RuleStoneEng
     ? { catalog: options.reasonCodeCatalog, version: await reasonCodeCatalogVersionOf(options.reasonCodeCatalog) }
     : undefined
   return new RuleStoneEngine(byId, registry, options, catalog)
+}
+
+/** The registered artifacts at their exact versions, in the order problems list them, as Approvals.artifacts. */
+async function approvalArtifacts(
+  sets: readonly ParameterSet[], tables: readonly DecisionTable[], flows: readonly DecisionFlow[], catalog: ReasonCodeCatalog | undefined,
+): Promise<ApprovalArtifact[]> {
+  const artifacts = new Map<string, ApprovalArtifact>()
+  const add = (artifact: ApprovalArtifact) => {
+    artifacts.set(`${artifact.kind} ${artifact.id} ${artifact.label} ${artifact.exactVersion}`, artifact)
+  }
+  for (const s of sets) add({ kind: 'params', id: s.id, label: s.version, exactVersion: await parameterSetVersionOf(s) })
+  for (const t of tables) add({ kind: 'table', id: t.id, label: t.version, exactVersion: await ruleVersionOf(t) })
+  for (const f of flows) add({ kind: 'flow', id: f.id, label: f.version, exactVersion: await flowVersionOf(f) })
+  if (catalog) add({ kind: 'catalog', id: APPROVAL_CATALOG_ID, label: catalog.version, exactVersion: await reasonCodeCatalogVersionOf(catalog) })
+  return [...artifacts.values()]
 }
 
 function checkTimeout(timeoutMs: number): void {

@@ -11,7 +11,7 @@ The TypeScript engine and the Java engine are equivalent implementations. Both g
 - No runtime dependencies. Numbers use the native `BigInt`.
 - ESM, TypeScript types included, and safe to tree-shake (`sideEffects: false`).
 - Runs in current browsers, Node.js 22 or later and edge runtimes, with no DOM. Hashing uses WebCrypto (`crypto.subtle`), which browsers provide only on secure (HTTPS or localhost) pages; timeouts use `performance.now()`.
-- **Size** (`npm run size`), minified and minified + gzipped: the main entry point 158.9 KiB and 49.3 KiB, `/cel` 56.6 KiB and 19.0 KiB, `/testing` 32.9 KiB and 11.2 KiB. Flows, model nodes and replay are part of `createEngine`, so every application that creates an engine loads them; elements that only check expressions do not.
+- **Size** (`npm run size`), minified and minified + gzipped: the main entry point 168.0 KiB and 52.6 KiB, `/cel` 56.6 KiB and 19.0 KiB, `/testing` 53.1 KiB and 17.0 KiB. Approval verification is in the main entry point but bundled only by applications that create an `ApprovalVerifier`; `createEngine` alone grows by less than 1 KiB. Flows, model nodes and replay are part of `createEngine`, so every application that creates an engine loads them; elements that only check expressions do not.
 
 ## Usage
 
@@ -83,6 +83,22 @@ rescored.differences                                         // [{ kind: 'OUTPUT
 
 `replay` and `rescore` behave as in Java ([Replaying decisions](../../../docs/replay.md)): nothing is written to the audit sinks, a version that is not registered with exactly the recorded content hash is a `DecisionNotFoundError`, and differences are described with Java's words, never with values.
 
+### Approvals
+
+An engine created with `requireApproved` loads only content covered by signed [approval statements](../../../docs/approvals.md), verified with WebCrypto (`EdDSA` with Ed25519, or `ES256`) and checked for four-eyes and a minimum number of approvers, as in Java:
+
+```ts
+import { ApprovalVerifier, createEngine } from '@dxa/rulestone-engine'
+
+const engine = await createEngine({
+  tables, paramSets, reasonCodeCatalog,
+  approvals: [{ name: 'CHG-2026-0042.approval.jws', jws: approvalText }],   // or bare strings
+  requireApproved: new ApprovalVerifier({ trustedKeys: { 'gov-2026': publicKey }, minApprovers: 1 }),
+})
+```
+
+A statement that does not verify, or an artifact that no acceptable statement covers, is a problem of the `InvalidDecisionError`, with Java's words. `ApprovalIssuer` in `@dxa/rulestone-engine/testing` signs statements for tests.
+
 ## API
 
 | Export | Purpose |
@@ -90,7 +106,7 @@ rescored.differences                                         // [{ kind: 'OUTPUT
 | `parseDecisionTable(text)` | Strict `.stone.json` reader, as `DecisionTableJson.read`. Unknown and duplicate keys are errors, and every problem is reported with its JSON path. |
 | `writeDecisionTable(table)`, `ruleVersionOf(table)` | The canonical form, and the rule version `<version>@sha256:<hex>` computed over it, as in Java. |
 | `parseDecisionFlow(text)`, `writeDecisionFlow(flow)`, `flowVersionOf(flow)` | The strict `.flow.json` reader, as `DecisionFlowJson.read`, the canonical form and the flow's rule version, as in Java. |
-| `createEngine(options)` | Compiles every parameter set, table and flow, and checks versions for duplicates and contradictory dates (a version without `effectiveTo` is superseded by the next one). Options: `tables`, `flows`, `paramSets`, `modelInvokers`, `suppliedModelsOnly`, `maxIterations`, `currencyScales`, `clock`, `timeZone`, `recordIds`, `auditSinks`, `factsHashKey`, `timeoutMs`, `reasonCodeCatalog`, `requireReasonCodeCatalog`. |
+| `createEngine(options)` | Compiles every parameter set, table and flow, and checks versions for duplicates and contradictory dates (a version without `effectiveTo` is superseded by the next one). Options: `tables`, `flows`, `paramSets`, `modelInvokers`, `suppliedModelsOnly`, `maxIterations`, `currencyScales`, `clock`, `timeZone`, `recordIds`, `auditSinks`, `factsHashKey`, `timeoutMs`, `reasonCodeCatalog`, `requireReasonCodeCatalog`, `requireApproved`, `approvals`. |
 | `parseParameterSet(text)`, `writeParameterSet(set)`, `parameterSetVersionOf(set)` | The strict `.params.json` reader, the canonical form and the version `<version>@sha256:<hex>` of a [parameter set](../../../docs/decision-tables.md#parameters), as `ParameterSetJson` in Java. Pass every version to `createEngine` as `paramSets`: tables and flows that declare `params` are checked against them with Java's messages and read the version in force on the business date as `params`; the record lists it in `params`. |
 | `engine.evaluate(ref, facts, models?)` | Evaluates a table or a flow with JavaScript values (see below). `ref` is a decision id or `{ id, version?, asOf?, correlationId?, params?, timeoutMs? }`; `params` forces parameter set versions, e.g. `{ retail_credit: '1' }`. `models` are supplied model results by node id. |
 | `engine.evaluateJson(ref, json, models?)` | The same, with facts and model results in their JSON forms, read with the inputs of the selected version (`FactsJson.readFacts(facts, inputs, models)`). |
@@ -104,6 +120,8 @@ rescored.differences                                         // [{ kind: 'OUTPUT
 | `valueToJson`, `valuesToJson`, `writeValues`, `outputJson` | Values to their JSON forms, with decimals as plain-notation strings. |
 | `parseReasonCodeCatalog`, `writeReasonCodeCatalog`, `reasonCodeCatalogVersionOf` | The strict `reason-codes.json` reader, the canonical form and the exact version of a [reason-code catalog](../../../docs/explanations.md), as `ReasonCodeCatalogJson`. Given to `createEngine` as `reasonCodeCatalog`, it is checked against the reason codes of every table and model node with Java's messages. |
 | `engine.explain(record, locale)`, `explainDecision`, `explanationText`, `writeExplanation` | The [explanation](../../../docs/explanations.md) of a record in one locale, as text and JSON, byte for byte as Java's `Explanations` writes them, for tables and flows. |
+| `ApprovalVerifier`, `parseApprovalStatement`, `writeApprovalStatement` | Verifies signed approval statements for `requireApproved`, as Java's `ApprovalVerifier`; reads and writes statements in canonical form, as `ApprovalStatementJson`. |
+| `ApprovalIssuer`, `approvalSubjects` (from `@dxa/rulestone-engine/testing`) | Signs approval statements with a generated or given key, and lists the exact versions of tables, flows, parameter sets and a catalog, for tests, as Java's `ApprovalIssuer`. |
 | `parseStoneTests`, `checkStoneTestCase` (from `@dxa/rulestone-engine/testing`) | Reads `.stone-test.json` files, with flows' `models` and expected `path`, and checks their cases, as `StoneTestJson` and `StoneTestCase.check` do. |
 | `ExpressionEnvironment` | Compiles and evaluates single expressions, as the Java class of that name. |
 | `analyzeExpression(source, { variables, expected? })` | For editors: parses and type-checks an expression without throwing, and returns the typed syntax tree, every problem with its position (in code points and as a UTF-16 index, line and column) and the engine's message. Every node has its source span (`start`, `end`, including enclosing parentheses); selections also give `fieldPos`. `compile` uses the same analysis. |
@@ -152,6 +170,7 @@ The tests in `test/` compare this engine with fixtures that the Java engine writ
 | `java-invalid-tables.json` | The problems reported for every invalid table in `invalid-tables.json`. |
 | `java-invalid-flows.json` | The problems reported, when it is read and when an engine is created, for every flow in `invalid-flows.json`: malformed files, graphs, names, scopes, table nodes, expressions, parameters, model contracts and reason codes. |
 | `java-explanations.json` | The explanation, in English and Vietnamese, of the records of the example tests. |
+| `java-approvals.json` | Signed approval statements with the trusted keys (EdDSA and ES256), and the problems of an engine created with `requireApproved`: valid statements, a tampered hash or payload, a wrong or unknown key, `alg: none`, forbidden header parameters, a wrong `typ`, payloads that are not canonical or not valid, a maker who approves, too few approvers and a missing approval. |
 
 `docs.test.ts` also checks every `` `expression` → result `` example in `docs/expressions.md`, and the worked examples in `docs/fuzzy-matching.md`, as Java's `ExpressionsDocTest` does. Invoke mode, timeouts and the facts hash key are tested against the behaviour of Java's `ModelNodeTest`, `TimeoutTest` and `DecisionRecordTest`.
 
@@ -167,6 +186,7 @@ The ISO 4217 table (`src/iso4217.ts`) is generated from the table that the Java 
 
 - **Not supported:** map literals (`{'a': 1}`), `bytes`, `type()`, `timestamp()`, `duration()` and `string(double)`. RuleStone rules do not use them, and Java's formatting of doubles depends on the JDK version. The TypeScript engine rejects them at compile time with a message saying so; Java accepts them.
 - **Canary and shadow versions** (`RuleStone.builder().canary(…)` and `shadow(…)` in Java) are not offered. Records with `routing` from the Java engine are read and replayed.
+- **Approval files:** the engine reads no files; give `approvals` the text of the `.approval.jws` files, which Java's `RuleStone.builder().approvals(dir)` reads itself. Keys are WebCrypto `CryptoKey`s.
 - **Syntax errors:** they are reported at the same position, but in other words than ANTLR's (for example `mismatched input '<EOF>'…`).
 - **Regular expressions:** `matches()` translates RE2 syntax to JavaScript `RegExp` with the `u` flag. Common syntax behaves the same, including leading `(?i)` flags, `\pL` and `(?P<name>…)`. Exotic RE2 constructs may differ.
 - **Unicode:** `normalizeName` and the fuzzy functions use the Unicode tables of the JavaScript runtime, and Java uses those of the JDK. They differ only for characters added in recent Unicode versions.

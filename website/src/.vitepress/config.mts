@@ -54,6 +54,7 @@ const SIDEBAR: { text: string; vi: string; items: [string, string][] }[] = [
       ['testing.md', 'Testing'],
       ['explanations.md', 'Explanations'],
       ['replay.md', 'Replay and re-score'],
+      ['approvals.md', 'Approvals'],
       ['temporal.md', 'Temporal integration'],
       ['editor.md', 'Web editor'],
       ['editor-sdk.md', 'Editor SDK'],

@@ -13,6 +13,7 @@
 | [Testing](testing.md) | Test decision tables and flows: JSON test cases, JUnit 5 integration, rule and node coverage and fluent assertions. |
 | [Explanations](explanations.md) | Explain decisions in the customer's language with a reviewed reason-code catalog, and check that every reason code has a message. |
 | [Replay and re-score](replay.md) | Reproduce a recorded decision exactly from its record and the original facts, and compare it with another version, other parameters or today's models. |
+| [Approvals](approvals.md) | Load only approved content: signed approval statements bound to content hashes, four-eyes and a minimum number of approvers, checked when the engine is built. |
 | [Web editor](editor.md) | Create and edit decision tables in the browser, try them on sample facts and save `.stone.json` files. |
 | [Editor SDK](editor-sdk.md) | Embed the visual editors in your own web application, with React, Angular, Vue or plain HTML, and run rules in the browser. |
 | [Temporal integration](temporal.md) | Evaluate decisions from Temporal workflows, as activities or inside workflow code with pinned rule versions. |
@@ -26,7 +27,7 @@
 | [Architecture](architecture.md) | Goals, design principles, modules, integration modes, banking requirements, AI integration and roadmap. |
 | [Hybrid AI decisioning](hybrid-ai.md) | Design proposal: model scores as rule inputs, models as nodes in decision flows, and the decision record that explains every decision. |
 | [Parameters, aggregates and local values](parameters.md) | Design proposal: parameter sets for policy thresholds, aggregate functions on lists, and local values in tables. |
-| [Governance](governance.md) | Design proposal: maker-checker approval bound to content hashes, signed releases, a hash-chained audit log, and JDBC storage. |
+| [Governance](governance.md) | Design proposal, partly implemented: maker-checker approval bound to content hashes, signed releases, a hash-chained audit log, and JDBC storage. |
 
 ## Project
 

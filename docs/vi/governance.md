@@ -1,13 +1,13 @@
 ---
 source: governance.md
-sourceHash: 0405a34a2b215288d0d40efeaa587ee2f0e0e3f227df9b5a05b583c77e85c726
+sourceHash: cd0ffddf025e0e7e98591fa6b4c07179a6a04a9c805c0902a3d573acc779dbaa
 ---
 
 # Quản trị luật
 
-> Trạng thái: **đề xuất thiết kế** · Cập nhật lần cuối: 2026-11-02
+> Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-11-03
 >
-> Chưa có nội dung nào trong trang này được triển khai. Đây là thiết kế cho mốc M2 của [lộ trình](architecture.md#9-lộ-trình): maker-checker, nhật ký kiểm toán liên kết chuỗi băm, kho luật JDBC và audit sink JDBC. Trang này dùng để rà soát và sẽ thay đổi trước khi phát hành.
+> Bước 1 của [kế hoạch triển khai](#11-kế-hoạch-triển-khai) **đã có** trong cả hai bộ máy luật: văn bản phê duyệt và `requireApproved()` (xem [Phê duyệt](approvals.md)). Mọi phần còn lại trong trang này là thiết kế cho phần còn lại của mốc M2 trong [lộ trình](architecture.md#9-lộ-trình): bản phát hành, dịch vụ quản trị với nhật ký kiểm toán liên kết chuỗi băm, kho luật JDBC và audit sink JDBC. Trang này dùng để rà soát và sẽ thay đổi trước khi phát hành.
 
 Một ngân hàng chỉ có thể thay đổi một hạn mức tín dụng trong vài giây nếu nhiều năm sau vẫn chứng minh được ai đã viết thay đổi, ai đã phê duyệt, rằng văn bản được duyệt chính là văn bản đã chạy, và rằng từ đó tới nay không ai sửa lịch sử. RuleStone đã làm cho mọi phiên bản trở nên bất biến và được nhận diện bằng mã băm nội dung, và đã ghi lại phiên bản nào đưa ra từng quyết định. Trang này bổ sung nửa còn thiếu: một phê duyệt gắn với mã băm nội dung, một engine từ chối nội dung chưa được duyệt, và một nhật ký chống giả mạo cho mọi sự kiện quản trị (governance).
 
@@ -648,7 +648,7 @@ Có hai biện pháp kiểm soát vẫn thuộc về ngân hàng: cấu hình en
 
 Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử và tài liệu bằng tiếng Anh và tiếng Việt. Bước 1 và 2 được làm trong cả hai engine, có fixture tương thích.
 
-1. **Văn bản phê duyệt và `requireApproved()`.** Định dạng văn bản, kiểm chứng JWS với `EdDSA` và `ES256`, khoá tin cậy, gắn với mã băm, kiểm tra nguyên tắc bốn mắt và `minApprovers`, phê duyệt đọc từ tệp. `java-approvals.json` cho bộ máy luật TypeScript. Bước này đưa việc bắt buộc vào trước: ngân hàng có thể phát hành văn bản phê duyệt từ một job CI và từ chối nội dung chưa được duyệt trước khi có bất kỳ dịch vụ quản trị nào.
+1. **Văn bản phê duyệt và `requireApproved()`.** *Đã xong.* Xem [Phê duyệt](approvals.md). Định dạng văn bản, kiểm chứng JWS với `EdDSA` và `ES256`, khoá tin cậy, gắn với mã băm, kiểm tra nguyên tắc bốn mắt và `minApprovers`, phê duyệt đọc từ tệp. `java-approvals.json` cho bộ máy luật TypeScript. Bước này đưa việc bắt buộc vào trước: ngân hàng có thể phát hành văn bản phê duyệt từ một job CI và từ chối nội dung chưa được duyệt trước khi có bất kỳ dịch vụ quản trị nào.
 2. **Bản phát hành và SPI `RuleRepository`.** Định dạng bản phát hành với `sequence` và `previous`, định tuyến trong bản phát hành, giao diện kho luật chỉ đọc với triển khai cho tệp và Git, lớp hỗ trợ nạp lại và bộ đệm cục bộ của bản phát hành gần nhất.
 3. **Phần lõi của dịch vụ quản trị** (`rulestone-governance`): vòng đời, bộ thay đổi, chính sách và cấp rủi ro, phân tách nhiệm vụ, thay đổi khẩn cấp, các SPI `PrincipalResolver` và `Signer`, một kho trong bộ nhớ, nhật ký liên kết chuỗi băm và công cụ `verify`.
 4. **JDBC.** `rulestone-repository-jdbc` với DDL cho PostgreSQL, Oracle và SQL Server, được kiểm thử trên từng cơ sở dữ liệu, và `rulestone-audit-jdbc` với niêm phong theo lô tuỳ chọn.
