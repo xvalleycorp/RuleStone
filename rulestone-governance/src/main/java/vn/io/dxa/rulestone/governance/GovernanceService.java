@@ -618,7 +618,7 @@ public final class GovernanceService {
                         && now.isAfter(emergency.get().postApprovalDue().get())) {
                     Instant due = emergency.get().postApprovalDue().get();
                     tx.event(EventType.POST_APPROVAL_OVERDUE, serviceActor(), cs.id(), cs.subjects(),
-                            Map.of("due", due.toString(), "overdueMinutes", ChronoUnit.MINUTES.between(due, now)));
+                            Map.of("due", due.toString(), "overdueSeconds", ChronoUnit.SECONDS.between(due, now)));
                     ChangeSet.Edit edit = cs.edit();
                     edit.emergency = Optional.of(new ChangeSet.Emergency(emergency.get().reason(),
                             emergency.get().declaredBy(), emergency.get().status(), emergency.get().postApprovalDue(), true));

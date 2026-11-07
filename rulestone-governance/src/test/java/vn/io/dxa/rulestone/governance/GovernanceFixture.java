@@ -60,6 +60,7 @@ final class GovernanceFixture {
     final MutableClock clock = new MutableClock(Instant.parse("2026-11-20T03:00:00Z"));
     final PublicKey publicKey;
     final ApprovalVerifier verifier;
+    final PrivateKeySigner signer;
     final GovernanceService service;
     private final String kid;
     private final AtomicInteger counter = new AtomicInteger();
@@ -78,10 +79,11 @@ final class GovernanceFixture {
         JsonNode key = key(kid);
         this.publicKey = publicKey(key);
         this.verifier = ApprovalVerifier.builder().trustedKey(kid, publicKey).build();
+        this.signer = PrivateKeySigner.of(kid, privateKey(key));
         this.service = GovernanceService.builder()
                 .store(store)
                 .principals(who)
-                .signer(PrivateKeySigner.of(kid, privateKey(key)))
+                .signer(signer)
                 .policy(policy)
                 .clock(clock)
                 .idGenerator(() -> String.format("00000000-0000-4000-8000-%012d", counter.incrementAndGet()))
