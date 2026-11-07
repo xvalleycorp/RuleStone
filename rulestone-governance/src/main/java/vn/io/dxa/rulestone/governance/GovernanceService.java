@@ -194,21 +194,12 @@ public final class GovernanceService {
             GovernancePolicy policy = currentPolicy();
             requireMaker(who, policy);
             ChangeSet cs = changeSet(changeSetId);
-            if (cs.state() != LifecycleState.DRAFT && cs.state() != LifecycleState.SUBMITTED
-                    && cs.state() != LifecycleState.REJECTED) {
-                throw illegal("change set " + cs.id() + " is " + cs.state() + ": an approved version is never edited, "
-                        + "supersede it with a new version in a new change set");
-            }
+            requireEditable(cs);
             ArtifactContent parsed = ArtifactContent.parse(Objects.requireNonNull(kind, "kind"), id,
                     Objects.requireNonNull(content, "content"));
             requireUnbound(parsed.kind(), parsed.id(), parsed.label());
             ChangeSet.Edit edit = cs.edit();
-            int voided = edit.approvals.size();
-            if (cs.state() != LifecycleState.DRAFT) {
-                edit.approvals.clear();
-                edit.rejection = Optional.empty();
-                edit.moveTo(LifecycleState.DRAFT);
-            }
+            int voided = reopen(cs, edit);
             ChangeSet.Item item = new ChangeSet.Item(parsed.kind(), parsed.id(), parsed.label(), parsed.exactVersion(),
                     content, LifecycleState.DRAFT);
             boolean replaced = false;
@@ -235,6 +226,62 @@ public final class GovernanceService {
             tx.commit();
             return changeSet(cs.id());
         });
+    }
+
+    /**
+     * Removes an item from a change set, for example a version label that another change set got approved
+     * first. Like a save it makes the caller a maker, and returns a submitted or rejected change set to
+     * {@code DRAFT}, voiding its approvals.
+     *
+     * @param label the version label of the item
+     */
+    public ChangeSet removeDraft(String changeSetId, ArtifactKind kind, String id, String label) {
+        return locked(() -> {
+            Principal who = caller();
+            requireMaker(who, currentPolicy());
+            ChangeSet cs = changeSet(changeSetId);
+            requireEditable(cs);
+            ChangeSet.Item item = cs.items().stream()
+                    .filter(i -> i.kind() == kind && i.id().equals(id) && i.label().equals(label)).findFirst()
+                    .orElseThrow(() -> new GovernanceException(GovernanceException.Code.NOT_FOUND,
+                            "change set " + cs.id() + " has no " + kind.jsonName() + " " + id + "@" + label));
+            ChangeSet.Edit edit = cs.edit();
+            int voided = reopen(cs, edit);
+            edit.items.removeIf(i -> i.sameLabel(item));
+            edit.maker(who.id());
+            who.onBehalfOf().ifPresent(edit::maker);
+            Map<String, Object> details = new TreeMap<>();
+            details.put("submission", (long) cs.submission());
+            details.put("removed", true);
+            if (voided > 0) {
+                details.put("voidedApprovals", (long) voided);
+            }
+            who.onBehalfOf().ifPresent(person -> details.put("onBehalfOf", person));
+            Tx tx = new Tx();
+            tx.event(EventType.DRAFT_SAVED, actor(who), cs.id(), List.of(item.subject()), details);
+            tx.put(edit.build());
+            tx.commit();
+            return changeSet(cs.id());
+        });
+    }
+
+    private static void requireEditable(ChangeSet cs) {
+        if (cs.state() != LifecycleState.DRAFT && cs.state() != LifecycleState.SUBMITTED
+                && cs.state() != LifecycleState.REJECTED) {
+            throw illegal("change set " + cs.id() + " is " + cs.state() + ": an approved version is never edited, "
+                    + "supersede it with a new version in a new change set");
+        }
+    }
+
+    /** Returns a submitted or rejected change set to {@code DRAFT}, voiding its approvals; returns how many it voided. */
+    private static int reopen(ChangeSet cs, ChangeSet.Edit edit) {
+        int voided = edit.approvals.size();
+        if (cs.state() != LifecycleState.DRAFT) {
+            edit.approvals.clear();
+            edit.rejection = Optional.empty();
+            edit.moveTo(LifecycleState.DRAFT);
+        }
+        return voided;
     }
 
     /**
