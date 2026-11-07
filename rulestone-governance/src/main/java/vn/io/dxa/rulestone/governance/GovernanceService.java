@@ -349,9 +349,9 @@ public final class GovernanceService {
                         who.id() + " has already approved change set " + cs.id());
             }
             requireRole(who, approvedRole);
-            List<GovernancePolicy.Tier> tiers = tiersOf(cs, policy);
+            GovernancePolicy.Tier requirement = GovernancePolicy.strictest(tiersOf(cs, policy));
             boolean emergencyRole = cs.emergency().isPresent() && policy.emergencyRoles().contains(approvedRole);
-            Set<String> allowed = new TreeSet<>(tierRoles(tiers));
+            Set<String> allowed = new TreeSet<>(requirement.roles());
             if (cs.emergency().isPresent()) {
                 allowed.addAll(policy.emergencyRoles());
             }
@@ -360,7 +360,7 @@ public final class GovernanceService {
                         "role " + approvedRole + " is not required by change set " + cs.id() + ": it needs one of " + allowed);
             }
             if (!emergencyRole) {
-                requireDistinctUnit(who, tiers, cs.approvals());
+                requireDistinctUnit(who, requirement, cs.approvals());
             }
             for (ChangeSet.Item item : cs.items()) {
                 requireUnbound(item.kind(), item.id(), item.label());
@@ -379,11 +379,11 @@ public final class GovernanceService {
                     cs.subjects(), details);
 
             List<ChangeSet.Approval> regular = edit.approvals.stream().filter(a -> !a.emergency()).toList();
-            boolean fullPolicy = GovernancePolicy.unmet(tiers, regular).isEmpty();
+            boolean fullPolicy = requirement.unmet(regular).isEmpty();
             boolean emergencyApproved = edit.approvals.stream().anyMatch(ChangeSet.Approval::emergency);
             if (fullPolicy || emergencyApproved) {
                 boolean emergency = !fullPolicy;
-                String tier = emergency ? "emergency" : GovernancePolicy.strictest(tiers).name();
+                String tier = emergency ? "emergency" : requirement.name();
                 Optional<Instant> due = emergency ? Optional.of(policy.postApprovalDue(now)) : Optional.empty();
                 edit.moveTo(LifecycleState.APPROVED);
                 tx.issue(cs, edit, EventType.APPROVAL_ISSUED, policy.ref(tier), emergency, due,
@@ -491,13 +491,13 @@ public final class GovernanceService {
                         who.id() + " has already post-approved change set " + cs.id());
             }
             requireRole(who, approvedRole);
-            List<GovernancePolicy.Tier> tiers = tiersOf(cs, policy);
-            if (!tierRoles(tiers).contains(approvedRole)) {
+            GovernancePolicy.Tier requirement = GovernancePolicy.strictest(tiersOf(cs, policy));
+            if (!requirement.roles().contains(approvedRole)) {
                 throw new GovernanceException(GovernanceException.Code.ROLE_NOT_REQUIRED,
                         "role " + approvedRole + " is not required by the full policy of change set " + cs.id()
-                                + ": it needs one of " + new TreeSet<>(tierRoles(tiers)));
+                                + ": it needs one of " + new TreeSet<>(requirement.roles()));
             }
-            requireDistinctUnit(who, tiers, cs.postApprovals());
+            requireDistinctUnit(who, requirement, cs.postApprovals());
 
             Instant now = clock.instant();
             ChangeSet.Approval approval = new ChangeSet.Approval(who.id(), approvedRole, who.unit(), now,
@@ -510,8 +510,8 @@ public final class GovernanceService {
             optionalText(comment).ifPresent(c -> details.put("comment", c));
             Tx tx = new Tx();
             tx.event(EventType.APPROVED, actor(who), cs.id(), cs.subjects(), details);
-            if (GovernancePolicy.unmet(tiers, edit.postApprovals).isEmpty()) {
-                tx.issue(cs, edit, EventType.POST_APPROVED, policy.ref(GovernancePolicy.strictest(tiers).name()), false,
+            if (requirement.unmet(edit.postApprovals).isEmpty()) {
+                tx.issue(cs, edit, EventType.POST_APPROVED, policy.ref(requirement.name()), false,
                         Optional.empty(), edit.postApprovals, cs.id() + ".post" + RuleStone.APPROVAL_FILE_SUFFIX);
                 ChangeSet.Emergency emergency = cs.emergency().get();
                 edit.emergency = Optional.of(new ChangeSet.Emergency(emergency.reason(), emergency.declaredBy(),
@@ -535,7 +535,7 @@ public final class GovernanceService {
             ChangeSet cs = changeSet(changeSetId);
             requireAwaitingPostApproval(cs);
             requireChecker(who, cs, policy);
-            if (tiersOf(cs, policy).stream().noneMatch(t -> t.roles().stream().anyMatch(who::hasRole))) {
+            if (GovernancePolicy.strictest(tiersOf(cs, policy)).roles().stream().noneMatch(who::hasRole)) {
                 throw new GovernanceException(GovernanceException.Code.FORBIDDEN,
                         who.id() + " holds no role of the full policy of change set " + cs.id());
             }
@@ -813,6 +813,16 @@ public final class GovernanceService {
                 .sorted(Comparator.comparing((Release.Entry e) -> e.kind().jsonName()).thenComparing(Release.Entry::id)
                         .thenComparing(Release.Entry::version))
                 .toList();
+        if (explicitRouting != null) {
+            for (Release.Route route : explicitRouting) {
+                if (sorted.stream().noneMatch(e -> e.state() == Release.State.ACTIVE
+                        && (e.kind() == ArtifactKind.TABLE || e.kind() == ArtifactKind.FLOW)
+                        && e.id().equals(route.decision()) && e.version().equals(route.version()))) {
+                    throw invalid("cannot route to " + route.decision() + "@" + route.version()
+                            + ": the release does not list it as an active table or flow");
+                }
+            }
+        }
         List<Release.Route> routing = explicitRouting != null ? explicitRouting
                 : latest.map(l -> l.release().routing().stream()
                         .filter(r -> sorted.stream().anyMatch(e -> e.state() == Release.State.ACTIVE
@@ -923,7 +933,7 @@ public final class GovernanceService {
     }
 
     private void requireChecksThis(Principal who, ChangeSet cs, GovernancePolicy policy) {
-        Set<String> roles = new TreeSet<>(tierRoles(tiersOf(cs, policy)));
+        Set<String> roles = new TreeSet<>(GovernancePolicy.strictest(tiersOf(cs, policy)).roles());
         if (cs.emergency().isPresent()) {
             roles.addAll(policy.emergencyRoles());
         }
@@ -939,8 +949,8 @@ public final class GovernanceService {
         }
     }
 
-    private static void requireDistinctUnit(Principal who, List<GovernancePolicy.Tier> tiers, List<ChangeSet.Approval> given) {
-        if (tiers.stream().noneMatch(GovernancePolicy.Tier::distinctUnits)) {
+    private static void requireDistinctUnit(Principal who, GovernancePolicy.Tier requirement, List<ChangeSet.Approval> given) {
+        if (!requirement.distinctUnits()) {
             return;
         }
         if (who.unit().isEmpty()) {
@@ -989,12 +999,6 @@ public final class GovernanceService {
             tiers.put(tier.name(), tier);
         }
         return List.copyOf(tiers.values());
-    }
-
-    private static Set<String> tierRoles(List<GovernancePolicy.Tier> tiers) {
-        Set<String> roles = new LinkedHashSet<>();
-        tiers.forEach(t -> roles.addAll(t.roles()));
-        return roles;
     }
 
     private static String nonBlank(String text, String what) {

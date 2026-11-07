@@ -47,8 +47,8 @@ import vn.io.dxa.rulestone.api.ArtifactKind;
  * }</pre>
  *
  * <p>Assignments are tried in order and the first that matches the kind and the id pattern ({@code *}
- * matches any characters) gives the tier of an artifact. A change set must satisfy the tier of each
- * of its items, so it takes the {@link #strictest} of them by name and is checked against all.
+ * matches any characters) gives the tier of an artifact. A change set takes the {@link #strictest} tier
+ * of its items.
  *
  * @param version                  the policy's version, written to approval statements as {@code tier@version};
  *                                 the service sets it when the policy is changed
@@ -124,29 +124,29 @@ public record GovernancePolicy(
         throw invalid("no tier is assigned to " + kind.jsonName() + " " + id);
     }
 
-    /** The strictest of {@code tiers}: most approvals, then most roles, then units must differ, then by name. */
+    /**
+     * The requirement of a change set with items of these tiers: its strictest tier, the one that needs
+     * the most approvals. If several tiers need as many, the requirement is their union, named
+     * {@code a+b}: the roles of all of them, with approvals enough for each role, units that must differ
+     * if any of them says so. A tier that needs fewer approvals does not add its roles, as in the
+     * design: a change of a catalog message together with a credit parameter is approved by the credit
+     * policy's approvers.
+     */
     public static Tier strictest(Collection<Tier> tiers) {
-        return tiers.stream().max(Comparator.comparingInt(Tier::approvals)
-                .thenComparingInt(t -> t.roles().size())
-                .thenComparing(Tier::distinctUnits)
-                .thenComparing(Tier::name, Comparator.reverseOrder())).orElseThrow();
+        int most = tiers.stream().mapToInt(Tier::approvals).max().orElseThrow();
+        List<Tier> top = tiers.stream().filter(t -> t.approvals() == most).sorted(Comparator.comparing(Tier::name)).toList();
+        if (top.size() == 1) {
+            return top.get(0);
+        }
+        Set<String> roles = new LinkedHashSet<>();
+        top.forEach(t -> roles.addAll(t.roles()));
+        return new Tier(String.join("+", top.stream().map(Tier::name).toList()), Math.max(most, roles.size()),
+                List.copyOf(roles), top.stream().anyMatch(Tier::distinctUnits));
     }
 
     /** {@code tier@version}, as the approval statement's {@code policy} field names it. */
     public String ref(String tierName) {
         return tierName + "@" + version;
-    }
-
-    /**
-     * What is still missing for {@code approvals} to satisfy every tier in {@code tiers}, or empty if
-     * they do. Messages name tiers, counts and roles.
-     */
-    public static Optional<String> unmet(Collection<Tier> tiers, List<ChangeSet.Approval> approvals) {
-        List<String> missing = new ArrayList<>();
-        for (Tier tier : tiers) {
-            tier.unmet(approvals).ifPresent(missing::add);
-        }
-        return missing.isEmpty() ? Optional.empty() : Optional.of(String.join("; ", missing));
     }
 
     /**
@@ -205,8 +205,8 @@ public record GovernancePolicy(
             return new Tier(name, approvals, roles, true);
         }
 
-        /** What this tier still misses for {@code approvals}, or empty if it is satisfied. */
-        Optional<String> unmet(List<ChangeSet.Approval> approvals) {
+        /** What this tier still misses for {@code approvals}, or empty if it is satisfied: names, counts and roles. */
+        public Optional<String> unmet(List<ChangeSet.Approval> approvals) {
             List<ChangeSet.Approval> counting = approvals.stream().filter(a -> roles.contains(a.role())).toList();
             Set<String> covered = new LinkedHashSet<>();
             counting.forEach(a -> covered.add(a.role()));
