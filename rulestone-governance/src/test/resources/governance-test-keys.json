@@ -1,0 +1,23 @@
+{
+  "comment": "Test-only signing keys for the governance service tests. Never trust them outside tests.",
+  "keys": [
+    {
+      "kid": "gov-ed",
+      "alg": "EdDSA",
+      "pkcs8": "MC4CAQAwBQYDK2VwBCIEIODvxiGKnpfiGsg5QLE1O5dg1PiCDV2X9CDDq7Gf+InA",
+      "spki": "MCowBQYDK2VwAyEApB/29NtLu9k2UY2qqjc43Aw4WwkL1i8RpgCueJRurDI="
+    },
+    {
+      "kid": "gov-ec",
+      "alg": "ES256",
+      "pkcs8": "MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCAQKD9w4Q9gEjgz07iwF0faBt2LWPRfTE9d3MOsim7+cg==",
+      "spki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHLh8L73p+ch4HsBqrWd1UORgp2d0xwflnj0syPkTGTmqS3q99NxnBIABrchLjRJcj1RMeale0TcAtcTvQZqp4g=="
+    },
+    {
+      "kid": "rogue-ed",
+      "alg": "EdDSA",
+      "pkcs8": "MC4CAQAwBQYDK2VwBCIEIOwDFAgTy4zz3C0FGA6Xwjkj7tasw6p3J7/eVPjHWZjY",
+      "spki": "MCowBQYDK2VwAyEABG8c0+XRcXnbNCu7R7bkiiGTd2f+q13ufPghxFnt3j0="
+    }
+  ]
+}
