@@ -1,13 +1,13 @@
 ---
 source: governance.md
-sourceHash: ebdf41dd3df7e48b34e5944873c287f8b1a719b982a44e8767de2bfaf156d69a
+sourceHash: 3f6d23bab711c85000f2e1a29cb3215fe1400bf92cfd3323e01af887634c7cb6
 ---
 
 # Quản trị luật
 
-> Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-11-03
+> Trạng thái: **đề xuất thiết kế**, đã triển khai một phần · Cập nhật lần cuối: 2026-11-07
 >
-> Bước 1 và 2 của [kế hoạch triển khai](#11-kế-hoạch-triển-khai) **đã có** trong cả hai bộ máy luật: văn bản phê duyệt và `requireApproved()` (xem [Phê duyệt](approvals.md)), cùng bản phát hành có chữ ký với `requireRelease()`, giao diện `RuleRepository` với triển khai cho tệp và Git, và công cụ nạp lại (xem [Bản phát hành](releases.md)). Mọi phần còn lại trong trang này là thiết kế cho phần còn lại của mốc M2 trong [lộ trình](architecture.md#9-lộ-trình): dịch vụ quản trị với nhật ký kiểm toán liên kết chuỗi băm, kho luật JDBC và audit sink JDBC. Trang này dùng để rà soát và sẽ thay đổi trước khi phát hành.
+> Bước 1 và 2 của [kế hoạch triển khai](#11-kế-hoạch-triển-khai) **đã có** trong cả hai bộ máy luật: văn bản phê duyệt và `requireApproved()` (xem [Phê duyệt](approvals.md)), cùng bản phát hành có chữ ký với `requireRelease()`, giao diện `RuleRepository` với triển khai cho tệp và Git, và công cụ nạp lại (xem [Bản phát hành](releases.md)). Bước 3 **đã có** bằng Java: dịch vụ quản trị với vòng đời, bộ thay đổi, maker-checker, thay đổi khẩn cấp, việc cấp văn bản có chữ ký và nhật ký kiểm toán liên kết chuỗi băm cùng công cụ `verify`, trên một kho trong bộ nhớ (xem [Dịch vụ quản trị luật](governance-service.md)). Mọi phần còn lại trong trang này là thiết kế cho phần còn lại của mốc M2 trong [lộ trình](architecture.md#9-lộ-trình): kho luật và audit sink JDBC, việc neo chuỗi, `ApprovalWorkflow` và các màn hình trình soạn thảo. Trang này dùng để rà soát và sẽ thay đổi trước khi phát hành.
 
 Một ngân hàng chỉ có thể thay đổi một hạn mức tín dụng trong vài giây nếu nhiều năm sau vẫn chứng minh được ai đã viết thay đổi, ai đã phê duyệt, rằng văn bản được duyệt chính là văn bản đã chạy, và rằng từ đó tới nay không ai sửa lịch sử. RuleStone đã làm cho mọi phiên bản trở nên bất biến và được nhận diện bằng mã băm nội dung, và đã ghi lại phiên bản nào đưa ra từng quyết định. Trang này bổ sung nửa còn thiếu: một phê duyệt gắn với mã băm nội dung, một engine từ chối nội dung chưa được duyệt, và một nhật ký chống giả mạo cho mọi sự kiện quản trị (governance).
 
@@ -366,7 +366,7 @@ record Artifact(ArtifactKind kind, String id, String version, byte[] content) {}
 record Snapshot(long sequence, byte[] release, List<Artifact> artifacts, List<byte[]> approvals) {}
 ```
 
-Việc ghi bản nháp, lần trình duyệt và sự kiện là việc của dịch vụ quản trị, qua một SPI riêng, `GovernanceStore`, trong `rulestone-governance`. Ngân hàng giữ luật trong hệ thống của mình chỉ cần triển khai `RuleRepository`.
+Việc ghi bản nháp, lần trình duyệt và sự kiện là việc của dịch vụ quản trị, qua một SPI riêng, `GovernanceStore`, trong `rulestone-governance` (đã có, với triển khai trong bộ nhớ; xem [Dịch vụ quản trị luật](governance-service.md#các-spi)). Ngân hàng giữ luật trong hệ thống của mình chỉ cần triển khai `RuleRepository`.
 
 | Triển khai | Mô-đun | Trạng thái |
 |---|---|---|
@@ -653,7 +653,7 @@ Mỗi bước là một thay đổi riêng, rà soát được, có kiểm thử
 
 1. **Văn bản phê duyệt và `requireApproved()`.** *Đã xong.* Xem [Phê duyệt](approvals.md). Định dạng văn bản, kiểm chứng JWS với `EdDSA` và `ES256`, khoá tin cậy, gắn với mã băm, kiểm tra nguyên tắc bốn mắt và `minApprovers`, phê duyệt đọc từ tệp. `java-approvals.json` cho bộ máy luật TypeScript. Bước này đưa việc bắt buộc vào trước: ngân hàng có thể phát hành văn bản phê duyệt từ một job CI và từ chối nội dung chưa được duyệt trước khi có bất kỳ dịch vụ quản trị nào.
 2. **Bản phát hành và SPI `RuleRepository`.** *Đã xong.* Xem [Bản phát hành](releases.md). Định dạng bản phát hành với `sequence` và `previous`, được ký như phê duyệt với `typ` là `rulestone-release+jws`; `requireRelease()`, nạp đúng các phiên bản được liệt kê, từ chối bản phát hành cũ hơn và chuỗi bị đứt, và lấy phiên bản canary và bóng từ bản phát hành; giao diện chỉ đọc `RuleRepository` với `FileRuleRepository` cho tệp và bản checkout Git; `RepositoryReloader` và bộ đệm cục bộ của bản phát hành được chấp nhận gần nhất. `java-releases.json` cho bộ máy luật TypeScript, bộ máy này kiểm chứng định tuyến nhưng không định tuyến.
-3. **Phần lõi của dịch vụ quản trị** (`rulestone-governance`): vòng đời, bộ thay đổi, chính sách và cấp rủi ro, phân tách nhiệm vụ, thay đổi khẩn cấp, các SPI `PrincipalResolver` và `Signer`, một kho trong bộ nhớ, nhật ký liên kết chuỗi băm và công cụ `verify`.
+3. **Phần lõi của dịch vụ quản trị** (`rulestone-governance`). *Đã xong.* Xem [Dịch vụ quản trị luật](governance-service.md). Vòng đời, bộ thay đổi, chính sách và cấp rủi ro, phân tách nhiệm vụ, thay đổi khẩn cấp, các SPI `PrincipalResolver` và `Signer`, SPI ghi `GovernanceStore` với một kho trong bộ nhớ, việc cấp văn bản phê duyệt và bản phát hành có chữ ký mà engine chấp nhận, nhật ký liên kết chuỗi băm và công cụ `verify` cùng điểm mở rộng `AnchorCheck`. Chỉ có bằng Java, như [mục 7](#7-bộ-máy-luật-typescript-tương-đương) nêu. Các mặc định đã được chấp nhận ở [mục 10](#10-câu-hỏi-mở) được áp dụng: chữ ký của dịch vụ, phiên bản bóng cần phê duyệt, phê duyệt bổ sung quá hạn là cảnh báo và một mục nhật ký, và thay đổi chính sách được ghi nhật ký và cần quản trị viên. Các [khác biệt](governance-service.md#khác-biệt-so-với-thiết-kế) được liệt kê ở đó.
 4. **JDBC.** `rulestone-repository-jdbc` với DDL cho PostgreSQL, Oracle và SQL Server, được kiểm thử trên từng cơ sở dữ liệu, và `rulestone-audit-jdbc` với niêm phong theo lô tuỳ chọn.
 5. **Neo chuỗi.** Xuất điểm kiểm có chữ ký, một client dấu thời gian RFC 3161 phía sau một SPI, và các sự kiện `ANCHORED`.
 6. **`ApprovalWorkflow`.** SPI, quy trình có sẵn, và quy trình cho Camunda 8 và Camunda 7.

@@ -50,6 +50,7 @@ export const LOCALES = {
       'replay.md': 'Chạy lại và chấm điểm lại',
       'approvals.md': 'Phê duyệt',
       'releases.md': 'Bản phát hành',
+      'governance-service.md': 'Dịch vụ quản trị luật',
       'temporal.md': 'Tích hợp Temporal',
       'editor.md': 'Trình soạn thảo web',
       'editor-sdk.md': 'SDK trình soạn thảo',

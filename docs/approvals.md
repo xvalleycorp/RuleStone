@@ -2,7 +2,7 @@
 
 An engine built with `requireApproved` loads only content that someone other than its authors approved. An approval is a signed **approval statement** that names the exact content hash of every table, flow, parameter set and reason-code catalog it covers. The engine computes every hash itself from the content it loads, verifies the signature with a key from its own configuration, and refuses to build if anything is not covered, if an approver is also a maker, or if too few approvers are named.
 
-This is step 1 of the [governance design](governance.md#11-implementation-plan). It is available in the Java engine and in the TypeScript engine, which give the same problems in the same words. [Releases](releases.md), step 2, add which approved versions an engine loads; the governance service follows in a later step. Until then, a CI job can issue the statements (see [Issuing statements from CI](#issuing-statements-from-ci)).
+This is step 1 of the [governance design](governance.md#11-implementation-plan). It is available in the Java engine and in the TypeScript engine, which give the same problems in the same words. [Releases](releases.md), step 2, add which approved versions an engine loads; the [governance service](governance-service.md), step 3, issues both. Without it, a CI job can issue the statements (see [Issuing statements from CI](#issuing-statements-from-ci)).
 
 - [Example](#example)
 - [What the engine checks](#what-the-engine-checks)

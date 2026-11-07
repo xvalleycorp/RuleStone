@@ -5,8 +5,6 @@
 
 package vn.io.dxa.rulestone.test;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -14,19 +12,14 @@ import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.Signature;
-import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.EdECPrivateKey;
 import java.security.spec.ECGenParameterSpec;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.UUID;
 import vn.io.dxa.rulestone.api.ArtifactKind;
 import vn.io.dxa.rulestone.core.ApprovalStatement;
@@ -36,6 +29,7 @@ import vn.io.dxa.rulestone.core.DecisionFlow;
 import vn.io.dxa.rulestone.core.DecisionFlowJson;
 import vn.io.dxa.rulestone.core.DecisionTable;
 import vn.io.dxa.rulestone.core.DecisionTableJson;
+import vn.io.dxa.rulestone.core.JwsWriter;
 import vn.io.dxa.rulestone.core.ParameterSet;
 import vn.io.dxa.rulestone.core.ParameterSetJson;
 import vn.io.dxa.rulestone.core.ReasonCodeCatalog;
@@ -68,8 +62,6 @@ import vn.io.dxa.rulestone.core.VersionedDefinition;
  */
 public final class ApprovalIssuer {
 
-    private static final ObjectMapper HEADER_WRITER = new ObjectMapper();
-
     private final String kid;
     private final String algorithm;
     private final PrivateKey privateKey;
@@ -81,13 +73,7 @@ public final class ApprovalIssuer {
         this.privateKey = Objects.requireNonNull(privateKey, "privateKey");
         this.publicKey = publicKey;
         this.random = random;
-        if (privateKey instanceof EdECPrivateKey) {
-            this.algorithm = ApprovalVerifier.EDDSA;
-        } else if (privateKey instanceof ECPrivateKey) {
-            this.algorithm = ApprovalVerifier.ES256;
-        } else {
-            throw new IllegalArgumentException("the key must be an Ed25519 or a P-256 EC private key");
-        }
+        this.algorithm = JwsWriter.algorithmOf(privateKey);
     }
 
     /**
@@ -160,24 +146,12 @@ public final class ApprovalIssuer {
 
     /** Signs {@code statement}: JWS compact serialization of its canonical form. */
     public String issue(ApprovalStatement statement) {
-        Map<String, String> header = new TreeMap<>(Map.of(
-                "alg", algorithm, "kid", kid, "typ", ApprovalVerifier.TYPE));
-        try {
-            return sign(HEADER_WRITER.writeValueAsString(header), ApprovalStatementJson.write(statement));
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException(e);
-        }
+        return sign(JwsWriter.header(algorithm, kid, ApprovalVerifier.TYPE), ApprovalStatementJson.write(statement));
     }
 
     /** Signs {@code release}: JWS compact serialization of its canonical form, with {@code typ} {@value ApprovalVerifier#RELEASE_TYPE}. */
     public String issue(Release release) {
-        Map<String, String> header = new TreeMap<>(Map.of(
-                "alg", algorithm, "kid", kid, "typ", ApprovalVerifier.RELEASE_TYPE));
-        try {
-            return sign(HEADER_WRITER.writeValueAsString(header), ReleaseJson.write(release));
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException(e);
-        }
+        return sign(JwsWriter.header(algorithm, kid, ApprovalVerifier.RELEASE_TYPE), ReleaseJson.write(release));
     }
 
     /**
@@ -186,21 +160,11 @@ public final class ApprovalIssuer {
      * canonical.
      */
     public String sign(String header, String payload) {
-        Base64.Encoder base64 = Base64.getUrlEncoder().withoutPadding();
-        String input = base64.encodeToString(header.getBytes(StandardCharsets.UTF_8)) + "."
-                + base64.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+        String input = JwsWriter.signingInput(header, payload);
         try {
-            Signature signer = Signature.getInstance(
-                    algorithm.equals(ApprovalVerifier.EDDSA) ? "Ed25519" : "SHA256withECDSAinP1363Format");
-            if (random == null) {
-                signer.initSign(privateKey);
-            } else {
-                signer.initSign(privateKey, random);
-            }
-            signer.update(input.getBytes(StandardCharsets.US_ASCII));
-            return input + "." + base64.encodeToString(signer.sign());
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("cannot sign with key '" + kid + "'", e);
+            return JwsWriter.compact(input, JwsWriter.sign(algorithm, privateKey, random, input.getBytes(StandardCharsets.US_ASCII)));
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException("cannot sign with key '" + kid + "'", e.getCause());
         }
     }
 

@@ -1,6 +1,6 @@
 ---
 source: java-api.md
-sourceHash: b479db1a0478612f2b31450e149b7cd606f31a4fe7c9bd83995e8398c027442a
+sourceHash: 6f34e0511d3a710bc7a9d428def797943965e0947c8e7c05a4d089e7fddade72
 ---
 
 # Java API
@@ -30,6 +30,7 @@ Trang này giải thích cách nhúng RuleStone vào một ứng dụng Java: t�
 | `rulestone-core` | `vn.io.dxa.rulestone.core` | Engine nhúng, bảng quyết định và định dạng `.stone.json`. |
 | `rulestone-cel` | `vn.io.dxa.rulestone.cel` | Ngôn ngữ biểu thức. Được `rulestone-core` sử dụng; chỉ dùng trực tiếp khi cần đánh giá các biểu thức độc lập. |
 | `rulestone-audit-kafka` | `vn.io.dxa.rulestone.audit.kafka` | Audit sink đẩy bản ghi quyết định lên Kafka; xem [Đẩy bản ghi lên Kafka](#đẩy-bản-ghi-lên-kafka). |
+| `rulestone-governance` | `vn.io.dxa.rulestone.governance` | Dịch vụ quản trị cấp văn bản phê duyệt và bản phát hành: xem [Dịch vụ quản trị luật](governance-service.md). Phụ thuộc vào `rulestone-core`. |
 | `rulestone-bom` | — | Import để đồng bộ phiên bản. |
 
 Hãy khai báo phụ thuộc vào `rulestone-core`; mô-đun này kéo theo hai mô-đun còn lại. Mã chỉ *đánh giá* quyết định thì không cần gì ngoài các kiểu trong `api`, nên phần lớn mã nguồn của bạn có thể không phụ thuộc vào `core`:

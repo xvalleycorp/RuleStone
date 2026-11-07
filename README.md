@@ -97,6 +97,7 @@ Continue with **[Getting started](docs/getting-started.md)**.
 | `rulestone-core` | Decision tables, the `.stone.json` format, effective dating, the embedded engine. |
 | `rulestone-cel` | The expression language: CEL with typed inputs and `decimal`. |
 | `rulestone-audit-kafka` | Audit sink that publishes decision records to Kafka. |
+| `rulestone-governance` | Governance service: change sets, maker-checker, signed approvals and releases, hash-chained audit log and its `verify` tool. |
 | `rulestone-bom` | Bill of materials for aligning module versions. |
 
 ## Building

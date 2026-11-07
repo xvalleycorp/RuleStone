@@ -1,13 +1,13 @@
 ---
 source: approvals.md
-sourceHash: 1e1ac3cc2b7ad9e3f1c4f1869f6facde1133f47996530e52b18da62443838840
+sourceHash: ed3046ad9e9239e7f14cbb2432badd4f9cac1fc80df7fa5f1004c504be3efe50
 ---
 
 # Phê duyệt
 
 Một engine được tạo với `requireApproved` chỉ nạp nội dung đã được một người khác với các tác giả của nó phê duyệt. Một phê duyệt là một **văn bản phê duyệt** (approval statement) có chữ ký, nêu chính xác mã băm nội dung của mọi bảng, luồng, bộ tham số và danh mục mã lý do mà nó bao phủ. Engine tự tính mọi mã băm từ nội dung nó nạp, kiểm chứng chữ ký bằng một khoá trong cấu hình của chính nó, và từ chối khởi tạo nếu có gì đó chưa được bao phủ, nếu một người duyệt đồng thời là người lập, hoặc nếu số người duyệt quá ít.
 
-Đây là bước 1 của [thiết kế quản trị](governance.md#11-kế-hoạch-triển-khai). Tính năng đã có trong bộ máy luật Java và bộ máy luật TypeScript, hai bộ máy báo cùng các vấn đề bằng cùng câu chữ. [Bản phát hành](releases.md), bước 2, bổ sung việc xác định những phiên bản đã duyệt nào được engine nạp; dịch vụ quản trị sẽ đến ở một bước sau. Trong lúc chờ, một job CI có thể cấp các văn bản phê duyệt (xem [Cấp văn bản phê duyệt từ CI](#cấp-văn-bản-phê-duyệt-từ-ci)).
+Đây là bước 1 của [thiết kế quản trị](governance.md#11-kế-hoạch-triển-khai). Tính năng đã có trong bộ máy luật Java và bộ máy luật TypeScript, hai bộ máy báo cùng các vấn đề bằng cùng câu chữ. [Bản phát hành](releases.md), bước 2, bổ sung việc xác định những phiên bản đã duyệt nào được engine nạp; [dịch vụ quản trị](governance-service.md), bước 3, cấp cả hai. Nếu không có nó, một job CI có thể cấp các văn bản phê duyệt (xem [Cấp văn bản phê duyệt từ CI](#cấp-văn-bản-phê-duyệt-từ-ci)).
 
 - [Ví dụ](#ví-dụ)
 - [Engine kiểm tra những gì](#engine-kiểm-tra-những-gì)

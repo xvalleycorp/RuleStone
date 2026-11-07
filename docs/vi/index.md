@@ -1,6 +1,6 @@
 ---
 source: README.md
-sourceHash: 5529ed11ae45342b0a674a19ddb79234f7e07f18d7d586808fc2f149f4d8b801
+sourceHash: 5dae90d497a55c8fcab907085cee855d2d0eca9fc03f83811eb2187a1924eec2
 ---
 
 # Tài liệu RuleStone
@@ -22,6 +22,7 @@ sourceHash: 5529ed11ae45342b0a674a19ddb79234f7e07f18d7d586808fc2f149f4d8b801
 | [Chạy lại và chấm điểm lại](replay.md) | Tái lập chính xác một quyết định đã ghi từ bản ghi của nó và dữ liệu đầu vào gốc, và so sánh nó với một phiên bản khác, bộ tham số khác hoặc các mô hình hiện tại. |
 | [Phê duyệt](approvals.md) | Chỉ nạp nội dung đã được duyệt: văn bản phê duyệt có chữ ký gắn với mã băm nội dung, nguyên tắc bốn mắt và số người duyệt tối thiểu, được kiểm tra khi engine được tạo. |
 | [Bản phát hành](releases.md) | Nạp đúng các phiên bản đã duyệt của một bản phát hành có chữ ký, từ chối quay lui, lấy phiên bản canary và bóng từ đó; giao diện `RuleRepository`, tệp và Git, và nạp lại nóng. |
+| [Dịch vụ quản trị luật](governance-service.md) | Điều khiển vòng đời thay đổi luật bằng Java: bộ thay đổi, maker-checker với chính sách phê duyệt và thay đổi khẩn cấp, văn bản phê duyệt và bản phát hành có chữ ký, nhật ký kiểm toán liên kết chuỗi băm và công cụ `verify`. |
 | [Trình soạn thảo web](editor.md) | Tạo và sửa bảng quyết định trên trình duyệt, thử với các fact mẫu và lưu tệp `.stone.json`. |
 | [SDK trình soạn thảo](editor-sdk.md) | Nhúng các trình soạn thảo trực quan vào ứng dụng web của bạn, với React, Angular, Vue hoặc HTML thuần, và chạy luật ngay trong trình duyệt. |
 | [Tích hợp Temporal](temporal.md) | Đánh giá quyết định từ workflow Temporal, dưới dạng activity hoặc ngay trong mã workflow với phiên bản luật được ghim. |

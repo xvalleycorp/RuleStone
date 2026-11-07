@@ -25,6 +25,7 @@ This page explains how to embed RuleStone in a Java application: building an eng
 | `rulestone-core` | `vn.io.dxa.rulestone.core` | The embedded engine, decision tables and the `.stone.json` format. |
 | `rulestone-cel` | `vn.io.dxa.rulestone.cel` | The expression language. Used by `rulestone-core`; use it directly only to evaluate stand-alone expressions. |
 | `rulestone-audit-kafka` | `vn.io.dxa.rulestone.audit.kafka` | An audit sink that publishes decision records to Kafka; see [Publishing records to Kafka](#publishing-records-to-kafka). |
+| `rulestone-governance` | `vn.io.dxa.rulestone.governance` | The governance service that issues approval statements and releases: see [Governance service](governance-service.md). Depends on `rulestone-core`. |
 | `rulestone-bom` | — | Import to align versions. |
 
 Depend on `rulestone-core`; it brings in the other two. Code that only *evaluates* decisions needs nothing beyond the `api` types, so you can keep `core` out of most of your codebase:
