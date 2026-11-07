@@ -1,8 +1,8 @@
 # Governance
 
-> Status: **design proposal**, partly implemented · Last updated: 2026-11-03
+> Status: **design proposal**, partly implemented · Last updated: 2026-11-07
 >
-> Steps 1 and 2 of the [implementation plan](#11-implementation-plan) are **available** in both engines: approval statements and `requireApproved()` (see [Approvals](approvals.md)), and signed releases with `requireRelease()`, the `RuleRepository` interface with its files and Git implementation, and the reload helper (see [Releases](releases.md)). Everything else on this page is the design for the rest of milestone M2 of the [roadmap](architecture.md#9-roadmap): the governance service with its hash-chained audit log, the JDBC repository and the JDBC audit sink. It is for review and will change before it ships.
+> Steps 1 and 2 of the [implementation plan](#11-implementation-plan) are **available** in both engines: approval statements and `requireApproved()` (see [Approvals](approvals.md)), and signed releases with `requireRelease()`, the `RuleRepository` interface with its files and Git implementation, and the reload helper (see [Releases](releases.md)). Step 3 is **available** in Java: the governance service with the lifecycle, change sets, maker-checker, emergency changes, signed issuing and the hash-chained audit log with its `verify` tool, over an in-memory store (see [Governance service](governance-service.md)). Everything else on this page is the design for the rest of milestone M2 of the [roadmap](architecture.md#9-roadmap): the JDBC repository and audit sink, anchoring, `ApprovalWorkflow` and the editor screens. It is for review and will change before it ships.
 
 A bank may change a credit limit in seconds only if it can show, years later, who wrote the change, who approved it, that the approved text is exactly the text that ran, and that nobody altered the history since. RuleStone already makes every version immutable and identified by a content hash, and records which version made each decision. This page adds the missing half: an approval that binds to the content hash, an engine that refuses unapproved content, and a tamper-evident log of every governance event.
 
@@ -361,7 +361,7 @@ record Artifact(ArtifactKind kind, String id, String version, byte[] content) {}
 record Snapshot(long sequence, byte[] release, List<Artifact> artifacts, List<byte[]> approvals) {}
 ```
 
-Writing drafts, submissions and events is the governance service's business, through a separate `GovernanceStore` SPI in `rulestone-governance`. A bank that keeps rules in its own system implements `RuleRepository` only.
+Writing drafts, submissions and events is the governance service's business, through a separate `GovernanceStore` SPI in `rulestone-governance` (available, with an in-memory implementation; see [Governance service](governance-service.md#the-spis)). A bank that keeps rules in its own system implements `RuleRepository` only.
 
 | Implementation | Module | Status |
 |---|---|---|
@@ -648,7 +648,7 @@ Each step is a separate, reviewable change with tests and documentation in Engli
 
 1. **Approval statements and `requireApproved()`.** *Done.* See [Approvals](approvals.md). The statement format, JWS verification with `EdDSA` and `ES256`, trusted keys, hash binding, four-eyes and `minApprovers` checks, approvals read from files. `java-approvals.json` for the TypeScript engine. This delivers enforcement first: a bank can issue statements from a CI job and refuse unapproved content before any governance service exists.
 2. **Releases and the `RuleRepository` SPI.** *Done.* See [Releases](releases.md). The release format with `sequence` and `previous`, signed like approvals with `typ` `rulestone-release+jws`; `requireRelease()`, which loads exactly the listed versions, refuses older releases and broken chains, and takes canary and shadow versions from the release; the read-only `RuleRepository` interface with `FileRuleRepository` for files and Git checkouts; `RepositoryReloader` and the local cache of the last accepted release. `java-releases.json` for the TypeScript engine, which verifies routing but does not route.
-3. **The governance service core** (`rulestone-governance`): lifecycle, change sets, policies and tiers, separation of duties, emergency changes, the `PrincipalResolver` and `Signer` SPIs, an in-memory store, the hash-chained log and the `verify` tool.
+3. **The governance service core** (`rulestone-governance`). *Done.* See [Governance service](governance-service.md). Lifecycle, change sets, policies and tiers, separation of duties, emergency changes, the `PrincipalResolver` and `Signer` SPIs, the `GovernanceStore` write SPI with an in-memory store, issuing of signed statements and releases that engines accept, the hash-chained log and the `verify` tool with its `AnchorCheck` extension point. Java only, as [section 7](#7-typescript-engine-parity) says. The accepted defaults of [section 10](#10-open-questions) apply: a service signature, shadow versions need approval, an overdue post-approval is an alert and a log entry, and policy changes are logged and need an administrator. The [differences](governance-service.md#differences-from-the-design) are listed there.
 4. **JDBC.** `rulestone-repository-jdbc` with the DDL for PostgreSQL, Oracle and SQL Server, tested against each database, and `rulestone-audit-jdbc` with optional batch sealing.
 5. **Anchoring.** Signed checkpoint export, an RFC 3161 timestamp client behind an SPI, and `ANCHORED` events.
 6. **`ApprovalWorkflow`.** The SPI, the built-in workflow, and Camunda 8 and Camunda 7 workflows.
